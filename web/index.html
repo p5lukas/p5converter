@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>p5converter</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%232dd4bf%27/%3E%3Ctext x=%2716%27 y=%2722%27 font-size=%2716%27 font-family=%27sans-serif%27 font-weight=%27700%27 text-anchor=%27middle%27 fill=%27%2304201d%27%3Ep5%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand"><span class="logo">p5</span>converter</div>
+  <nav id="worlds">
+    <button data-world="audio" class="active">♪ Audio</button>
+    <button data-world="video">▶ Video</button>
+  </nav>
+  <div class="spacer"></div>
+  <span id="ffver" class="muted small"></span>
+</header>
+
+<main>
+  <section class="col">
+    <div class="card">
+      <div class="card-h"><h2>Dateien</h2>
+        <div class="btns">
+          <button id="addFiles">+ Dateien</button>
+          <button id="addFolder">+ Ordner</button>
+          <button id="clearFiles" class="ghost">Leeren</button>
+        </div>
+      </div>
+      <div id="fileList" class="files"></div>
+      <div id="fileSummary" class="muted small"></div>
+    </div>
+
+    <div class="card" id="destCard">
+      <h2>Ziel</h2>
+      <div class="grid2">
+        <label>Speicherort
+          <select id="outMode"><option value="same">Neben der Quelldatei</option><option value="custom">Eigener Ordner…</option></select>
+        </label>
+        <label id="outDirRow" class="hidden">Ordner
+          <div class="row"><input id="outDir" placeholder="/output"><button id="pickOut" class="small">…</button></div>
+        </label>
+        <label id="structRow" class="hidden">Struktur
+          <select id="outStruct"><option value="keep">Ordnerstruktur beibehalten</option><option value="flat">Alles in einen Ordner</option></select>
+        </label>
+        <label>Dateiname-Zusatz
+          <input id="suffix" placeholder="z. B. _x265">
+        </label>
+        <label id="patternRow">Namensmuster (optional)
+          <input id="pattern" list="patterns" placeholder="{artist}/{album}/{track} - {title}">
+          <datalist id="patterns">
+            <option value="{artist}/{album}/{track} - {title}">
+            <option value="{artist} - {title}">
+            <option value="{albumartist}/{year} - {album}/{track} - {title}">
+          </datalist>
+        </label>
+        <label>Wenn Datei existiert
+          <select id="exists"><option value="rename">Umbenennen (2)</option><option value="skip">Überspringen</option><option value="overwrite">Überschreiben</option></select>
+        </label>
+      </div>
+      <label class="check"><input type="checkbox" id="deleteSource"> Quelldatei nach Erfolg löschen <span class="warn small">(unwiderruflich)</span></label>
+    </div>
+  </section>
+
+  <section class="col">
+    <div class="card" id="audioSettings">
+      <h2>Audio-Einstellungen</h2>
+      <div class="grid2">
+        <label>Format
+          <select id="aFormat">
+            <option value="mp3">MP3</option><option value="ogg">Ogg Vorbis</option><option value="opus">Opus</option>
+            <option value="m4a">AAC (M4A)</option><option value="flac">FLAC (verlustfrei)</option><option value="wav">WAV (unkomprimiert)</option>
+          </select>
+        </label>
+        <label id="aModeRow">Qualitätsmodus
+          <select id="aMode"><option value="vbr">Variable Bitrate (Qualität)</option><option value="cbr">Konstante Bitrate</option></select>
+        </label>
+        <label id="aQualityRow">Qualität <output id="aQualityOut"></output>
+          <input type="range" id="aQuality" min="0" max="9" value="2">
+        </label>
+        <label id="aBitrateRow">Bitrate
+          <select id="aBitrate"></select>
+        </label>
+        <label id="aFlacRow">Kompression <output id="aFlacOut"></output>
+          <input type="range" id="aFlac" min="0" max="8" value="5">
+        </label>
+        <label id="aWavRow">Bit-Tiefe
+          <select id="aWav"><option value="16">16 Bit</option><option value="24">24 Bit</option><option value="32">32 Bit</option></select>
+        </label>
+        <label>Samplerate
+          <select id="aRate"><option value="0">Wie Quelle</option><option value="44100">44,1 kHz</option><option value="48000">48 kHz</option><option value="96000">96 kHz</option></select>
+        </label>
+        <label>Kanäle
+          <select id="aCh"><option value="0">Wie Quelle</option><option value="1">Mono</option><option value="2">Stereo</option></select>
+        </label>
+      </div>
+      <label class="check"><input type="checkbox" id="aCover" checked> Cover-Bild übernehmen (MP3, M4A, FLAC)</label>
+      <p class="muted small">Tags (Titel, Interpret, Album …) werden immer übernommen.</p>
+    </div>
+
+    <div class="card hidden" id="videoSettings">
+      <h2>Video-Einstellungen</h2>
+      <div class="presets" id="vPresets"></div>
+      <div class="grid2">
+        <label>Container
+          <select id="vContainer"><option value="mkv">MKV (Matroska)</option><option value="mp4">MP4</option></select>
+        </label>
+        <label>Video-Codec
+          <select id="vCodec">
+            <option value="copy">Kopieren (kein Re-Encode)</option>
+            <option value="h264">H.264 (x264)</option><option value="hevc">H.265 / HEVC (x265)</option>
+            <option value="av1">AV1</option><option value="vp9">VP9</option>
+          </select>
+        </label>
+        <label id="vBackendRow">Encoder / Hardware
+          <select id="vBackend"></select>
+        </label>
+        <label id="vResolvedRow"><span class="muted">Wird verwendet</span>
+          <div id="vResolved" class="resolved"></div>
+        </label>
+        <label id="vCrfRow"><span>Qualität (CRF) <output id="vCrfOut"></output></span>
+          <input type="range" id="vCrf" min="10" max="40" value="22">
+          <span class="muted small" id="vCrfHint"></span>
+        </label>
+        <label id="vPresetRow">Geschwindigkeit
+          <select id="vPreset"><option value="slow">Langsam (beste Kompression)</option><option value="medium" selected>Mittel</option><option value="fast">Schnell</option><option value="veryfast">Sehr schnell</option></select>
+        </label>
+        <label id="vDepthRow">Bit-Tiefe
+          <select id="vDepth"><option value="0">Wie Quelle</option><option value="8">8 Bit</option><option value="10">10 Bit</option></select>
+        </label>
+        <label id="vHeightRow">Auflösung (max. Höhe)
+          <select id="vHeight"><option value="0">Original</option><option value="2160">2160p (4K)</option><option value="1440">1440p</option><option value="1080">1080p</option><option value="720">720p</option><option value="576">576p</option><option value="480">480p</option></select>
+        </label>
+      </div>
+      <label class="check" id="vHwDecRow"><input type="checkbox" id="vHwDec" checked> Hardware-Decoding nutzen (fällt bei Fehler automatisch zurück)</label>
+
+      <h3>Audiospuren</h3>
+      <div class="grid2">
+        <label>Verarbeitung
+          <select id="vAudioMode"><option value="copy">Passthrough (unverändert)</option><option value="encode">Neu kodieren</option></select>
+        </label>
+        <label id="vAudioCodecRow">Codec / Bitrate (Stereo)
+          <div class="row"><select id="vAudioCodec"><option value="aac">AAC</option><option value="opus">Opus</option><option value="ac3">AC-3</option><option value="eac3">E-AC-3</option><option value="flac">FLAC</option></select>
+          <input id="vAudioKbps" type="number" min="32" max="640" value="160" style="width:90px"></div>
+        </label>
+        <label>Nur diese Sprachen behalten
+          <input id="vAudioLangs" placeholder="leer = alle, z. B. ger,eng">
+        </label>
+      </div>
+      <h3>Untertitel</h3>
+      <div class="grid2">
+        <label>Verarbeitung
+          <select id="vSubMode"><option value="copy">Passthrough (alle behalten)</option><option value="none">Alle entfernen</option></select>
+        </label>
+        <label>Nur diese Sprachen behalten
+          <input id="vSubLangs" placeholder="leer = alle, z. B. ger,eng">
+        </label>
+      </div>
+      <p class="muted small">Einzelne Spuren pro Datei entfernen oder Standard-Audiospur ändern: in der Dateiliste auf „Spuren“ klicken.</p>
+    </div>
+
+    <div class="card hidden" id="hwCard">
+      <div class="card-h"><h2>Hardware</h2><button id="hwRedetect" class="small">Neu erkennen</button></div>
+      <div id="hwList"></div>
+      <div id="hwGpus" class="muted small"></div>
+    </div>
+  </section>
+
+  <section class="full">
+    <div class="startbar">
+      <button id="start" class="primary">Konvertierung starten</button>
+      <span id="startMsg" class="small"></span>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>Warteschlange</h2>
+        <div class="btns">
+          <label class="inline small">Parallel <select id="conc"><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
+          <button id="cancelAll" class="small ghost">Alle abbrechen</button>
+          <button id="clearDone" class="small ghost">Fertige entfernen</button>
+        </div>
+      </div>
+      <div id="monitor" class="monitor"></div>
+      <div id="queue"></div>
+    </div>
+  </section>
+</main>
+
+<dialog id="browser">
+  <form method="dialog" class="dlg">
+    <div class="dlg-h">
+      <button type="button" id="bUp" class="small">⬆</button>
+      <input id="bPath">
+      <button type="button" id="bGo" class="small">Gehe</button>
+    </div>
+    <div id="bDrives" class="small"></div>
+    <div id="bList" class="blist"></div>
+    <div class="dlg-f">
+      <span id="bCount" class="muted small"></span>
+      <div class="btns">
+        <button type="button" id="bAddDir">Diesen Ordner (rekursiv)</button>
+        <button type="button" id="bAddSel" class="primary">Auswahl hinzufügen</button>
+        <button type="button" id="bCancel" class="ghost">Abbrechen</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="tracks">
+  <form method="dialog" class="dlg">
+    <h2 id="tTitle"></h2>
+    <div id="tBody" class="tbody"></div>
+    <div class="dlg-f"><span class="muted small">Abgewählte Spuren werden entfernt.</span><button class="primary">Fertig</button></div>
+  </form>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>
