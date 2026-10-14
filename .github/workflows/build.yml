@@ -35,7 +35,7 @@ jobs:
           mkdir -p dist/linux dist/windows
           CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -trimpath -ldflags "-s -w -X main.version=$V" -o dist/linux/p5converter .
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "-s -w -X main.version=$V" -o dist/windows/p5converter.exe .
-      - name: Bundle ffmpeg (BtbN GPL builds: x264/x265/SVT-AV1, QSV, NVENC, AMF, VAAPI)
+      - name: "Bundle ffmpeg (BtbN GPL builds with x264, x265, SVT-AV1, QSV, NVENC, AMF, VAAPI)"
         run: |
           B=https://github.com/BtbN/FFmpeg-Builds/releases/download/latest
           curl -fsSL -o ffw.zip $B/ffmpeg-master-latest-win64-gpl.zip
