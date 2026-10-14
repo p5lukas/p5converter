@@ -58,3 +58,14 @@ dialog::backdrop{background:#0008}
 .bi{display:flex;align-items:center;gap:8px;padding:5px 10px;cursor:pointer;border-bottom:1px solid var(--line)}
 .bi:hover{background:var(--card2)}.bi .sz{margin-left:auto;color:var(--mut);font-size:12px}
 table{border-collapse:collapse;width:100%;font-size:12px}td,th{padding:5px 8px;border-bottom:1px solid var(--line);text-align:left}
+
+button.info{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;padding:0;margin-left:5px;border-radius:50%;font-size:11px;font-weight:700;font-style:italic;font-family:Georgia,serif;line-height:1;color:var(--acc);background:transparent;border:1px solid var(--acc);vertical-align:middle;flex:none}
+button.info:hover,button.info.on{background:var(--acc);color:#04201d}
+.infopop{position:fixed;z-index:50;width:min(380px,92vw);max-height:70vh;overflow:auto;background:var(--card);color:var(--fg);border:1px solid var(--acc);border-radius:10px;padding:10px 14px;box-shadow:0 8px 30px #0006;font-size:13px;line-height:1.5}
+.infopop h4{margin:0 0 6px;font-size:14px;color:var(--acc)}
+.infopop p{margin:6px 0}.infopop ul{margin:6px 0;padding-left:18px}.infopop li{margin:3px 0}
+.infopop code{background:var(--card2);border-radius:4px;padding:0 4px;font-size:12px}
+.infopop .ex{color:var(--mut);border-left:3px solid var(--acc);padding-left:8px}
+dialog:has(.dlg) ~ .infopop{z-index:100}
+
+.lt{display:flex;align-items:center}

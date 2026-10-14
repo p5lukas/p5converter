@@ -3,9 +3,9 @@
 Audio- und Video-Konverter mit Web-Oberfläche – ein SoundConverter-Klon mit zusätzlicher Video-Welt.
 Ein einzelnes Go-Binary (nur Standardbibliothek) steuert **ffmpeg** an. Dieselbe Codebasis liefert
 
-* **Docker-Image** (Unraid, Template unter `unraid/p5converter.xml`)
-* **Windows-`.exe`** (Zip mit mitgeliefertem ffmpeg)
-* **Linux-Binary** (Fedora KDE & Co.)
+* **Docker-Image** (alles enthalten: ffmpeg, Intel-/AMD-Treiber; Unraid, Template unter `unraid/p5converter.xml`)
+* **Windows-`.exe`** (Setup.exe oder Portable-Zip, ffmpeg enthalten)
+* **Linux-Paket** (Fedora KDE & Co., ffmpeg enthalten, Installer-Skript)
 
 ## Funktionen
 
@@ -22,6 +22,9 @@ Namensmuster (`{artist}/{album}/{track} - {title}`; Platzhalter `artist album al
 * **Audio**: Passthrough oder neu kodieren (AAC/Opus/AC-3/E-AC-3/FLAC), Sprachfilter, einzelne Spuren entfernen, Standard-Spur ändern
 * **Untertitel**: Passthrough, alle entfernen, Sprachfilter, einzelne Spuren entfernen (Schriftarten-Anhänge bleiben in MKV erhalten)
 * Pro Datei über **„Spuren“** auswählbar
+
+### Hilfe für Einsteiger
+Jede Einstellung hat einen kleinen **ⓘ**-Punkt mit einfacher Erklärung und Beispielen (z. B. wann 10 Bit sinnvoll ist).
 
 ### Hardware-Encoding (Intel Quick Sync, NVIDIA, AMD)
 * **Automatische Erkennung per echtem Test-Encode** (nicht nur „Encoder im ffmpeg vorhanden“): Quick Sync (QSV), NVENC, VAAPI, AMF – je Codec (H.264/HEVC/AV1) und 8/10 Bit
@@ -48,18 +51,19 @@ docker run -d --name p5converter -p 8484:8484 \
 * Intel: Im Container-Log/„Hardware“-Karte steht, warum ein Backend nicht nutzbar ist (z. B. `/dev/dri` fehlt).
 
 ## Windows
-Zip entpacken (enthält `p5converter.exe`, `ffmpeg.exe`, `ffprobe.exe`) und `p5converter.exe` starten – die Oberfläche öffnet sich im Browser.
-Aktuelle GPU-Treiber installieren (Intel/NVIDIA/AMD); sie liefern QSV/NVENC/AMF.
+Zwei Varianten, beide enthalten **alles** (p5converter + ffmpeg mit x264/x265/AV1, Quick Sync, NVENC, AMF):
+* **`p5converter-setup.exe`** – normaler Installer (Startmenü, Desktop-Verknüpfung, Deinstallation).
+* **`p5converter-windows-x64-portable.zip`** – entpacken und `p5converter.exe` starten.
 
-## Fedora KDE
+Die Oberfläche öffnet sich im Browser; das schwarze Konsolenfenster beim Start gehört dazu (Schließen = Beenden).
+Einzige Voraussetzung für Hardware-Encoding sind normale GPU-Treiber (Intel/NVIDIA/AMD) – die bringen QSV/NVENC/AMF mit und lassen sich nicht sinnvoll mitliefern. Ohne Treiber läuft alles über die CPU.
+
+## Fedora KDE (und andere Linux)
 ```bash
-# ffmpeg mit x264/x265 und Hardware-Encodern (Fedoras ffmpeg-free kann das nicht):
-sudo dnf install https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm \
-                 https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
-sudo dnf swap ffmpeg-free ffmpeg --allowerasing
-sudo dnf install intel-media-driver libvpl   # Intel Quick Sync (nonfree)
-tar xzf p5converter-linux-x64.tar.gz && ./install-linux.sh
+tar xzf p5converter-linux-x64.tar.gz
+./install-linux.sh
 ```
+Der Installer legt Programm **inklusive ffmpeg** nach `~/.local/opt/p5converter`, erstellt den Menüeintrag und installiert auf Wunsch (Abfrage) bei Intel-GPUs die Treiberpakete `intel-media-driver libvpl` per `dnf` (aktiviert dafür RPM Fusion). NVIDIA: proprietärer Treiber (`akmod-nvidia`). Entfernen: `uninstall-linux.sh`.
 
 ## Aus dem Quellcode
 ```bash
@@ -69,5 +73,5 @@ go build -o p5converter .     # benötigt ffmpeg + ffprobe im PATH
 Optionen/Umgebungsvariablen: `-listen/P5_LISTEN`, `-roots/P5_ROOTS`, `-ffmpeg-dir/P5_FFMPEG_DIR`, `-jobs/P5_JOBS`, `-no-browser/P5_NO_BROWSER`, `P5_PASSWORD`.
 
 ## Stand / bekannte Lücken
-* Software-Pfad (CPU) ist mit echten Dateien getestet. **GPU-Pfade (QSV/NVENC/VAAPI/AMF) und Windows-Messung sind implementiert, aber auf echter Hardware noch ungetestet** – bitte erste Läufe prüfen (Details-Ansicht eines Jobs zeigt den exakten ffmpeg-Befehl).
+* Software-Pfad (CPU) ist mit echten Dateien getestet. **GPU-Pfade (QSV/NVENC/VAAPI/AMF), Windows-Messung, Setup.exe und Docker-Image sind implementiert, aber noch nicht auf echter Hardware/in CI geprüft** – bitte erste Läufe prüfen (Details-Ansicht eines Jobs zeigt den exakten ffmpeg-Befehl).
 * Kein natives Fenster: Die Oberfläche läuft im Browser (Windows/Linux öffnen ihn automatisch).

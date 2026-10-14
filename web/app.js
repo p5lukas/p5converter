@@ -177,7 +177,7 @@ function renderFiles() {
   if (!list.length) el.innerHTML = `<div class="empty">Noch keine Dateien.<br>„+ Dateien“ oder „+ Ordner“ wählen.</div>`;
   else el.innerHTML = list.map((f, i) => `<div class="file"><span class="n" title="${esc(f.path)}">${esc(f.rel || f.path)}</span>
     <span class="muted small">${fmtSize(f.size)}</span>
-    ${S.world === 'video' ? `<button class="small" data-tr="${i}">Spuren${f.drop.size || f.defaultAudio != null ? ' ●' : ''}</button>` : ''}
+    ${S.world === 'video' ? `<button class="small" data-tr="${i}">Spuren${f.drop.size || f.defaultAudio != null ? ' ●' : ''}</button><button type="button" class="info" data-key="tracksBtn" aria-label="Erklärung anzeigen">i</button>` : ''}
     <button class="small ghost rm" data-rm="${i}">✕</button></div>`).join('');
   $$('#fileList [data-rm]').forEach(b => b.onclick = () => { list.splice(+b.dataset.rm, 1); renderFiles(); });
   $$('#fileList [data-tr]').forEach(b => b.onclick = () => openTracks(list[+b.dataset.tr]));
@@ -352,6 +352,69 @@ async function poll() {
   } catch (e) {} finally { polling = false; }
 }
 
+// ---------- info popovers ----------
+function infoBtn(key) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'info'; b.textContent = 'i'; b.dataset.key = key;
+  b.title = 'Erklärung'; b.setAttribute('aria-label', 'Erklärung anzeigen');
+  return b;
+}
+function decorateInfo() {
+  Object.keys(INFO).forEach(key => {
+    if (key === 'tracksBtn') return;
+    let target = null, after = null;
+    const el = document.getElementById(key);
+    if (el) {
+      const lab = el.closest('label');
+      if (!lab) return;
+      // after first text node or span of the label
+      after = [...lab.childNodes].find(n => (n.nodeType === 3 && n.textContent.trim()) || (n.nodeType === 1 && n.tagName === 'SPAN'));
+      target = lab;
+    } else {
+      const h = document.querySelector(`[data-info="${key}"]`);
+      if (!h) return;
+      h.appendChild(infoBtn(key)); return;
+    }
+    const b = infoBtn(key);
+    if (lab_isCheck(target)) {
+      if (after && after.nextSibling) target.insertBefore(b, after.nextSibling); else target.appendChild(b);
+    } else if (after && after.nodeType === 3) {
+      const wrap = document.createElement('span');
+      wrap.className = 'lt';
+      target.insertBefore(wrap, after);
+      wrap.appendChild(after); wrap.appendChild(b);
+    } else if (after) after.appendChild(b);
+    else target.insertBefore(b, target.firstChild);
+  });
+}
+const lab_isCheck = l => l.classList.contains('check');
+let popFor = null;
+function showInfo(btn) {
+  const pop = $('#infoPop');
+  if (popFor === btn) return hideInfo();
+  hideInfo();
+  const i = INFO[btn.dataset.key]; if (!i) return;
+  pop.innerHTML = `<h4>${i.t}</h4>${i.b}`;
+  pop.classList.remove('hidden');
+  const r = btn.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+  let x = Math.min(Math.max(8, r.left - 10), window.innerWidth - w - 8);
+  let y = Math.max(8, Math.min(r.bottom + 8, window.innerHeight - h - 8));
+  pop.style.left = x + 'px'; pop.style.top = y + 'px';
+  btn.classList.add('on'); popFor = btn;
+  if (btn.closest('dialog')) btn.closest('dialog').appendChild(pop); else document.body.appendChild(pop);
+}
+function hideInfo() {
+  const pop = $('#infoPop'); pop.classList.add('hidden');
+  if (popFor) popFor.classList.remove('on'); popFor = null;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('button.info');
+  if (b) { e.preventDefault(); e.stopPropagation(); showInfo(b); return; }
+  if (!e.target.closest('#infoPop')) hideInfo();
+}, true);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') hideInfo(); });
+window.addEventListener('scroll', hideInfo, true);
+
 // ---------- init ----------
 async function loadInfo() {
   S.info = await api('/api/info');
@@ -394,7 +457,7 @@ function outModeUI() {
   $('#structRow').classList.toggle('hidden', !c);
 }
 (async function init() {
-  loadSettings(); renderPresets(); wire();
+  loadSettings(); renderPresets(); decorateInfo(); wire();
   await loadInfo();
   if (!$('#outDir').value && S.info.roots && S.info.roots.length > 1) $('#outDir').value = S.info.roots[S.info.roots.length - 1];
   outModeUI(); setWorld(S.world); refreshAudioUI(); refreshVideoUI();

@@ -135,7 +135,7 @@
       </div>
       <label class="check" id="vHwDecRow"><input type="checkbox" id="vHwDec" checked> Hardware-Decoding nutzen (fällt bei Fehler automatisch zurück)</label>
 
-      <h3>Audiospuren</h3>
+      <h3 data-info="vAudioTracks">Audiospuren</h3>
       <div class="grid2">
         <label>Verarbeitung
           <select id="vAudioMode"><option value="copy">Passthrough (unverändert)</option><option value="encode">Neu kodieren</option></select>
@@ -148,7 +148,7 @@
           <input id="vAudioLangs" placeholder="leer = alle, z. B. ger,eng">
         </label>
       </div>
-      <h3>Untertitel</h3>
+      <h3 data-info="vSubTracks">Untertitel</h3>
       <div class="grid2">
         <label>Verarbeitung
           <select id="vSubMode"><option value="copy">Passthrough (alle behalten)</option><option value="none">Alle entfernen</option></select>
@@ -161,7 +161,7 @@
     </div>
 
     <div class="card hidden" id="hwCard">
-      <div class="card-h"><h2>Hardware</h2><button id="hwRedetect" class="small">Neu erkennen</button></div>
+      <div class="card-h"><h2 data-info="hwInfo">Hardware</h2><button id="hwRedetect" class="small">Neu erkennen</button></div>
       <div id="hwList"></div>
       <div id="hwGpus" class="muted small"></div>
     </div>
@@ -214,6 +214,8 @@
   </form>
 </dialog>
 
+<script src="info.js"></script>
 <script src="app.js"></script>
+<div id="infoPop" class="infopop hidden" role="dialog"></div>
 </body>
 </html>
