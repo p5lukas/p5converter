@@ -384,6 +384,7 @@ function pageAbout() {
   const b = (S.info && S.info.build) || {}, c = (S.info && S.info.config) || {};
   const link = (t, u) => u ? h('a', {href: u, target: '_blank', rel: 'noopener'}, t) : t;
   return h('div', {}, h('h2', {}, 'Info'),
+    h('img', {class: 'appicon', src: 'icon-192.png', width: 96, height: 96, alt: 'p5converter'}),
     h('div', {class: 'kv'},
       h('span', {}, 'Version'), h('b', {}, b.version || ''),
       h('span', {}, 'Branch'), link(b.branch || '–', b.branchUrl),

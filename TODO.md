@@ -30,6 +30,7 @@
 - [ ] Linux-App (Fedora KDE) mit eigener Oberfläche
 
 ## Erledigt
+- [x] 0.0.8: **Endgültiges App-Icon**: zwei zentrierte Discs (silberne Audio-CD + blaue Blu-ray) als Abzeichen; in allen Größen, Einstellungen → Info, README, Release-Text, Unraid-Icon. p5assets: oranger Komet (0.4.8 auf `dev`)
 - [x] 0.0.7: **Log-Fenster wie bei p5assets** (Seite, Kopfzeilen-Symbol mit Zähler, rotierendes Protokoll, Schwärzung von Geheimnissen)
 - [x] 0.0.7: **App-Icon wie p5assets** mit Abzeichen (zwei Pfeile) in allen Größen inkl. Apple-Touch- und Unraid-Icon; p5assets bekommt das Feuerball-Abzeichen im selben Aufbau (eigener Stand dort)
 - [x] 0.0.7: Beide Repos: Icon-Erzeugung als Skript (`tools/icons/make_icons.py`)

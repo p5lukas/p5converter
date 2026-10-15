@@ -430,3 +430,5 @@ button.danger{color:var(--bad);border-color:#ff4d5e66}
 @keyframes logpulse{0%,100%{box-shadow:0 0 14px var(--pulse),0 0 30px color-mix(in srgb,var(--pulse) 45%,transparent)}50%{box-shadow:0 0 26px var(--pulse),0 0 54px var(--pulse)}}
 @media(prefers-reduced-motion:reduce){.logbtn.alert-err,.logbtn.alert-warn{animation:none}.logbtn .cur{animation:none}}
 @media(max-width:700px){#viewLogs{padding:14px}.logview{height:calc(100vh - 380px)}}
+
+.appicon{display:block;border-radius:22px;margin:0 0 16px;box-shadow:0 0 24px var(--dim)}
