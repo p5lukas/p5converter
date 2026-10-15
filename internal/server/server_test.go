@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/p5lukas/p5converter/internal/ffmpeg"
+	"github.com/p5lukas/p5converter/internal/version"
 )
 
 func newTestServer(t *testing.T, roots []string) (*Server, *httptest.Server) {
@@ -20,7 +21,7 @@ func newTestServer(t *testing.T, roots []string) (*Server, *httptest.Server) {
 	if err != nil {
 		t.Skip("ffmpeg nicht installiert")
 	}
-	s := New("test", tl, roots, 2)
+	s := New(version.Get(), tl, roots, 2)
 	ts := httptest.NewServer(s.Handler())
 	t.Cleanup(ts.Close)
 	return s, ts
@@ -168,10 +169,37 @@ func TestHardwareRejectedAndCancel(t *testing.T) {
 	time.Sleep(1500 * time.Millisecond)
 	s.Jobs.CancelAll()
 	waitDone(t, s, 1)
-	if st := s.Jobs.Snapshot()[0].Status; st != "canceled" {
-		t.Errorf("status %s", st)
+	if j := s.Jobs.Snapshot()[0]; j.Status != "canceled" || j.Error != "" {
+		t.Errorf("status %s, error %q (abgebrochen darf keinen Fehlertext zeigen)", j.Status, j.Error)
 	}
 	if m, _ := filepath.Glob(filepath.Join(root, "o", "*")); len(m) != 0 {
 		t.Errorf("Reste nach Abbruch: %v", m)
+	}
+}
+
+func TestInfoNewsManifest(t *testing.T) {
+	_, ts := newTestServer(t, []string{t.TempDir()})
+	var info struct {
+		Version string                `json:"version"`
+		Build   struct{ Base string } `json:"build"`
+	}
+	resp, _ := http.Get(ts.URL + "/api/info")
+	json.NewDecoder(resp.Body).Decode(&info)
+	if info.Version == "" || info.Build.Base != version.Base {
+		t.Errorf("info: %+v", info)
+	}
+	var news []map[string]string
+	resp, _ = http.Get(ts.URL + "/api/news")
+	if err := json.NewDecoder(resp.Body).Decode(&news); err != nil || len(news) == 0 || news[0]["version"] == "" {
+		t.Errorf("news: %v %v", err, news)
+	}
+	resp, _ = http.Get(ts.URL + "/manifest.webmanifest")
+	var mf map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&mf); err != nil || mf["display"] != "standalone" {
+		t.Errorf("manifest: %v %v", err, mf)
+	}
+	resp, _ = http.Get(ts.URL + "/")
+	if resp.Header.Get("Cache-Control") != "no-cache" || resp.StatusCode != 200 {
+		t.Errorf("index: %d %q", resp.StatusCode, resp.Header.Get("Cache-Control"))
 	}
 }

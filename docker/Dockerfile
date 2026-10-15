@@ -3,8 +3,13 @@ FROM golang:1.24 AS build
 WORKDIR /src
 COPY go.mod ./
 COPY . .
-ARG VERSION=dev
-RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o /p5converter .
+ARG P5_TAG=
+ARG P5_BRANCH=
+ARG P5_COMMIT=
+RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w \
+  -X github.com/p5lukas/p5converter/internal/version.Tag=${P5_TAG} \
+  -X github.com/p5lukas/p5converter/internal/version.Branch=${P5_BRANCH} \
+  -X github.com/p5lukas/p5converter/internal/version.Commit=${P5_COMMIT}" -o /p5converter .
 
 # Ubuntu 24.04 ships ffmpeg 6.1 with x264/x265/SVT-AV1, VAAPI, QSV (libvpl) and NVENC (dynamic).
 FROM ubuntu:24.04

@@ -3,7 +3,7 @@
 Audio- und Video-Konverter mit Web-Oberfläche für **Unraid / Docker** – ein SoundConverter-Klon mit zusätzlicher Video-Welt.
 Ein einzelnes Go-Programm (nur Standardbibliothek) steuert **ffmpeg** an; das Docker-Image bringt alles mit (ffmpeg mit x264/x265/SVT-AV1, Intel-/AMD-Treiber für Quick Sync/VAAPI).
 
-> **Status: v0.0.x Vorabversion.** Windows- und Linux-Desktop-App (mit eigener Oberfläche) folgen später.
+> **Status: v0.0.x Vorabversion** (aktuell 0.0.2, siehe `CHANGELOG.md`). Windows- und Linux-Desktop-App (mit eigener Oberfläche) folgen später.
 
 ## Installation (Unraid)
 
@@ -24,6 +24,10 @@ docker run -d --name p5converter -p 8787:8787 \
 * Optional: `-e P5_PASSWORD=…` schützt die Oberfläche per Login (Benutzer `p5`). Trotzdem nicht ins Internet stellen.
 
 ## Funktionen
+
+### Design
+Gleiche Designlinie wie [p5assets](https://github.com/p5lukas/p5assets): Matrix-Theme, Audio und Video als eigene **Welten** mit Farbe und Planet (Wurmloch-Flug beim Wechsel), Übersicht mit Fortschrittsring und Live-Auslastung, Version und Neuigkeiten in der Fußzeile.
+Läuft auf Desktop, Handy und iPad (Hoch-/Querformat); auf iPhone/iPad per **Teilen → Zum Home-Bildschirm** als Web-App.
 
 ### Hilfe für Einsteiger
 Jede Einstellung hat einen kleinen **ⓘ**-Punkt mit einfacher Erklärung und Beispielen (z. B. wann 10 Bit sinnvoll ist).

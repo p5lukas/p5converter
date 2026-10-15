@@ -19,9 +19,8 @@ import (
 
 	"github.com/p5lukas/p5converter/internal/ffmpeg"
 	"github.com/p5lukas/p5converter/internal/server"
+	"github.com/p5lukas/p5converter/internal/version"
 )
-
-var version = "dev"
 
 func env(k, def string) string {
 	if v := os.Getenv(k); v != "" {
@@ -49,7 +48,7 @@ func main() {
 		return
 	}
 	if *showVersion {
-		fmt.Println("p5converter", version)
+		fmt.Println("p5converter", version.Get().Version)
 		return
 	}
 
@@ -67,7 +66,7 @@ func main() {
 			rs = append(rs, r)
 		}
 	}
-	srv := server.New(version, tools, rs, *jobsN)
+	srv := server.New(version.Get(), tools, rs, *jobsN)
 	if desktop {
 		srv.Quit = func() { time.Sleep(300 * time.Millisecond); os.Exit(0) }
 	}
@@ -90,7 +89,7 @@ func main() {
 		}
 	}
 	url := urlFor(ln.Addr().String())
-	log.Printf("p5converter %s – %s", version, tools.Version())
+	log.Printf("p5converter %s – %s", version.Get().Version, tools.Version())
 	log.Printf("Oberfläche: %s", url)
 	if !*noBrowser {
 		go func() { time.Sleep(400 * time.Millisecond); openWindow(url) }()

@@ -8,24 +8,18 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
-- [ ] **Port 8787** als Standard (umgesetzt in PR #3, wartet auf „leg los“ zum Mergen)
-- [ ] **Designlinie wie p5assets** (Referenz im Repo `p5lukas/p5assets`: `app/static/style.css`, `planets.js`, `index.html`):
-  - Matrix-Theme: dunkler Grund, Monospace-Schrift, Leuchteffekte (Glow), Labels mit `> `-Präfix, kantige 6-px-Rundungen
-  - gesamte Palette aus **einem Farbton `--h`** abgeleitet; jede „Welt“ hat ihre eigene Akzentfarbe
-  - **Welten-Umschalter Audio / Video** im Kopf (wie bei p5assets mit Planeten-Symbolen), Logo mit blinkendem Cursor
-  - Toasts, Drop-Zone/Dateiauswahl, Onboarding/Schritte falls sinnvoll
-  - Handy/iPad: Web-App-Fähigkeit (manifest, apple-touch-icon, Safe-Areas), eigene Mobilansichten
-  - ⓘ-Hilfetexte im neuen Stil beibehalten
-- [ ] **Versionierung wie p5assets** (Entscheidung Nutzer: ja): Versionsdatei, `CHANGELOG.md`, „Neuigkeiten“-Anzeige in der Oberfläche; Version/Branch/Commit im Footer anzeigen
 - [ ] Branch-Modell: **erstmal nur `main`**, bis alles stabil läuft. Auf Zuruf des Nutzers dann wie p5assets: Feature-Branch → `dev` (Image `:dev`) → `main` (Image `:latest`); optional multi-arch (amd64/arm64)
+- [ ] Design weiter verfeinern nach Rückmeldung vom Gerät (iPhone/iPad Safari und Web-App)
 
 ## Vom Nutzer zu prüfen (nicht in der Sandbox möglich)
+- [ ] iPhone/iPad: Safari und Web-App (Safe-Areas, Statusleiste, Pull-to-Refresh) auf dem Gerät ansehen
 - [ ] GPU-Encoding auf echter Hardware (Intel Quick Sync via `/dev/dri`, NVIDIA via `--runtime=nvidia`)
-- [ ] ghcr-Paket `p5converter` auf öffentlich stellen (sonst kann Unraid das Image nicht ziehen)
 
 ## Später
 - [ ] Windows-App mit eigener Oberfläche
 - [ ] Linux-App (Fedora KDE) mit eigener Oberfläche
 
 ## Erledigt
+- [x] 0.0.2: Port 8787, Designlinie wie p5assets (Matrix-Theme, Welten mit Planeten, Übersicht, Handy/iPad, Web-App), Versionierung (Version, CHANGELOG, Neuigkeiten, Fußzeile)
+- [x] ghcr-Paket ist öffentlich (geprüft)
 - [x] v0.0.1 als Pre-Release (Docker-Image + Unraid-Template)

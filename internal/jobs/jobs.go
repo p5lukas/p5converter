@@ -452,7 +452,7 @@ func (m *Manager) run(j *Job) {
 	if err != nil {
 		os.Remove(tmp)
 		if m.wasCancelled(j) {
-			m.update(j, func() { j.Status = "canceled"; j.Ended = time.Now() })
+			m.update(j, func() { j.Status = "canceled"; j.Ended = time.Now(); j.Error = "" })
 			return
 		}
 		m.fail(j, err)

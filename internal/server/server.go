@@ -3,6 +3,7 @@ package server
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"io/fs"
 	"net/http"
@@ -18,11 +19,12 @@ import (
 	"github.com/p5lukas/p5converter/internal/ffmpeg"
 	"github.com/p5lukas/p5converter/internal/hw"
 	"github.com/p5lukas/p5converter/internal/jobs"
+	"github.com/p5lukas/p5converter/internal/version"
 	"github.com/p5lukas/p5converter/web"
 )
 
 type Server struct {
-	Version string
+	Build   version.Info
 	Tools   ffmpeg.Tools
 	Det     *hw.Detector
 	Sampler *hw.Sampler
@@ -33,8 +35,8 @@ type Server struct {
 	ffver   string
 }
 
-func New(version string, t ffmpeg.Tools, roots []string, concurrency int) *Server {
-	s := &Server{Version: version, Tools: t, Det: hw.NewDetector(t), Sampler: hw.NewSampler(), Roots: roots}
+func New(build version.Info, t ffmpeg.Tools, roots []string, concurrency int) *Server {
+	s := &Server{Build: build, Tools: t, Det: hw.NewDetector(t), Sampler: hw.NewSampler(), Roots: roots}
 	s.Jobs = jobs.New(t, s.Sampler, concurrency)
 	s.enc = t.Encoders()
 	s.ffver = t.Version()
@@ -75,7 +77,17 @@ func (s *Server) allowed(p string) bool {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	sub, _ := fs.Sub(web.FS, ".")
-	mux.Handle("GET /", http.FileServerFS(sub))
+	static := http.FileServerFS(sub)
+	mux.Handle("GET /", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-cache") // always revalidate (ETag): new versions show up immediately
+		static.ServeHTTP(w, r)
+	}))
+	mux.HandleFunc("GET /manifest.webmanifest", s.manifest)
+	mux.HandleFunc("GET /api/news", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "no-store")
+		w.Write(newsJSON)
+	})
 	mux.HandleFunc("GET /api/info", s.info)
 	mux.HandleFunc("POST /api/hw/detect", func(w http.ResponseWriter, r *http.Request) {
 		go s.Det.Detect()
@@ -136,6 +148,25 @@ func csrfGuard(next http.Handler) http.Handler {
 	})
 }
 
+//go:embed news.json
+var newsJSON []byte
+
+// manifest makes the UI installable as an app on the home screen (iPhone/iPad: Share > Add to Home Screen).
+func (s *Server) manifest(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/manifest+json")
+	w.Header().Set("Cache-Control", "public, max-age=3600")
+	json.NewEncoder(w).Encode(map[string]any{
+		"name": "p5converter", "short_name": "p5converter", "description": "Audio und Video konvertieren (ffmpeg, GPU)",
+		"start_url": "/", "scope": "/", "display": "standalone", "orientation": "any", "lang": "de",
+		"background_color": "#02100a", "theme_color": "#02100a",
+		"icons": []map[string]string{
+			{"src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+			{"src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+			{"src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+		},
+	})
+}
+
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
@@ -159,7 +190,7 @@ func (s *Server) info(w http.ResponseWriter, r *http.Request) {
 		enc[k] = s.enc[k]
 	}
 	writeJSON(w, map[string]any{
-		"version": s.Version, "ffmpeg": s.ffver, "os": runtime.GOOS, "roots": s.Roots, "home": home,
+		"version": s.Build.Version, "build": s.Build, "ffmpeg": s.ffver, "os": runtime.GOOS, "roots": s.Roots, "home": home,
 		"encoders": enc, "hw": s.Det.Result(), "concurrency": s.Jobs.Concurrency(), "canQuit": s.Quit != nil,
 	})
 }

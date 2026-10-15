@@ -23,6 +23,15 @@ for b in d["hw"]["backends"]:
     print(" ", b["id"], sorted(b["codecs"]), (b.get("detail") or "")[:100])
 assert d["hw"]["backends"][0]["codecs"].get("hevc"), "CPU-HEVC fehlt"
 '
+# Version, Neuigkeiten, Web-App-Manifest und Oberfläche
+curl -fs localhost:8787/api/info | python3 -c '
+import json,sys
+d=json.load(sys.stdin)
+assert d["version"].startswith(d["build"]["base"]), d["version"]
+print("Version:", d["version"])'
+curl -fs localhost:8787/api/news | python3 -c 'import json,sys; n=json.load(sys.stdin); assert len(n)>0 and n[0]["version"]'
+curl -fs localhost:8787/manifest.webmanifest | python3 -c 'import json,sys; assert json.load(sys.stdin)["display"]=="standalone"'
+curl -fs -o /dev/null localhost:8787/icon-192.png && curl -fs localhost:8787/ | grep -q "p5converter" || { echo "Oberfläche/Icons fehlen"; exit 1; }
 H='Content-Type: application/json'
 curl -fs -X POST -H "$H" localhost:8787/api/jobs -d '{"kind":"video","items":[{"path":"/media/test.mkv"}],"output":{"dir":"/output","exists":"rename"},"video":{"container":"mkv","codec":"hevc","backend":"cpu","crf":30,"preset":"veryfast","bitDepth":10,"height":180,"audioMode":"copy","subMode":"copy"}}'
 curl -fs -X POST -H "$H" localhost:8787/api/jobs -d '{"kind":"audio","items":[{"path":"/media/song.flac"}],"output":{"dir":"/output","pattern":"{artist}/{title}"},"audio":{"format":"mp3","mode":"vbr","quality":2}}'
