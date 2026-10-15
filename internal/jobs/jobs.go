@@ -4,6 +4,7 @@ package jobs
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -63,6 +64,9 @@ type Job struct {
 	HWDecodeFallback bool `json:"hwDecodeFallback"`
 	// Decoder: "hardware" or "software" (empty: nothing is decoded, e.g. copy or audio).
 	Decoder string `json:"decoder,omitempty"`
+	// DecoderName/DecoderConfirmed: the decoder ffmpeg itself reported (e.g. hevc_qsv); confirmed = a hardware decoder.
+	DecoderName      string `json:"decoderName,omitempty"`
+	DecoderConfirmed bool   `json:"decoderConfirmed"`
 	// Attempts: short notes about earlier tries that failed before the current one (shown calmly, not as an error).
 	Attempts []string  `json:"attempts,omitempty"`
 	Cmd      string    `json:"cmd"`
@@ -89,46 +93,59 @@ type Manager struct {
 	mu          sync.Mutex
 	jobs        []*Job
 	seq         int
-	concurrency int
-	running     int
+	concurrency map[string]int // per world: audio and video have their own queue
+	running     map[string]int
 	reserved    map[string]string // output path -> job id (queued/running jobs)
+	partialFile string
+	partials    map[string]bool
 }
 
 func New(t ffmpeg.Tools, s *hw.Sampler, concurrency int) *Manager {
-	m := &Manager{tools: t, sampler: s, concurrency: concurrency, reserved: map[string]string{}}
+	m := &Manager{tools: t, sampler: s, reserved: map[string]string{},
+		concurrency: map[string]int{"audio": concurrency, "video": concurrency}, running: map[string]int{}}
 	go m.samplerLoop()
 	return m
 }
 
 func (m *Manager) samplerLoop() {
 	for {
-		time.Sleep(1500 * time.Millisecond)
+		m.sampler.Sample() // always: a frozen value from the last job would look like a measurement
 		m.mu.Lock()
-		r := m.running
+		r := m.running["audio"] + m.running["video"]
 		m.mu.Unlock()
 		if r > 0 {
-			m.sampler.Sample()
+			time.Sleep(1500 * time.Millisecond)
+		} else {
+			time.Sleep(3 * time.Second)
 		}
 	}
 }
 
-func (m *Manager) SetConcurrency(n int) {
+func clampConc(n int) int {
 	if n < 1 {
-		n = 1
+		return 1
 	}
 	if n > 8 {
-		n = 8
+		return 8
+	}
+	return n
+}
+
+// SetConcurrency sets the parallel jobs of one world ("audio" | "video").
+func (m *Manager) SetConcurrency(kind string, n int) {
+	if kind != "audio" && kind != "video" {
+		return
 	}
 	m.mu.Lock()
-	m.concurrency = n
+	m.concurrency[kind] = clampConc(n)
 	m.mu.Unlock()
 	m.schedule()
 }
 
-func (m *Manager) Concurrency() int {
+func (m *Manager) Concurrency(kind string) int {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	return m.concurrency
+	return m.concurrency[kind]
 }
 
 func (m *Manager) Submit(req *Request) []string {
@@ -176,11 +193,14 @@ func (m *Manager) Cancel(id string) {
 	}
 }
 
-func (m *Manager) CancelAll() {
+// CancelAll cancels the jobs of one world (kind "" = both).
+func (m *Manager) CancelAll(kind string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	for _, j := range m.jobs {
-		m.cancelLocked(j)
+		if kind == "" || j.Kind == kind {
+			m.cancelLocked(j)
+		}
 	}
 }
 
@@ -197,12 +217,13 @@ func (m *Manager) cancelLocked(j *Job) {
 	}
 }
 
-func (m *Manager) ClearFinished() {
+// ClearFinished removes finished jobs of one world (kind "" = both).
+func (m *Manager) ClearFinished(kind string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	var keep []*Job
 	for _, j := range m.jobs {
-		if j.Status == "queued" || j.Status == "running" {
+		if j.Status == "queued" || j.Status == "running" || (kind != "" && j.Kind != kind) {
 			keep = append(keep, j)
 		}
 	}
@@ -212,27 +233,30 @@ func (m *Manager) ClearFinished() {
 func (m *Manager) schedule() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	for m.running < m.concurrency {
-		var next *Job
-		for _, j := range m.jobs {
-			if j.Status == "queued" {
-				next = j
+	// each world has its own queue and its own number of parallel jobs
+	for _, kind := range []string{"audio", "video"} {
+		for m.running[kind] < m.concurrency[kind] {
+			var next *Job
+			for _, j := range m.jobs {
+				if j.Status == "queued" && j.Kind == kind {
+					next = j
+					break
+				}
+			}
+			if next == nil {
 				break
 			}
+			next.Status = "running"
+			next.Started = time.Now()
+			m.running[kind]++
+			go func(j *Job) {
+				m.run(j)
+				m.mu.Lock()
+				m.running[j.Kind]--
+				m.mu.Unlock()
+				m.schedule()
+			}(next)
 		}
-		if next == nil {
-			return
-		}
-		next.Status = "running"
-		next.Started = time.Now()
-		m.running++
-		go func(j *Job) {
-			m.run(j)
-			m.mu.Lock()
-			m.running--
-			m.mu.Unlock()
-			m.schedule()
-		}(next)
 	}
 }
 
@@ -359,11 +383,19 @@ func (m *Manager) run(j *Job) {
 	}
 	defer m.release(out)
 	m.update(j, func() { j.Output = out })
+	newDirs := missingDirs(filepath.Dir(out))
 	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
 		m.fail(j, err)
 		return
 	}
 	tmp := out + ".part"
+	m.trackPartial(tmp, true)
+	defer m.trackPartial(tmp, false)
+	// folders this job created are removed again when nothing came out of it (cancel or error)
+	cleanup := func() {
+		os.Remove(tmp)
+		m.removeEmptyDirs(newDirs, out)
+	}
 
 	type attempt struct {
 		hwdec bool
@@ -432,7 +464,7 @@ func (m *Manager) run(j *Job) {
 		})
 	}
 	if err != nil {
-		os.Remove(tmp)
+		cleanup()
 		if m.wasCancelled(j) {
 			m.update(j, func() { j.Status = "canceled"; j.Ended = time.Now(); j.Error = "" })
 			return
@@ -441,7 +473,7 @@ func (m *Manager) run(j *Job) {
 		return
 	}
 	if err := os.Rename(tmp, out); err != nil {
-		os.Remove(tmp)
+		cleanup()
 		m.fail(j, err)
 		return
 	}
@@ -485,6 +517,7 @@ func (m *Manager) exec(ctx context.Context, j *Job, args []string, duration floa
 		j.Cmd = "ffmpeg " + build.Quote(args)
 		j.MapLines = nil
 		j.EncoderConfirmed = false
+		j.DecoderName, j.DecoderConfirmed = "", false
 	})
 	if err := cmd.Start(); err != nil {
 		return err
@@ -513,6 +546,11 @@ func (m *Manager) exec(ctx context.Context, j *Job, args []string, duration floa
 					j.MapLines = append(j.MapLines, line)
 					if j.Encoder != "" && strings.Contains(line, "("+j.Encoder+")") {
 						j.EncoderConfirmed = true
+						// the same line names the decoder: "(hevc (hevc_qsv) -> hevc (hevc_qsv))"
+						if name := decoderOf(line); name != "" {
+							j.DecoderName = name
+							j.DecoderConfirmed = isHWDecoder(name)
+						}
 					}
 				}
 			})
@@ -580,4 +618,111 @@ func maxf(a, b float64) float64 {
 		return a
 	}
 	return b
+}
+
+// missingDirs lists the parts of dir that do not exist yet, deepest first.
+func missingDirs(dir string) []string {
+	var out []string
+	for d := filepath.Clean(dir); ; d = filepath.Dir(d) {
+		if _, err := os.Stat(d); err == nil || filepath.Dir(d) == d {
+			break
+		}
+		out = append(out, d)
+	}
+	return out
+}
+
+// removeEmptyDirs removes folders a failed job created, unless another job is still writing below them.
+func (m *Manager) removeEmptyDirs(dirs []string, own string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, d := range dirs {
+		busy := false
+		for out := range m.reserved {
+			if out != own && strings.HasPrefix(out, d+string(filepath.Separator)) {
+				busy = true
+				break
+			}
+		}
+		if busy {
+			return
+		}
+		if os.Remove(d) != nil { // not empty: stop, the parents are not empty either
+			return
+		}
+	}
+}
+
+// ---- unfinished files survive a crash/restart: remember them and clean up at the next start ----
+
+// SetPartialLog enables tracking of .part files in file (usually /config/partials.json) and removes
+// the ones a previous run left behind. Only files this program created itself are touched.
+func (m *Manager) SetPartialLog(file string) (removed int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.partialFile = file
+	if file == "" {
+		return 0
+	}
+	var old []string
+	if b, err := os.ReadFile(file); err == nil {
+		json.Unmarshal(b, &old)
+	}
+	for _, p := range old {
+		if strings.HasSuffix(p, ".part") {
+			if os.Remove(p) == nil {
+				removed++
+			}
+		}
+	}
+	m.partials = map[string]bool{}
+	m.savePartialsLocked()
+	return removed
+}
+
+func (m *Manager) trackPartial(path string, on bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.partialFile == "" {
+		return
+	}
+	if on {
+		m.partials[path] = true
+	} else {
+		delete(m.partials, path)
+	}
+	m.savePartialsLocked()
+}
+
+func (m *Manager) savePartialsLocked() {
+	list := make([]string, 0, len(m.partials))
+	for p := range m.partials {
+		list = append(list, p)
+	}
+	b, _ := json.Marshal(list)
+	tmp := m.partialFile + ".tmp"
+	if os.WriteFile(tmp, b, 0o644) == nil {
+		os.Rename(tmp, m.partialFile)
+	}
+}
+
+var decRe = regexp.MustCompile(`\(\w+ \(([\w.-]+)\) -> `)
+
+// decoderOf extracts the decoder name from ffmpeg's "Stream mapping" line ("" if absent).
+func decoderOf(line string) string {
+	if m := decRe.FindStringSubmatch(line); m != nil {
+		return m[1]
+	}
+	return ""
+}
+
+// isHWDecoder: ffmpeg names real hardware decoders (…_qsv, …_cuvid) in that line; plain "native" is software
+// (VAAPI/CUDA hwaccels are not shown there, so they cannot be confirmed this way).
+func isHWDecoder(name string) bool {
+	for _, suf := range []string{"_qsv", "_cuvid", "_vaapi", "_amf", "_d3d11va"} {
+		if strings.HasSuffix(name, suf) {
+			return true
+		}
+	}
+	return false
 }

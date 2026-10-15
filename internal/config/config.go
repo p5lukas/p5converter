@@ -30,8 +30,9 @@ type Preset struct {
 type Settings struct {
 	Worlds           map[string]World `json:"worlds"`
 	WorldOrder       []string         `json:"worldOrder"`
-	StartWorld       string           `json:"startWorld"` // last | audio | video
-	Concurrency      int              `json:"concurrency"`
+	StartWorld       string           `json:"startWorld"`       // last | audio | video
+	Concurrency      int              `json:"concurrency"`      // parallel video jobs
+	ConcurrencyAudio int              `json:"concurrencyAudio"` // parallel audio jobs
 	DefaultOutDir    string           `json:"defaultOutDir"`
 	ShowNews         bool             `json:"showNews"`
 	PreferredBackend string           `json:"preferredBackend"` // auto | cpu | qsv | nvenc | vaapi | amf
@@ -178,6 +179,9 @@ func Validate(in Settings) (Settings, error) {
 	}
 	if !contains([]string{"last", "audio", "video"}, out.StartWorld) {
 		out.StartWorld = "last"
+	}
+	if out.ConcurrencyAudio < 0 || out.ConcurrencyAudio > 8 {
+		return Settings{}, errors.New("Parallele Audio-Aufträge: 1–8")
 	}
 	if out.Concurrency < 0 || out.Concurrency > 8 {
 		return Settings{}, errors.New("Parallele Aufträge: 1–8")

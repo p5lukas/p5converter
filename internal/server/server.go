@@ -46,10 +46,17 @@ type Server struct {
 func New(build version.Info, t ffmpeg.Tools, roots []string, concurrency int, configDir string) *Server {
 	s := &Server{Build: build, Tools: t, Det: hw.NewDetector(t), Sampler: hw.NewSampler(), Roots: roots,
 		Settings: config.Open(configDir), Auth: auth.New(configDir)}
-	if c := s.Settings.Get().Concurrency; c > 0 {
-		concurrency = c // the value saved in the settings wins over the start default
-	}
 	s.Jobs = jobs.New(t, s.Sampler, concurrency)
+	cfg := s.Settings.Get()
+	if cfg.Concurrency > 0 { // the values saved in the settings win over the start default
+		s.Jobs.SetConcurrency("video", cfg.Concurrency)
+	}
+	if cfg.ConcurrencyAudio > 0 {
+		s.Jobs.SetConcurrency("audio", cfg.ConcurrencyAudio)
+	}
+	if s.Settings.Persistent() { // unfinished .part files of a crashed run are removed at start
+		s.Jobs.SetPartialLog(filepath.Join(configDir, "partials.json"))
+	}
 	s.enc = t.Encoders()
 	s.ffver = t.Version()
 	go s.Det.Detect()
@@ -117,11 +124,15 @@ func (s *Server) Handler() http.Handler {
 		writeJSON(w, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("POST /api/jobs/cancel-all", func(w http.ResponseWriter, r *http.Request) {
-		s.Jobs.CancelAll()
+		var b struct{ Kind string }
+		json.NewDecoder(r.Body).Decode(&b)
+		s.Jobs.CancelAll(b.Kind)
 		writeJSON(w, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("POST /api/jobs/clear", func(w http.ResponseWriter, r *http.Request) {
-		s.Jobs.ClearFinished()
+		var b struct{ Kind string }
+		json.NewDecoder(r.Body).Decode(&b)
+		s.Jobs.ClearFinished(b.Kind)
 		writeJSON(w, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("POST /api/quit", func(w http.ResponseWriter, r *http.Request) {
@@ -133,11 +144,18 @@ func (s *Server) Handler() http.Handler {
 		go s.Quit()
 	})
 	mux.HandleFunc("POST /api/concurrency", func(w http.ResponseWriter, r *http.Request) {
-		var b struct{ N int }
+		var b struct {
+			Kind string
+			N    int
+		}
 		json.NewDecoder(r.Body).Decode(&b)
-		s.Jobs.SetConcurrency(b.N)
+		if b.Kind != "audio" && b.Kind != "video" {
+			httpErr(w, 400, "kind muss audio oder video sein")
+			return
+		}
+		s.Jobs.SetConcurrency(b.Kind, b.N)
 		cfg := s.Settings.Get()
-		cfg.Concurrency = s.Jobs.Concurrency()
+		cfg.Concurrency, cfg.ConcurrencyAudio = s.Jobs.Concurrency("video"), s.Jobs.Concurrency("audio")
 		s.Settings.Put(cfg)
 		writeJSON(w, map[string]bool{"ok": true})
 	})
@@ -217,7 +235,7 @@ func (s *Server) info(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, map[string]any{
 		"version": s.Build.Version, "build": s.Build, "ffmpeg": s.ffver, "os": runtime.GOOS, "roots": s.Roots, "home": home,
-		"encoders": enc, "hw": s.Det.Result(), "concurrency": s.Jobs.Concurrency(), "canQuit": s.Quit != nil,
+		"encoders": enc, "hw": s.Det.Result(), "concurrency": s.concurrencies(), "canQuit": s.Quit != nil,
 		"config": map[string]any{"persistent": s.Settings.Persistent(), "dir": s.Settings.Dir()}, "authEnabled": s.Auth.Enabled(),
 	})
 }
@@ -431,9 +449,13 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{"ids": ids})
 }
 
+func (s *Server) concurrencies() map[string]int {
+	return map[string]int{"audio": s.Jobs.Concurrency("audio"), "video": s.Jobs.Concurrency("video")}
+}
+
 func (s *Server) state(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{
-		"jobs": s.Jobs.Snapshot(), "stats": s.Sampler.Latest(), "concurrency": s.Jobs.Concurrency(),
+		"jobs": s.Jobs.Snapshot(), "stats": s.Sampler.Latest(), "concurrency": s.concurrencies(),
 	})
 }
 
@@ -455,7 +477,10 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if out.Concurrency > 0 {
-		s.Jobs.SetConcurrency(out.Concurrency)
+		s.Jobs.SetConcurrency("video", out.Concurrency)
+	}
+	if out.ConcurrencyAudio > 0 {
+		s.Jobs.SetConcurrency("audio", out.ConcurrencyAudio)
 	}
 	writeJSON(w, map[string]any{"settings": out, "persistent": s.Settings.Persistent()})
 }

@@ -340,3 +340,17 @@ button.small .ic,.blist .ic{width:1.3em;height:1.3em}
   #viewRename{padding:14px}
 }
 .presets .ic{width:1.35em;height:1.35em}
+.qworld{color:var(--muted);font-weight:400;margin-left:8px}
+.wbadge{margin-left:8px;min-width:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:var(--bg);font-size:11px;font-weight:700;line-height:18px;text-align:center}
+
+/* Auftragskarten: grün = geklappt, gelb = Hinweis/Ausweichweg/abgebrochen, rot = Fehler */
+.job.done{border-color:var(--ok)}
+.job.done.note,.job.canceled,.job.skipped{border-color:var(--warn)}
+.job.canceled .bar>i,.job.skipped .bar>i,.job.done.note .bar>i{background:var(--warn);box-shadow:0 0 10px #ffd24a55}
+.job.done .bar>i{background:var(--ok)}
+:root{--good:#3ddc84}
+.chip.ok{color:var(--good);border-color:var(--good);background:rgba(61,220,132,.1)}
+.job.done{border-color:var(--good)}
+.job.done .bar>i{background:var(--good);box-shadow:0 0 10px rgba(61,220,132,.4)}
+.job.done.note .bar>i{background:var(--warn);box-shadow:0 0 10px #ffd24a55}
+.job.done .bar{background:var(--line)}

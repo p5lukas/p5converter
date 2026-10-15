@@ -174,13 +174,16 @@ func TestHardwareRejectedAndCancel(t *testing.T) {
 		t.Fatalf("submit %d", r.StatusCode)
 	}
 	time.Sleep(1500 * time.Millisecond)
-	s.Jobs.CancelAll()
+	s.Jobs.CancelAll("")
 	waitDone(t, s, 1)
 	if j := s.Jobs.Snapshot()[0]; j.Status != "canceled" || j.Error != "" {
 		t.Errorf("status %s, error %q (abgebrochen darf keinen Fehlertext zeigen)", j.Status, j.Error)
 	}
 	if m, _ := filepath.Glob(filepath.Join(root, "o", "*")); len(m) != 0 {
 		t.Errorf("Reste nach Abbruch: %v", m)
+	}
+	if _, err := os.Stat(filepath.Join(root, "o")); err == nil {
+		t.Error("vom Auftrag angelegter leerer Zielordner blieb nach dem Abbruch stehen")
 	}
 }
 
@@ -361,8 +364,8 @@ func TestSettingsEndpoint(t *testing.T) {
 	if r, _ := doJSON(t, c, "PUT", ts.URL+"/api/settings", got.Settings); r.StatusCode != 200 {
 		t.Fatalf("PUT: %d", r.StatusCode)
 	}
-	if s.Jobs.Concurrency() != 3 {
-		t.Errorf("parallele Aufträge nicht übernommen: %d", s.Jobs.Concurrency())
+	if s.Jobs.Concurrency("video") != 3 {
+		t.Errorf("parallele Aufträge nicht übernommen: %d", s.Jobs.Concurrency("video"))
 	}
 	if now := s.Settings.Get(); now.Worlds["video"].Name != "Filme" || now.Presets[0].Name != "Mein Archiv" {
 		t.Errorf("nicht gespeichert: %+v", now.Worlds)
