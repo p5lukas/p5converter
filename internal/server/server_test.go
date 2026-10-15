@@ -463,7 +463,10 @@ func TestStateCarriesSavedTotals(t *testing.T) {
 	}
 	var st struct {
 		Saved struct {
-			Video struct{ Count int; In, Out int64 }
+			Video struct {
+				Count   int
+				In, Out int64
+			}
 			Audio struct{ Count int }
 		}
 		Concurrency map[string]int
