@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>p5converter</Name>
+  <Repository>ghcr.io/p5lukas/p5converter:latest</Repository>
+  <Registry>https://github.com/p5lukas/p5converter/pkgs/container/p5converter</Registry>
+  <Network>bridge</Network>
+  <Privileged>false</Privileged>
+  <TemplateURL>https://raw.githubusercontent.com/p5lukas/p5converter/main/unraid/p5converter.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/p5lukas/p5converter/main/unraid/icon.svg</Icon>
+  <Support>https://github.com/p5lukas/p5converter/issues</Support>
+  <Project>https://github.com/p5lukas/p5converter</Project>
+  <Overview>Audio- und Video-Konverter mit Web-Oberfläche (ffmpeg). Audio wie SoundConverter, Video nach MKV mit Auflösung, CRF, 10 Bit, x264/x265/AV1 und GPU-Encoding (Intel Quick Sync, NVIDIA NVENC, VAAPI).</Overview>
+  <Category>MediaApp:Video MediaApp:Music Tools:</Category>
+  <WebUI>http://[IP]:[PORT:8484]/</WebUI>
+  <ExtraParams>--device=/dev/dri</ExtraParams>
+  <PostArgs/>
+  <Config Name="WebUI-Port" Target="8484" Default="8484" Mode="tcp" Description="Port der Weboberfläche" Type="Port" Display="always" Required="true">8484</Config>
+  <Config Name="Medien" Target="/media" Default="/mnt/user" Mode="rw" Description="Quellmedien (Lese-/Schreibzugriff, falls Quelle gelöscht oder daneben gespeichert werden soll)" Type="Path" Display="always" Required="true">/mnt/user</Config>
+  <Config Name="Ausgabe" Target="/output" Default="/mnt/user/appdata/p5converter/output" Mode="rw" Description="Standard-Zielordner" Type="Path" Display="always" Required="true">/mnt/user/appdata/p5converter/output</Config>
+  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="Benutzer-ID (Unraid: 99 = nobody)" Type="Variable" Display="advanced" Required="false">99</Config>
+  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Gruppen-ID (Unraid: 100 = users)" Type="Variable" Display="advanced" Required="false">100</Config>
+  <Config Name="Parallele Jobs" Target="P5_JOBS" Default="1" Mode="" Description="Gleichzeitige Konvertierungen" Type="Variable" Display="advanced" Required="false">1</Config>
+  <Config Name="Passwort (optional)" Target="P5_PASSWORD" Default="" Mode="" Description="Schützt die Oberfläche per Login (Benutzer: p5)" Type="Variable" Display="advanced" Required="false"/>
+  <Config Name="NVIDIA GPU" Target="NVIDIA_VISIBLE_DEVICES" Default="" Mode="" Description="Nur für NVENC: GPU-UUID oder 'all'. Zusätzlich bei Extra Parameters '--runtime=nvidia' ergänzen (Nvidia-Driver-Plugin nötig)." Type="Variable" Display="advanced" Required="false"/>
+</Container>
