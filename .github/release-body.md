@@ -1,3 +1,5 @@
+![p5converter](https://raw.githubusercontent.com/p5lukas/p5converter/main/web/icon-512.png)
+
 ## p5converter – Vorabversion (Pre-Release)
 
 Audio- und Video-Konverter mit Web-Oberfläche für **Unraid / Docker**. Ein SoundConverter-Klon plus Video-Welt (MKV, x264/x265/AV1, CRF, 10 Bit, Auflösung, Audio-/Untertitel-Spuren) und GPU-Encoding (Intel Quick Sync, NVIDIA NVENC, VAAPI).

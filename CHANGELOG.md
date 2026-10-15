@@ -1,5 +1,12 @@
 # Änderungen
 
+## 0.0.8 – 2026-10-15
+
+**Geändert**
+- **App-Icon**: Abzeichen unten rechts sind jetzt **zwei exakt zentrierte Scheiben** – silberne Audio-CD und blaue Blu-ray – statt der zwei Pfeile; alle Größen neu (Favicon, 192/512, Apple-Touch-Icon für die iPhone/iPad-Web-App, Unraid-Icon `unraid/icon.png`)
+- Das Icon steht auch in **Einstellungen → Info**, in der **README** und im **Release-Text**
+- Icon-Skript `tools/icons/make_icons.py` erzeugt beide Apps (p5converter: Discs, p5assets: oranger Flammen-Komet)
+
 ## 0.0.7 – 2026-10-15
 
 **Neu**

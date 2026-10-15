@@ -2,7 +2,7 @@
 """Erzeugt alle App-Icons (SVG-Quelle + PNG-Größen) für p5assets und p5converter nach demselben Muster.
 
 Aufbau wie p5assets: abgerundetes Quadrat, dunkler Matrix-Regen, grüner leuchtender Poster-Rahmen im Hochformat
-mit „p5_“. Unterschied: unten rechts ein Abzeichen – p5converter: zwei Pfeile ⇄, p5assets: Feuerball/Komet.
+mit „p5_“. Unterschied: unten rechts ein Abzeichen – p5converter: silberne Audio-CD + blaue Blu-ray (Audio und Video), p5assets: oranger Flammen-Komet (Kometa).
 Das „p5“ ist etwas kleiner als beim alten Icon, damit das Abzeichen Platz hat.
 
 Aufruf:  python3 make_icons.py <converter|assets> <ausgabeverzeichnis> [--png-dir DIR ...]
@@ -40,26 +40,40 @@ def rain(seed, w=512, h=512):
         x += rnd.randint(26, 36)
     return "\n".join(out)
 
+def disc(x, y, r, typ):
+    """Scheibe mit Glanzbögen und Mittelloch: typ 'bd' = blaue Blu-ray, 'cd' = silberne Audio-CD."""
+    fill = "url(#disc)" if typ == "bd" else "url(#cdsil)"
+    edge = "#9fd0ff" if typ == "bd" else "#f2f6fb"
+    rings = ("#bfe0ff" if typ == "bd" else "#ffffff")
+    extra = ""
+    if typ == "cd":  # leichter Regenbogen-Schimmer wie bei einer CD
+        extra = (f'<path d="M{x-r*.72:.1f} {y+r*.2:.1f} A{r*.74:.1f} {r*.74:.1f} 0 0 1 {x-r*.1:.1f} {y-r*.73:.1f}" fill="none" stroke="#ff9ad8" stroke-opacity=".55" stroke-width="5" stroke-linecap="round"/>'
+                 f'<path d="M{x+r*.72:.1f} {y-r*.15:.1f} A{r*.74:.1f} {r*.74:.1f} 0 0 1 {x+r*.2:.1f} {y+r*.7:.1f}" fill="none" stroke="#7fe0ff" stroke-opacity=".55" stroke-width="5" stroke-linecap="round"/>')
+    return (f'<circle cx="{x}" cy="{y}" r="{r}" fill="{fill}" stroke="{edge}" stroke-width="3"/>'
+            f'<circle cx="{x}" cy="{y}" r="{r-11}" fill="none" stroke="{rings}" stroke-opacity=".32" stroke-width="2"/>'
+            f'<circle cx="{x}" cy="{y}" r="{r-22}" fill="none" stroke="{rings}" stroke-opacity=".22" stroke-width="2"/>'
+            f'<path d="M{x-r+8} {y-5} A{r-8} {r-8} 0 0 1 {x-6} {y-r+8}" fill="none" stroke="#ffffff" stroke-opacity=".85" stroke-width="5" stroke-linecap="round"/>'
+            f'{extra}<circle cx="{x}" cy="{y}" r="{max(r*.26,10):.1f}" fill="#e8f1fb"/><circle cx="{x}" cy="{y}" r="{max(r*.14,6):.1f}" fill="#03160c"/>')
+
 def badge(kind):
     """Abzeichen unten rechts (Mitte 380,380, Radius 96)."""
     cx, cy, r = 380, 380, 96
     base = (f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="#03160c" stroke="{GREEN}" stroke-width="10" filter="url(#glow)"/>')
     if kind == "converter":
-        # zwei Pfeile ⇄
-        a = (f'<g fill="none" stroke="{GREEN}" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow2)">'
-             f'<path d="M{cx-48} {cy-22} H{cx+44} M{cx+18} {cy-48} L{cx+46} {cy-22} L{cx+18} {cy+4}"/>'
-             f'<path d="M{cx+48} {cy+24} H{cx-44} M{cx-18} {cy-2} L{cx-46} {cy+24} L{cx-18} {cy+50}"/></g>')
-        return base + a
-    # Feuerball/Komet: Kopf rechts unten, Flammenschweif nach links oben
-    hx, hy = cx + 20, cy + 20
-    tail = (f'<path d="M{hx} {hy} C{hx-20} {hy-58} {hx-70} {hy-74} {hx-86} {hy-88} '
-            f'C{hx-62} {hy-52} {hx-70} {hy-30} {hx-76} {hy-14} C{hx-56} {hy-24} {hx-42} {hy-6} {hx-62} {hy+22} '
-            f'C{hx-34} {hy+10} {hx-22} {hy+30} {hx-30} {hy+50} C{hx-8} {hy+42} {hx+4} {hy+26} {hx} {hy} Z" '
-            f'fill="url(#fire)" filter="url(#glow2)"/>')
-    head = (f'<circle cx="{hx}" cy="{hy}" r="30" fill="url(#ball)" filter="url(#glow2)"/>'
-            f'<circle cx="{hx+6}" cy="{hy+6}" r="12" fill="#eaffd8" fill-opacity=".85"/>')
-    spark = ''.join(f'<circle cx="{x}" cy="{y}" r="{s}" fill="#b6ff6b"/>' for x, y, s in [(cx-62, cy+8, 4), (cx-40, cy-52, 3.5), (cx+4, cy-62, 3)])
-    return base + tail + head + spark
+        # zwei gleich große Scheiben, symmetrisch um die Mitte des Abzeichens: silberne Audio-CD hinten, blaue Blu-ray vorn
+        return base + f'<g filter="url(#glowb)">{disc(cx-20, cy-16, 50, "cd")}{disc(cx+20, cy+16, 50, "bd")}</g>'
+    # Komet/Feuerball (eigene Zeichnung im Stil eines Flammen-Kometen, ohne Buchstaben): Kopf unten links, Schweif nach rechts oben
+    hx, hy = cx - 22, cy + 24
+    def tongue(angle, length, width, op=1.0):
+        # Flammenzunge, zeigt nach +x (Spitze bei length), um den Kopf gedreht
+        l, w = length, width
+        d = f"M0 {-w} C{l*.35} {-w*1.5} {l*.7} {-w*.6} {l} 0 C{l*.7} {w*.6} {l*.35} {w*1.5} 0 {w} Z"
+        return (f'<path d="{d}" transform="translate({hx} {hy}) rotate({angle})" fill="url(#flame)" fill-opacity="{op}"/>')
+    tongues = (tongue(-52, 112, 15) + tongue(-34, 92, 12, .95) + tongue(-70, 84, 11, .9) + tongue(-18, 66, 9, .85) + tongue(-86, 62, 8, .8))
+    head = (f'<circle cx="{hx}" cy="{hy}" r="27" fill="url(#ball)"/>'
+            f'<circle cx="{hx-5}" cy="{hy-5}" r="11" fill="#fff4c2" fill-opacity=".9"/>')
+    spark = ''.join(f'<circle cx="{x}" cy="{y}" r="{s}" fill="#ffc83a"/>' for x, y, s in [(cx+58, cy-18, 3.5), (cx+20, cy-66, 3), (cx+66, cy+14, 2.5)])
+    return base + f'<g filter="url(#glowo)">{tongues}{head}</g>' + spark
 
 def svg(kind, rounded):
     plate = (f'<rect width="512" height="512" rx="112" fill="{PLATE}"/>' if rounded else
@@ -71,8 +85,12 @@ def svg(kind, rounded):
 {clip}
 <filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
 <filter id="glow2" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-<linearGradient id="fire" x1="1" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#eaffd8"/><stop offset=".35" stop-color="#7dff6b"/><stop offset=".8" stop-color="{GREEN}" stop-opacity=".55"/><stop offset="1" stop-color="{GREEN}" stop-opacity="0"/></linearGradient>
-<radialGradient id="ball" cx=".4" cy=".4" r=".7"><stop offset="0" stop-color="#eaffd8"/><stop offset=".55" stop-color="#7dff6b"/><stop offset="1" stop-color="{GREEN}"/></radialGradient>
+<linearGradient id="flame" gradientUnits="objectBoundingBox" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ff7a00"/><stop offset=".45" stop-color="#ffa800"/><stop offset="1" stop-color="#ffd23a" stop-opacity="0"/></linearGradient>
+<radialGradient id="ball" cx=".4" cy=".4" r=".7"><stop offset="0" stop-color="#fff4c2"/><stop offset=".5" stop-color="#ffb400"/><stop offset="1" stop-color="#ff6a00"/></radialGradient>
+<radialGradient id="cdsil" cx=".35" cy=".3" r=".9"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#cfd7e0"/><stop offset="1" stop-color="#8d98a6"/></radialGradient>
+<radialGradient id="disc" cx=".35" cy=".3" r=".9"><stop offset="0" stop-color="#8ec5ff"/><stop offset=".45" stop-color="#2d8cff"/><stop offset="1" stop-color="#1239b8"/></radialGradient>
+<filter id="glowb" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<filter id="glowo" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
 </defs>
 {plate}
 <g clip-path="url(#pl)" font-family="DejaVu Sans Mono, Menlo, Consolas, monospace" font-weight="700" font-size="26">
