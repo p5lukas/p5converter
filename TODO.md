@@ -9,6 +9,7 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
+- [ ] **Umbenennungstool einarbeiten** (Nutzer): Ausgabedateinamen per „Suchen und Ersetzen“ ändern können, dazu mehrere Variablen im Namensmuster (z. B. Titel, Codec, Auflösung, Datum …). Offen: Aufbau/Ort in der Oberfläche (Variante A/B/C noch festlegen)
 - [ ] **„Neu“ im Kopf in „Neuigkeiten“ umbenennen** (Nutzer): Beschriftung oben in der Kopfzeile ändern (Tooltip/Seitentitel dabei mitprüfen, auch Handy-Ansicht wegen Platz)
 - [ ] **Standard-Voreinstellungen auf je 1 reduzieren** (Nutzer): Audio: „Remux als FLAC“, Video: „Remux als MKV“ (statt der bisherigen je 5). Dabei prüfen: Tests, „Standard wiederherstellen“, Beschreibungen/README
 - [ ] **Symbole überarbeiten** (Nutzer): Zahnrad und Stern (Neuigkeiten) sind zu klein → größer; Diskette (Speichern) als **Matrix-Style-Diskette**; **keine bunten Emojis** mehr in der Oberfläche (Ausnahme: die Planeten, die bleiben) – stattdessen einfarbige Symbole im Theme
