@@ -19,6 +19,14 @@
 - [ ] Branch-Modell: **erstmal nur `main`**, bis alles stabil läuft. Auf Zuruf des Nutzers dann wie p5assets: Feature-Branch → `dev` (Image `:dev`) → `main` (Image `:latest`); optional multi-arch (amd64/arm64)
 - [ ] Design weiter verfeinern nach Rückmeldung vom Gerät (iPhone/iPad Safari und Web-App)
 
+- [ ] **Einstellungen-Seite** (Nutzer: „wo sind die Einstellungen zu p5converter?“ – bisher gibt es keine; nur `P5_PASSWORD`/`P5_JOBS` per Umgebungsvariable, Eingaben liegen im Browser). Geplant wie bei p5assets: Zahnrad im Kopf, am Handy als Liste mit Gruppen („‹ Einstellungen“ führt zurück):
+  - **Welten & Farben**: Farbton/Planet je Welt (Audio, Video) wählbar wie bei p5assets, Reihenfolge/Namen der Welten
+  - **Anmeldung**: Passwort in der Oberfläche setzen/ändern statt nur per `P5_PASSWORD`
+  - **Voreinstellungen** (Audio und Video getrennt): anlegen, bearbeiten, umbenennen, löschen, sortieren; je Voreinstellung wählbar, ob sie **als Vorschlag** oben im Einstellungs-Panel erscheint; die bisher fest eingebauten (Archiv H.265 10 Bit, Klein 1080p, Kompatibel H.264, AV1 10 Bit, Nur Remux) werden normale, änderbare Voreinstellungen
+  - **Knopf „Als Voreinstellung speichern“** direkt beim Konvertieren (neben „Konvertierung starten“): speichert die aktuell eingestellten Werte unter einem Namen
+  - weitere Gruppen: Allgemein (parallele Aufträge, Zielordner-Vorgabe, Startwelt), Hardware (Erkennung, bevorzugter Encoder), Info/Neuigkeiten
+  - **Speicherort**: dauerhaft auf dem Server in einem neuen Pfad `/config` (Unraid-Template: `appdata/p5converter`), damit alle Geräte (PC, iPhone, iPad) dieselben Einstellungen sehen – Entscheidung offen, Varianten siehe Chat (A: `/config` auf dem Server, B: nur im Browser)
+
 ## Vom Nutzer zu prüfen (nicht in der Sandbox möglich)
 - [ ] iPhone/iPad: Safari und Web-App (Safe-Areas, Statusleiste, Pull-to-Refresh) auf dem Gerät ansehen
 - [ ] GPU-Encoding auf echter Hardware (Intel Quick Sync via `/dev/dri`, NVIDIA via `--runtime=nvidia`)
