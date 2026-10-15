@@ -27,6 +27,7 @@ type Server struct {
 	Sampler *hw.Sampler
 	Jobs    *jobs.Manager
 	Roots   []string // empty = unrestricted (desktop mode)
+	Quit    func()   // set in desktop mode: enables the Beenden button
 	enc     map[string]bool
 	ffver   string
 }
@@ -96,6 +97,14 @@ func (s *Server) Handler() http.Handler {
 		s.Jobs.ClearFinished()
 		writeJSON(w, map[string]bool{"ok": true})
 	})
+	mux.HandleFunc("POST /api/quit", func(w http.ResponseWriter, r *http.Request) {
+		if s.Quit == nil {
+			httpErr(w, 403, "Beenden ist hier nicht erlaubt")
+			return
+		}
+		writeJSON(w, map[string]bool{"ok": true})
+		go s.Quit()
+	})
 	mux.HandleFunc("POST /api/concurrency", func(w http.ResponseWriter, r *http.Request) {
 		var b struct{ N int }
 		json.NewDecoder(r.Body).Decode(&b)
@@ -129,7 +138,7 @@ func (s *Server) info(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, map[string]any{
 		"version": s.Version, "ffmpeg": s.ffver, "os": runtime.GOOS, "roots": s.Roots, "home": home,
-		"encoders": enc, "hw": s.Det.Result(), "concurrency": s.Jobs.Concurrency(),
+		"encoders": enc, "hw": s.Det.Result(), "concurrency": s.Jobs.Concurrency(), "canQuit": s.Quit != nil,
 	})
 }
 

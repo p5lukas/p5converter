@@ -343,7 +343,7 @@ function renderMonitor() {
 }
 let polling = false;
 async function poll() {
-  if (polling) return; polling = true;
+  if (polling || S.stopped) return; polling = true;
   try {
     const d = await api('/api/state');
     S.jobs = d.jobs; S.stats = d.stats;
@@ -420,6 +420,7 @@ async function loadInfo() {
   S.info = await api('/api/info');
   $('#ffver').textContent = S.info.ffmpeg.replace(/^ffmpeg version /, 'ffmpeg ').split(' Copyright')[0] + ' · ' + S.info.os;
   refreshVideoUI();
+  $('#quit').classList.toggle('hidden', !S.info.canQuit);
   if (!S.info.hw.done) setTimeout(loadInfo, 1200);
 }
 function wire() {
@@ -446,6 +447,13 @@ function wire() {
   $('#bAddSel').onclick = () => closeBrowser({paths: [...B.sel], dir: B.path});
   $('#bAddDir').onclick = () => closeBrowser(B.mode === 'dir' ? {dir: B.path, paths: [B.path]} : {paths: [B.path], dir: B.path});
   $('#start').onclick = start;
+  $('#quit').onclick = async () => {
+    const running = S.jobs.filter(j => j.status === 'running' || j.status === 'queued').length;
+    if (!confirm(running ? `Es laufen/warten noch ${running} Aufträge. Trotzdem beenden und abbrechen?` : 'p5converter beenden?')) return;
+    try { await api('/api/quit', {}); } catch (e) {}
+    document.body.innerHTML = '<div style="padding:60px;text-align:center;font:18px system-ui">p5converter wurde beendet.<br><br><small>Du kannst dieses Fenster schließen. Zum Neustart das Programm erneut öffnen.</small></div>';
+    S.stopped = true;
+  };
   $('#cancelAll').onclick = () => api('/api/jobs/cancel-all', {}).then(poll);
   $('#clearDone').onclick = () => api('/api/jobs/clear', {}).then(poll);
   $('#conc').onchange = () => api('/api/concurrency', {n: +$('#conc').value});

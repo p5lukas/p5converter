@@ -1,0 +1,23 @@
+p5converter für Linux
+=====================
+
+INSTALLIEREN (einmalig)
+  Terminal in diesem Ordner öffnen und eingeben:
+
+      ./Installieren.sh
+
+  (In Dolphin: Rechtsklick auf Installieren.sh -> "Im Terminal ausführen")
+
+Danach startest du p5converter wie jedes andere Programm über das
+Anwendungsmenü (Multimedia -> p5converter). Es öffnet sich ein eigenes Fenster.
+Beenden: oben rechts auf "Beenden" klicken.
+
+Der Ordner "app" ist nur der Inhalt für den Installer – nichts davon musst du
+einzeln anklicken. Nach der Installation kannst du diesen ganzen Ordner löschen.
+
+Probleme?
+  Log-Datei: ~/.cache/p5converter/p5converter.log
+  Oder im Terminal starten:  p5converter
+
+ENTFERNEN
+  ~/.local/opt/p5converter/Deinstallieren.sh

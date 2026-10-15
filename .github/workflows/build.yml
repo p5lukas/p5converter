@@ -48,7 +48,12 @@ jobs:
             cp LICENSE dist/$d/LICENSE-p5converter.txt
             echo "ffmpeg: BtbN FFmpeg-Builds (GPL), https://github.com/BtbN/FFmpeg-Builds" > dist/$d/ffmpeg-info.txt
           done
-          cp packaging/p5converter.desktop packaging/install-linux.sh packaging/uninstall-linux.sh dist/linux/
+          # Linux: Top-Level nur Installieren.sh + LIES-MICH.txt, Rest in app/
+          L=dist/linux-pkg/p5converter-linux
+          mkdir -p $L/app
+          mv dist/linux/p5converter dist/linux/ffmpeg dist/linux/ffprobe dist/linux/LICENSE-p5converter.txt dist/linux/ffmpeg-info.txt $L/app/
+          cp packaging/linux/p5converter.svg packaging/linux/p5converter.desktop packaging/linux/Deinstallieren.sh $L/app/
+          cp packaging/linux/Installieren.sh packaging/linux/LIES-MICH.txt $L/
       - name: Windows Setup.exe (NSIS)
         run: |
           sudo apt-get update && sudo apt-get install -y nsis
@@ -58,7 +63,7 @@ jobs:
         run: |
           cd dist
           (cd windows && zip -r ../p5converter-windows-x64-portable.zip .)
-          tar -C linux -czf p5converter-linux-x64.tar.gz .
+          tar -C linux-pkg -czf p5converter-linux-x64.tar.gz p5converter-linux
       - uses: actions/upload-artifact@v4
         with:
           name: binaries

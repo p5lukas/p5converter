@@ -1,8 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=p5converter
-Comment=Audio- und Video-Konverter
-Exec=p5converter
-Icon=applications-multimedia
-Terminal=true
-Categories=AudioVideo;AudioVideoEditing;
