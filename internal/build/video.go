@@ -9,22 +9,25 @@ import (
 )
 
 type VideoOpts struct {
-	Container   string   `json:"container"` // mkv | mp4
-	Codec       string   `json:"codec"`     // copy | h264 | hevc | av1 | vp9
-	Backend     string   `json:"backend"`   // cpu | qsv | nvenc | vaapi | amf
-	VaapiDevice string   `json:"vaapiDevice"`
-	CRF         int      `json:"crf"`
-	Preset      string   `json:"preset"`   // slow | medium | fast | veryfast
-	BitDepth    int      `json:"bitDepth"` // 0 = like source, 8, 10
-	Height      int      `json:"height"`   // 0 = keep; never upscales
-	HWDecode    bool     `json:"hwDecode"`
-	AV1Aom      bool     `json:"av1Aom"`    // use libaom instead of SVT-AV1 on cpu
-	AudioMode   string   `json:"audioMode"` // copy | encode
-	AudioCodec  string   `json:"audioCodec"`
-	AudioKbps   int      `json:"audioKbps"` // per stereo pair
-	AudioLangs  []string `json:"audioLangs"`
-	SubMode     string   `json:"subMode"` // copy | none
-	SubLangs    []string `json:"subLangs"`
+	Container   string `json:"container"` // mkv | mp4
+	Codec       string `json:"codec"`     // copy | h264 | hevc | av1 | vp9
+	Backend     string `json:"backend"`   // cpu | qsv | nvenc | vaapi | amf
+	VaapiDevice string `json:"vaapiDevice"`
+	CRF         int    `json:"crf"`
+	Preset      string `json:"preset"`   // slow | medium | fast | veryfast
+	BitDepth    int    `json:"bitDepth"` // 0 = like source, 8, 10
+	Height      int    `json:"height"`   // 0 = keep; never upscales
+	HWDecode    bool   `json:"hwDecode"`
+	AV1Aom      bool   `json:"av1Aom"` // use libaom instead of SVT-AV1 on cpu
+	// HWInit are extra ffmpeg input options found by the hardware detection (e.g. Quick Sync via a VAAPI device).
+	// Set by the server, never by the client.
+	HWInit     []string `json:"-"`
+	AudioMode  string   `json:"audioMode"` // copy | encode
+	AudioCodec string   `json:"audioCodec"`
+	AudioKbps  int      `json:"audioKbps"` // per stereo pair
+	AudioLangs []string `json:"audioLangs"`
+	SubMode    string   `json:"subMode"` // copy | none
+	SubLangs   []string `json:"subLangs"`
 }
 
 // Overrides are per-file track decisions made in the UI.
@@ -122,6 +125,7 @@ func BuildVideo(info *ffmpeg.Info, o VideoOpts, ov Overrides, in, out string) (*
 
 	// --- device / hardware decode (input options) ---
 	if hw {
+		args = append(args, o.HWInit...)
 		if o.Backend == "vaapi" {
 			dev := o.VaapiDevice
 			if dev == "" {
@@ -133,6 +137,9 @@ func BuildVideo(info *ffmpeg.Info, o VideoOpts, ov Overrides, in, out string) (*
 			switch o.Backend {
 			case "qsv":
 				args = append(args, "-hwaccel", "qsv")
+				if len(o.HWInit) > 0 {
+					args = append(args, "-hwaccel_device", "hw")
+				}
 			case "nvenc":
 				args = append(args, "-hwaccel", "cuda")
 			case "vaapi":

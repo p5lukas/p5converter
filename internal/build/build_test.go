@@ -66,3 +66,26 @@ func TestVideoVariants(t *testing.T) {
 }
 
 func ptr(i int) *int { return &i }
+
+func TestQSVInitArgs(t *testing.T) {
+	init := []string{"-init_hw_device", "vaapi=va:/dev/dri/renderD128", "-init_hw_device", "qsv=hw@va"}
+	p, err := BuildVideo(sample(), VideoOpts{Codec: "hevc", Backend: "qsv", CRF: 24, HWDecode: true, HWInit: init}, Overrides{}, "in.mkv", "out.part")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := join(p.Args)
+	for _, w := range []string{"-init_hw_device vaapi=va:/dev/dri/renderD128", "-init_hw_device qsv=hw@va", "-hwaccel qsv", "-hwaccel_device hw", "-c:v hevc_qsv"} {
+		if !strings.Contains(s, w) {
+			t.Errorf("fehlt %q in%s", w, s)
+		}
+	}
+	// the init options must come before the input
+	if strings.Index(s, "-init_hw_device") > strings.Index(s, " -i ") {
+		t.Error("init-Optionen müssen vor -i stehen")
+	}
+	// no init -> unchanged behaviour
+	p2, _ := BuildVideo(sample(), VideoOpts{Codec: "hevc", Backend: "qsv", CRF: 24, HWDecode: true}, Overrides{}, "in.mkv", "out.part")
+	if strings.Contains(join(p2.Args), "hwaccel_device") || strings.Contains(join(p2.Args), "init_hw_device") {
+		t.Error("ohne Init keine Zusatzoptionen")
+	}
+}

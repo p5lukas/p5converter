@@ -2,10 +2,13 @@
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const api = async (url, body) => {
-  const r = await fetch(url, body === undefined ? {} : {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+const api = async (url, body, method) => {
+  const r = await fetch(url, body === undefined ? {} : {method: method || 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
   const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j.error || r.statusText);
+  if (!r.ok) {
+    if (r.status === 401 && j.login && typeof showLogin === 'function') showLogin('Bitte melde dich erneut an.');
+    const e = new Error(j.error || r.statusText); e.status = r.status; throw e;
+  }
   return j;
 };
 const fmtSize = n => n > 1e9 ? (n / 1e9).toFixed(2) + ' GB' : n > 1e6 ? (n / 1e6).toFixed(1) + ' MB' : n > 1e3 ? (n / 1e3).toFixed(0) + ' KB' : (n || 0) + ' B';
@@ -37,23 +40,24 @@ function loadSettings() {
 }
 
 // ---------- worlds ----------
-// Welten: jede hat ihre Farbe (Farbton) und ihren Planeten, wie bei p5assets (Themes in planets.js)
-const WORLDS = {audio: {hue: 140, label: 'Audio'}, video: {hue: 270, label: 'Video'}};
+// Welten: jede hat ihre Farbe (Farbton) und ihren Planeten, wie bei p5assets (Themes in planets.js).
+// Namen, Farben und Reihenfolge kommen aus den Einstellungen (settings.js: W(), worldOrder()).
 function applyTheme(w) {
-  const hue = WORLDS[w].hue, t = themeOf(hue), root = document.documentElement.style;
+  const hue = W(w).hue, t = themeOf(hue), root = document.documentElement.style;
   root.setProperty('--h', hue); root.setProperty('--sat', t.sat + '%'); root.setProperty('--lit', t.lit + '%');
+  try { localStorage.setItem('p5hue', hue); } catch (e) {}
   $$('#worlds button').forEach(b => {
-    const wh = WORLDS[b.dataset.world].hue, wt = themeOf(wh);
+    const wh = W(b.dataset.world).hue, wt = themeOf(wh);
     b.style.setProperty('--c', `hsl(${wh} ${wt.sat}% ${wt.lit}%)`);
     const slot = b.querySelector('.pl');
-    if (slot && !slot.firstChild) slot.replaceWith(planetSvg(wh, 22));
+    if (slot) slot.replaceChildren(planetSvg(wh, 22));
   });
   const meta = document.querySelector('meta[name=theme-color]');
   if (meta) meta.content = `hsl(${hue} 80% 2%)`;
 }
 function worldFx(w) {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const hue = WORLDS[w].hue, t = themeOf(hue), ms = 1300;
+  const hue = W(w).hue, t = themeOf(hue), ms = 1300;
   const fx = document.createElement('div'); fx.className = 'worldfx';
   fx.style.setProperty('--c', `hsl(${hue} ${t.sat}% ${t.lit}%)`);
   const cv = document.createElement('canvas'), pl = document.createElement('div');
@@ -176,27 +180,12 @@ function renderHwCard() {
     const ok = cs.length > 0;
     const gpu = b.gpu ? ` <span class="muted small">(${esc(b.gpu)}${b.device ? ', ' + esc(b.device) : ''})</span>` : '';
     return `<div class="hw"><div><b>${esc(b.label)}${gpu}</b>` +
-      (ok ? `<span class="small muted">${cs.map(c => CODEC_LABEL[c] + (b.tenBit && b.tenBit[c] ? ' <span title="10 Bit">10b</span>' : '')).join(' · ')}</span>`
+      (ok ? `<span class="small muted">${cs.map(c => CODEC_LABEL[c] + (b.tenBit && b.tenBit[c] ? ' <span title="10 Bit">10b</span>' : '')).join(' · ')}${b.variant && b.variant !== 'automatisch' ? ' · gestartet: ' + esc(b.variant) : ''}</span>`
           : `<span class="small muted">${esc(b.detail || 'nicht verfügbar')}</span>`) +
       `</div><span class="chip ${ok ? 'ok' : 'err'}">${ok ? 'nutzbar' : 'nicht nutzbar'}</span></div>`;
   }).join('');
-  $('#hwGpus').textContent = (h.gpus && h.gpus.length ? 'Erkannte GPUs: ' + h.gpus.join(', ') : 'Keine GPU gemeldet.') +
-    (h.done ? ` · Test dauerte ${(h.tookMs / 1000).toFixed(1)} s (echte Test-Encodes)` : '');
-}
-
-const VPRESETS = [
-  {n: 'Archiv · H.265 10 Bit', v: {vCodec: 'hevc', vCrf: 20, vDepth: '10', vPreset: 'slow', vHeight: '0'}},
-  {n: 'Klein · H.265 1080p', v: {vCodec: 'hevc', vCrf: 24, vDepth: '8', vPreset: 'medium', vHeight: '1080'}},
-  {n: 'Kompatibel · H.264 1080p', v: {vCodec: 'h264', vCrf: 21, vDepth: '8', vPreset: 'medium', vHeight: '1080'}},
-  {n: 'AV1 · 10 Bit', v: {vCodec: 'av1', vCrf: 28, vDepth: '10', vPreset: 'medium', vHeight: '0'}},
-  {n: 'Nur Remux → MKV', v: {vCodec: 'copy'}},
-];
-function renderPresets() {
-  $('#vPresets').innerHTML = VPRESETS.map((p, i) => `<button data-i="${i}">${esc(p.n)}</button>`).join('');
-  $$('#vPresets button').forEach(b => b.onclick = () => {
-    Object.entries(VPRESETS[+b.dataset.i].v).forEach(([k, v]) => $('#' + k).value = v);
-    refreshVideoUI(); saveSettings();
-  });
+  $('#hwGpus').innerHTML = esc((h.gpus && h.gpus.length ? 'Erkannte GPUs: ' + h.gpus.join(', ') : 'Keine GPU gemeldet.') +
+    (h.done ? ` · Test dauerte ${(h.tookMs / 1000).toFixed(1)} s (echte Test-Encodes)` : '')) + ' · <a href="#settings/hardware">Diagnose</a>';
 }
 
 // ---------- files ----------
@@ -287,7 +276,7 @@ function toast(msg, kind) {
 }
 function renderStartInfo() {
   const n = S.files[S.world].length;
-  $('#startInfo').textContent = n ? `${n} ${n === 1 ? 'Datei' : 'Dateien'} · ${WORLDS[S.world].label}` : 'Noch keine Dateien';
+  $('#startInfo').textContent = n ? `${n} ${n === 1 ? 'Datei' : 'Dateien'} · ${W(S.world).name}` : 'Noch keine Dateien';
 }
 
 // ---------- start job ----------
@@ -515,7 +504,12 @@ function openNews() {
 }
 function wire() {
   $('#newsBtn').onclick = openNews;
-  $$('#worlds button').forEach(b => b.onclick = () => setWorld(b.dataset.world, true));
+  $('#gearBtn').onclick = () => { location.hash = '#settings'; };
+  $('#logoutBtn').onclick = logout;
+  $('#savePreset').onclick = openPresetDialog;
+  $('#presetCancel').onclick = () => $('#presetDlg').close();
+  $('#presetForm').addEventListener('submit', e => { e.preventDefault(); savePresetFromDialog(); });
+  window.addEventListener('hashchange', route);
   [...FIELDS, ...CHECKS].forEach(f => $('#' + f).addEventListener('input', () => { refreshAudioUI(); refreshVideoUI(); saveSettings(); }));
   $('#outMode').addEventListener('input', outModeUI);
   $('#addFiles').onclick = async () => {
@@ -555,10 +549,35 @@ function outModeUI() {
   $('#outDirRow').classList.toggle('hidden', !c);
   $('#structRow').classList.toggle('hidden', !c);
 }
-(async function init() {
-  loadSettings(); renderPresets(); decorateInfo(); wire();
+function applyDefaultsFromCfg() {
+  const c = cfg();
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem('p5c') || '{}'); } catch (e) {}
+  refreshVideoUI();
+  if (c.preferredBackend && c.preferredBackend !== 'auto' && saved.vBackend === undefined) setField('vBackend', c.preferredBackend);
+  if (saved.vHwDec === undefined) $('#vHwDec').checked = c.hwDecode !== false;
+  if (c.defaultOutDir && saved.outDir === undefined) { $('#outDir').value = c.defaultOutDir; $('#outMode').value = 'custom'; }
+  else if (!$('#outDir').value && S.info.roots && S.info.roots.length > 1) $('#outDir').value = S.info.roots[S.info.roots.length - 1];
+}
+
+async function startApp() {
+  S.cfg = await api('/api/settings');
+  loadSettings(); decorateInfo(); wire(); renderWorldNav();
   await loadInfo();
-  if (!$('#outDir').value && S.info.roots && S.info.roots.length > 1) $('#outDir').value = S.info.roots[S.info.roots.length - 1];
-  outModeUI(); setWorld(S.world, false); refreshAudioUI(); refreshVideoUI(); renderHero(); loadNews();
-  poll(); setInterval(poll, 1000);
+  applyDefaultsFromCfg();
+  const sw = cfg().startWorld;
+  if (sw === 'audio' || sw === 'video') S.world = sw;
+  if (!worldOrder().includes(S.world)) S.world = worldOrder()[0];
+  outModeUI(); setWorld(S.world, false); renderPresetChips(); renderHero();
+  if (cfg().showNews !== false) loadNews();
+  if (!S.cfg.persistent) toast('Einstellungen werden nicht dauerhaft gespeichert (Pfad /config fehlt).', 'bad');
+  poll(); S.pollTimer = setInterval(poll, 1000);
+  route();
+}
+
+(async function boot() {
+  await loadAuth();
+  if (S.auth.enabled && !S.auth.authenticated) { showLogin(); return; }
+  updateAuthUI();
+  try { await startApp(); } catch (e) { if (e.status !== 401) toast('Start fehlgeschlagen: ' + e.message, 'bad'); }
 })();

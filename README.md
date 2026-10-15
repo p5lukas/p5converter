@@ -15,13 +15,15 @@ Oder per Kommandozeile:
 ```bash
 docker run -d --name p5converter -p 8787:8787 \
   --device /dev/dri \
-  -v /mnt/user/musik:/audio1 -v /mnt/user/filme:/video1 -v /mnt/user/appdata/p5converter/output:/output \
+  -v /mnt/user/musik:/audio1 -v /mnt/user/filme:/video1 \
+  -v /mnt/user/appdata/p5converter/output:/output -v /mnt/user/appdata/p5converter/config:/config \
   ghcr.io/p5lukas/p5converter:latest
 ```
-* `--device /dev/dri` reicht Intel Quick Sync / VAAPI durch.
+* `--device /dev/dri` reicht Intel Quick Sync / VAAPI durch (im Unraid-Template ein sichtbarer Eintrag „Intel/AMD Grafik“).
+* `/config` speichert Einstellungen, Voreinstellungen, Farben und die Anmeldung dauerhaft (gilt auf allen Geräten). Ohne diesen Pfad funktioniert alles, wird aber nicht gespeichert; die Anmeldung lässt sich dann nicht einschalten.
 * **NVIDIA NVENC:** Nvidia-Driver-Plugin installieren, `--runtime=nvidia` bei „Extra Parameters“ ergänzen (`NVIDIA_VISIBLE_DEVICES=all` ist voreingestellt).
 * Die Oberfläche sieht nur eingehängte Ordner: im Unraid-Template **2× Audio** (`/audio1`, `/audio2`), **4× Video** (`/video1` … `/video4`) – alle optional, leer lassen was nicht gebraucht wird – und den Zielordner `/output`. Per Kommandozeile geht auch ein einzelnes `/media`. Die Liste steht in `P5_ROOTS`; nicht eingehängte Ordner werden ausgeblendet. Die Quell-Ordner brauchen Schreibzugriff, wenn die Ergebnisse neben die Quelle sollen oder Quellen gelöscht werden. `PUID`/`PGID` (Standard 99/100) bestimmen den Besitzer neuer Dateien.
-* Optional: `-e P5_PASSWORD=…` schützt die Oberfläche per Login (Benutzer `p5`). Trotzdem nicht ins Internet stellen.
+* Anmeldung (optional): wird in der Oberfläche unter **Einstellungen → Anmeldung** angelegt, nicht per Umgebungsvariable. Trotzdem nicht ins Internet stellen.
 
 ## Funktionen
 
@@ -44,11 +46,19 @@ Zielordner mit Struktur oder Namensmuster (`{artist}/{album}/{track} - {title}`)
 * **Untertitel:** Passthrough, alle entfernen, Sprachfilter, einzelne Spuren entfernen (Schriftarten-Anhänge bleiben in MKV erhalten)
 * Pro Datei über **„Spuren“** einstellbar
 
+### Einstellungen, Voreinstellungen, Anmeldung
+* **Zahnrad ⚙** oben rechts (am Handy als Liste mit Gruppen): Allgemein, Welten & Farben, Voreinstellungen, Hardware, Anmeldung, Info
+* **Voreinstellungen** (Audio und Video): Knopf „💾 Als Voreinstellung speichern“ neben „Konvertierung starten“; in den Einstellungen umbenennen, sortieren, duplizieren, löschen, „Vorschlag“ an/aus und „✎ Werte“ zum Bearbeiten
+* **Welten & Farben**: Name, Farbe und Planet je Welt (wie bei p5assets), Reihenfolge
+* **Anmeldung** wie bei p5assets: im Browser anlegen, „Angemeldet bleiben (30 Tage)“, Spaßmeldung nach falschem Passwort (abschaltbar), Passwort nur als Hash; vergessen: `docker exec -it p5converter p5converter auth reset`, `P5_AUTH_RESET=1` oder `/config/auth.json` löschen
+
 ### Hardware-Encoding
 * **Erkennung per echtem Test-Encode** (Quick Sync, NVENC, VAAPI, AMF – je Codec und 8/10 Bit), nicht nur „Encoder im ffmpeg vorhanden“
 * „Automatisch“ oder festes Backend; ein nicht funktionierendes Backend wird **abgelehnt, nicht still durch die CPU ersetzt**
 * **Nachweis der Nutzung:** pro Auftrag der von ffmpeg gemeldete Encoder (`hevc_qsv ✓ von ffmpeg bestätigt`), kompletter Befehl und Log; live CPU- und GPU-Auslastung (NVIDIA: `nvidia-smi` mit Encode/Decode-Engine · Intel: sysfs-RC6 „GPU aktiv“ · AMD: `gpu_busy_percent`)
 * Hardware-Decoding optional, bei Fehlern automatischer Neuversuch ohne
+* **Quick Sync auch auf älteren Intel-Chips** (Gen 8–11, z. B. i9-9900): das Image enthält die Media-SDK-Runtime *und* oneVPL (Gen 12+); die Erkennung probiert mehrere Startvarianten
+* **Diagnose** unter Einstellungen → Hardware (Ergebnis jedes Tests, `vainfo`, GPUs) mit „📋 Diagnose kopieren“
 
 > Der Qualitätswert bei Hardware-Encodern (ICQ/CQ/QP) ist nicht 1:1 mit x264/x265-CRF vergleichbar; 20–28 sind üblich.
 
@@ -57,7 +67,7 @@ Die CI führt Unit- und Integrationstests mit echtem ffmpeg aus (alle Software-E
 **GPU-Pfade (QSV/NVENC/VAAPI) sind implementiert, aber noch nicht auf echter Hardware geprüft** – bitte erste Läufe über „Details“ am Auftrag kontrollieren und Probleme melden.
 
 ## Sicherheit
-Keine Anmeldung ohne `P5_PASSWORD`. Schreibende API-Aufrufe verlangen JSON und dieselbe Herkunft (Schutz vor fremden Webseiten); Dateizugriff nur innerhalb von `P5_ROOTS`.
+Optionale Anmeldung (Hash des Passworts, Sitzungs-Cookie, Bremse bei Fehlversuchen). Schreibende API-Aufrufe verlangen JSON und dieselbe Herkunft (Schutz vor fremden Webseiten); Dateizugriff nur innerhalb von `P5_ROOTS`.
 
 ## Entwicklung
 ```bash
@@ -65,7 +75,7 @@ go test ./...                 # benötigt ffmpeg im PATH
 go build -o p5converter . && P5_NO_BROWSER=1 ./p5converter   # http://127.0.0.1:8787
 docker build -f docker/Dockerfile -t p5converter .
 ```
-Umgebungsvariablen: `P5_LISTEN`, `P5_ROOTS`, `P5_JOBS`, `P5_PASSWORD`, `P5_FFMPEG_DIR`, `P5_NO_BROWSER`, `PUID`, `PGID`.
+Umgebungsvariablen: `P5_LISTEN`, `P5_ROOTS`, `P5_JOBS`, `P5_CONFIG`, `P5_AUTH_RESET`, `P5_FFMPEG_DIR`, `P5_NO_BROWSER`, `PUID`, `PGID`.
 
 ## Roadmap
 1. Unraid/Docker stabilisieren, Design verfeinern

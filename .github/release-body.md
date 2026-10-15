@@ -11,10 +11,12 @@ Oder per Kommandozeile:
 ```bash
 docker run -d --name p5converter -p 8787:8787 \
   --device /dev/dri \
-  -v /mnt/user/musik:/audio1 -v /mnt/user/filme:/video1 -v /mnt/user/appdata/p5converter/output:/output \
+  -v /mnt/user/musik:/audio1 -v /mnt/user/filme:/video1 \
+  -v /mnt/user/appdata/p5converter/output:/output -v /mnt/user/appdata/p5converter/config:/config \
   ghcr.io/p5lukas/p5converter:latest
 ```
-* Intel Quick Sync / VAAPI: `--device /dev/dri` (im Template voreingestellt).
+* Intel Quick Sync / VAAPI: `--device /dev/dri` (im Template ein sichtbarer Eintrag „Intel/AMD Grafik“).
+* `/config` speichert Einstellungen, Voreinstellungen und die Anmeldung dauerhaft.
 * NVIDIA NVENC: Nvidia-Driver-Plugin installieren und bei „Extra Parameters“ `--runtime=nvidia` ergänzen.
 * Im Bereich **Hardware** der Oberfläche siehst du, welche Encoder wirklich funktionieren (echter Test-Encode) – und warum nicht, falls einer fehlt.
 
@@ -22,4 +24,4 @@ docker run -d --name p5converter -p 8787:8787 \
 * Software-Encoding (CPU) und Audio sind automatisiert getestet (inkl. Docker-Image-Smoketest in der CI).
 * **GPU-Encoding (QSV/NVENC/VAAPI) wurde noch nicht auf echter Hardware geprüft.** Bitte erste Läufe über „Details“ am Auftrag kontrollieren (zeigt den von ffmpeg bestätigten Encoder und den kompletten Befehl) und Probleme melden.
 * Keine Windows-/Linux-Desktop-App in diesem Release (geplant, mit eigener Oberfläche).
-* Die Oberfläche hat keine Anmeldung. Nicht ins Internet stellen; optional `P5_PASSWORD` setzen.
+* Anmeldung optional (Einstellungen → Anmeldung). Nicht ins Internet stellen.
