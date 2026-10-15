@@ -6,6 +6,11 @@ on:
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Release-Version ohne v (z. B. 0.0.1) – baut Image :<version> und erstellt Tag + GitHub-Release"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -35,6 +40,7 @@ jobs:
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}}
+            type=raw,value=${{ inputs.version }},enable=${{ inputs.version != '' }}
             type=ref,event=branch
             type=ref,event=pr
       - name: Build image (local) for smoke test
@@ -44,7 +50,7 @@ jobs:
           file: docker/Dockerfile
           load: true
           tags: p5converter:smoke
-          build-args: VERSION=${{ github.ref_name }}
+          build-args: VERSION=${{ inputs.version != '' && format('v{0}', inputs.version) || github.ref_name }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Smoke test (real conversions inside the image)
@@ -64,20 +70,22 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: VERSION=${{ github.ref_name }}
+          build-args: VERSION=${{ inputs.version != '' && format('v{0}', inputs.version) || github.ref_name }}
           cache-from: type=gha
 
   release:
     needs: docker
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.version != '')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: softprops/action-gh-release@v2
         with:
-          name: p5converter ${{ github.ref_name }}
+          tag_name: ${{ inputs.version != '' && format('v{0}', inputs.version) || github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          name: p5converter ${{ inputs.version != '' && format('v{0}', inputs.version) || github.ref_name }}
           body_path: .github/release-body.md
           generate_release_notes: true
-          prerelease: ${{ startsWith(github.ref_name, 'v0.') }}
+          prerelease: ${{ startsWith(inputs.version != '' && format('v{0}', inputs.version) || github.ref_name, 'v0.') }}
           files: |
             unraid/p5converter.xml
