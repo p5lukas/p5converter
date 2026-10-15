@@ -6,7 +6,7 @@ M=$(mktemp -d); O=$(mktemp -d); chmod 755 "$M"; chmod 777 "$O"
 docker run --rm -v "$M:/media" --entrypoint ffmpeg "$IMG" -v error -f lavfi -i testsrc2=s=640x360:r=25:d=3 -f lavfi -i sine=d=3 \
   -c:v libx264 -c:a aac /media/test.mkv
 docker run --rm -v "$M:/media" --entrypoint ffmpeg "$IMG" -v error -f lavfi -i sine=d=3 -metadata artist=Band -metadata title=Lied /media/song.flac
-chmod 644 "$M"/*
+docker run --rm -v "$M:/media" --entrypoint chmod "$IMG" 644 /media/test.mkv /media/song.flac
 trap 'docker logs p5smoke 2>&1 | tail -30; docker rm -f p5smoke >/dev/null 2>&1 || true' EXIT
 docker run -d --name p5smoke -p 8484:8484 -v "$M:/media:ro" -v "$O:/output" "$IMG" >/dev/null
 
