@@ -9,6 +9,8 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
+- [ ] **Auftragsanzeige bei HW-Decoding-Fallback unklar** (Nutzer, Screenshot, hevc_qsv, Quelle h265): Beim automatischen Neuversuch ohne HW-Decoding bleibt die Fehlermeldung des ersten Versuchs („Error while filtering: Function not implemented …“) stehen, obwohl der zweite Versuch läuft → Fehler/Log des ersten Versuchs einklappen bzw. als „Versuch 1 (HW-Decoding) fehlgeschlagen“ kennzeichnen. Außerdem klar trennen: **Encoder: Hardware (Quick Sync)** und **Decoder: Hardware/Software** (zwei getrennte Angaben statt „HW-Decoding nicht möglich → Software-Decoding“)
+- [ ] **HW-Decoding mit Quick Sync schlägt bei h265-Quelle fehl** (Nutzer, i9-9900): Ursache untersuchen (Filterkette `format=nv12` direkt nach `-hwaccel qsv`, evtl. 10-Bit-Quelle, evtl. `hwdownload`/`scale_qsv` nötig); ffmpeg-Befehl und Log aus „Details“ auswerten
 - [ ] **Umbenennungstool einarbeiten** (Nutzer): Ausgabedateinamen per „Suchen und Ersetzen“ ändern können, dazu mehrere Variablen im Namensmuster (z. B. Titel, Codec, Auflösung, Datum …). **Variante C** (Entscheidung Nutzer): Namensmuster mit Variablen + Suchen/Ersetzen direkt im Konvertier-Dialog (Live-Vorschau), Muster in den Voreinstellungen speicherbar, zusätzlich eigener Bereich „Umbenennen“ für Dateien ohne Konvertierung (mit Vorschau)
 - [ ] **„Neu“ im Kopf in „Neuigkeiten“ umbenennen** (Nutzer): Beschriftung oben in der Kopfzeile ändern (Tooltip/Seitentitel dabei mitprüfen, auch Handy-Ansicht wegen Platz)
 - [ ] **Standard-Voreinstellungen auf je 1 reduzieren** (Nutzer): Audio: „Remux als FLAC“, Video: „Remux als MKV“ (statt der bisherigen je 5). Dabei prüfen: Tests, „Standard wiederherstellen“, Beschreibungen/README
