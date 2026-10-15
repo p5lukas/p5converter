@@ -452,3 +452,27 @@ func TestPageAssetsServed(t *testing.T) {
 		}
 	}
 }
+
+// the start page needs the lifetime totals in the state, and finished jobs must feed them
+func TestStateCarriesSavedTotals(t *testing.T) {
+	s, ts := newTestServer(t, nil)
+	s.Stats.Add("video", 1000, 250)
+	resp, err := http.Get(ts.URL + "/api/state")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var st struct {
+		Saved struct {
+			Video struct{ Count int; In, Out int64 }
+			Audio struct{ Count int }
+		}
+		Concurrency map[string]int
+	}
+	json.NewDecoder(resp.Body).Decode(&st)
+	if st.Saved.Video.Count != 1 || st.Saved.Video.In != 1000 || st.Saved.Video.Out != 250 || st.Saved.Audio.Count != 0 {
+		t.Errorf("gewonnener Platz fehlt im Zustand: %+v", st.Saved)
+	}
+	if st.Concurrency["audio"] < 1 || st.Concurrency["video"] < 1 {
+		t.Errorf("Parallelität je Welt fehlt: %v", st.Concurrency)
+	}
+}

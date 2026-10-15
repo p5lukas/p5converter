@@ -10,12 +10,12 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
-- [ ] **Ablauf statt einer überladenen Seite** (Nutzer): Die Oberfläche wirkt unordentlich/überladen → je Welt ein **Ablauf in Schritten**. **Videowelt:** 1. Startseite (Statistik, Hardware, bisher gewonnener Platz, Warteschlange, Knopf „Neu konvertieren starten“) → 2. Dateien auswählen → 3. Ziel → 4. Benennen/Umbenennen → 5. Videoeinstellungen → 6. Audioeinstellungen. **Audiowelt:** analog aufgeteilt, so wie es für Audio sinnvoll ist (z. B. Startseite → Dateien → Ziel → Benennen → Audioeinstellungen). Nach „Konvertierung starten“ geht es zurück zur **Startseite**, wo die arbeitende Warteschlange zu sehen ist. Offen/zu klären vor dem Umsetzen: (a) „bisher gewonnener Platz“ braucht eine dauerhafte Summe (Größe vorher − nachher aller fertigen Aufträge, in `/config`); (b) Form des Ablaufs: Schritte mit „Weiter/Zurück“ und Fortschrittsanzeige oben (Assistent) oder frei anklickbare Reiter; (c) Voreinstellungen/Zusammenfassung vor dem Start; (d) Umbenennen-Seite und Einstellungen bleiben eigene Seiten; (e) Handy/iPad: ein Schritt pro Bildschirm. Prüfregel: alle Ansichten
 - [ ] Branch-Modell: **erstmal nur `main`**, bis alles stabil läuft. Auf Zuruf des Nutzers dann wie p5assets: Feature-Branch → `dev` (Image `:dev`) → `main` (Image `:latest`); optional multi-arch (amd64/arm64)
 - [ ] Design weiter verfeinern nach Rückmeldung vom Gerät (iPhone/iPad Safari und Web-App)
 - [ ] Quick Sync (Intel Core i9-9900): Wirkung des Fixes in 0.0.3 beim Nutzer bestätigen; bleibt es „nicht nutzbar“, die kopierte Diagnose (Einstellungen → Hardware) auswerten
 
 ## Vom Nutzer zu prüfen (nicht in der Sandbox möglich)
+- [ ] Neuen Ablauf auf iPhone/iPad ansehen (Reiter-Leiste scrollt, Zurück/Weiter-Leiste unten, Safe-Areas in der Web-App)
 - [ ] Auslastungsanzeige auf dem Unraid-Server ansehen: im Leerlauf soll die CPU kleine, wechselnde Werte zeigen; „Grafik aktiv“ (Intel) im Leerlauf niedrig, beim Konvertieren hoch. Falls der Intel-Wert weiter nicht stimmt: Diagnose (Einstellungen → Hardware) schicken
 - [ ] iPhone/iPad: Safari und Web-App (Safe-Areas, Statusleiste, Pull-to-Refresh) auf dem Gerät ansehen
 - [ ] Quick Sync auf dem i9-9900: mit Hardware-Decoding an muss in der Warteschlange „Schreiben: Quick Sync …“ **und** „Lesen: Quick Sync“ stehen (auch mit Verkleinern/10 Bit); sonst „Details“ (Befehl, Log, Frühere Versuche) schicken
@@ -27,6 +27,7 @@
 - [ ] Linux-App (Fedora KDE) mit eigener Oberfläche
 
 ## Erledigt
+- [x] 0.0.6: **Ablauf in Schritten** (Variante C, mit Zusammenfassung): Startseite (Statistik, Hardware, gewonnener Platz, Warteschlange, „Konvertierung starten“/„Umbenennen starten“), Schritte je Welt, Rückkehr zur Startseite nach dem Start; „Umbenennen“ aus der Kopfzeile entfernt
 - [x] 0.0.5: **Warteschlange je Welt getrennt** (eigene Parallelität, Zähler, Abbrechen/Entfernen je Welt)
 - [x] 0.0.5: **Auslastungsanzeige** dauernd live gemessen, ehrlich bei fehlender Messung (Ursache: Messung nur während Aufträgen → alter Wert blieb stehen)
 - [x] 0.0.5: **„+ Ersetzung“ repariert**, Muster/Zusatz/Ersetzungen je Welt getrennt, UI-Test (`tools/ui-check-world.js`)

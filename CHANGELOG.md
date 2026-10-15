@@ -1,5 +1,19 @@
 # Änderungen
 
+## 0.0.6 – 2026-10-15
+
+**Neu**
+- **Ablauf in Schritten je Welt** (Variante C: Reiter + Zurück/Weiter): Startseite → Dateien → Ziel → Benennen → Einstellungen → Zusammenfassung; Video: Video-Einstellungen und Audio & Untertitel als eigene Schritte, Audio: ein Schritt „Einstellungen“; ein Schritt pro Bildschirm auf Handy/iPad
+- **Startseite**: Statistik, Auslastung, Hardware (Video), **gewonnener Platz**, Warteschlange und die Knöpfe „Konvertierung starten“ und „Umbenennen starten“; nach dem Start geht es automatisch zurück zur Startseite
+- **Zusammenfassung** vor dem Start (Dateien, Ziel, Benennen mit Beispielname, Einstellungen, Warnungen, „Ändern“ springt zum Schritt) mit „Als Voreinstellung speichern“ und „Konvertierung starten“
+- **Gewonnener Platz**: Summe aus Größe vorher minus nachher aller fertigen Dateien, getrennt für Audio und Video, dauerhaft in `/config/stats.json` (zählt ab diesem Update)
+
+**Geändert**
+- „Umbenennen“ wandert aus der Kopfzeile auf die Startseite („Umbenennen starten“)
+- Voreinstellungs-Chips stehen als Leiste über den Schritten (nicht auf der Startseite und Zusammenfassung)
+- „Dateiname-Zusatz“ gehört jetzt zum Schritt „Benennen“
+- UI-Prüfungen (`tools/ui-*.js`) laufen über die Schritte und prüfen alle Ansichten
+
 ## 0.0.5 – 2026-10-15
 
 **Neu**

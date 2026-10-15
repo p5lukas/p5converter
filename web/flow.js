@@ -1,0 +1,120 @@
+'use strict';
+/* Ablauf in Schritten (je Welt) mit Startseite, Reitern, „Zurück/Weiter“ und Zusammenfassung.
+   Nutzt S, $, $$, h(), fill(), W(), api(), toast() usw. aus app.js/settings.js (nur zur Laufzeit). */
+
+const STEPS = {
+  video: [['start', 'Start'], ['files', 'Dateien'], ['dest', 'Ziel'], ['name', 'Benennen'], ['video', 'Video'], ['tracks', 'Audio & Untertitel'], ['summary', 'Zusammenfassung']],
+  audio: [['start', 'Start'], ['files', 'Dateien'], ['dest', 'Ziel'], ['name', 'Benennen'], ['audio', 'Einstellungen'], ['summary', 'Zusammenfassung']],
+};
+const stepIds = () => STEPS[S.world].map(s => s[0]);
+
+function renderSteps() {
+  const ids = stepIds(), cur = ids.indexOf(S.step), n = S.files[S.world].length;
+  fill($('#steps'), STEPS[S.world].map(([id, label], i) => h('button', {type: 'button', 'data-step-btn': id, class: 'stepbtn' + (id === S.step ? ' on' : '') + (i < cur ? ' past' : ''),
+    title: label, 'aria-current': id === S.step ? 'step' : null, onclick: () => showStep(id)},
+    h('i', {}, id === 'start' ? icon('planet') : String(i)), h('span', {}, label), id === 'files' && n ? h('em', {}, n) : null)));
+  const on = $('#steps .stepbtn.on'); if (on && on.scrollIntoView) on.scrollIntoView({inline: 'center', block: 'nearest'});
+}
+
+// zeigt nur den gewählten Schritt; Reiter, Zurück/Weiter und Voreinstellungsleiste passen sich an
+function applySteps() {
+  const ids = stepIds(), i = ids.indexOf(S.step);
+  $$('.stepsec').forEach(sec => sec.classList.toggle('hidden', !(sec.dataset.step === S.step && (!sec.dataset.world || sec.dataset.world === S.world))));
+  $('#hwCard').classList.toggle('hidden', S.world !== 'video');
+  const mid = S.step !== 'start' && S.step !== 'summary';
+  $('#presetBar').classList.toggle('hidden', !mid);
+  $('#aPresets').classList.toggle('hidden', S.world !== 'audio');
+  $('#vPresets').classList.toggle('hidden', S.world !== 'video');
+  $('#stepnav').classList.toggle('hidden', S.step === 'start');
+  $('#stepNext').classList.toggle('hidden', S.step === 'summary');
+  $('#start').classList.toggle('hidden', S.step !== 'summary');
+  $('#savePreset').classList.toggle('hidden', S.step !== 'summary');
+  $('#stepBack').textContent = i <= 1 ? '← Startseite' : '← Zurück';
+  document.body.dataset.step = S.step;
+  renderSteps();
+}
+
+function showStep(id, keepScroll) {
+  if (!stepIds().includes(id)) id = 'start';
+  S.step = id;
+  applySteps();
+  if (id === 'summary') renderSummary();
+  if (id === 'files') renderFiles();
+  if (id === 'name') syncNameUI();
+  if (!keepScroll) window.scrollTo(0, 0);
+}
+const stepMove = d => { const ids = stepIds(), i = ids.indexOf(S.step) + d; showStep(i < 0 ? 'start' : ids[Math.min(i, ids.length - 1)]); };
+
+// ---------- Startseite: gewonnener Platz ----------
+function savedLine(name, t) {
+  if (!t || !t.count) return null;
+  const diff = t.in - t.out, pct = t.in ? Math.round(Math.abs(diff) / t.in * 100) : 0;
+  return h('div', {class: 'savedrow'},
+    h('b', {}, name), h('span', {class: diff >= 0 ? 'good' : 'warn'}, (diff >= 0 ? '−' : '+') + fmtSize(Math.abs(diff)) + ' (' + pct + ' %)'),
+    h('small', {class: 'muted'}, t.count + (t.count === 1 ? ' Datei' : ' Dateien') + ' · ' + fmtSize(t.in) + ' → ' + fmtSize(t.out)));
+}
+function renderSaved() {
+  const d = S.saved, box = $('#savedBody');
+  if (!d || (!d.audio.count && !d.video.count)) {
+    fill(box, h('p', {class: 'muted small'}, 'Noch nichts umgewandelt. Hier siehst du bald, wie viel Speicherplatz du durch das Konvertieren gewonnen hast.'));
+    return;
+  }
+  const total = {count: d.audio.count + d.video.count, in: d.audio.in + d.video.in, out: d.audio.out + d.video.out};
+  const order = S.world === 'video' ? [['video', d.video], ['audio', d.audio]] : [['audio', d.audio], ['video', d.video]];
+  const diff = total.in - total.out;
+  fill(box, h('div', {class: 'savedbig ' + (diff >= 0 ? 'good' : 'warn')}, (diff >= 0 ? '−' : '+') + fmtSize(Math.abs(diff))),
+    h('div', {class: 'muted small'}, diff >= 0 ? 'Platz gewonnen' + (d.since ? ' seit ' + d.since.split('-').reverse().join('.') : '') : 'Mehrbedarf (z. B. durch verlustfreie Formate)'),
+    order.map(([w, t]) => savedLine(W(w).name, t)));
+}
+
+// ---------- Zusammenfassung ----------
+function sumRow(label, step, ...content) {
+  return h('div', {class: 'sumrow'}, h('div', {class: 'suml'}, h('b', {}, label), h('button', {type: 'button', class: 'small ghost', onclick: () => showStep(step)}, 'Ändern')), h('div', {class: 'sumc'}, content));
+}
+async function renderSummary() {
+  const files = S.files[S.world], tot = files.reduce((a, f) => a + (f.size || 0), 0), warns = [];
+  const dir = $('#outMode').value === 'custom' ? $('#outDir').value.trim() : '';
+  if (!files.length) warns.push('Es sind noch keine Dateien ausgewählt.');
+  if ($('#outMode').value === 'custom' && !dir) warns.push('Es ist kein Zielordner angegeben.');
+  if ($('#deleteSource').checked) warns.push('Die Quelldateien werden nach erfolgreicher Konvertierung GELÖSCHT.');
+  if (S.world === 'video' && $('#vCodec').value !== 'copy') {
+    const r = resolveBackend(); if (r && r.note) warns.push(r.note);
+  }
+  const names = files.slice(0, 4).map(f => f.rel || f.path.split(/[\\/]/).pop());
+  const existsTxt = {rename: 'Gibt es das Ziel schon: neue Datei mit „(2)“', skip: 'Gibt es das Ziel schon: überspringen', overwrite: 'Gibt es das Ziel schon: überschreiben'}[$('#exists').value];
+  const pat = $('#pattern').value.trim(), rules = cleanRules(nameRules()), suf = $('#suffix').value;
+  const nameParts = [pat ? 'Muster ' + pat : 'Originalname', suf ? 'Zusatz „' + suf + '“' : null, rules.length ? rules.length + (rules.length === 1 ? ' Ersetzung' : ' Ersetzungen') : null].filter(Boolean);
+  const settings = describePreset({world: S.world, values: collectPresetValues(S.world)});
+  const sp = h('span', {class: 'muted small'}, '');
+  const rows = [
+    sumRow('Dateien', 'files', h('div', {}, files.length + (files.length === 1 ? ' Datei' : ' Dateien') + (files.length ? ' · ' + fmtSize(tot) : '')), files.length ? h('div', {class: 'muted small'}, names.join(' · ') + (files.length > 4 ? ' · … und ' + (files.length - 4) + ' weitere' : '')) : null),
+    sumRow('Ziel', 'dest', h('div', {}, dir ? 'Ordner ' + dir : 'Neben der Quelldatei'), h('div', {class: 'muted small'}, existsTxt)),
+    sumRow('Benennen', 'name', h('div', {}, nameParts.join(' · ')), sp),
+    sumRow(S.world === 'video' ? 'Video' : 'Einstellungen', S.world === 'video' ? 'video' : 'audio', h('div', {}, settings),
+      S.world === 'video' && $('#vCodec').value !== 'copy' ? h('div', {class: 'muted small'}, 'Encoder: ' + $('#vResolved').textContent.replace(/\s+/g, ' ').trim()) : null),
+  ];
+  if (S.world === 'video') {
+    const am = $('#vAudioMode').value === 'copy' ? 'Audiospuren unverändert' : 'Audio neu kodiert (' + $('#vAudioCodec').value.toUpperCase() + ' ' + $('#vAudioKbps').value + ' kbit/s)';
+    const al = $('#vAudioLangs').value.trim(), sl = $('#vSubLangs').value.trim();
+    const sm = $('#vSubMode').value === 'none' ? 'Untertitel entfernt' : 'Untertitel unverändert';
+    rows.push(sumRow('Audio & Untertitel', 'tracks', h('div', {}, am + (al ? ' · nur ' + al : '')), h('div', {}, sm + (sl && $('#vSubMode').value !== 'none' ? ' · nur ' + sl : ''))));
+  }
+  fill($('#summaryBody'), warns.length ? h('div', {class: 'banner warn'}, warns.map(w => h('div', {}, icon('warn'), ' ' + w))) : null, rows);
+  $('#start').disabled = !files.length || ($('#outMode').value === 'custom' && !dir);
+  // Beispiel für den neuen Namen der ersten Datei
+  if (files.length) {
+    try {
+      const r = await api('/api/rename/preview', {items: [files[0].path], pattern: pat, replace: rules, suffix: suf, ext: outExt(), mode: 'convert',
+        target: S.world === 'video' ? {codec: $('#vCodec').value, height: +$('#vHeight').value, bitDepth: +$('#vDepth').value, container: $('#vContainer').value} : {container: outExt()}});
+      const x = r.items[0];
+      if (x) sp.textContent = 'Beispiel: ' + x.old + ' → ' + (x.error ? x.error : x.new);
+    } catch (e) { /* nur ein Beispiel */ }
+  }
+}
+
+function wireFlow() {
+  $('#startFlow').onclick = () => showStep('files');
+  $('#startRename').onclick = () => { location.hash = '#rename'; };
+  $('#stepBack').onclick = () => stepMove(-1);
+  $('#stepNext').onclick = () => stepMove(1);
+}
