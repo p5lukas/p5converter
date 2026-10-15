@@ -354,3 +354,39 @@ button.small .ic,.blist .ic{width:1.3em;height:1.3em}
 .job.done .bar>i{background:var(--good);box-shadow:0 0 10px rgba(61,220,132,.4)}
 .job.done.note .bar>i{background:var(--warn);box-shadow:0 0 10px #ffd24a55}
 .job.done .bar{background:var(--line)}
+
+/* ===== Ablauf in Schritten ===== */
+.steps{display:flex;gap:6px;overflow-x:auto;padding:4px 2px 12px;margin:0 0 8px;scrollbar-width:thin}
+.stepbtn{flex:none;gap:8px;padding:7px 12px;color:var(--muted);border-color:var(--line)}
+.stepbtn i{font-style:normal;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;border:1px solid var(--line);font-size:12px}
+.stepbtn i .ic{width:15px;height:15px}
+.stepbtn em{font-style:normal;font-size:11px;background:var(--accent);color:var(--bg);border-radius:9px;padding:0 6px;line-height:16px;font-weight:700}
+.stepbtn.past{color:var(--text)}.stepbtn.past i{border-color:var(--accent);color:var(--accent)}
+.stepbtn.on{color:var(--accent);border-color:var(--accent);background:var(--dim);text-shadow:0 0 10px var(--glow)}
+.stepbtn.on i{background:var(--accent);color:var(--bg);border-color:var(--accent);text-shadow:none}
+.stepsec[data-step]:not([data-step=start]){max-width:900px;margin:0 auto}
+.presetbar{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;max-width:900px;margin:0 auto 14px}
+.presetbar .presets{margin:0}
+.stepnav{display:flex;align-items:center;gap:12px;flex-wrap:wrap;max-width:900px;margin:20px auto;padding:10px 14px;position:sticky;bottom:calc(10px + var(--sat-bottom));z-index:15;background:hsl(var(--h) 80% 2% / .92);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:10px;box-shadow:0 0 24px var(--dim),0 8px 30px #000a}
+.stepnav .spacer{flex:1}
+.stepnav button{white-space:nowrap}
+.startactions{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0}
+.startactions button.big{padding:14px 26px;font-size:16px}
+.startcols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start;margin-bottom:20px}
+.startcols:has(#hwCard.hidden){grid-template-columns:minmax(0,1fr)}
+.savedbig{font-size:34px;font-weight:700;line-height:1.1;text-shadow:0 0 14px var(--glow)}
+.savedbig.good,.savedrow .good{color:var(--good)}.savedbig.warn,.savedrow .warn{color:var(--warn)}
+.savedrow{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+.savedrow small{grid-column:1/-1}
+.sumrow{display:grid;grid-template-columns:200px 1fr;gap:6px 18px;padding:12px 0;border-top:1px solid var(--line)}
+.suml{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.sumc{overflow-wrap:anywhere}
+#summaryBody .banner{margin-bottom:10px}
+@media(max-width:1000px){.startcols{grid-template-columns:1fr}}
+@media(max-width:700px){
+  .stepbtn{padding:6px 9px}.stepbtn:not(.on)>span:not(.icw){display:none}
+  .startactions button.big{flex:1;justify-content:center;padding:14px 12px;font-size:15px}
+  .sumrow{grid-template-columns:1fr}
+  .stepnav{margin:14px 0;padding:8px}.stepnav button{flex:1;justify-content:center}.stepnav #startInfo{display:none}.stepnav .spacer{display:none}
+  .savedbig{font-size:28px}
+}

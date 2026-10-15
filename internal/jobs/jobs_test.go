@@ -232,3 +232,27 @@ func TestDecoderOfMappingLine(t *testing.T) {
 		}
 	}
 }
+
+// finished conversions are reported with their sizes (feeds the "gewonnener Platz" total); failures are not
+func TestOnDoneReportsSizes(t *testing.T) {
+	real, video, _ := testMedia(t)
+	fake := fakeFFmpeg(t, "for a; do last=$a; done\nprintf 'abcd' > \"$last\"")
+	m := New(ffmpeg.Tools{FFmpeg: fake, FFprobe: real.FFprobe}, hw.NewSampler(), 1)
+	type rec struct {
+		kind    string
+		in, out int64
+	}
+	got := make(chan rec, 4)
+	m.OnDone = func(k string, in, out int64) { got <- rec{k, in, out} }
+	m.Submit(&Request{Kind: "video", Items: []Item{{Path: video}}, Video: build.VideoOpts{Container: "mkv", Codec: "copy"},
+		Output: OutputOpts{Dir: t.TempDir(), Exists: "rename"}})
+	select {
+	case r := <-got:
+		st, _ := os.Stat(video)
+		if r.kind != "video" || r.in != st.Size() || r.out != 4 {
+			t.Errorf("%+v (Quelle %d Bytes)", r, st.Size())
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("OnDone wurde nicht aufgerufen")
+	}
+}

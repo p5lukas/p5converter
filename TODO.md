@@ -15,6 +15,7 @@
 - [ ] Quick Sync (Intel Core i9-9900): Wirkung des Fixes in 0.0.3 beim Nutzer bestätigen; bleibt es „nicht nutzbar“, die kopierte Diagnose (Einstellungen → Hardware) auswerten
 
 ## Vom Nutzer zu prüfen (nicht in der Sandbox möglich)
+- [ ] Neuen Ablauf auf iPhone/iPad ansehen (Reiter-Leiste scrollt, Zurück/Weiter-Leiste unten, Safe-Areas in der Web-App)
 - [ ] Auslastungsanzeige auf dem Unraid-Server ansehen: im Leerlauf soll die CPU kleine, wechselnde Werte zeigen; „Grafik aktiv“ (Intel) im Leerlauf niedrig, beim Konvertieren hoch. Falls der Intel-Wert weiter nicht stimmt: Diagnose (Einstellungen → Hardware) schicken
 - [ ] iPhone/iPad: Safari und Web-App (Safe-Areas, Statusleiste, Pull-to-Refresh) auf dem Gerät ansehen
 - [ ] Quick Sync auf dem i9-9900: mit Hardware-Decoding an muss in der Warteschlange „Schreiben: Quick Sync …“ **und** „Lesen: Quick Sync“ stehen (auch mit Verkleinern/10 Bit); sonst „Details“ (Befehl, Log, Frühere Versuche) schicken
@@ -26,6 +27,7 @@
 - [ ] Linux-App (Fedora KDE) mit eigener Oberfläche
 
 ## Erledigt
+- [x] 0.0.6: **Ablauf in Schritten** (Variante C, mit Zusammenfassung): Startseite (Statistik, Hardware, gewonnener Platz, Warteschlange, „Konvertierung starten“/„Umbenennen starten“), Schritte je Welt, Rückkehr zur Startseite nach dem Start; „Umbenennen“ aus der Kopfzeile entfernt
 - [x] 0.0.5: **Warteschlange je Welt getrennt** (eigene Parallelität, Zähler, Abbrechen/Entfernen je Welt)
 - [x] 0.0.5: **Auslastungsanzeige** dauernd live gemessen, ehrlich bei fehlender Messung (Ursache: Messung nur während Aufträgen → alter Wert blieb stehen)
 - [x] 0.0.5: **„+ Ersetzung“ repariert**, Muster/Zusatz/Ersetzungen je Welt getrennt, UI-Test (`tools/ui-check-world.js`)

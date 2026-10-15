@@ -25,6 +25,7 @@ import (
 	"github.com/p5lukas/p5converter/internal/hw"
 	"github.com/p5lukas/p5converter/internal/jobs"
 	"github.com/p5lukas/p5converter/internal/rename"
+	"github.com/p5lukas/p5converter/internal/stats"
 	"github.com/p5lukas/p5converter/internal/version"
 	"github.com/p5lukas/p5converter/web"
 )
@@ -34,6 +35,7 @@ type Server struct {
 	Tools    ffmpeg.Tools
 	Det      *hw.Detector
 	Sampler  *hw.Sampler
+	Stats    *stats.Store
 	Jobs     *jobs.Manager
 	Auth     *auth.Manager
 	Settings *config.Store
@@ -47,6 +49,8 @@ func New(build version.Info, t ffmpeg.Tools, roots []string, concurrency int, co
 	s := &Server{Build: build, Tools: t, Det: hw.NewDetector(t), Sampler: hw.NewSampler(), Roots: roots,
 		Settings: config.Open(configDir), Auth: auth.New(configDir)}
 	s.Jobs = jobs.New(t, s.Sampler, concurrency)
+	s.Stats = stats.Open(statsDir(s.Settings, configDir))
+	s.Jobs.OnDone = s.Stats.Add
 	cfg := s.Settings.Get()
 	if cfg.Concurrency > 0 { // the values saved in the settings win over the start default
 		s.Jobs.SetConcurrency("video", cfg.Concurrency)
@@ -449,13 +453,21 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{"ids": ids})
 }
 
+// statsDir: totals are only kept on disk when the config folder is writable.
+func statsDir(c *config.Store, dir string) string {
+	if c.Persistent() {
+		return dir
+	}
+	return ""
+}
+
 func (s *Server) concurrencies() map[string]int {
 	return map[string]int{"audio": s.Jobs.Concurrency("audio"), "video": s.Jobs.Concurrency("video")}
 }
 
 func (s *Server) state(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{
-		"jobs": s.Jobs.Snapshot(), "stats": s.Sampler.Latest(), "concurrency": s.concurrencies(),
+		"jobs": s.Jobs.Snapshot(), "stats": s.Sampler.Latest(), "concurrency": s.concurrencies(), "saved": s.Stats.Get(),
 	})
 }
 

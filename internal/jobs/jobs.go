@@ -96,6 +96,8 @@ type Manager struct {
 	concurrency map[string]int // per world: audio and video have their own queue
 	running     map[string]int
 	reserved    map[string]string // output path -> job id (queued/running jobs)
+	// OnDone is called after every successful conversion (kind, bytes in, bytes out).
+	OnDone      func(kind string, in, out int64)
 	partialFile string
 	partials    map[string]bool
 }
@@ -499,13 +501,18 @@ func (m *Manager) run(j *Job) {
 			}
 		}
 	}
+	var sizeIn int64
 	m.update(j, func() {
 		j.Status = "done"
 		j.Progress = 100
 		j.ETA = 0
 		j.SizeOut = size
 		j.Ended = time.Now()
+		sizeIn = j.SizeIn
 	})
+	if m.OnDone != nil {
+		m.OnDone(j.Kind, sizeIn, size)
+	}
 }
 
 func (m *Manager) exec(ctx context.Context, j *Job, args []string, duration float64) error {

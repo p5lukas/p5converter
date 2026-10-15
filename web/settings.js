@@ -135,6 +135,7 @@ function editPreset(id) {
   setWorld(p.world, false);
   applyPreset(p);
   renderEditBanner();
+  showStep(p.world === 'video' ? 'video' : 'audio');
 }
 function renderEditBanner() {
   const b = $('#editBanner'), p = S.editPreset && cfg().presets.find(x => x.id === S.editPreset);

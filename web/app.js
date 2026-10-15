@@ -14,7 +14,7 @@ const api = async (url, body, method) => {
 const fmtSize = n => n > 1e9 ? (n / 1e9).toFixed(2) + ' GB' : n > 1e6 ? (n / 1e6).toFixed(1) + ' MB' : n > 1e3 ? (n / 1e3).toFixed(0) + ' KB' : (n || 0) + ' B';
 const fmtTime = s => { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s % 60).padStart(2, '0'); };
 
-const S = {world: 'audio', files: {audio: [], video: []}, info: null, jobs: [], stats: null};
+const S = {step: 'start', world: 'audio', files: {audio: [], video: []}, info: null, jobs: [], stats: null};
 const BACKEND_ORDER = ['qsv', 'nvenc', 'amf', 'vaapi', 'cpu'];
 const CODEC_LABEL = {h264: 'H.264', hevc: 'H.265', av1: 'AV1', vp9: 'VP9'};
 const SWENC = {h264: 'libx264', hevc: 'libx265', av1: 'libsvtav1', vp9: 'libvpx-vp9'};
@@ -82,15 +82,13 @@ function setWorld(w, animate) {
   $$('#worlds button').forEach(b => b.classList.toggle('on', b.dataset.world === w));
   // Der Farbwechsel passiert mitten im Flug (dunkler Bildschirm), damit nichts flackert
   setTimeout(() => { applyTheme(w); }, animate ? 380 : 0);
-  $('#audioSettings').classList.toggle('hidden', w !== 'audio');
-  $('#videoSettings').classList.toggle('hidden', w !== 'video');
-  $('#hwCard').classList.toggle('hidden', w !== 'video');
   renderFiles();
   refreshAudioUI();
   refreshVideoUI();
   renderStartInfo();
   syncNameUI();
-  renderConc(); renderQueue(); renderHero(); renderWorldBadges();
+  renderConc(); renderQueue(); renderHero(); renderWorldBadges(); renderSaved();
+  S.step = 'start'; applySteps();
   saveSettings();
 }
 
@@ -212,6 +210,7 @@ function renderFiles() {
   $$('#fileList [data-tr]').forEach(b => b.onclick = () => openTracks(list[+b.dataset.tr]));
   const tot = list.reduce((a, f) => a + (f.size || 0), 0);
   renderStartInfo();
+  renderSteps();
   refreshNamePreview();
   $('#fileSummary').textContent = list.length ? `${list.length} Datei(en), ${fmtSize(tot)}` : '';
 }
@@ -322,7 +321,7 @@ async function start() {
   try {
     const r = await api('/api/jobs', req);
     toast(r.ids.length + (r.ids.length === 1 ? ' Auftrag eingereiht.' : ' Aufträge eingereiht.'), 'ok');
-    files.length = 0; renderFiles(); saveSettings(); poll();
+    files.length = 0; renderFiles(); saveSettings(); poll(); showStep('start');
   } catch (e) { toast(e.message, 'bad'); }
 }
 
@@ -449,6 +448,7 @@ async function poll() {
   try {
     const d = await api('/api/state');
     S.jobs = d.jobs; S.stats = d.stats; S.conc = d.concurrency;
+    const savedChanged = JSON.stringify(S.saved) !== JSON.stringify(d.saved); S.saved = d.saved; if (savedChanged) renderSaved();
     renderConc(); renderWorldBadges();
     renderQueue(); renderMonitor(); renderHero();
   } catch (e) {} finally { polling = false; }
@@ -564,7 +564,7 @@ function openNews() {
   try { localStorage.setItem('p5cNewsSeen', cur); } catch (e) {}
 }
 function wire() {
-  wireRename();
+  wireRename(); wireFlow();
   $('#newsBtn').onclick = openNews;
   $('#gearBtn').onclick = () => { location.hash = '#settings'; };
   $('#logoutBtn').onclick = logout;

@@ -23,7 +23,6 @@
   </nav>
   <div class="spacer"></div>
   <span id="ffver" class="muted small hidewide"></span>
-  <button id="renameBtn" class="tb" title="Umbenennen"><span data-ic="rename"></span><span class="lbl"> Umbenennen</span></button>
   <button id="newsBtn" class="tb" title="Neuigkeiten"><span data-ic="news"></span><span class="lbl"> Neuigkeiten</span><i id="newsDot" class="dot hidden"></i></button>
   <button id="gearBtn" class="tb" title="Einstellungen"><span data-ic="gear"></span><span class="lbl"> Einstellungen</span></button>
   <button id="logoutBtn" class="tb ghost hidden" title="Abmelden"><span data-ic="logout"></span><span class="lbl"> Abmelden</span></button>
@@ -31,6 +30,16 @@
 </div></header>
 
 <main id="viewMain">
+  <nav class="steps" id="steps" aria-label="Ablauf"></nav>
+  <div id="editBanner" class="editbanner hidden"></div>
+  <div class="presetbar hidden" id="presetBar">
+    <span class="muted small">Voreinstellung:</span>
+    <div class="presets" id="aPresets"></div>
+    <div class="presets hidden" id="vPresets"></div>
+  </div>
+
+  <!-- Schritt: Start -->
+  <section class="stepsec" data-step="start">
   <section class="hero" id="hero">
     <div class="ring" id="ring"><b id="ringTxt">–</b></div>
     <div class="stats">
@@ -42,8 +51,37 @@
     </div>
     <div id="monitor" class="monitor"></div>
   </section>
-  <div class="cols">
-  <section class="col">
+    <div class="startactions">
+      <button id="startFlow" class="primary big"><span data-ic="play"></span> Konvertierung starten</button>
+      <button id="startRename" class="big"><span data-ic="rename"></span> Umbenennen starten</button>
+    </div>
+    <div class="startcols">
+      <div class="panel" id="savedCard">
+        <h2 data-info="savedInfo">Gewonnener Platz</h2>
+        <div id="savedBody"></div>
+      </div>
+      <div class="panel hidden" id="hwCard" data-world="video">
+      <div class="panel-h"><h2 data-info="hwInfo">Hardware</h2><button id="hwRedetect" class="small">Neu erkennen</button></div>
+      <div id="hwList"></div>
+      <div id="hwGpus" class="muted small"></div>
+      </div>
+    </div>
+    <section class="full">
+    <div class="panel">
+      <div class="panel-h"><h2>Warteschlange <span id="queueWorld" class="qworld"></span></h2>
+        <div class="btns">
+          <label class="inline small">Parallel <select id="conc"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
+          <button id="cancelAll" class="small ghost" title="Bricht alle Aufträge dieser Welt ab und löscht unfertige Dateien. Quelldateien bleiben unberührt.">Alle abbrechen</button>
+          <button id="clearDone" class="small ghost">Fertige entfernen</button>
+        </div>
+      </div>
+      <div id="queue"></div>
+    </div>
+    </section>
+  </section>
+
+  <!-- Schritt: Dateien -->
+  <section class="stepsec hidden" data-step="files">
     <div class="panel">
       <div class="panel-h"><h2>Dateien</h2>
         <div class="btns">
@@ -56,6 +94,10 @@
       <div id="fileSummary" class="muted small"></div>
     </div>
 
+  </section>
+
+  <!-- Schritt: Ziel -->
+  <section class="stepsec hidden" data-step="dest">
     <div class="panel" id="destCard">
       <h2>Ziel</h2>
       <div class="grid2">
@@ -68,11 +110,21 @@
         <label id="structRow" class="hidden">Struktur
           <select id="outStruct"><option value="keep">Ordnerstruktur beibehalten</option><option value="flat">Alles in einen Ordner</option></select>
         </label>
-        <label>Dateiname-Zusatz
-          <input id="suffix" placeholder="z. B. _x265">
-        </label>
         <label>Wenn Datei existiert
           <select id="exists"><option value="rename">Umbenennen (2)</option><option value="skip">Überspringen</option><option value="overwrite">Überschreiben</option></select>
+        </label>
+      </div>
+      <label class="check"><input type="checkbox" id="deleteSource"> Quelldatei nach Erfolg löschen <span class="warn small">(unwiderruflich)</span></label>
+    </div>
+  </section>
+
+  <!-- Schritt: Benennen -->
+  <section class="stepsec hidden" data-step="name">
+    <div class="panel">
+      <h2>Benennen</h2>
+      <div class="grid2">
+        <label>Dateiname-Zusatz
+          <input id="suffix" placeholder="z. B. _x265">
         </label>
       </div>
       <div class="namebox" id="nameBox">
@@ -87,14 +139,13 @@
         <button type="button" class="small" id="addRule">+ Ersetzung</button>
         <div class="namepreview" id="namePreview"></div>
       </div>
-      <label class="check"><input type="checkbox" id="deleteSource"> Quelldatei nach Erfolg löschen <span class="warn small">(unwiderruflich)</span></label>
     </div>
   </section>
 
-  <section class="col">
+  <!-- Schritt: Audio-Einstellungen (Audiowelt) -->
+  <section class="stepsec hidden" data-step="audio" data-world="audio">
     <div class="panel" id="audioSettings">
       <h2>Audio-Einstellungen</h2>
-      <div class="presets" id="aPresets"></div>
       <div class="grid2">
         <label>Format
           <select id="aFormat">
@@ -128,9 +179,12 @@
       <p class="muted small">Tags (Titel, Interpret, Album …) werden immer übernommen.</p>
     </div>
 
-    <div class="panel hidden" id="videoSettings">
+  </section>
+
+  <!-- Schritt: Video-Einstellungen (Videowelt) -->
+  <section class="stepsec hidden" data-step="video" data-world="video">
+    <div class="panel" id="videoSettings">
       <h2>Video-Einstellungen</h2>
-      <div class="presets" id="vPresets"></div>
       <div class="grid2">
         <label>Container
           <select id="vContainer"><option value="mkv">MKV (Matroska)</option><option value="mp4">MP4</option></select>
@@ -164,6 +218,13 @@
       </div>
       <label class="check" id="vHwDecRow"><input type="checkbox" id="vHwDec" checked> Hardware-Decoding nutzen (fällt bei Fehler automatisch zurück)</label>
 
+    </div>
+  </section>
+
+  <!-- Schritt: Audio & Untertitel (Videowelt) -->
+  <section class="stepsec hidden" data-step="tracks" data-world="video">
+    <div class="panel" id="trackSettings">
+      <h2>Audio und Untertitel</h2>
       <h3 data-info="vAudioTracks">Audiospuren</h3>
       <div class="grid2">
         <label>Verarbeitung
@@ -186,42 +247,30 @@
           <input id="vSubLangs" placeholder="leer = alle, z. B. ger,eng">
         </label>
       </div>
-      <p class="muted small">Einzelne Spuren pro Datei entfernen oder Standard-Audiospur ändern: in der Dateiliste auf „Spuren“ klicken.</p>
-    </div>
-
-    <div class="panel hidden" id="hwCard">
-      <div class="panel-h"><h2 data-info="hwInfo">Hardware</h2><button id="hwRedetect" class="small">Neu erkennen</button></div>
-      <div id="hwList"></div>
-      <div id="hwGpus" class="muted small"></div>
+      <p class="muted small">Einzelne Spuren pro Datei entfernen oder Standard-Audiospur ändern: im Schritt „Dateien“ auf „Spuren“ klicken.</p>
     </div>
   </section>
 
-  </div>
+  <!-- Schritt: Zusammenfassung -->
+  <section class="stepsec hidden" data-step="summary">
+    <div class="panel" id="summaryCard">
+      <h2>Zusammenfassung</h2>
+      <div id="summaryBody"></div>
+    </div>
+  </section>
 
-  <div id="editBanner" class="editbanner hidden"></div>
-
-  <div class="startbar" id="startbar">
-    <button id="start" class="primary big"><span data-ic="play"></span> Konvertierung starten</button>
-    <button id="savePreset" title="Die aktuellen Einstellungen als Voreinstellung speichern"><span data-ic="floppy"></span><span class="lbl2"> Als Voreinstellung speichern</span></button>
+  <div class="stepnav hidden" id="stepnav">
+    <button id="stepBack" class="ghost">← Zurück</button>
     <span id="startInfo" class="small muted"></span>
+    <span class="spacer"></span>
+    <button id="savePreset" class="hidden" title="Die aktuellen Einstellungen als Voreinstellung speichern"><span data-ic="floppy"></span><span class="lbl2"> Als Voreinstellung speichern</span></button>
+    <button id="stepNext" class="primary">Weiter →</button>
+    <button id="start" class="primary big hidden"><span data-ic="play"></span> Konvertierung starten</button>
   </div>
-
-  <section class="full">
-    <div class="panel">
-      <div class="panel-h"><h2>Warteschlange <span id="queueWorld" class="qworld"></span></h2>
-        <div class="btns">
-          <label class="inline small">Parallel <select id="conc"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
-          <button id="cancelAll" class="small ghost" title="Bricht alle Aufträge dieser Welt ab und löscht unfertige Dateien. Quelldateien bleiben unberührt.">Alle abbrechen</button>
-          <button id="clearDone" class="small ghost">Fertige entfernen</button>
-        </div>
-      </div>
-      <div id="queue"></div>
-    </div>
-  </section>
 </main>
 
 <main id="viewRename" class="hidden">
-  <div class="sethead"><button class="ghost" id="rnBack">← Zum Konverter</button><h1>Umbenennen</h1></div>
+  <div class="sethead"><button class="ghost" id="rnBack">← Zur Startseite</button><h1>Umbenennen</h1></div>
   <p class="muted small rnintro">Dateien umbenennen, ohne sie zu konvertieren: mit Namensmuster, Variablen und Suchen &amp; Ersetzen. Es wird nur der Name geändert – nichts wird verschoben oder überschrieben.</p>
   <div class="panel">
     <div class="panel-h"><h2>Dateien</h2>
@@ -299,6 +348,7 @@
 <script src="planets.js"></script>
 <script src="info.js"></script>
 <script src="rename.js"></script>
+<script src="flow.js"></script>
 <script src="settings.js"></script>
 <script src="auth.js"></script>
 <script src="app.js"></script>

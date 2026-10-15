@@ -38,12 +38,15 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     await p.goto(BASE); await p.waitForTimeout(1200);
     await p.click('[data-world=video]'); await p.waitForTimeout(1800);
     // Voreinstellung speichern
+    await p.click('[data-step-btn=video]'); await p.waitForTimeout(250);
     await p.selectOption('#vCodec', 'hevc'); await p.selectOption('#vDepth', '10'); await p.fill('#vCrf', '19');
     await p.evaluate(() => { const e = document.querySelector('#vCrf'); e.value = 19; e.dispatchEvent(new Event('input', {bubbles: true})); });
+    await p.click('[data-step-btn=summary]'); await p.waitForTimeout(250);
     await p.click('#savePreset'); await p.waitForTimeout(300);
     await p.fill('#presetName', 'Mein Test ' + name); await p.click('#presetSave'); await p.waitForTimeout(600);
     ok(await p.locator('#vPresets button', {hasText: 'Mein Test ' + name}).count() === 1, name + ': Chip der neuen Voreinstellung fehlt');
     // zurücksetzen und per Chip laden
+    await p.click('[data-step-btn=video]'); await p.waitForTimeout(250);
     await p.selectOption('#vCodec', 'h264'); await p.selectOption('#vDepth', '8');
     await p.click('#vPresets button:has-text("Mein Test ' + name + '")'); await p.waitForTimeout(300);
     ok((await p.inputValue('#vCodec')) === 'hevc' && (await p.inputValue('#vDepth')) === '10', name + ': Voreinstellung wurde nicht angewendet');

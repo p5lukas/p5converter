@@ -98,7 +98,6 @@ function renderRenamePage() {
   rnRefresh();
 }
 function wireRename() {
-  $('#renameBtn').onclick = () => { location.hash = '#rename'; };
   $('#rnBack').onclick = () => { location.hash = ''; };
   $('#addRule').onclick = () => addRuleFn && addRuleFn();
   $('#rnAddRule').onclick = () => rnAddRule && rnAddRule();
