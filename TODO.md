@@ -10,6 +10,7 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
+- [ ] **Warteschlange: Haken und Farben vereinheitlichen** (Nutzer, Screenshot): (1) Bei „Schreiben: Quick Sync · hevc_qsv ✓“ steht ein Haken, bei „Lesen: Quick Sync“ nicht – verwirrend: entweder bei beiden einen Haken (soweit ffmpeg es bestätigt; Decoder-Bestätigung aus dem ffmpeg-Log prüfen, z. B. Stream-Zeile `(hevc (hevc_qsv) …)`) oder den Haken erklären/weglassen; (2) Kacheln (Chips) farblich nach Ergebnis: **grün** = hat geklappt/bestätigt, **gelb** = Hinweis/Info/Ausweichweg (z. B. „Lesen: CPU“), **rot** = Fehler (Idee des Nutzers, Variante noch zu bestätigen)
 - [ ] Branch-Modell: **erstmal nur `main`**, bis alles stabil läuft. Auf Zuruf des Nutzers dann wie p5assets: Feature-Branch → `dev` (Image `:dev`) → `main` (Image `:latest`); optional multi-arch (amd64/arm64)
 - [ ] Design weiter verfeinern nach Rückmeldung vom Gerät (iPhone/iPad Safari und Web-App)
 - [ ] Quick Sync (Intel Core i9-9900): Wirkung des Fixes in 0.0.3 beim Nutzer bestätigen; bleibt es „nicht nutzbar“, die kopierte Diagnose (Einstellungen → Hardware) auswerten
