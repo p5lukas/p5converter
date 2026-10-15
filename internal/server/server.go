@@ -24,6 +24,7 @@ import (
 	"github.com/p5lukas/p5converter/internal/ffmpeg"
 	"github.com/p5lukas/p5converter/internal/hw"
 	"github.com/p5lukas/p5converter/internal/jobs"
+	"github.com/p5lukas/p5converter/internal/logs"
 	"github.com/p5lukas/p5converter/internal/rename"
 	"github.com/p5lukas/p5converter/internal/stats"
 	"github.com/p5lukas/p5converter/internal/version"
@@ -63,7 +64,10 @@ func New(build version.Info, t ffmpeg.Tools, roots []string, concurrency int, co
 	}
 	s.enc = t.Encoders()
 	s.ffver = t.Version()
-	go s.Det.Detect()
+	go func() {
+		s.Det.Detect()
+		logHardware(s.Det.Result())
+	}()
 	return s
 }
 
@@ -122,6 +126,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/jobs", s.submit)
 	mux.HandleFunc("GET /api/state", s.state)
 	mux.HandleFunc("POST /api/rename/preview", s.renamePreview)
+	mux.HandleFunc("GET /api/logs", s.logFiles)
+	mux.HandleFunc("GET /api/logs/alerts", s.logAlerts)
+	mux.HandleFunc("GET /api/logs/read", s.logRead)
+	mux.HandleFunc("GET /api/logs/download", s.logDownload)
+	mux.HandleFunc("POST /api/logs/clear", s.logClear)
 	mux.HandleFunc("POST /api/rename", s.renameApply)
 	mux.HandleFunc("POST /api/jobs/{id}/cancel", func(w http.ResponseWriter, r *http.Request) {
 		s.Jobs.Cancel(r.PathValue("id"))
@@ -450,6 +459,7 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	ids := s.Jobs.Submit(&req)
+	logs.Get("jobs").Infof("%d %s-Auftrag(e) eingereiht (%s)", len(ids), req.Kind, describeRequest(&req))
 	writeJSON(w, map[string]any{"ids": ids})
 }
 
@@ -494,6 +504,7 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 	if out.ConcurrencyAudio > 0 {
 		s.Jobs.SetConcurrency("audio", out.ConcurrencyAudio)
 	}
+	logs.Get("settings").Infof("Einstellungen gespeichert")
 	writeJSON(w, map[string]any{"settings": out, "persistent": s.Settings.Persistent()})
 }
 
@@ -568,6 +579,11 @@ func (s *Server) authLogin(w http.ResponseWriter, r *http.Request) {
 	tok, life, err := s.Auth.Login(b.Username, b.Password, clientIP(r), b.Remember)
 	if err != nil {
 		var be *auth.BlockedError
+		if errors.As(err, &be) {
+			logs.Get("auth").Warnf("Anmeldung gesperrt für %s (zu viele Fehlversuche, %d s)", clientIP(r), int(be.Wait.Seconds())+1)
+		} else if !errors.Is(err, auth.ErrNotEnabled) {
+			logs.Get("auth").Warnf("Anmeldung fehlgeschlagen für Benutzer %q von %s", b.Username, clientIP(r))
+		}
 		switch {
 		case errors.As(err, &be):
 			w.Header().Set("Retry-After", strconv.Itoa(int(be.Wait.Seconds())+1))
@@ -579,6 +595,7 @@ func (s *Server) authLogin(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	logs.Get("auth").Infof("Angemeldet: %q von %s", b.Username, clientIP(r))
 	setSessionCookie(w, r, tok, life, b.Remember)
 	writeJSON(w, map[string]any{"ok": true, "state": map[string]any{"enabled": true, "authenticated": true, "user": s.Auth.User(), "fun": s.Auth.Fun()}})
 }
@@ -601,6 +618,7 @@ func (s *Server) authSetup(w http.ResponseWriter, r *http.Request) {
 		httpErr(w, 400, err.Error())
 		return
 	}
+	logs.Get("auth").Infof("Anmeldung eingeschaltet (Benutzer %q)", b.Username)
 	// log the person in right away, otherwise they would lock themselves out of the page they are on
 	tok := ""
 	if t, life, err := s.Auth.Login(b.Username, b.Password, clientIP(r), false); err == nil {
@@ -630,9 +648,11 @@ func (s *Server) authChange(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.Auth.Change(b.Current, b.Username, b.NewPassword); err != nil {
+		logs.Get("auth").Warnf("Zugangsdaten ändern abgelehnt: %v", err)
 		httpErr(w, 400, err.Error())
 		return
 	}
+	logs.Get("auth").Infof("Zugangsdaten geändert, alle Sitzungen beendet")
 	// all sessions ended: sign this browser in again with the new data
 	user := b.Username
 	if strings.TrimSpace(user) == "" {
@@ -657,9 +677,43 @@ func (s *Server) authDisable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.Auth.Disable(b.Password); err != nil {
+		logs.Get("auth").Warnf("Anmeldung ausschalten abgelehnt: %v", err)
 		httpErr(w, 400, err.Error())
 		return
 	}
+	logs.Get("auth").Infof("Anmeldung ausgeschaltet")
 	http.SetCookie(w, &http.Cookie{Name: auth.CookieName(), Value: "", Path: "/", MaxAge: -1, HttpOnly: true, SameSite: http.SameSiteLaxMode})
 	writeJSON(w, s.authStateOf(r))
+}
+
+// logHardware writes the result of the hardware detection into the log.
+func logHardware(res hw.Result) {
+	l := logs.Get("hw")
+	for _, b := range res.Backends {
+		var ok []string
+		for c, works := range b.Codecs {
+			if works {
+				ok = append(ok, c)
+			}
+		}
+		sort.Strings(ok)
+		if len(ok) > 0 {
+			l.Infof("%s nutzbar (%s)%s", b.Label, strings.Join(ok, ", "), map[bool]string{true: ", Start: " + b.Variant, false: ""}[b.Variant != ""])
+		} else if b.ID != "cpu" && b.Compiled {
+			l.Warnf("%s nicht nutzbar: %s", b.Label, b.Detail)
+		} else if b.ID != "cpu" {
+			l.Debugf("%s: %s", b.Label, b.Detail)
+		}
+	}
+	l.Infof("Hardware-Erkennung fertig in %.1f s; Grafik/Videoeinheiten: %s; Render-Geräte: %s", float64(res.TookMs)/1000, strings.Join(res.GPUs, ", "), strings.Join(res.Devices, ", "))
+}
+
+func describeRequest(req *jobs.Request) string {
+	if req.Kind == "audio" {
+		return "Format " + req.Audio.Format
+	}
+	if req.Video.Codec == "copy" {
+		return "Video kopiert"
+	}
+	return req.Video.Codec + " mit " + req.Video.Backend
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/p5lukas/p5converter/internal/build"
 	"github.com/p5lukas/p5converter/internal/ffmpeg"
 	"github.com/p5lukas/p5converter/internal/hw"
+	"github.com/p5lukas/p5converter/internal/logs"
 	"github.com/p5lukas/p5converter/internal/rename"
 )
 
@@ -274,12 +275,15 @@ func (m *Manager) wasCancelled(j *Job) bool {
 	return j.cancelled
 }
 
+var jlog = logs.Get("jobs")
+
 func (m *Manager) fail(j *Job, err error) {
 	m.update(j, func() {
 		j.Status = "error"
 		j.Error = err.Error()
 		j.Ended = time.Now()
 	})
+	jlog.Errorf("Auftrag %s fehlgeschlagen: %s – %v", j.ID, filepath.Base(j.item.Path), err)
 }
 
 func outputPath(j *Job, info *ffmpeg.Info) string {
@@ -381,10 +385,12 @@ func (m *Manager) run(j *Job) {
 			j.Ended = time.Now()
 			j.Error = "Zieldatei existiert bereits"
 		})
+		jlog.Warnf("Auftrag %s übersprungen: Zieldatei existiert bereits (%s)", j.ID, out)
 		return
 	}
 	defer m.release(out)
 	m.update(j, func() { j.Output = out })
+	jlog.Infof("Auftrag %s gestartet: %s → %s", j.ID, j.item.Path, out)
 	newDirs := missingDirs(filepath.Dir(out))
 	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
 		m.fail(j, err)
@@ -459,6 +465,7 @@ func (m *Manager) run(j *Job) {
 			break
 		}
 		// this way did not work: note it quietly and try the next one
+		jlog.Warnf("Auftrag %s: %s nicht möglich, neuer Versuch. ffmpeg: %s", j.ID, a.label, j.Error)
 		m.update(j, func() {
 			j.Attempts = append(j.Attempts, a.label+" nicht möglich – "+j.Error)
 			j.Log = append(j.Log, "--- "+a.label+" fehlgeschlagen, neuer Versuch ---")
@@ -469,6 +476,7 @@ func (m *Manager) run(j *Job) {
 		cleanup()
 		if m.wasCancelled(j) {
 			m.update(j, func() { j.Status = "canceled"; j.Ended = time.Now(); j.Error = "" })
+			jlog.Infof("Auftrag %s abgebrochen, unfertige Datei gelöscht (%s)", j.ID, filepath.Base(j.item.Path))
 			return
 		}
 		m.fail(j, err)
@@ -510,6 +518,10 @@ func (m *Manager) run(j *Job) {
 		j.Ended = time.Now()
 		sizeIn = j.SizeIn
 	})
+	m.mu.Lock()
+	dur, backend, encoder, decoder := j.Ended.Sub(j.Started).Round(time.Second), j.Backend, j.Encoder, j.Decoder
+	m.mu.Unlock()
+	jlog.Infof("Auftrag %s fertig in %s: %d → %d Bytes (Schreiben: %s/%s, Lesen: %s)", j.ID, dur, sizeIn, size, backend, encoder, decoder)
 	if m.OnDone != nil {
 		m.OnDone(j.Kind, sizeIn, size)
 	}
@@ -679,6 +691,7 @@ func (m *Manager) SetPartialLog(file string) (removed int) {
 		if strings.HasSuffix(p, ".part") {
 			if os.Remove(p) == nil {
 				removed++
+				jlog.Warnf("Unfertige Datei eines früheren Laufs entfernt: %s", p)
 			}
 		}
 	}

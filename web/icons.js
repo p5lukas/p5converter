@@ -20,6 +20,11 @@ const IC = {
   up: '<path d="M12 20V5M6 11l6-6 6 6"/>',
   play: '<path d="M7 4l13 8-13 8z"/>',
   folder: '<path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>',
+  terminal: '<path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M6.5 9.5l3 2.5-3 2.5"/><path class="cur" d="M12.5 15.5h4.5"/>',
+  download: '<path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v3h16v-3"/>',
+  file: '<path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/>',
+  sync: '<path d="M20 11a8 8 0 0 0-14-4M4 4v4h4M4 13a8 8 0 0 0 14 4M20 20v-4h-4"/>',
+  back: '<path d="M10 6l-6 6 6 6M4 12h16"/>',
   rename: '<path d="M4 7h10M4 12h6M4 17h10"/><path d="M15 17l1-4 5-5 3 3-5 5z" transform="translate(-2 1) scale(.9)"/>',
 };
 function ic(name, cls) {

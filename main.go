@@ -18,6 +18,7 @@ import (
 
 	"github.com/p5lukas/p5converter/internal/auth"
 	"github.com/p5lukas/p5converter/internal/ffmpeg"
+	"github.com/p5lukas/p5converter/internal/logs"
 	"github.com/p5lukas/p5converter/internal/server"
 	"github.com/p5lukas/p5converter/internal/version"
 )
@@ -77,6 +78,9 @@ func main() {
 			cfgDir = filepath.Join(d, "p5converter")
 		}
 	}
+	logs.Setup(cfgDir) // Logdatei in <Konfig>/logs, ohne Ordner nur im Speicher
+	log.SetFlags(0)
+	log.SetOutput(logs.Writer("app"))
 	if os.Getenv("P5_AUTH_RESET") == "1" && cfgDir != "" {
 		if err := auth.Reset(cfgDir); err == nil {
 			log.Print("P5_AUTH_RESET=1: Anmeldung zurückgesetzt. Variable bitte wieder entfernen.")
@@ -115,6 +119,11 @@ func main() {
 	}
 	url := urlFor(ln.Addr().String())
 	log.Printf("p5converter %s – %s", version.Get().Version, tools.Version())
+	if cfgDir == "" {
+		log.Printf("Erlaubte Ordner: %s · Konfiguration: nicht dauerhaft", strings.Join(rs, ", "))
+	} else {
+		log.Printf("Erlaubte Ordner: %s · Konfiguration: %s", strings.Join(rs, ", "), cfgDir)
+	}
 	log.Printf("Oberfläche: %s", url)
 	if !*noBrowser {
 		go func() { time.Sleep(400 * time.Millisecond); openWindow(url) }()

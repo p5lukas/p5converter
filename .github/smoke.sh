@@ -31,6 +31,8 @@ d=json.load(sys.stdin)
 assert d["version"].startswith(d["build"]["base"]), d["version"]
 print("Version:", d["version"])'
 curl -fs localhost:8787/api/news | python3 -c 'import json,sys; n=json.load(sys.stdin); assert len(n)>0 and n[0]["version"]'
+curl -fs "localhost:8787/api/logs/read?tail=50" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert any("Erlaubte Ordner" in e["msg"] for e in d["entries"]), d' && echo "Log-API ok"
+docker exec p5smoke test -s /config/logs/p5converter.log && echo "Logdatei in /config ok"
 curl -fs localhost:8787/manifest.webmanifest | python3 -c 'import json,sys; assert json.load(sys.stdin)["display"]=="standalone"'
 curl -fs -o /dev/null localhost:8787/icon-192.png && curl -fs localhost:8787/ | grep -q "p5converter" || { echo "Oberfläche/Icons fehlen"; exit 1; }
 H='Content-Type: application/json'

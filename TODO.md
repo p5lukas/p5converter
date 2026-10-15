@@ -11,14 +11,13 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
-- [ ] **Beide Repos bearbeiten** (Nutzer-Frage): Damit p5converter und p5assets in einer Sitzung geändert werden können (Icon-Abzeichen, Log-Fenster abgleichen), muss `p5lukas/p5assets` für die Sitzung freigegeben sein (siehe Antwort im Chat); Änderungen an p5assets nur nach ausdrücklichem „los“ des Nutzers
-- [ ] **Log-Fenster wie bei p5assets** (Nutzer): Beschreibung aus dem p5assets-Code (`app/logs.py`, `app/static/app.js` → `logsPage`, Kopfzeilen-Knopf `#logbtn`): **eigene Log-Seite** mit Dateiauswahl (aktuelle + rotierte Logs), Stufenfilter (ALL/INFO/WARNING/ERROR), Suche, Auto-Scroll/Live-Nachladen, „Vollständig laden“, Download und „Log leeren“; in der **Kopfzeile ein Terminal-Symbol** mit Zähler für neue Warnungen/Fehler (`/logs/alerts`). Backend: rotierende Logdatei `/config/logs/p5converter.log` + Konsole, Geheimnisse geschwärzt (Passwort, Cookies), API `GET /api/logs`, `/api/logs/read`, `/api/logs/download`, `DELETE /api/logs`, Warn-/Fehlerzähler. In p5converter zusätzlich loggen: Start, Hardware-Erkennung, Aufträge (Start/Ende/Fehler, Versuche, ffmpeg-Fehlerzeilen), Anmeldung, Aufräumen. Einfarbiges SVG-Terminal-Symbol im Theme; in allen Ansichten prüfen
-- [ ] **App-Icon wie p5assets** (Nutzer): p5converter bekommt **dasselbe Icon wie p5assets – gleiche Maße und Aufbau** (p5assets: abgerundetes Quadrat, dunkler Matrix-Regen-Hintergrund, grüner leuchtender Poster-Rahmen im Hochformat mit „p5_“; Dateien: `icon.png` 256×256 RGBA, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` 180×180, `unraid/icon.png` 256×256 RGBA – bei p5converter heute andere Größen/Form). **Entscheidung Nutzer: Variante B**: Grün bleibt Standardfarbe beider Apps; p5converter bekommt unten rechts ein Abzeichen mit **zwei Pfeilen ⇄** (Idee des Nutzers: das „p5“ etwas kleiner als das Symbol, damit das Abzeichen groß genug bleibt); p5assets bekommt ein eigenes Abzeichen: **Feuerball/Komet** wie beim Kometa-Logo (Würfel passt nicht zu Postern). Icons als SVG-Quelle ablegen und daraus alle PNG-Größen erzeugen (Skript), damit beide Apps gleich aufgebaut sind. Änderungen in p5assets nur auf ausdrückliches „los“ des Nutzers
 - [ ] Branch-Modell: **erstmal nur `main`**, bis alles stabil läuft. Auf Zuruf des Nutzers dann wie p5assets: Feature-Branch → `dev` (Image `:dev`) → `main` (Image `:latest`); optional multi-arch (amd64/arm64)
 - [ ] Design weiter verfeinern nach Rückmeldung vom Gerät (iPhone/iPad Safari und Web-App)
 - [ ] Quick Sync (Intel Core i9-9900): Wirkung des Fixes in 0.0.3 beim Nutzer bestätigen; bleibt es „nicht nutzbar“, die kopierte Diagnose (Einstellungen → Hardware) auswerten
 
 ## Vom Nutzer zu prüfen (nicht in der Sandbox möglich)
+- [ ] Neues Icon: auf iPhone/iPad die Web-App einmal vom Home-Bildschirm löschen und neu hinzufügen (iOS merkt sich das alte Icon); in Unraid wird das Icon aus `unraid/icon.png` auf `main` geholt (Container ggf. neu anlegen/„Force Update“)
+- [ ] Log-Seite auf dem Server ansehen: nach einer Konvertierung stehen Start/Ende/Fehler im Log, Zähler am Terminal-Symbol
 - [ ] Neuen Ablauf auf iPhone/iPad ansehen (Reiter-Leiste scrollt, Zurück/Weiter-Leiste unten, Safe-Areas in der Web-App)
 - [ ] Auslastungsanzeige auf dem Unraid-Server ansehen: im Leerlauf soll die CPU kleine, wechselnde Werte zeigen; „Grafik aktiv“ (Intel) im Leerlauf niedrig, beim Konvertieren hoch. Falls der Intel-Wert weiter nicht stimmt: Diagnose (Einstellungen → Hardware) schicken
 - [ ] iPhone/iPad: Safari und Web-App (Safe-Areas, Statusleiste, Pull-to-Refresh) auf dem Gerät ansehen
@@ -31,6 +30,9 @@
 - [ ] Linux-App (Fedora KDE) mit eigener Oberfläche
 
 ## Erledigt
+- [x] 0.0.7: **Log-Fenster wie bei p5assets** (Seite, Kopfzeilen-Symbol mit Zähler, rotierendes Protokoll, Schwärzung von Geheimnissen)
+- [x] 0.0.7: **App-Icon wie p5assets** mit Abzeichen (zwei Pfeile) in allen Größen inkl. Apple-Touch- und Unraid-Icon; p5assets bekommt das Feuerball-Abzeichen im selben Aufbau (eigener Stand dort)
+- [x] 0.0.7: Beide Repos: Icon-Erzeugung als Skript (`tools/icons/make_icons.py`)
 - [x] 0.0.6: **Ablauf in Schritten** (Variante C, mit Zusammenfassung): Startseite (Statistik, Hardware, gewonnener Platz, Warteschlange, „Konvertierung starten“/„Umbenennen starten“), Schritte je Welt, Rückkehr zur Startseite nach dem Start; „Umbenennen“ aus der Kopfzeile entfernt
 - [x] 0.0.5: **Warteschlange je Welt getrennt** (eigene Parallelität, Zähler, Abbrechen/Entfernen je Welt)
 - [x] 0.0.5: **Auslastungsanzeige** dauernd live gemessen, ehrlich bei fehlender Messung (Ursache: Messung nur während Aufträgen → alter Wert blieb stehen)

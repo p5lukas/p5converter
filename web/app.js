@@ -567,6 +567,7 @@ function wire() {
   wireRename(); wireFlow();
   $('#newsBtn').onclick = openNews;
   $('#gearBtn').onclick = () => { location.hash = '#settings'; };
+  $('#logbtn').onclick = () => { location.hash = '#logs'; };
   $('#logoutBtn').onclick = logout;
   $('#savePreset').onclick = openPresetDialog;
   $('#presetCancel').onclick = () => $('#presetDlg').close();
@@ -634,6 +635,7 @@ async function startApp() {
   if (cfg().showNews !== false) loadNews();
   if (!S.cfg.persistent) toast('Einstellungen werden nicht dauerhaft gespeichert (Pfad /config fehlt).', 'bad');
   poll(); S.pollTimer = setInterval(poll, 1000);
+  checkAlerts(); S.alertTimer = setInterval(() => checkAlerts(), 30000);
   route();
 }
 
