@@ -9,6 +9,7 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
+- [ ] **Symbole überarbeiten** (Nutzer): Zahnrad und Stern (Neuigkeiten) sind zu klein → größer; Diskette (Speichern) als **Matrix-Style-Diskette**; **keine bunten Emojis** mehr in der Oberfläche (Ausnahme: die Planeten, die bleiben) – stattdessen einfarbige Symbole im Theme
 - [ ] **Unraid zeigt „Passwort (optional)“ (`P5_PASSWORD`) noch an** (Nutzer, Screenshot): Ursache (1) bis zum Merge von 0.0.3 enthielt die Vorlage auf `main` den Eintrag noch; (2) bestehende Container behalten alte Variablen auch mit neuer Vorlage – der Eintrag muss dort per **REMOVE** gelöscht werden (die Variable wird vom Programm seit 0.0.3 ignoriert, schadet also nicht). Ideen: Hinweis dazu in „Neuigkeiten“, README und Release-Text; prüfen, ob sich der Eintrag bei Neuinstallation wirklich nicht mehr zeigt
 - [ ] Branch-Modell: **erstmal nur `main`**, bis alles stabil läuft. Auf Zuruf des Nutzers dann wie p5assets: Feature-Branch → `dev` (Image `:dev`) → `main` (Image `:latest`); optional multi-arch (amd64/arm64)
 - [ ] Design weiter verfeinern nach Rückmeldung vom Gerät (iPhone/iPad Safari und Web-App)
