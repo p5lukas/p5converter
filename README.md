@@ -9,11 +9,11 @@ Ein einzelnes Go-Programm (nur Standardbibliothek) steuert **ffmpeg** an; das Do
 
 1. `unraid/p5converter.xml` nach `/boot/config/plugins/dockerMan/templates-user/` kopieren.
 2. Unraid → **Docker → Container hinzufügen → p5converter** → Pfade prüfen → **Apply**.
-3. Weboberfläche: `http://<unraid-ip>:8484`
+3. Weboberfläche: `http://<unraid-ip>:8787`
 
 Oder per Kommandozeile:
 ```bash
-docker run -d --name p5converter -p 8484:8484 \
+docker run -d --name p5converter -p 8787:8787 \
   --device /dev/dri \
   -v /mnt/user:/media -v /mnt/user/appdata/p5converter/output:/output \
   ghcr.io/p5lukas/p5converter:latest
@@ -58,7 +58,7 @@ Keine Anmeldung ohne `P5_PASSWORD`. Schreibende API-Aufrufe verlangen JSON und d
 ## Entwicklung
 ```bash
 go test ./...                 # benötigt ffmpeg im PATH
-go build -o p5converter . && P5_NO_BROWSER=1 ./p5converter   # http://127.0.0.1:8484
+go build -o p5converter . && P5_NO_BROWSER=1 ./p5converter   # http://127.0.0.1:8787
 docker build -f docker/Dockerfile -t p5converter .
 ```
 Umgebungsvariablen: `P5_LISTEN`, `P5_ROOTS`, `P5_JOBS`, `P5_PASSWORD`, `P5_FFMPEG_DIR`, `P5_NO_BROWSER`, `PUID`, `PGID`.

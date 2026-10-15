@@ -31,7 +31,7 @@ func env(k, def string) string {
 }
 
 func main() {
-	addr := flag.String("listen", env("P5_LISTEN", "127.0.0.1:8484"), "Adresse:Port (Docker: 0.0.0.0:8484)")
+	addr := flag.String("listen", env("P5_LISTEN", "127.0.0.1:8787"), "Adresse:Port (Docker: 0.0.0.0:8787)")
 	roots := flag.String("roots", env("P5_ROOTS", ""), "erlaubte Wurzelordner, kommagetrennt (leer = alles erlaubt)")
 	ffdir := flag.String("ffmpeg-dir", env("P5_FFMPEG_DIR", ""), "Ordner mit ffmpeg/ffprobe")
 	noBrowser := flag.Bool("no-browser", env("P5_NO_BROWSER", "") != "", "Fenster/Browser nicht automatisch öffnen")
