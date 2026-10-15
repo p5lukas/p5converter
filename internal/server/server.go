@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -111,7 +112,28 @@ func (s *Server) Handler() http.Handler {
 		s.Jobs.SetConcurrency(b.N)
 		writeJSON(w, map[string]bool{"ok": true})
 	})
-	return mux
+	return csrfGuard(mux)
+}
+
+// csrfGuard blocks cross-site requests: state-changing calls must be JSON (forces a CORS
+// preflight we never answer) and, if an Origin header is present, must come from this host.
+func csrfGuard(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			if !strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
+				httpErr(w, 415, "Content-Type application/json erforderlich")
+				return
+			}
+		}
+		if o := r.Header.Get("Origin"); o != "" {
+			u, err := url.Parse(o)
+			if err != nil || u.Host != r.Host {
+				httpErr(w, 403, "Cross-Origin-Anfrage abgelehnt")
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func writeJSON(w http.ResponseWriter, v any) {
@@ -324,6 +346,10 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 	// refuse hardware backends that detection did not confirm (no silent software fallback)
 	if req.Kind == "video" && req.Video.Codec != "copy" && req.Video.Backend != "" && req.Video.Backend != "cpu" {
 		res := s.Det.Result()
+		if !res.Done {
+			httpErr(w, 409, "Die Hardware-Erkennung läuft noch – bitte ein paar Sekunden warten und erneut starten.")
+			return
+		}
 		ok := false
 		for _, b := range res.Backends {
 			if b.ID == req.Video.Backend && b.Codecs[req.Video.Codec] {

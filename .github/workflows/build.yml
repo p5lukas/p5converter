@@ -22,76 +22,12 @@ jobs:
       - run: go vet ./...
       - run: go test -race ./...
 
-  binaries:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with: { go-version: "1.24" }
-      - name: Build binaries
-        run: |
-          V=${GITHUB_REF_NAME:-dev}
-          mkdir -p dist/linux dist/windows
-          CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -trimpath -ldflags "-s -w -X main.version=$V" -o dist/linux/p5converter .
-          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "-s -w -X main.version=$V" -o dist/windows/p5converter.exe .
-      - name: "Bundle ffmpeg (BtbN GPL builds with x264, x265, SVT-AV1, QSV, NVENC, AMF, VAAPI)"
-        run: |
-          B=https://github.com/BtbN/FFmpeg-Builds/releases/download/latest
-          curl -fsSL -o ffw.zip $B/ffmpeg-master-latest-win64-gpl.zip
-          unzip -q ffw.zip
-          cp ffmpeg-master-latest-win64-gpl/bin/ffmpeg.exe ffmpeg-master-latest-win64-gpl/bin/ffprobe.exe dist/windows/
-          curl -fsSL -o ffl.tar.xz $B/ffmpeg-master-latest-linux64-gpl.tar.xz
-          tar xJf ffl.tar.xz
-          cp ffmpeg-master-latest-linux64-gpl/bin/ffmpeg ffmpeg-master-latest-linux64-gpl/bin/ffprobe dist/linux/
-          for d in windows linux; do
-            cp LICENSE dist/$d/LICENSE-p5converter.txt
-            echo "ffmpeg: BtbN FFmpeg-Builds (GPL), https://github.com/BtbN/FFmpeg-Builds" > dist/$d/ffmpeg-info.txt
-          done
-          # Linux: Top-Level nur Installieren.sh + LIES-MICH.txt, Rest in app/
-          L=dist/linux-pkg/p5converter-linux
-          mkdir -p $L/app
-          mv dist/linux/p5converter dist/linux/ffmpeg dist/linux/ffprobe dist/linux/LICENSE-p5converter.txt dist/linux/ffmpeg-info.txt $L/app/
-          cp packaging/linux/p5converter.svg packaging/linux/p5converter.desktop packaging/linux/Deinstallieren.sh $L/app/
-          cp packaging/linux/Installieren.sh packaging/linux/LIES-MICH.txt $L/
-      - name: Windows Setup.exe (NSIS)
-        run: |
-          sudo apt-get update && sudo apt-get install -y nsis
-          makensis -V2 -DSRC=$PWD/dist/windows -DVERSION=${GITHUB_REF_NAME:-dev} packaging/windows/installer.nsi
-          mv packaging/windows/p5converter-setup.exe dist/p5converter-setup.exe
-      - name: Package
-        run: |
-          cd dist
-          (cd windows && zip -r ../p5converter-windows-x64-portable.zip .)
-          tar -C linux-pkg -czf p5converter-linux-x64.tar.gz p5converter-linux
-      - uses: actions/upload-artifact@v4
-        with:
-          name: binaries
-          path: |
-            dist/p5converter-setup.exe
-            dist/p5converter-windows-x64-portable.zip
-            dist/p5converter-linux-x64.tar.gz
-      - name: Release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            dist/p5converter-setup.exe
-            dist/p5converter-windows-x64-portable.zip
-            dist/p5converter-linux-x64.tar.gz
-
   docker:
     needs: test
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
       - id: meta
         uses: docker/metadata-action@v5
         with:
@@ -100,10 +36,48 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}}
             type=ref,event=branch
-      - uses: docker/build-push-action@v6
+            type=ref,event=pr
+      - name: Build image (local) for smoke test
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          load: true
+          tags: p5converter:smoke
+          build-args: VERSION=${{ github.ref_name }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Smoke test (real conversions inside the image)
+        run: .github/smoke.sh p5converter:smoke
+      - uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push image
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: docker/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           build-args: VERSION=${{ github.ref_name }}
+          cache-from: type=gha
+
+  release:
+    needs: docker
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: p5converter ${{ github.ref_name }}
+          body_path: .github/release-body.md
+          generate_release_notes: true
+          prerelease: ${{ startsWith(github.ref_name, 'v0.') }}
+          files: |
+            unraid/p5converter.xml

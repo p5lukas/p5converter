@@ -105,6 +105,16 @@ func (d *Detector) Detect() {
 				continue
 			}
 			b.Device = nodes[0]
+			for _, n := range nodes { // pick the first render node that can really encode
+				if ok, _ := d.test("vaapi", n, "h264_vaapi", false); ok {
+					b.Device = n
+					break
+				}
+				if ok, _ := d.test("vaapi", n, "hevc_vaapi", false); ok {
+					b.Device = n
+					break
+				}
+			}
 		}
 		backs = append(backs, b)
 		for _, c := range codecs {

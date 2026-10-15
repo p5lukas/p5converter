@@ -38,7 +38,16 @@ func main() {
 	conc, _ := strconv.Atoi(env("P5_JOBS", "1"))
 	jobsN := flag.Int("jobs", conc, "parallele Konvertierungen")
 	showVersion := flag.Bool("version", false, "Version anzeigen")
+	health := flag.Bool("healthcheck", false, "Docker-Healthcheck: Exit 0 wenn der Server antwortet")
 	flag.Parse()
+	if *health {
+		c := http.Client{Timeout: 3 * time.Second}
+		resp, err := c.Get(urlFor(*addr) + "/api/info")
+		if err != nil || resp.StatusCode >= 500 {
+			os.Exit(1)
+		}
+		return
+	}
 	if *showVersion {
 		fmt.Println("p5converter", version)
 		return

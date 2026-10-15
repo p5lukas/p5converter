@@ -8,6 +8,9 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${VERSION}"
 
 # Ubuntu 24.04 ships ffmpeg 6.1 with x264/x265/SVT-AV1, VAAPI, QSV (libvpl) and NVENC (dynamic).
 FROM ubuntu:24.04
+LABEL org.opencontainers.image.source="https://github.com/p5lukas/p5converter" \
+      org.opencontainers.image.description="Audio- und Video-Konverter mit Web-Oberfläche (ffmpeg, Intel QSV, NVIDIA NVENC, VAAPI)" \
+      org.opencontainers.image.licenses="MIT"
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ffmpeg ca-certificates pciutils util-linux \
@@ -24,6 +27,7 @@ ENV P5_LISTEN=0.0.0.0:8484 \
     NVIDIA_VISIBLE_DEVICES=all \
     NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
 EXPOSE 8484
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s CMD ["p5converter", "-healthcheck"]
 VOLUME ["/media", "/output"]
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["p5converter"]

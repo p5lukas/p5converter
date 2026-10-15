@@ -1,42 +1,17 @@
 # p5converter
 
-Audio- und Video-Konverter mit Web-Oberfläche – ein SoundConverter-Klon mit zusätzlicher Video-Welt.
-Ein einzelnes Go-Binary (nur Standardbibliothek) steuert **ffmpeg** an. Dieselbe Codebasis liefert
+Audio- und Video-Konverter mit Web-Oberfläche für **Unraid / Docker** – ein SoundConverter-Klon mit zusätzlicher Video-Welt.
+Ein einzelnes Go-Programm (nur Standardbibliothek) steuert **ffmpeg** an; das Docker-Image bringt alles mit (ffmpeg mit x264/x265/SVT-AV1, Intel-/AMD-Treiber für Quick Sync/VAAPI).
 
-* **Docker-Image** (alles enthalten: ffmpeg, Intel-/AMD-Treiber; Unraid, Template unter `unraid/p5converter.xml`)
-* **Windows-`.exe`** (Setup.exe oder Portable-Zip, ffmpeg enthalten)
-* **Linux-Paket** (Fedora KDE & Co., ffmpeg enthalten, Installer-Skript)
+> **Status: v0.0.x Vorabversion.** Windows- und Linux-Desktop-App (mit eigener Oberfläche) folgen später.
 
-## Funktionen
+## Installation (Unraid)
 
-### Audio (wie SoundConverter)
-MP3, Ogg Vorbis, Opus, AAC/M4A, FLAC, WAV · VBR-Qualität oder konstante Bitrate · Samplerate/Kanäle ·
-Tags und Cover werden übernommen · Ordner rekursiv hinzufügen · Zielordner mit Struktur oder
-Namensmuster (`{artist}/{album}/{track} - {title}`; Platzhalter `artist album albumartist title track disc year genre filename`) ·
-„Datei existiert“: umbenennen/überspringen/überschreiben · Quelle optional löschen.
+1. `unraid/p5converter.xml` nach `/boot/config/plugins/dockerMan/templates-user/` kopieren.
+2. Unraid → **Docker → Container hinzufügen → p5converter** → Pfade prüfen → **Apply**.
+3. Weboberfläche: `http://<unraid-ip>:8484`
 
-### Video
-* Container **MKV** (Standard) oder MP4, „Nur Remux“ (Video kopieren)
-* Codec **H.264 (x264), H.265 (x265), AV1 (SVT-AV1/libaom), VP9**
-* **Auflösung** (max. Höhe, nie hochskaliert), **CRF/Qualität**, Geschwindigkeits-Preset, **8/10 Bit** (oder „wie Quelle“, HDR-Quellen bleiben 10 Bit)
-* **Audio**: Passthrough oder neu kodieren (AAC/Opus/AC-3/E-AC-3/FLAC), Sprachfilter, einzelne Spuren entfernen, Standard-Spur ändern
-* **Untertitel**: Passthrough, alle entfernen, Sprachfilter, einzelne Spuren entfernen (Schriftarten-Anhänge bleiben in MKV erhalten)
-* Pro Datei über **„Spuren“** auswählbar
-
-### Hilfe für Einsteiger
-Jede Einstellung hat einen kleinen **ⓘ**-Punkt mit einfacher Erklärung und Beispielen (z. B. wann 10 Bit sinnvoll ist).
-
-### Hardware-Encoding (Intel Quick Sync, NVIDIA, AMD)
-* **Automatische Erkennung per echtem Test-Encode** (nicht nur „Encoder im ffmpeg vorhanden“): Quick Sync (QSV), NVENC, VAAPI, AMF – je Codec (H.264/HEVC/AV1) und 8/10 Bit
-* Auswahl „Automatisch“ oder festes Backend; ein nicht erkanntes Backend wird **abgelehnt, nicht still durch CPU ersetzt**
-* **Nachweis, dass die Hardware genutzt wird**: pro Job der *von ffmpeg selbst gemeldete* Encoder (`hevc_qsv ✓ von ffmpeg bestätigt`), voller ffmpeg-Befehl und Log; live CPU- und GPU-Auslastung
-  (NVIDIA: `nvidia-smi` inkl. Encode/Decode-Engine · Intel: sysfs-RC6 „GPU aktiv“ · AMD: `gpu_busy_percent` · Windows: Performance-Zähler der Video-Encode-Engine)
-* Hardware-Decoding optional, mit automatischem Neuversuch ohne bei Fehlern
-
-> Der Qualitätswert bei Hardware-Encodern (ICQ/CQ/QP) ist nicht 1:1 mit x264/x265-CRF vergleichbar; 20–28 sind übliche Werte.
-
-## Docker / Unraid
-
+Oder per Kommandozeile:
 ```bash
 docker run -d --name p5converter -p 8484:8484 \
   --device /dev/dri \
@@ -44,34 +19,51 @@ docker run -d --name p5converter -p 8484:8484 \
   ghcr.io/p5lukas/p5converter:latest
 ```
 * `--device /dev/dri` reicht Intel Quick Sync / VAAPI durch.
-* **NVIDIA**: zusätzlich `--runtime=nvidia -e NVIDIA_VISIBLE_DEVICES=all` (Unraid: Nvidia-Driver-Plugin).
-* Oberfläche: `http://<server>:8484`. Optional `-e P5_PASSWORD=…` (Login-Name `p5`). Nicht ins Internet stellen.
-* Der Browser sieht nur `/media` und `/output` (`P5_ROOTS`). `PUID`/`PGID` (Standard 99/100) bestimmen den Besitzer neuer Dateien.
-* Unraid-Template: `unraid/p5converter.xml` nach `/boot/config/plugins/dockerMan/templates-user/` kopieren.
-* Intel: Im Container-Log/„Hardware“-Karte steht, warum ein Backend nicht nutzbar ist (z. B. `/dev/dri` fehlt).
+* **NVIDIA NVENC:** Nvidia-Driver-Plugin installieren, `--runtime=nvidia` bei „Extra Parameters“ ergänzen (`NVIDIA_VISIBLE_DEVICES=all` ist voreingestellt).
+* Die Oberfläche sieht nur `/media` und `/output` (`P5_ROOTS`). `/media` braucht Schreibzugriff, wenn die Ergebnisse neben die Quelle sollen oder Quellen gelöscht werden. `PUID`/`PGID` (Standard 99/100) bestimmen den Besitzer neuer Dateien.
+* Optional: `-e P5_PASSWORD=…` schützt die Oberfläche per Login (Benutzer `p5`). Trotzdem nicht ins Internet stellen.
 
-## Windows
-Zwei Varianten, beide enthalten **alles** (p5converter + ffmpeg mit x264/x265/AV1, Quick Sync, NVENC, AMF):
-* **`p5converter-setup.exe`** – normaler Installer (Startmenü, Desktop-Verknüpfung, Deinstallation).
-* **`p5converter-windows-x64-portable.zip`** – entpacken und `p5converter.exe` starten.
+## Funktionen
 
-Die Oberfläche öffnet sich im Browser; das schwarze Konsolenfenster beim Start gehört dazu (Schließen = Beenden).
-Einzige Voraussetzung für Hardware-Encoding sind normale GPU-Treiber (Intel/NVIDIA/AMD) – die bringen QSV/NVENC/AMF mit und lassen sich nicht sinnvoll mitliefern. Ohne Treiber läuft alles über die CPU.
+### Hilfe für Einsteiger
+Jede Einstellung hat einen kleinen **ⓘ**-Punkt mit einfacher Erklärung und Beispielen (z. B. wann 10 Bit sinnvoll ist).
 
-## Fedora KDE (und andere Linux)
+### Audio (wie SoundConverter)
+MP3, Ogg Vorbis, Opus, AAC/M4A, FLAC, WAV · VBR-Qualität oder konstante Bitrate · Samplerate/Kanäle · Tags und Cover bleiben erhalten · Ordner rekursiv hinzufügen ·
+Zielordner mit Struktur oder Namensmuster (`{artist}/{album}/{track} - {title}`) · „Datei existiert“: umbenennen/überspringen/überschreiben · Quelle optional löschen (nur nach Prüfung der Ergebnis-Laufzeit).
+
+### Video
+* Container **MKV** (Standard) oder MP4, „Nur Remux“ (Video kopieren)
+* Codec **H.264, H.265, AV1, VP9**
+* **Auflösung** (max. Höhe, nie hochskaliert), **CRF**, Geschwindigkeits-Preset, **8/10 Bit** (oder „wie Quelle“)
+* **Audio:** Passthrough oder neu kodieren, Sprachfilter, einzelne Spuren entfernen, Standard-Spur ändern
+* **Untertitel:** Passthrough, alle entfernen, Sprachfilter, einzelne Spuren entfernen (Schriftarten-Anhänge bleiben in MKV erhalten)
+* Pro Datei über **„Spuren“** einstellbar
+
+### Hardware-Encoding
+* **Erkennung per echtem Test-Encode** (Quick Sync, NVENC, VAAPI, AMF – je Codec und 8/10 Bit), nicht nur „Encoder im ffmpeg vorhanden“
+* „Automatisch“ oder festes Backend; ein nicht funktionierendes Backend wird **abgelehnt, nicht still durch die CPU ersetzt**
+* **Nachweis der Nutzung:** pro Auftrag der von ffmpeg gemeldete Encoder (`hevc_qsv ✓ von ffmpeg bestätigt`), kompletter Befehl und Log; live CPU- und GPU-Auslastung (NVIDIA: `nvidia-smi` mit Encode/Decode-Engine · Intel: sysfs-RC6 „GPU aktiv“ · AMD: `gpu_busy_percent`)
+* Hardware-Decoding optional, bei Fehlern automatischer Neuversuch ohne
+
+> Der Qualitätswert bei Hardware-Encodern (ICQ/CQ/QP) ist nicht 1:1 mit x264/x265-CRF vergleichbar; 20–28 sind üblich.
+
+## Qualitätssicherung
+Die CI führt Unit- und Integrationstests mit echtem ffmpeg aus (alle Software-Encoder, Audioformate, Spuren/Untertitel, Parallel-Kollisionen, Abbruch, Sicherheitsprüfungen) und startet das gebaute Docker-Image zu einem **Smoke-Test mit echten Konvertierungen**, bevor es veröffentlicht wird.
+**GPU-Pfade (QSV/NVENC/VAAPI) sind implementiert, aber noch nicht auf echter Hardware geprüft** – bitte erste Läufe über „Details“ am Auftrag kontrollieren und Probleme melden.
+
+## Sicherheit
+Keine Anmeldung ohne `P5_PASSWORD`. Schreibende API-Aufrufe verlangen JSON und dieselbe Herkunft (Schutz vor fremden Webseiten); Dateizugriff nur innerhalb von `P5_ROOTS`.
+
+## Entwicklung
 ```bash
-tar xzf p5converter-linux-x64.tar.gz
-./install-linux.sh
+go test ./...                 # benötigt ffmpeg im PATH
+go build -o p5converter . && P5_NO_BROWSER=1 ./p5converter   # http://127.0.0.1:8484
+docker build -f docker/Dockerfile -t p5converter .
 ```
-Der Installer legt Programm **inklusive ffmpeg** nach `~/.local/opt/p5converter`, erstellt den Menüeintrag und installiert auf Wunsch (Abfrage) bei Intel-GPUs die Treiberpakete `intel-media-driver libvpl` per `dnf` (aktiviert dafür RPM Fusion). NVIDIA: proprietärer Treiber (`akmod-nvidia`). Entfernen: `uninstall-linux.sh`.
+Umgebungsvariablen: `P5_LISTEN`, `P5_ROOTS`, `P5_JOBS`, `P5_PASSWORD`, `P5_FFMPEG_DIR`, `P5_NO_BROWSER`, `PUID`, `PGID`.
 
-## Aus dem Quellcode
-```bash
-go build -o p5converter .     # benötigt ffmpeg + ffprobe im PATH
-./p5converter                  # http://127.0.0.1:8484
-```
-Optionen/Umgebungsvariablen: `-listen/P5_LISTEN`, `-roots/P5_ROOTS`, `-ffmpeg-dir/P5_FFMPEG_DIR`, `-jobs/P5_JOBS`, `-no-browser/P5_NO_BROWSER`, `P5_PASSWORD`.
-
-## Stand / bekannte Lücken
-* Software-Pfad (CPU) ist mit echten Dateien getestet. **GPU-Pfade (QSV/NVENC/VAAPI/AMF), Windows-Messung, Setup.exe und Docker-Image sind implementiert, aber noch nicht auf echter Hardware/in CI geprüft** – bitte erste Läufe prüfen (Details-Ansicht eines Jobs zeigt den exakten ffmpeg-Befehl).
-* Kein natives Fenster: Die Oberfläche läuft im Browser (Windows/Linux öffnen ihn automatisch).
+## Roadmap
+1. Unraid/Docker stabilisieren, Design verfeinern
+2. Windows-App mit eigener Oberfläche
+3. Linux-Desktop-App (Fedora KDE) mit eigener Oberfläche

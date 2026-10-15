@@ -86,7 +86,15 @@ func BuildAudio(info *ffmpeg.Info, o AudioOpts, in, out string) ([]string, error
 		a = append(a, "-c:v", "copy", "-disposition:v", "attached_pic")
 	}
 	if o.SampleRate > 0 {
-		a = append(a, "-ar", strconv.Itoa(o.SampleRate))
+		rate := o.SampleRate
+		if o.Format == "opus" { // libopus only supports 8/12/16/24/48 kHz
+			switch rate {
+			case 8000, 12000, 16000, 24000, 48000:
+			default:
+				rate = 48000
+			}
+		}
+		a = append(a, "-ar", strconv.Itoa(rate))
 	}
 	if o.Channels > 0 {
 		a = append(a, "-ac", strconv.Itoa(o.Channels))

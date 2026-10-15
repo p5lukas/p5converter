@@ -85,10 +85,11 @@ type Manager struct {
 	seq         int
 	concurrency int
 	running     int
+	reserved    map[string]string // output path -> job id (queued/running jobs)
 }
 
 func New(t ffmpeg.Tools, s *hw.Sampler, concurrency int) *Manager {
-	m := &Manager{tools: t, sampler: s, concurrency: concurrency}
+	m := &Manager{tools: t, sampler: s, concurrency: concurrency, reserved: map[string]string{}}
 	go m.samplerLoop()
 	return m
 }
@@ -347,15 +348,43 @@ func outputPath(j *Job, info *ffmpeg.Info) string {
 	return out
 }
 
-func freeName(p string) string {
-	ext := filepath.Ext(p)
-	base := strings.TrimSuffix(p, ext)
-	for i := 2; ; i++ {
-		c := fmt.Sprintf("%s (%d)%s", base, i, ext)
-		if _, err := os.Stat(c); os.IsNotExist(err) {
-			return c
+// claimOutput picks the final output path for j and reserves it, so two parallel jobs never
+// write the same file. ok=false means the job should be skipped.
+func (m *Manager) claimOutput(j *Job, out string) (string, bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	_, err := os.Stat(out)
+	_, taken := m.reserved[out]
+	if err == nil || taken {
+		switch j.req.Output.Exists {
+		case "skip":
+			return out, false
+		case "overwrite":
+			if !taken {
+				m.reserved[out] = j.ID
+				return out, true
+			}
+		}
+		ext := filepath.Ext(out)
+		base := strings.TrimSuffix(out, ext)
+		for i := 2; ; i++ {
+			c := fmt.Sprintf("%s (%d)%s", base, i, ext)
+			if _, e := os.Stat(c); os.IsNotExist(e) {
+				if _, t := m.reserved[c]; !t {
+					out = c
+					break
+				}
+			}
 		}
 	}
+	m.reserved[out] = j.ID
+	return out, true
+}
+
+func (m *Manager) release(out string) {
+	m.mu.Lock()
+	delete(m.reserved, out)
+	m.mu.Unlock()
 }
 
 var mapRe = regexp.MustCompile(`^Stream #\d+:\d+ -> #\d+:\d+ \(`)
@@ -370,22 +399,17 @@ func (m *Manager) run(j *Job) {
 		m.fail(j, err)
 		return
 	}
-	out := outputPath(j, info)
-	if _, err := os.Stat(out); err == nil {
-		switch j.req.Output.Exists {
-		case "skip":
-			m.update(j, func() {
-				j.Status = "skipped"
-				j.Output = out
-				j.Ended = time.Now()
-				j.Error = "Zieldatei existiert bereits"
-			})
-			return
-		case "overwrite":
-		default:
-			out = freeName(out)
-		}
+	out, ok := m.claimOutput(j, outputPath(j, info))
+	if !ok {
+		m.update(j, func() {
+			j.Status = "skipped"
+			j.Output = out
+			j.Ended = time.Now()
+			j.Error = "Zieldatei existiert bereits"
+		})
+		return
 	}
+	defer m.release(out)
 	m.update(j, func() { j.Output = out })
 	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
 		m.fail(j, err)
@@ -443,6 +467,24 @@ func (m *Manager) run(j *Job) {
 	if st, err := os.Stat(out); err == nil {
 		size = st.Size()
 	}
+	if j.req.Output.DeleteSource && filepath.Clean(out) != filepath.Clean(j.item.Path) && size > 0 {
+		// Only delete the source if the result looks complete (duration matches the source).
+		outInfo, perr := m.tools.Probe(context.Background(), out)
+		switch {
+		case perr != nil:
+			m.update(j, func() {
+				j.Warnings = append(j.Warnings, "Quelle NICHT gelöscht: Ergebnis nicht prüfbar ("+perr.Error()+")")
+			})
+		case info.Duration > 0 && absf(outInfo.Duration-info.Duration) > maxf(2, info.Duration*0.02):
+			m.update(j, func() {
+				j.Warnings = append(j.Warnings, fmt.Sprintf("Quelle NICHT gelöscht: Laufzeit weicht ab (%.1fs → %.1fs)", info.Duration, outInfo.Duration))
+			})
+		default:
+			if err := os.Remove(j.item.Path); err != nil {
+				m.update(j, func() { j.Warnings = append(j.Warnings, "Quelle konnte nicht gelöscht werden: "+err.Error()) })
+			}
+		}
+	}
 	m.update(j, func() {
 		j.Status = "done"
 		j.Progress = 100
@@ -450,11 +492,6 @@ func (m *Manager) run(j *Job) {
 		j.SizeOut = size
 		j.Ended = time.Now()
 	})
-	if j.req.Output.DeleteSource && filepath.Clean(out) != filepath.Clean(j.item.Path) && size > 0 {
-		if err := os.Remove(j.item.Path); err != nil {
-			m.update(j, func() { j.Warnings = append(j.Warnings, "Quelle konnte nicht gelöscht werden: "+err.Error()) })
-		}
-	}
 }
 
 func (m *Manager) exec(ctx context.Context, j *Job, args []string, duration float64) error {
@@ -546,4 +583,18 @@ func (m *Manager) readProgress(j *Job, r io.Reader, duration float64) {
 			}
 		})
 	}
+}
+
+func absf(f float64) float64 {
+	if f < 0 {
+		return -f
+	}
+	return f
+}
+
+func maxf(a, b float64) float64 {
+	if a > b {
+		return a
+	}
+	return b
 }

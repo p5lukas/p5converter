@@ -42,7 +42,8 @@ const INFO = {
     <p>Eine 16-Bit-Quelle auf 24 Bit zu stellen bringt keine bessere Qualität.</p>`},
   aRate: {t: 'Samplerate', b: `<p>Wie oft pro Sekunde der Ton gemessen wird.</p>
     <ul><li><b>Wie Quelle:</b> nichts ändern – <b>meist richtig</b>.</li><li>44,1 kHz: Audio-CD/Musik</li><li>48 kHz: Ton von Videos/Filmen</li></ul>
-    <p>Nur ändern, wenn ein Gerät es verlangt. Höher stellen verbessert nichts.</p>`},
+    <p>Nur ändern, wenn ein Gerät es verlangt. Höher stellen verbessert nichts.</p>
+    <p class="ex">Opus unterstützt kein 44,1 kHz – dort wird automatisch 48 kHz verwendet.</p>`},
   aCh: {t: 'Kanäle', b: `<ul><li><b>Wie Quelle:</b> unverändert (meist richtig).</li><li><b>Mono:</b> ein Kanal – halbiert ungefähr die Größe. Gut für Sprache/Podcasts/Hörbücher, schlecht für Musik.</li><li><b>Stereo:</b> links/rechts. Wandelt z. B. 5.1-Surround in Stereo um.</li></ul>`},
   aCover: {t: 'Cover-Bild', b: `<p>Übernimmt das eingebettete Albumcover in die neue Datei (bei MP3, M4A und FLAC). Titel, Interpret, Album usw. werden immer übernommen.</p>`},
 

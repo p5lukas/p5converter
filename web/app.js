@@ -418,7 +418,7 @@ window.addEventListener('scroll', hideInfo, true);
 // ---------- init ----------
 async function loadInfo() {
   S.info = await api('/api/info');
-  $('#ffver').textContent = S.info.ffmpeg.replace(/^ffmpeg version /, 'ffmpeg ').split(' Copyright')[0] + ' · ' + S.info.os;
+  $('#ffver').textContent = 'p5converter ' + S.info.version + ' · ' + S.info.ffmpeg.replace(/^ffmpeg version /, 'ffmpeg ').split(' Copyright')[0] + ' · ' + S.info.os;
   refreshVideoUI();
   $('#quit').classList.toggle('hidden', !S.info.canQuit);
   if (!S.info.hw.done) setTimeout(loadInfo, 1200);

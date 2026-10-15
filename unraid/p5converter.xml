@@ -5,6 +5,8 @@
   <Registry>https://github.com/p5lukas/p5converter/pkgs/container/p5converter</Registry>
   <Network>bridge</Network>
   <Privileged>false</Privileged>
+  <TemplateURL>https://raw.githubusercontent.com/p5lukas/p5converter/main/unraid/p5converter.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/p5lukas/p5converter/main/unraid/icon.svg</Icon>
   <Support>https://github.com/p5lukas/p5converter/issues</Support>
   <Project>https://github.com/p5lukas/p5converter</Project>
   <Overview>Audio- und Video-Konverter mit Web-Oberfläche (ffmpeg). Audio wie SoundConverter, Video nach MKV mit Auflösung, CRF, 10 Bit, x264/x265/AV1 und GPU-Encoding (Intel Quick Sync, NVIDIA NVENC, VAAPI).</Overview>
