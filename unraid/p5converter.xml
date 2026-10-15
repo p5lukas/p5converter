@@ -12,7 +12,7 @@
   <Overview>Audio- und Video-Konverter mit Web-Oberfläche (ffmpeg). Audio wie SoundConverter, Video nach MKV mit Auflösung, CRF, 10 Bit, x264/x265/AV1 und GPU-Encoding (Intel Quick Sync, NVIDIA NVENC, VAAPI).</Overview>
   <Category>MediaApp:Video MediaApp:Music Tools:</Category>
   <WebUI>http://[IP]:[PORT:8787]/</WebUI>
-  <ExtraParams>--device=/dev/dri</ExtraParams>
+  <ExtraParams/>
   <PostArgs/>
   <Config Name="WebUI-Port" Target="8787" Default="8787" Mode="tcp" Description="Port der Weboberfläche" Type="Port" Display="always" Required="true">8787</Config>
   <Config Name="Audio 1 (optional)" Target="/audio1" Default="" Mode="rw" Description="Musik-Ordner 1 (optional). Leer lassen, wenn nicht gebraucht. Lese-/Schreibzugriff, falls Ergebnisse daneben gespeichert oder Quellen gelöscht werden sollen." Type="Path" Display="always" Required="false"/>
@@ -22,9 +22,10 @@
   <Config Name="Video 3 (optional)" Target="/video3" Default="" Mode="rw" Description="Video-Ordner 3 (optional). Leer lassen, wenn nicht gebraucht. Lese-/Schreibzugriff, falls Ergebnisse daneben gespeichert oder Quellen gelöscht werden sollen." Type="Path" Display="always" Required="false"/>
   <Config Name="Video 4 (optional)" Target="/video4" Default="" Mode="rw" Description="Video-Ordner 4 (optional). Leer lassen, wenn nicht gebraucht. Lese-/Schreibzugriff, falls Ergebnisse daneben gespeichert oder Quellen gelöscht werden sollen." Type="Path" Display="always" Required="false"/>
   <Config Name="Ausgabe" Target="/output" Default="/mnt/user/appdata/p5converter/output" Mode="rw" Description="Zielordner für fertige Dateien (empfohlen)" Type="Path" Display="always" Required="true">/mnt/user/appdata/p5converter/output</Config>
+  <Config Name="Einstellungen" Target="/config" Default="/mnt/user/appdata/p5converter/config" Mode="rw" Description="Speichert Einstellungen, Voreinstellungen, Farben und die Anmeldung dauerhaft" Type="Path" Display="always" Required="true">/mnt/user/appdata/p5converter/config</Config>
+  <Config Name="Intel/AMD Grafik (/dev/dri)" Target="" Default="/dev/dri" Mode="" Description="Reicht die Grafik für Quick Sync und VAAPI durch. Leer lassen (Wert löschen), wenn keine Intel/AMD-Grafik vorhanden ist." Type="Device" Display="always" Required="false">/dev/dri</Config>
   <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="Benutzer-ID (Unraid: 99 = nobody)" Type="Variable" Display="advanced" Required="false">99</Config>
   <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Gruppen-ID (Unraid: 100 = users)" Type="Variable" Display="advanced" Required="false">100</Config>
   <Config Name="Parallele Jobs" Target="P5_JOBS" Default="1" Mode="" Description="Gleichzeitige Konvertierungen" Type="Variable" Display="advanced" Required="false">1</Config>
-  <Config Name="Passwort (optional)" Target="P5_PASSWORD" Default="" Mode="" Description="Schützt die Oberfläche per Login (Benutzer: p5)" Type="Variable" Display="advanced" Required="false"/>
-  <Config Name="NVIDIA GPU" Target="NVIDIA_VISIBLE_DEVICES" Default="" Mode="" Description="Nur für NVENC: GPU-UUID oder 'all'. Zusätzlich bei Extra Parameters '--runtime=nvidia' ergänzen (Nvidia-Driver-Plugin nötig)." Type="Variable" Display="advanced" Required="false"/>
+  <Config Name="NVIDIA GPU" Target="NVIDIA_VISIBLE_DEVICES" Default="" Mode="" Description="Nur für NVENC: GPU-UUID oder 'all'. Zusätzlich bei Extra Parameters '--runtime=nvidia' eintragen (Nvidia-Driver-Plugin nötig)." Type="Variable" Display="advanced" Required="false"/>
 </Container>

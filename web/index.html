@@ -18,16 +18,18 @@
 <header class="top"><div class="in">
   <a class="logo" href="/"><i class="logomark">p5</i><span>converter<u>_</u></span></a>
   <nav class="worlds" id="worlds">
-    <button data-world="audio" class="on"><span class="pl"></span>Audio</button>
-    <button data-world="video"><span class="pl"></span>Video</button>
+    <button data-world="audio" class="on"><span class="pl"></span><span class="wl">Audio</span></button>
+    <button data-world="video"><span class="pl"></span><span class="wl">Video</span></button>
   </nav>
   <div class="spacer"></div>
   <span id="ffver" class="muted small hidewide"></span>
   <button id="newsBtn" class="tb" title="Neuigkeiten">✦<span class="lbl"> Neu</span><i id="newsDot" class="dot hidden"></i></button>
+  <button id="gearBtn" class="tb" title="Einstellungen">⚙<span class="lbl"> Einstellungen</span></button>
+  <button id="logoutBtn" class="tb ghost hidden" title="Abmelden">⎋<span class="lbl"> Abmelden</span></button>
   <button id="quit" class="tb ghost hidden" title="p5converter komplett beenden">⏻<span class="lbl"> Beenden</span></button>
 </div></header>
 
-<main>
+<main id="viewMain">
   <section class="hero" id="hero">
     <div class="ring" id="ring"><b id="ringTxt">–</b></div>
     <div class="stats">
@@ -87,6 +89,7 @@
   <section class="col">
     <div class="panel" id="audioSettings">
       <h2>Audio-Einstellungen</h2>
+      <div class="presets" id="aPresets"></div>
       <div class="grid2">
         <label>Format
           <select id="aFormat">
@@ -190,8 +193,11 @@
 
   </div>
 
+  <div id="editBanner" class="editbanner hidden"></div>
+
   <div class="startbar" id="startbar">
     <button id="start" class="primary big">▶ Konvertierung starten</button>
+    <button id="savePreset" title="Die aktuellen Einstellungen als Voreinstellung speichern">💾<span class="lbl2"> Als Voreinstellung speichern</span></button>
     <span id="startInfo" class="small muted"></span>
   </div>
 
@@ -199,7 +205,7 @@
     <div class="panel">
       <div class="panel-h"><h2>Warteschlange</h2>
         <div class="btns">
-          <label class="inline small">Parallel <select id="conc"><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
+          <label class="inline small">Parallel <select id="conc"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
           <button id="cancelAll" class="small ghost">Alle abbrechen</button>
           <button id="clearDone" class="small ghost">Fertige entfernen</button>
         </div>
@@ -209,8 +215,21 @@
   </section>
 </main>
 
+<main id="viewSettings" class="hidden"></main>
+<div id="viewLogin" class="hidden"></div>
+
 <footer id="foot"></footer>
 <div id="toasts"></div>
+
+<dialog id="presetDlg">
+  <form method="dialog" class="dlg" id="presetForm">
+    <h2>💾 Als Voreinstellung speichern</h2>
+    <label>Name<input id="presetName" maxlength="40" placeholder="z. B. Filme klein H.265" autocomplete="off"></label>
+    <label class="check"><input type="checkbox" id="presetSuggest" checked> Als Vorschlag oben im Einstellungs-Panel anzeigen</label>
+    <p class="muted small" id="presetHint"></p>
+    <div class="dlg-f"><button type="button" id="presetCancel" class="ghost">Abbrechen</button><button class="primary" id="presetSave">Speichern</button></div>
+  </form>
+</dialog>
 
 <dialog id="news">
   <form method="dialog" class="dlg">
@@ -250,6 +269,8 @@
 
 <script src="planets.js"></script>
 <script src="info.js"></script>
+<script src="settings.js"></script>
+<script src="auth.js"></script>
 <script src="app.js"></script>
 <div id="infoPop" class="infopop hidden" role="dialog"></div>
 </body>

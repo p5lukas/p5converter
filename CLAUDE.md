@@ -5,13 +5,13 @@ Gleiche Zusammenarbeit wie im Schwesterprojekt **p5assets** (Vorbild: `TODO.md` 
 ## Ablauf
 - **„Todo: …“** vom Nutzer = nur notieren: Eintrag in `TODO.md` + eigener Commit `TODO: <kurzer Text>`. **Nichts umsetzen.**
 - Bei offenen Entscheidungen Varianten (A/B/C) mit kurzer Beschreibung vorschlagen; der Nutzer wählt kurz („Dann C“). Die Entscheidung wird als `TODO: … Variante C` festgehalten.
-- **„Leg los“** = alle offenen TODOs umsetzen, danach kleiner Versionssprung (siehe unten). Ohne „leg los“ wird nichts gemergt, getaggt oder veröffentlicht.
+- **„Leg los“** = alle offenen TODOs umsetzen, danach kleiner Versionssprung (siehe unten) und **nach grüner CI direkt nach `main` mergen** (Entscheidung des Nutzers: „immer direkt mergen, wenn ich leg los sage“; Pull Request erstellen, CI abwarten, Squash-Merge). Ohne „leg los“ wird nichts gemergt, getaggt oder veröffentlicht.
 - Regeln des Nutzers werden als „Arbeitsregel (Nutzer)“ in `TODO.md` oben festgehalten.
 
 ## Versionen und Veröffentlichung
 - Bei jedem „leg los“ ein **Patch-Sprung** (0.0.1 → 0.0.2): Version hochsetzen, neuen Abschnitt oben in `CHANGELOG.md` (Datum; Neu/Geändert/Behoben), alles testen, auf Feature-Branch pushen.
 - **Tags/Releases nur bei Sprüngen der mittleren Stelle** (0.1.0 → 0.2.0 …), nicht bei Patch-Versionen. Größere Funktionen = kleine Versionssprünge nur nach Absprache.
-- `main`, Tag und Release macht der Nutzer bzw. nur auf ausdrücklichen Wunsch. **Tags kann ich aus der Sandbox nicht pushen**; Ausweg nur auf Wunsch: Workflow `build.yml` per `workflow_dispatch` mit Eingabe `version` (legt Tag + Pre-Release an).
+- Nach „leg los“ merge ich nach `main` (siehe oben); **Tag und Release nur auf ausdrücklichen Wunsch** bzw. bei Sprüngen der mittleren Stelle. **Tags kann ich aus der Sandbox nicht pushen**; Ausweg nur auf Wunsch: Workflow `build.yml` per `workflow_dispatch` mit Eingabe `version` (legt Tag + Pre-Release an).
 - Aktueller Stand: `v0.0.1` ist ein **Pre-Release**.
 
 ## Prüfregel (bei jeder UI-Änderung)

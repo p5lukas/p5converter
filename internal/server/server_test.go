@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"net/http/cookiejar"
 	"net/http/httptest"
 	"os"
 	"os/exec"
@@ -11,9 +12,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/p5lukas/p5converter/internal/auth"
+	"github.com/p5lukas/p5converter/internal/config"
 	"github.com/p5lukas/p5converter/internal/ffmpeg"
 	"github.com/p5lukas/p5converter/internal/version"
 )
+
+func init() { auth.Iter = 1000 } // fast hashes in tests
 
 func newTestServer(t *testing.T, roots []string) (*Server, *httptest.Server) {
 	t.Helper()
@@ -21,7 +26,7 @@ func newTestServer(t *testing.T, roots []string) (*Server, *httptest.Server) {
 	if err != nil {
 		t.Skip("ffmpeg nicht installiert")
 	}
-	s := New(version.Get(), tl, roots, 2)
+	s := New(version.Get(), tl, roots, 2, t.TempDir())
 	ts := httptest.NewServer(s.Handler())
 	t.Cleanup(ts.Close)
 	return s, ts
@@ -201,5 +206,167 @@ func TestInfoNewsManifest(t *testing.T) {
 	resp, _ = http.Get(ts.URL + "/")
 	if resp.Header.Get("Cache-Control") != "no-cache" || resp.StatusCode != 200 {
 		t.Errorf("index: %d %q", resp.StatusCode, resp.Header.Get("Cache-Control"))
+	}
+}
+
+func jar() *http.Client {
+	j, _ := cookiejar.New(nil)
+	return &http.Client{Jar: j}
+}
+
+func doJSON(t *testing.T, c *http.Client, method, url string, body any) (*http.Response, map[string]any) {
+	t.Helper()
+	var rd *bytes.Reader
+	if body != nil {
+		b, _ := json.Marshal(body)
+		rd = bytes.NewReader(b)
+	} else {
+		rd = bytes.NewReader(nil)
+	}
+	req, _ := http.NewRequest(method, url, rd)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var m map[string]any
+	json.NewDecoder(resp.Body).Decode(&m)
+	resp.Body.Close()
+	return resp, m
+}
+
+func TestAuthFlow(t *testing.T) {
+	_, ts := newTestServer(t, []string{t.TempDir()})
+	c := jar()
+	// login is off: everything open
+	if r, _ := doJSON(t, c, "GET", ts.URL+"/api/settings", nil); r.StatusCode != 200 {
+		t.Fatalf("settings offen: %d", r.StatusCode)
+	}
+	// too short password
+	if r, m := doJSON(t, c, "POST", ts.URL+"/api/auth/setup", map[string]string{"username": "lukas", "password": "kurz"}); r.StatusCode != 400 {
+		t.Errorf("kurzes Passwort: %d %v", r.StatusCode, m)
+	}
+	r, m := doJSON(t, c, "POST", ts.URL+"/api/auth/setup", map[string]string{"username": "lukas", "password": "geheimes-passwort"})
+	if r.StatusCode != 200 || m["enabled"] != true || m["authenticated"] != true {
+		t.Fatalf("setup: %d %v", r.StatusCode, m)
+	}
+	// the browser that set it up is signed in
+	if r, _ := doJSON(t, c, "GET", ts.URL+"/api/settings", nil); r.StatusCode != 200 {
+		t.Errorf("nach Setup eingeloggt: %d", r.StatusCode)
+	}
+	// a stranger is locked out of the API but not of the page
+	stranger := jar()
+	if r, m := doJSON(t, stranger, "GET", ts.URL+"/api/settings", nil); r.StatusCode != 401 || m["login"] != true {
+		t.Errorf("Fremder: %d %v", r.StatusCode, m)
+	}
+	if r, _ := doJSON(t, stranger, "POST", ts.URL+"/api/jobs", map[string]any{}); r.StatusCode != 401 {
+		t.Errorf("Aufträge ohne Anmeldung: %d", r.StatusCode)
+	}
+	if resp, err := stranger.Get(ts.URL + "/"); err != nil || resp.StatusCode != 200 {
+		t.Errorf("Startseite muss öffentlich sein")
+	}
+	if resp, _ := stranger.Get(ts.URL + "/manifest.webmanifest"); resp.StatusCode != 200 {
+		t.Errorf("Manifest muss öffentlich sein")
+	}
+	if _, m := doJSON(t, stranger, "GET", ts.URL+"/api/auth/state", nil); m["enabled"] != true || m["authenticated"] != false || m["fun"] != true {
+		t.Errorf("state: %v", m)
+	}
+	// wrong password, then the right one
+	if r, _ := doJSON(t, stranger, "POST", ts.URL+"/api/auth/login", map[string]any{"username": "lukas", "password": "falsch"}); r.StatusCode != 401 {
+		t.Errorf("falsches Passwort: %d", r.StatusCode)
+	}
+	if r, _ := doJSON(t, stranger, "POST", ts.URL+"/api/auth/login", map[string]any{"username": "lukas", "password": "geheimes-passwort", "remember": true}); r.StatusCode != 200 {
+		t.Fatalf("Login: %d", r.StatusCode)
+	}
+	if r, _ := doJSON(t, stranger, "GET", ts.URL+"/api/settings", nil); r.StatusCode != 200 {
+		t.Errorf("nach Login: %d", r.StatusCode)
+	}
+	// cross-site login attempts stay blocked by the CSRF guard
+	req, _ := http.NewRequest("POST", ts.URL+"/api/auth/login", bytes.NewReader([]byte(`{}`)))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Origin", "http://evil.example")
+	if resp, _ := http.DefaultClient.Do(req); resp.StatusCode != 403 {
+		t.Errorf("fremder Origin: %d", resp.StatusCode)
+	}
+	// change password needs the current one; sessions of others end, this one stays signed in
+	if r, _ := doJSON(t, c, "POST", ts.URL+"/api/auth/change", map[string]any{"current": "falsch", "newPassword": "neues-passwort-123"}); r.StatusCode != 400 {
+		t.Errorf("Ändern mit falschem Passwort: %d", r.StatusCode)
+	}
+	if r, _ := doJSON(t, c, "POST", ts.URL+"/api/auth/change", map[string]any{"current": "geheimes-passwort", "newPassword": "neues-passwort-123"}); r.StatusCode != 200 {
+		t.Fatalf("Ändern: %d", r.StatusCode)
+	}
+	if r, _ := doJSON(t, c, "GET", ts.URL+"/api/settings", nil); r.StatusCode != 200 {
+		t.Errorf("nach Ändern noch eingeloggt: %d", r.StatusCode)
+	}
+	if r, _ := doJSON(t, stranger, "GET", ts.URL+"/api/settings", nil); r.StatusCode != 401 {
+		t.Errorf("alte Sitzung muss enden: %d", r.StatusCode)
+	}
+	// fun line switch without password
+	if _, m := doJSON(t, c, "POST", ts.URL+"/api/auth/change", map[string]any{"fun": false}); m["fun"] != false {
+		t.Errorf("fun: %v", m)
+	}
+	// logout, then disable the login
+	doJSON(t, c, "POST", ts.URL+"/api/auth/logout", nil)
+	if r, _ := doJSON(t, c, "GET", ts.URL+"/api/settings", nil); r.StatusCode != 401 {
+		t.Errorf("nach Logout: %d", r.StatusCode)
+	}
+	doJSON(t, c, "POST", ts.URL+"/api/auth/login", map[string]any{"username": "lukas", "password": "neues-passwort-123"})
+	if r, _ := doJSON(t, c, "POST", ts.URL+"/api/auth/disable", map[string]any{"password": "falsch"}); r.StatusCode != 400 {
+		t.Errorf("Ausschalten mit falschem Passwort: %d", r.StatusCode)
+	}
+	if r, m := doJSON(t, c, "POST", ts.URL+"/api/auth/disable", map[string]any{"password": "neues-passwort-123"}); r.StatusCode != 200 || m["enabled"] != false {
+		t.Errorf("Ausschalten: %d %v", r.StatusCode, m)
+	}
+	if r, _ := doJSON(t, jar(), "GET", ts.URL+"/api/settings", nil); r.StatusCode != 200 {
+		t.Errorf("ohne Anmeldung wieder offen: %d", r.StatusCode)
+	}
+}
+
+func TestLoginRateLimitOverHTTP(t *testing.T) {
+	_, ts := newTestServer(t, []string{t.TempDir()})
+	c := jar()
+	doJSON(t, c, "POST", ts.URL+"/api/auth/setup", map[string]string{"username": "lukas", "password": "geheimes-passwort"})
+	attacker := jar()
+	var last int
+	for i := 0; i < 7; i++ {
+		r, _ := doJSON(t, attacker, "POST", ts.URL+"/api/auth/login", map[string]any{"username": "lukas", "password": "falsch"})
+		last = r.StatusCode
+	}
+	if last != 429 {
+		t.Errorf("nach 6 Fehlversuchen erwartet 429, bekam %d", last)
+	}
+}
+
+func TestSettingsEndpoint(t *testing.T) {
+	s, ts := newTestServer(t, []string{t.TempDir()})
+	c := jar()
+	resp, err := c.Get(ts.URL + "/api/settings")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got struct {
+		Settings   config.Settings `json:"settings"`
+		Persistent bool            `json:"persistent"`
+	}
+	json.NewDecoder(resp.Body).Decode(&got)
+	resp.Body.Close()
+	if !got.Persistent || len(got.Settings.Presets) == 0 {
+		t.Fatalf("Standard: %+v", got)
+	}
+	got.Settings.Concurrency = 3
+	got.Settings.Worlds["video"] = config.World{Name: "Filme", Hue: 205}
+	got.Settings.Presets[0].Name = "Mein Archiv"
+	if r, _ := doJSON(t, c, "PUT", ts.URL+"/api/settings", got.Settings); r.StatusCode != 200 {
+		t.Fatalf("PUT: %d", r.StatusCode)
+	}
+	if s.Jobs.Concurrency() != 3 {
+		t.Errorf("parallele Aufträge nicht übernommen: %d", s.Jobs.Concurrency())
+	}
+	if now := s.Settings.Get(); now.Worlds["video"].Name != "Filme" || now.Presets[0].Name != "Mein Archiv" {
+		t.Errorf("nicht gespeichert: %+v", now.Worlds)
+	}
+	got.Settings.Worlds["video"] = config.World{Name: "Filme", Hue: 999}
+	if r, m := doJSON(t, c, "PUT", ts.URL+"/api/settings", got.Settings); r.StatusCode != 400 {
+		t.Errorf("ungültiger Farbton: %d %v", r.StatusCode, m)
 	}
 }

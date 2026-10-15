@@ -36,7 +36,7 @@ button:disabled{opacity:.45;pointer-events:none}
 button.tb{position:relative}
 
 /* ---------- Eingaben ---------- */
-input[type=text],input[type=number],input:not([type]),select{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:9px 12px;width:100%;outline:none;color:var(--text);min-width:0}
+input[type=text],input[type=number],input[type=password],input:not([type]),select{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:9px 12px;width:100%;outline:none;color:var(--text);min-width:0}
 input::placeholder{color:var(--faint)}
 input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 12px var(--dim)}
 select option{background:var(--panel)}
@@ -229,3 +229,76 @@ button.info:hover,button.info.on{background:var(--accent);color:var(--on-accent)
 }
 @media(display-mode:standalone){body{overscroll-behavior-y:none}}
 @media(prefers-reduced-motion:reduce){.worldfx{animation-duration:.01s}.logo u{animation:none}.bar>i,.progress i{transition:none}}
+
+/* ---------- Einstellungen ---------- */
+#viewSettings{max-width:1500px;margin:auto;padding:22px;padding-bottom:calc(22px + var(--sat-bottom))}
+.sethead{display:flex;align-items:center;gap:14px;margin-bottom:16px;flex-wrap:wrap}
+.sethead h1{margin:0;font-size:22px;color:var(--accent);text-shadow:0 0 14px var(--glow)}
+.sethead h1:before{content:"> ";opacity:.6}
+.setlayout{display:flex;gap:26px;align-items:flex-start}
+.setnav{display:flex;flex-direction:column;gap:4px;width:230px;flex:none;position:sticky;top:90px}
+.setnav button{background:transparent;border:1px solid transparent;border-radius:var(--r);padding:9px 12px;font-size:13.5px;color:var(--muted);display:flex;gap:10px;align-items:center;text-align:left;box-shadow:none}
+.setnav button i{font-style:normal;width:18px;text-align:center}
+.setnav button.on{border-color:var(--accent);color:var(--accent);background:var(--dim);box-shadow:0 0 14px var(--dim);text-shadow:0 0 10px var(--glow)}
+.setnav button:not(.on):hover{border-color:var(--accent);color:var(--accent)}
+.setpage{flex:1;min-width:0}
+.setpage h2{font-size:19px;margin:0 0 14px}
+.setrow{display:grid;grid-template-columns:minmax(180px,1fr) minmax(220px,1.4fr);gap:10px 20px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.setrow:last-of-type{border:0}
+.setl b{display:flex;align-items:center;font-weight:600}.setl .small{display:block}
+.setc .row input{flex:1}
+.banner{border:1px solid var(--line);border-radius:var(--r);padding:10px 14px;margin:0 0 14px;background:var(--panel2)}
+.banner.warn{border-color:#ffd24a88;color:var(--warn)}
+.worldcard{border:1px solid var(--line);border-radius:var(--r);padding:14px;margin:14px 0;background:var(--panel2)}
+.wchead{display:flex;gap:10px;align-items:center;margin-bottom:12px}.wchead input{flex:1}
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
+.swatch{flex-direction:column;gap:4px;padding:8px 6px;font-size:12px;color:var(--muted);justify-content:center}
+.swatch.on{border-color:var(--accent);color:var(--accent);background:var(--dim);box-shadow:0 0 14px var(--dim)}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.tabs button.on{border-color:var(--accent);color:var(--accent);background:var(--dim)}
+.plist{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.prow{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;background:var(--panel2)}
+.pmain{flex:1;min-width:220px;display:flex;flex-direction:column;gap:4px}
+.pact{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+button.danger:hover{border-color:var(--bad);color:var(--bad);box-shadow:0 0 14px #ff4d5e33}
+.form{display:flex;flex-direction:column;gap:10px;max-width:420px}
+.status.bad{color:var(--bad)}.status.ok{color:var(--ok)}
+.kv{display:grid;grid-template-columns:150px 1fr;gap:8px 16px}.kv span{color:var(--muted);text-transform:uppercase;font-size:12px;letter-spacing:.06em}
+.diag{margin-top:16px}.diag summary{font-size:13px}.diag .tbody{margin-top:8px;max-height:340px}
+.diag td{vertical-align:top;word-break:break-word}
+.mlist{display:flex;flex-direction:column;gap:8px}
+.mitem{display:flex;align-items:center;gap:14px;padding:14px;text-align:left;width:100%;background:var(--panel);box-shadow:none}
+.mitem i{font-style:normal;font-size:20px;width:28px;text-align:center;color:var(--accent)}
+.mitem span{flex:1;display:flex;flex-direction:column}.mitem small{color:var(--muted);font-size:12px}.mitem em{color:var(--faint);font-style:normal;font-size:20px}
+
+/* ---------- Voreinstellung bearbeiten / Startleiste ---------- */
+.editbanner{display:flex;gap:10px;align-items:center;flex-wrap:wrap;color:var(--accent);font-size:13px;border:1px solid var(--accent);border-radius:var(--r);background:var(--dim);padding:10px 14px;margin:20px 0 -8px}
+.editbanner span{flex:1;min-width:200px}
+.startbar{flex-wrap:wrap}
+#savePreset{padding:12px 16px}
+.startbar button{white-space:nowrap}
+
+/* ---------- Anmeldung ---------- */
+body.loginmode header .tb,body.loginmode .worlds,body.loginmode #ffver{display:none}
+.login{min-height:calc(100dvh - 90px);display:grid;place-items:center;padding:calc(var(--sat-top) + 20px) 16px 20px}
+.logincard{width:min(420px,100%);background:var(--panel);border:1px solid var(--accent);border-radius:10px;padding:28px;box-shadow:0 0 40px var(--dim)}
+.logincard .logo{margin-bottom:14px}
+.logincard h1{margin:0 0 4px;font-size:22px;color:var(--accent);text-shadow:0 0 14px var(--glow)}
+.logincard h1:before{content:"> ";opacity:.6}
+.logincard label.f{margin-top:14px}
+.logincard ol{margin:8px 0 0;padding-left:18px}.logincard code{word-break:break-all}
+.logincard .status{margin:0 0 12px}
+.funline{min-height:22px;margin:6px 0 0;color:#ff6b78;font-size:13px;line-height:22px;word-break:break-word}
+.funline u{display:inline-block;width:.6em;height:1em;vertical-align:-2px;margin-left:2px;background:#ff6b78;animation:blink 1s steps(1) infinite}
+@media(prefers-reduced-motion:reduce){.funline u{animation:none}}
+
+@media(max-width:1000px){.setlayout{flex-direction:column}.setnav{flex-direction:row;flex-wrap:wrap;width:100%;position:static}}
+@media(max-width:700px){
+  #viewSettings{padding:14px;padding-bottom:calc(14px + var(--sat-bottom))}
+  .setrow{grid-template-columns:1fr}
+  .kv{grid-template-columns:1fr}
+  .lbl2{display:none}
+  #savePreset{padding:10px 14px;flex:none}
+  .startbar button.big{padding:10px 14px;font-size:14px}
+  .pact{width:100%}
+}
+@media(hover:none){.setnav button,.mitem{min-height:44px}.swatch{min-height:64px}}

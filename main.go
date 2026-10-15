@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/subtle"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -17,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/p5lukas/p5converter/internal/auth"
 	"github.com/p5lukas/p5converter/internal/ffmpeg"
 	"github.com/p5lukas/p5converter/internal/server"
 	"github.com/p5lukas/p5converter/internal/version"
@@ -30,8 +30,24 @@ func env(k, def string) string {
 }
 
 func main() {
+	// p5converter auth reset  – removes the login (forgotten password; needs access to the server)
+	if len(os.Args) >= 3 && os.Args[1] == "auth" && os.Args[2] == "reset" {
+		dir := env("P5_CONFIG", "")
+		if dir == "" {
+			if d, err := os.UserConfigDir(); err == nil {
+				dir = filepath.Join(d, "p5converter")
+			}
+		}
+		if err := auth.Reset(dir); err != nil {
+			fmt.Fprintln(os.Stderr, "Fehler:", err)
+			os.Exit(1)
+		}
+		fmt.Println("Anmeldung zurückgesetzt (" + dir + "). Beim nächsten Öffnen kann in den Einstellungen eine neue angelegt werden.")
+		return
+	}
 	addr := flag.String("listen", env("P5_LISTEN", "127.0.0.1:8787"), "Adresse:Port (Docker: 0.0.0.0:8787)")
 	roots := flag.String("roots", env("P5_ROOTS", ""), "erlaubte Wurzelordner, kommagetrennt (leer = alles erlaubt)")
+	cfgFlag := flag.String("config", env("P5_CONFIG", ""), "Ordner für Einstellungen und Anmeldung (Docker: /config)")
 	ffdir := flag.String("ffmpeg-dir", env("P5_FFMPEG_DIR", ""), "Ordner mit ffmpeg/ffprobe")
 	noBrowser := flag.Bool("no-browser", env("P5_NO_BROWSER", "") != "", "Fenster/Browser nicht automatisch öffnen")
 	conc, _ := strconv.Atoi(env("P5_JOBS", "1"))
@@ -55,13 +71,27 @@ func main() {
 	// Desktop mode = started by a person on their own machine (not Docker/server with fixed roots).
 	desktop := strings.TrimSpace(*roots) == "" && !*noBrowser
 	setupLog(desktop)
+	cfgDir := *cfgFlag
+	if cfgDir == "" && desktop {
+		if d, err := os.UserConfigDir(); err == nil {
+			cfgDir = filepath.Join(d, "p5converter")
+		}
+	}
+	if os.Getenv("P5_AUTH_RESET") == "1" && cfgDir != "" {
+		if err := auth.Reset(cfgDir); err == nil {
+			log.Print("P5_AUTH_RESET=1: Anmeldung zurückgesetzt. Variable bitte wieder entfernen.")
+		}
+	}
+	if cfgDir == "" {
+		log.Print("Hinweis: kein Konfigurationsordner (P5_CONFIG/ /config) – Einstellungen werden nicht dauerhaft gespeichert.")
+	}
 
 	tools, err := ffmpeg.Locate(*ffdir)
 	if err != nil {
 		fatal(desktop, fmt.Sprintf("%v\nWindows/Linux-Paket: ffmpeg gehört in denselben Ordner wie p5converter. Bitte neu installieren.", err))
 	}
 	rs := existingRoots(*roots)
-	srv := server.New(version.Get(), tools, rs, *jobsN)
+	srv := server.New(version.Get(), tools, rs, *jobsN, cfgDir)
 	if desktop {
 		srv.Quit = func() { time.Sleep(300 * time.Millisecond); os.Exit(0) }
 	}
@@ -89,11 +119,7 @@ func main() {
 	if !*noBrowser {
 		go func() { time.Sleep(400 * time.Millisecond); openWindow(url) }()
 	}
-	h := srv.Handler()
-	if pw := os.Getenv("P5_PASSWORD"); pw != "" {
-		h = basicAuth(h, pw)
-	}
-	if err := http.Serve(ln, h); err != nil {
+	if err := http.Serve(ln, srv.Handler()); err != nil {
 		fatal(desktop, err.Error())
 	}
 }
@@ -214,19 +240,6 @@ func openWindow(url string) {
 	if err := cmd.Start(); err != nil {
 		log.Printf("Browser konnte nicht geöffnet werden (%v). Öffne bitte selbst: %s", err, url)
 	}
-}
-
-// basicAuth protects the UI when P5_PASSWORD is set (user name: p5).
-func basicAuth(next http.Handler, password string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		u, p, ok := r.BasicAuth()
-		if !ok || u != "p5" || subtle.ConstantTimeCompare([]byte(p), []byte(password)) != 1 {
-			w.Header().Set("WWW-Authenticate", `Basic realm="p5converter"`)
-			http.Error(w, "Login erforderlich", http.StatusUnauthorized)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
 }
 
 // existingRoots splits a comma-separated root list and drops folders that are not there (optional

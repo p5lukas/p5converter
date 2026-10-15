@@ -5,17 +5,22 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"io/fs"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/p5lukas/p5converter/internal/auth"
 	"github.com/p5lukas/p5converter/internal/build"
+	"github.com/p5lukas/p5converter/internal/config"
 	"github.com/p5lukas/p5converter/internal/ffmpeg"
 	"github.com/p5lukas/p5converter/internal/hw"
 	"github.com/p5lukas/p5converter/internal/jobs"
@@ -24,19 +29,25 @@ import (
 )
 
 type Server struct {
-	Build   version.Info
-	Tools   ffmpeg.Tools
-	Det     *hw.Detector
-	Sampler *hw.Sampler
-	Jobs    *jobs.Manager
-	Roots   []string // empty = unrestricted (desktop mode)
-	Quit    func()   // set in desktop mode: enables the Beenden button
-	enc     map[string]bool
-	ffver   string
+	Build    version.Info
+	Tools    ffmpeg.Tools
+	Det      *hw.Detector
+	Sampler  *hw.Sampler
+	Jobs     *jobs.Manager
+	Auth     *auth.Manager
+	Settings *config.Store
+	Roots    []string // empty = unrestricted (desktop mode)
+	Quit     func()   // set in desktop mode: enables the Beenden button
+	enc      map[string]bool
+	ffver    string
 }
 
-func New(build version.Info, t ffmpeg.Tools, roots []string, concurrency int) *Server {
-	s := &Server{Build: build, Tools: t, Det: hw.NewDetector(t), Sampler: hw.NewSampler(), Roots: roots}
+func New(build version.Info, t ffmpeg.Tools, roots []string, concurrency int, configDir string) *Server {
+	s := &Server{Build: build, Tools: t, Det: hw.NewDetector(t), Sampler: hw.NewSampler(), Roots: roots,
+		Settings: config.Open(configDir), Auth: auth.New(configDir)}
+	if c := s.Settings.Get().Concurrency; c > 0 {
+		concurrency = c // the value saved in the settings wins over the start default
+	}
 	s.Jobs = jobs.New(t, s.Sampler, concurrency)
 	s.enc = t.Encoders()
 	s.ffver = t.Version()
@@ -122,9 +133,21 @@ func (s *Server) Handler() http.Handler {
 		var b struct{ N int }
 		json.NewDecoder(r.Body).Decode(&b)
 		s.Jobs.SetConcurrency(b.N)
+		cfg := s.Settings.Get()
+		cfg.Concurrency = s.Jobs.Concurrency()
+		s.Settings.Put(cfg)
 		writeJSON(w, map[string]bool{"ok": true})
 	})
-	return csrfGuard(mux)
+	mux.HandleFunc("GET /api/settings", s.getSettings)
+	mux.HandleFunc("PUT /api/settings", s.putSettings)
+	mux.HandleFunc("GET /api/settings/defaults", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, config.Defaults()) })
+	mux.HandleFunc("GET /api/auth/state", s.authState)
+	mux.HandleFunc("POST /api/auth/login", s.authLogin)
+	mux.HandleFunc("POST /api/auth/logout", s.authLogout)
+	mux.HandleFunc("POST /api/auth/setup", s.authSetup)
+	mux.HandleFunc("POST /api/auth/change", s.authChange)
+	mux.HandleFunc("POST /api/auth/disable", s.authDisable)
+	return csrfGuard(s.authGuard(mux))
 }
 
 // csrfGuard blocks cross-site requests: state-changing calls must be JSON (forces a CORS
@@ -192,6 +215,7 @@ func (s *Server) info(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{
 		"version": s.Build.Version, "build": s.Build, "ffmpeg": s.ffver, "os": runtime.GOOS, "roots": s.Roots, "home": home,
 		"encoders": enc, "hw": s.Det.Result(), "concurrency": s.Jobs.Concurrency(), "canQuit": s.Quit != nil,
+		"config": map[string]any{"persistent": s.Settings.Persistent(), "dir": s.Settings.Dir()}, "authEnabled": s.Auth.Enabled(),
 	})
 }
 
@@ -388,6 +412,7 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 				if req.Video.Backend == "vaapi" && req.Video.VaapiDevice == "" {
 					req.Video.VaapiDevice = b.Device
 				}
+				req.Video.HWInit = b.Init // e.g. Quick Sync started via a VAAPI device
 			}
 		}
 		if !ok {
@@ -403,4 +428,194 @@ func (s *Server) state(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{
 		"jobs": s.Jobs.Snapshot(), "stats": s.Sampler.Latest(), "concurrency": s.Jobs.Concurrency(),
 	})
+}
+
+// ---------------------------------------------------------------- settings ---
+
+func (s *Server) getSettings(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, map[string]any{"settings": s.Settings.Get(), "persistent": s.Settings.Persistent(), "dir": s.Settings.Dir()})
+}
+
+func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
+	var in config.Settings
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&in); err != nil {
+		httpErr(w, 400, "Ungültige Einstellungen")
+		return
+	}
+	out, err := s.Settings.Put(in)
+	if err != nil {
+		httpErr(w, 400, err.Error())
+		return
+	}
+	if out.Concurrency > 0 {
+		s.Jobs.SetConcurrency(out.Concurrency)
+	}
+	writeJSON(w, map[string]any{"settings": out, "persistent": s.Settings.Persistent()})
+}
+
+// -------------------------------------------------------------------- auth ---
+
+func (s *Server) sessionToken(r *http.Request) string {
+	if c, err := r.Cookie(auth.CookieName()); err == nil {
+		return c.Value
+	}
+	return ""
+}
+
+// authGuard protects the API when the login is on. The static page, the manifest and the login calls stay public.
+func (s *Server) authGuard(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		p := r.URL.Path
+		public := !strings.HasPrefix(p, "/api/") || p == "/api/auth/state" || p == "/api/auth/login" ||
+			p == "/api/auth/setup" || p == "/api/auth/logout"
+		if !public && s.Auth.Enabled() && !s.Auth.Valid(s.sessionToken(r)) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]any{"error": "Anmeldung erforderlich", "login": true})
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (s *Server) authStateOf(r *http.Request) map[string]any {
+	return s.authStateTok(s.sessionToken(r))
+}
+
+func (s *Server) authStateTok(token string) map[string]any {
+	enabled := s.Auth.Enabled()
+	ok := !enabled || s.Auth.Valid(token)
+	st := map[string]any{"enabled": enabled, "authenticated": ok, "fun": s.Auth.Fun(), "persistent": s.Settings.Persistent()}
+	if enabled && ok {
+		st["user"] = s.Auth.User()
+	}
+	return st
+}
+
+func (s *Server) authState(w http.ResponseWriter, r *http.Request) { writeJSON(w, s.authStateOf(r)) }
+
+func clientIP(r *http.Request) string {
+	h, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return h
+}
+
+func setSessionCookie(w http.ResponseWriter, r *http.Request, token string, maxAge int, remember bool) {
+	c := &http.Cookie{Name: auth.CookieName(), Value: token, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode,
+		Secure: r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https"}
+	if remember {
+		c.MaxAge = maxAge
+	}
+	http.SetCookie(w, c)
+}
+
+func (s *Server) authLogin(w http.ResponseWriter, r *http.Request) {
+	var b struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+		Remember bool   `json:"remember"`
+	}
+	if json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<16)).Decode(&b) != nil {
+		httpErr(w, 400, "Ungültige Anfrage")
+		return
+	}
+	tok, life, err := s.Auth.Login(b.Username, b.Password, clientIP(r), b.Remember)
+	if err != nil {
+		var be *auth.BlockedError
+		switch {
+		case errors.As(err, &be):
+			w.Header().Set("Retry-After", strconv.Itoa(int(be.Wait.Seconds())+1))
+			httpErr(w, 429, err.Error())
+		case errors.Is(err, auth.ErrNotEnabled):
+			httpErr(w, 400, err.Error())
+		default:
+			httpErr(w, 401, err.Error())
+		}
+		return
+	}
+	setSessionCookie(w, r, tok, life, b.Remember)
+	writeJSON(w, map[string]any{"ok": true, "state": map[string]any{"enabled": true, "authenticated": true, "user": s.Auth.User(), "fun": s.Auth.Fun()}})
+}
+
+func (s *Server) authLogout(w http.ResponseWriter, r *http.Request) {
+	if t := s.sessionToken(r); t != "" {
+		s.Auth.Logout(t)
+	}
+	http.SetCookie(w, &http.Cookie{Name: auth.CookieName(), Value: "", Path: "/", MaxAge: -1, HttpOnly: true, SameSite: http.SameSiteLaxMode})
+	writeJSON(w, map[string]bool{"ok": true})
+}
+
+func (s *Server) authSetup(w http.ResponseWriter, r *http.Request) {
+	var b struct{ Username, Password string }
+	if json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<16)).Decode(&b) != nil {
+		httpErr(w, 400, "Ungültige Anfrage")
+		return
+	}
+	if err := s.Auth.Setup(b.Username, b.Password); err != nil {
+		httpErr(w, 400, err.Error())
+		return
+	}
+	// log the person in right away, otherwise they would lock themselves out of the page they are on
+	tok := ""
+	if t, life, err := s.Auth.Login(b.Username, b.Password, clientIP(r), false); err == nil {
+		tok = t
+		setSessionCookie(w, r, tok, life, false)
+	}
+	writeJSON(w, s.authStateTok(tok))
+}
+
+func (s *Server) authChange(w http.ResponseWriter, r *http.Request) {
+	var b struct {
+		Current     string `json:"current"`
+		Username    string `json:"username"`
+		NewPassword string `json:"newPassword"`
+		Fun         *bool  `json:"fun"`
+	}
+	if json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<16)).Decode(&b) != nil {
+		httpErr(w, 400, "Ungültige Anfrage")
+		return
+	}
+	if b.Fun != nil && b.Current == "" && b.Username == "" && b.NewPassword == "" { // the fun switch needs no password
+		if err := s.Auth.SetFun(*b.Fun); err != nil {
+			httpErr(w, 400, err.Error())
+			return
+		}
+		writeJSON(w, s.authStateOf(r))
+		return
+	}
+	if err := s.Auth.Change(b.Current, b.Username, b.NewPassword); err != nil {
+		httpErr(w, 400, err.Error())
+		return
+	}
+	// all sessions ended: sign this browser in again with the new data
+	user := b.Username
+	if strings.TrimSpace(user) == "" {
+		user = s.Auth.User()
+	}
+	pw := b.NewPassword
+	if pw == "" {
+		pw = b.Current
+	}
+	tok := ""
+	if t, life, err := s.Auth.Login(user, pw, clientIP(r), false); err == nil {
+		tok = t
+		setSessionCookie(w, r, tok, life, false)
+	}
+	writeJSON(w, s.authStateTok(tok))
+}
+
+func (s *Server) authDisable(w http.ResponseWriter, r *http.Request) {
+	var b struct{ Password string }
+	if json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<16)).Decode(&b) != nil {
+		httpErr(w, 400, "Ungültige Anfrage")
+		return
+	}
+	if err := s.Auth.Disable(b.Password); err != nil {
+		httpErr(w, 400, err.Error())
+		return
+	}
+	http.SetCookie(w, &http.Cookie{Name: auth.CookieName(), Value: "", Path: "/", MaxAge: -1, HttpOnly: true, SameSite: http.SameSiteLaxMode})
+	writeJSON(w, s.authStateOf(r))
 }
