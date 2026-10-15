@@ -10,6 +10,8 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
+- [ ] **Log-Fenster wie bei p5assets** (Nutzer): Ein Log-Fenster (Protokoll der Anwendung) wie in p5assets, auch **oben in der Kopfzeile** mit genau denselben Symbolen/Knöpfen wie dort. Zum Umsetzen den p5assets-Code ansehen (Repo dafür mit `add_repo` hinzufügen, nur lesen); einfarbige SVG-Symbole im Theme, kein Emoji
+- [ ] **App-Icon wie p5assets** (Nutzer): p5converter bekommt **dasselbe Icon wie p5assets – gleiche Maße und Aufbau** (Größen 192/512, Apple-Touch-Icon, Favicon, Unraid-Icon). Damit man beide auf dem Home-Bildschirm/in Unraid unterscheiden kann, braucht es einen kleinen Unterschied – Varianten: **A** andere Farbe (Farbton des Hintergrunds/der Schrift wie die Welt-Farben, z. B. p5assets Grün, p5converter Violett); **B** gleiches Icon + kleines Abzeichen unten rechts (z. B. Pfeile ⇄ für „Konvertieren“) in der Ecke; **C** gleiche Form, aber anderer Buchstabe/Zusatz („p5“ + „c“ statt „a“ o. ä.) und andere Farbe. Entscheidung des Nutzers steht noch aus
 - [ ] Branch-Modell: **erstmal nur `main`**, bis alles stabil läuft. Auf Zuruf des Nutzers dann wie p5assets: Feature-Branch → `dev` (Image `:dev`) → `main` (Image `:latest`); optional multi-arch (amd64/arm64)
 - [ ] Design weiter verfeinern nach Rückmeldung vom Gerät (iPhone/iPad Safari und Web-App)
 - [ ] Quick Sync (Intel Core i9-9900): Wirkung des Fixes in 0.0.3 beim Nutzer bestätigen; bleibt es „nicht nutzbar“, die kopierte Diagnose (Einstellungen → Hardware) auswerten
