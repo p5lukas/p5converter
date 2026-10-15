@@ -26,13 +26,13 @@ COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 ENV P5_LISTEN=0.0.0.0:8787 \
-    P5_ROOTS=/media,/output \
+    P5_ROOTS=/media,/audio1,/audio2,/video1,/video2,/video3,/video4,/output \
     P5_NO_BROWSER=1 \
     PUID=99 PGID=100 \
     NVIDIA_VISIBLE_DEVICES=all \
     NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
 EXPOSE 8787
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s CMD ["p5converter", "-healthcheck"]
-VOLUME ["/media", "/output"]
+VOLUME ["/output"]
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["p5converter"]

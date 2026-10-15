@@ -60,12 +60,7 @@ func main() {
 	if err != nil {
 		fatal(desktop, fmt.Sprintf("%v\nWindows/Linux-Paket: ffmpeg gehört in denselben Ordner wie p5converter. Bitte neu installieren.", err))
 	}
-	var rs []string
-	for _, r := range strings.Split(*roots, ",") {
-		if r = strings.TrimSpace(r); r != "" {
-			rs = append(rs, r)
-		}
-	}
+	rs := existingRoots(*roots)
 	srv := server.New(version.Get(), tools, rs, *jobsN)
 	if desktop {
 		srv.Quit = func() { time.Sleep(300 * time.Millisecond); os.Exit(0) }
@@ -232,4 +227,27 @@ func basicAuth(next http.Handler, password string) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// existingRoots splits a comma-separated root list and drops folders that are not there (optional
+// Docker mounts such as /video3 may be left empty). If none exists, the full list is kept so the
+// problem stays visible instead of silently opening up everything.
+func existingRoots(list string) []string {
+	var all, found []string
+	for _, r := range strings.Split(list, ",") {
+		r = strings.TrimSpace(r)
+		if r == "" {
+			continue
+		}
+		all = append(all, r)
+		if st, err := os.Stat(r); err == nil && st.IsDir() {
+			found = append(found, r)
+		} else {
+			log.Printf("Ordner %s nicht eingehängt – wird übersprungen.", r)
+		}
+	}
+	if len(found) == 0 {
+		return all
+	}
+	return found
 }
