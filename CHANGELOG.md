@@ -1,5 +1,25 @@
 # Änderungen
 
+## 0.0.4 – 2026-10-15
+
+**Neu**
+- **Umbenennen**: Namensmuster mit Variablen (`{title}`, `{year}`, `{res}`, `{codec}`, `{bit}`, `{container}`, `{date}`, `{filename}` und Audio-Tags) und **Suchen & Ersetzen** (mehrere Regeln, optional Regex und Groß-/Kleinschreibung) im Bereich „Ziel“ – für Audio und Video, mit Live-Vorschau; Muster und Regeln gehören zu den Voreinstellungen
+- **Seite „Umbenennen“** (Kopfzeile): Dateien ohne Konvertierung umbenennen, mit Vorschau; überschreibt nie, verschiebt nie, bleibt innerhalb der erlaubten Ordner
+- **Quick Sync lesen und schreiben**: Hardware-Decoding mit durchgängiger Hardware-Kette (`vpp_qsv` für Verkleinern/10 Bit); danach zwei weitere Wege (Bilder zurück in den Arbeitsspeicher, CPU liest); Anzeige „Schreiben: Quick Sync · … ✓“ und „Lesen: Hardware/CPU“ getrennt
+- Symbole als einfarbige SVGs im Theme (größeres Zahnrad, Stern bei Neuigkeiten, Matrix-Diskette)
+
+**Geändert**
+- Standard-Voreinstellungen auf je eine reduziert: „Remux als MKV“ (Video) und „Remux als FLAC“ (Audio)
+- „Neu“ in der Kopfzeile heißt jetzt „Neuigkeiten“
+- Keine bunten Emojis mehr in der Oberfläche (Ausnahme: die Planeten); „GPU“ durch verständlichere Begriffe ersetzt (Quick Sync steckt in der Intel-CPU)
+- Fehlgeschlagene Zwischenversuche (z. B. HW-Decoding) erscheinen nicht mehr als roter Fehler, sondern unter „Details → Frühere Versuche“; ein Fehler wird nur angezeigt, wenn alle Wege scheitern
+
+**Behoben**
+- Quick-Sync-Decoding scheiterte bei h265-Quellen mit Verkleinern/10 Bit mit „Function not implemented“ (Software-Filter bekamen GPU-Bilder)
+- Die Fehlermeldung des ersten Versuchs blieb beim laufenden zweiten Versuch stehen
+
+**Hinweis (Unraid)**: Zeigt ein bestehender Container noch „Passwort (optional)“ (`P5_PASSWORD`), den Eintrag mit REMOVE löschen – die Variable wird nicht mehr benutzt.
+
 ## 0.0.3 – 2026-10-15
 
 **Neu**

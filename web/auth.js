@@ -33,7 +33,7 @@ function showLogin(note) {
   S.view = 'login';
   clearInterval(S.pollTimer);
   document.body.classList.add('loginmode');
-  ['#viewMain', '#viewSettings'].forEach(s => $(s).classList.add('hidden'));
+  ['#viewMain', '#viewSettings', '#viewRename'].forEach(s => $(s).classList.add('hidden'));
   $('#foot').replaceChildren();
   // zuletzt benutzte Farbe (der Server liefert vor der Anmeldung keine Einstellungen)
   try {
@@ -59,7 +59,7 @@ function showLogin(note) {
       location.hash = '';
       location.reload();
     } catch (ex) {
-      err.hidden = false; err.textContent = '⚠ ' + ex.message; go.disabled = false;
+      err.hidden = false; err.textContent = ex.message; go.disabled = false;
       if (ex.status === 401) { pass.value = ''; pass.focus(); if (!S.auth || S.auth.fun !== false) funLine(funEl); }   // Fokus bleibt im Feld: gleich nochmal tippen
     }
   }},

@@ -18,6 +18,7 @@ import (
 	"github.com/p5lukas/p5converter/internal/build"
 	"github.com/p5lukas/p5converter/internal/ffmpeg"
 	"github.com/p5lukas/p5converter/internal/hw"
+	"github.com/p5lukas/p5converter/internal/rename"
 )
 
 type Item struct {
@@ -27,12 +28,13 @@ type Item struct {
 }
 
 type OutputOpts struct {
-	Dir          string `json:"dir"`       // "" = next to source
-	Structure    string `json:"structure"` // flat | keep
-	Suffix       string `json:"suffix"`
-	Pattern      string `json:"pattern"` // audio only, e.g. {artist}/{album}/{track} - {title}
-	Exists       string `json:"exists"`  // skip | overwrite | rename
-	DeleteSource bool   `json:"deleteSource"`
+	Dir          string        `json:"dir"`       // "" = next to source
+	Structure    string        `json:"structure"` // flat | keep
+	Suffix       string        `json:"suffix"`
+	Pattern      string        `json:"pattern"` // e.g. {artist}/{album}/{track} - {title} (audio) or {title} [{res}][{codec}] (video)
+	Replace      []rename.Rule `json:"replace"` // search & replace on the file name
+	Exists       string        `json:"exists"`  // skip | overwrite | rename
+	DeleteSource bool          `json:"deleteSource"`
 }
 
 type Request struct {
@@ -57,18 +59,22 @@ type Job struct {
 	Backend  string  `json:"backend"`
 	Encoder  string  `json:"encoder"`
 	// EncoderConfirmed: ffmpeg itself reported using this encoder.
-	EncoderConfirmed bool      `json:"encoderConfirmed"`
-	HWDecodeFallback bool      `json:"hwDecodeFallback"`
-	Cmd              string    `json:"cmd"`
-	Error            string    `json:"error,omitempty"`
-	Warnings         []string  `json:"warnings,omitempty"`
-	MapLines         []string  `json:"mapLines,omitempty"`
-	Log              []string  `json:"log,omitempty"`
-	SizeIn           int64     `json:"sizeIn"`
-	SizeOut          int64     `json:"sizeOut"`
-	Created          time.Time `json:"created"`
-	Started          time.Time `json:"started"`
-	Ended            time.Time `json:"ended"`
+	EncoderConfirmed bool `json:"encoderConfirmed"`
+	HWDecodeFallback bool `json:"hwDecodeFallback"`
+	// Decoder: "hardware" or "software" (empty: nothing is decoded, e.g. copy or audio).
+	Decoder string `json:"decoder,omitempty"`
+	// Attempts: short notes about earlier tries that failed before the current one (shown calmly, not as an error).
+	Attempts []string  `json:"attempts,omitempty"`
+	Cmd      string    `json:"cmd"`
+	Error    string    `json:"error,omitempty"`
+	Warnings []string  `json:"warnings,omitempty"`
+	MapLines []string  `json:"mapLines,omitempty"`
+	Log      []string  `json:"log,omitempty"`
+	SizeIn   int64     `json:"sizeIn"`
+	SizeOut  int64     `json:"sizeOut"`
+	Created  time.Time `json:"created"`
+	Started  time.Time `json:"started"`
+	Ended    time.Time `json:"ended"`
 
 	item      Item
 	req       *Request
@@ -250,65 +256,6 @@ func (m *Manager) fail(j *Job, err error) {
 	})
 }
 
-var invalidChars = strings.NewReplacer("/", "_", "\\", "_", ":", "_", "*", "_", "?", "_", "\"", "_", "<", "_", ">", "_", "|", "_")
-
-func safe(s string) string {
-	s = strings.TrimSpace(invalidChars.Replace(s))
-	return strings.Trim(s, ". ")
-}
-
-var patRe = regexp.MustCompile(`\{(\w+)\}`)
-
-func applyPattern(pat string, info *ffmpeg.Info, in string) string {
-	return patRe.ReplaceAllStringFunc(pat, func(m string) string {
-		key := m[1 : len(m)-1]
-		var v string
-		switch key {
-		case "filename":
-			v = strings.TrimSuffix(filepath.Base(in), filepath.Ext(in))
-		case "track", "disc":
-			t := info.Tags[key]
-			if key == "disc" && t == "" {
-				t = info.Tags["discnumber"]
-			}
-			if key == "track" && t == "" {
-				t = info.Tags["tracknumber"]
-			}
-			t, _, _ = strings.Cut(t, "/")
-			if n, err := strconv.Atoi(strings.TrimSpace(t)); err == nil {
-				if key == "track" {
-					return fmt.Sprintf("%02d", n)
-				}
-				return strconv.Itoa(n)
-			}
-			return ""
-		case "year":
-			v = info.Tags["date"]
-			if v == "" {
-				v = info.Tags["year"]
-			}
-			if len(v) > 4 {
-				v = v[:4]
-			}
-		case "albumartist":
-			v = info.Tags["album_artist"]
-			if v == "" {
-				v = info.Tags["albumartist"]
-			}
-			if v == "" {
-				v = info.Tags["artist"]
-			}
-		default:
-			v = info.Tags[key]
-		}
-		v = safe(v)
-		if v == "" {
-			v = "Unbekannt"
-		}
-		return v
-	})
-}
-
 func outputPath(j *Job, info *ffmpeg.Info) string {
 	o := j.req.Output
 	in := j.item.Path
@@ -325,21 +272,22 @@ func outputPath(j *Job, info *ffmpeg.Info) string {
 			dir = filepath.Join(dir, filepath.Dir(filepath.FromSlash(j.item.Rel)))
 		}
 	}
+	t := rename.Target{Container: ext}
+	if j.Kind == "video" {
+		t.Codec, t.Height, t.BitDepth = j.req.Video.Codec, j.req.Video.Height, j.req.Video.BitDepth
+	}
 	base := strings.TrimSuffix(filepath.Base(in), filepath.Ext(in)) + o.Suffix
-	if j.Kind == "audio" && o.Pattern != "" {
-		p := applyPattern(o.Pattern, info, in)
-		parts := strings.Split(filepath.ToSlash(p), "/")
-		for i, s := range parts {
-			parts[i] = safe(s)
+	if nn, err := rename.NewName(o.Pattern, o.Replace, o.Suffix, info, in, t); err == nil {
+		// the pattern may carry sub folders (audio and video)
+		parts := strings.Split(nn, "/")
+		for i, p := range parts[:len(parts)-1] {
+			parts[i] = rename.Safe(p)
 		}
-		rel := filepath.Join(parts...)
-		if rel != "" {
-			if o.Dir == "" {
-				dir = filepath.Dir(in)
-			}
-			dir = filepath.Join(dir, filepath.Dir(rel))
-			base = strings.TrimLeft(filepath.Base(rel), " -") + o.Suffix
+		if o.Dir == "" {
+			dir = filepath.Dir(in)
 		}
+		dir = filepath.Join(append([]string{dir}, parts[:len(parts)-1]...)...)
+		base = parts[len(parts)-1]
 	}
 	out := filepath.Join(dir, base+"."+ext)
 	if filepath.Clean(out) == filepath.Clean(in) {
@@ -417,12 +365,18 @@ func (m *Manager) run(j *Job) {
 	}
 	tmp := out + ".part"
 
-	buildArgs := func(hwdec bool) ([]string, error) {
+	type attempt struct {
+		hwdec bool
+		mode  string
+		label string
+	}
+	buildArgs := func(a attempt) ([]string, error) {
 		if j.Kind == "audio" {
 			return build.BuildAudio(info, j.req.Audio, j.item.Path, tmp)
 		}
 		v := j.req.Video
-		v.HWDecode = v.HWDecode && hwdec
+		v.HWDecode = v.HWDecode && a.hwdec
+		v.HWDecodeMode = a.mode
 		plan, err := build.BuildVideo(info, v, j.item.Overrides, j.item.Path, tmp)
 		if err != nil {
 			return nil, err
@@ -433,21 +387,49 @@ func (m *Manager) run(j *Job) {
 		return plan.Args, nil
 	}
 
-	args, err := buildArgs(true)
-	if err != nil {
-		m.fail(j, err)
-		return
+	attempts := []attempt{{hwdec: false}}
+	if j.Kind == "video" {
+		v := j.req.Video
+		if v.HWDecode && v.Backend != "cpu" && v.Codec != "copy" {
+			if v.Backend == "qsv" {
+				attempts = []attempt{
+					{true, "full", "Quick Sync lesen (alles auf der Intel-Videoeinheit)"},
+					{true, "download", "Quick Sync lesen (Bilder zurück in den Arbeitsspeicher)"},
+					{false, "", ""},
+				}
+			} else {
+				attempts = []attempt{{true, "", "Hardware-Decoding"}, {false, "", ""}}
+			}
+		}
 	}
-	err = m.exec(ctx, j, args, info.Duration)
-	if err != nil && !m.wasCancelled(j) && j.Kind == "video" && j.req.Video.HWDecode && j.req.Video.Backend != "cpu" && j.req.Video.Codec != "copy" {
+	for i, a := range attempts {
+		args, e := buildArgs(a)
+		if e != nil {
+			m.fail(j, e)
+			return
+		}
 		m.update(j, func() {
-			j.HWDecodeFallback = true
-			j.Log = append(j.Log, "--- Fehler mit HW-Decoding, neuer Versuch ohne HW-Decoding ---")
+			switch {
+			case j.Kind != "video" || j.req.Video.Codec == "copy":
+				j.Decoder = ""
+			case a.hwdec:
+				j.Decoder = "hardware"
+			default:
+				j.Decoder = "software"
+			}
+			j.HWDecodeFallback = len(attempts) > 1 && !a.hwdec
 			j.Progress = 0
 		})
-		if args2, e2 := buildArgs(false); e2 == nil {
-			err = m.exec(ctx, j, args2, info.Duration)
+		err = m.exec(ctx, j, args, info.Duration)
+		if err == nil || m.wasCancelled(j) || i == len(attempts)-1 {
+			break
 		}
+		// this way did not work: note it quietly and try the next one
+		m.update(j, func() {
+			j.Attempts = append(j.Attempts, a.label+" nicht möglich – "+j.Error)
+			j.Log = append(j.Log, "--- "+a.label+" fehlgeschlagen, neuer Versuch ---")
+			j.Error = ""
+		})
 	}
 	if err != nil {
 		os.Remove(tmp)
@@ -496,6 +478,7 @@ func (m *Manager) run(j *Job) {
 
 func (m *Manager) exec(ctx context.Context, j *Job, args []string, duration float64) error {
 	cmd := exec.CommandContext(ctx, m.tools.FFmpeg, args...)
+	m.update(j, func() { j.Error = "" })
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()
 	m.update(j, func() {

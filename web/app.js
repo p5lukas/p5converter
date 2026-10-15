@@ -20,7 +20,7 @@ const CODEC_LABEL = {h264: 'H.264', hevc: 'H.265', av1: 'AV1', vp9: 'VP9'};
 const SWENC = {h264: 'libx264', hevc: 'libx265', av1: 'libsvtav1', vp9: 'libvpx-vp9'};
 
 // ---------- persisted settings ----------
-const FIELDS = ['outMode', 'outDir', 'outStruct', 'suffix', 'pattern', 'exists', 'aFormat', 'aMode', 'aQuality', 'aBitrate', 'aFlac', 'aWav', 'aRate', 'aCh',
+const FIELDS = ['outMode', 'outDir', 'outStruct', 'suffix', 'pattern', 'renRules', 'exists', 'aFormat', 'aMode', 'aQuality', 'aBitrate', 'aFlac', 'aWav', 'aRate', 'aCh',
   'vContainer', 'vCodec', 'vBackend', 'vCrf', 'vPreset', 'vDepth', 'vHeight', 'vAudioMode', 'vAudioCodec', 'vAudioKbps', 'vAudioLangs', 'vSubMode', 'vSubLangs'];
 const CHECKS = ['deleteSource', 'aCover', 'vHwDec'];
 function saveSettings() {
@@ -75,11 +75,11 @@ function setWorld(w, animate) {
   $('#audioSettings').classList.toggle('hidden', w !== 'audio');
   $('#videoSettings').classList.toggle('hidden', w !== 'video');
   $('#hwCard').classList.toggle('hidden', w !== 'video');
-  $('#patternRow').classList.toggle('hidden', w !== 'audio');
   renderFiles();
   refreshAudioUI();
   refreshVideoUI();
   renderStartInfo();
+  syncNameUI();
   saveSettings();
 }
 
@@ -184,7 +184,7 @@ function renderHwCard() {
           : `<span class="small muted">${esc(b.detail || 'nicht verfügbar')}</span>`) +
       `</div><span class="chip ${ok ? 'ok' : 'err'}">${ok ? 'nutzbar' : 'nicht nutzbar'}</span></div>`;
   }).join('');
-  $('#hwGpus').innerHTML = esc((h.gpus && h.gpus.length ? 'Erkannte GPUs: ' + h.gpus.join(', ') : 'Keine GPU gemeldet.') +
+  $('#hwGpus').innerHTML = esc((h.gpus && h.gpus.length ? 'Erkannte Grafik-/Videoeinheiten: ' + h.gpus.join(', ') : 'Keine Grafik-/Videoeinheit gemeldet.') +
     (h.done ? ` · Test dauerte ${(h.tookMs / 1000).toFixed(1)} s (echte Test-Encodes)` : '')) + ' · <a href="#settings/hardware">Diagnose</a>';
 }
 
@@ -201,6 +201,7 @@ function renderFiles() {
   $$('#fileList [data-tr]').forEach(b => b.onclick = () => openTracks(list[+b.dataset.tr]));
   const tot = list.reduce((a, f) => a + (f.size || 0), 0);
   renderStartInfo();
+  refreshNamePreview();
   $('#fileSummary').textContent = list.length ? `${list.length} Datei(en), ${fmtSize(tot)}` : '';
 }
 function addScanned(files) {
@@ -222,8 +223,8 @@ async function browseTo(path) {
     $$('#bDrives [data-d]').forEach(b => b.onclick = () => browseTo(b.dataset.d));
     const kindOK = e => B.mode === 'dir' ? false : true;
     $('#bList').innerHTML = d.entries.map((e, i) => `<div class="bi" data-i="${i}">
-      ${e.dir ? '📁' : (B.mode === 'files' ? `<input type="checkbox" data-c="${i}">` : '')}
-      <span>${esc(e.name)}</span><span class="sz">${e.dir ? '' : (e.media === 'video' ? '▶ ' : '♪ ') + fmtSize(e.size)}</span></div>`).join('') || '<div class="empty">Leer</div>';
+      ${e.dir ? ic('folder') : (B.mode === 'files' ? `<input type="checkbox" data-c="${i}">` : '')}
+      <span>${esc(e.name)}</span><span class="sz">${e.dir ? '' : (e.media === 'video' ? ic('play') + ' ' : '♪ ') + fmtSize(e.size)}</span></div>`).join('') || '<div class="empty">Leer</div>';
     $$('#bList .bi').forEach(row => {
       const e = d.entries[+row.dataset.i];
       row.onclick = ev => {
@@ -289,7 +290,7 @@ async function start() {
     items: files.map(f => ({path: f.path, rel: f.rel, overrides: {drop: [...f.drop], defaultAudio: f.defaultAudio}})),
     output: {
       dir: $('#outMode').value === 'custom' ? $('#outDir').value.trim() : '', structure: $('#outStruct').value,
-      suffix: $('#suffix').value, pattern: kind === 'audio' ? $('#pattern').value.trim() : '', exists: $('#exists').value,
+      suffix: $('#suffix').value, pattern: $('#pattern').value.trim(), replace: cleanRules(nameRules()), exists: $('#exists').value,
       deleteSource: $('#deleteSource').checked,
     },
   };
@@ -320,12 +321,21 @@ function statusChip(j) {
   const m = {queued: ['wartet', ''], running: ['läuft', 'acc'], done: ['fertig', 'ok'], error: ['Fehler', 'err'], canceled: ['abgebrochen', 'warn'], skipped: ['übersprungen', 'warn']}[j.status];
   return `<span class="chip ${m[1]}">${m[0]}</span>`;
 }
+const BACKEND_NAMES = {qsv: 'Quick Sync', nvenc: 'NVIDIA NVENC', vaapi: 'VAAPI', amf: 'AMD AMF', cpu: 'CPU'};
+// „Schreiben“ = Encoder, „Lesen“ = Decoder: zwei getrennte Angaben, damit klar ist, was wo läuft
 function encoderBadge(j) {
   if (j.kind !== 'video' || !j.encoder) return '';
   if (j.encoder === 'copy') return '<span class="chip">Video kopiert</span>';
   const hw = j.backend && j.backend !== 'cpu';
-  const conf = j.encoderConfirmed ? ' ✓ von ffmpeg bestätigt' : (j.status === 'running' ? ' (warte auf ffmpeg …)' : '');
-  return `<span class="chip ${hw ? 'ok' : ''}">${hw ? '⚡ ' : ''}${esc(j.encoder)}${conf}</span>`;
+  const conf = j.encoderConfirmed ? ' ✓' : (j.status === 'running' ? ' (warte auf ffmpeg …)' : '');
+  const who = hw ? BACKEND_NAMES[j.backend] || j.backend : 'CPU';
+  const title = hw ? 'Der Encoder läuft in der Hardware. ' + (j.encoderConfirmed ? 'ffmpeg hat die Nutzung bestätigt.' : '') : 'Der Encoder läuft in Software auf der CPU.';
+  return `<span class="chip ${hw ? 'ok' : ''}" title="${esc(title)}">${hw ? ic('bolt') : ''}Schreiben: ${esc(who)} · ${esc(j.encoder)}${conf}</span>`;
+}
+function decoderBadge(j) {
+  if (j.kind !== 'video' || !j.decoder || j.encoder === 'copy') return '';
+  if (j.decoder === 'hardware') return `<span class="chip ok" title="Die Quelldatei wird in der Hardware gelesen (dekodiert).">${ic('bolt')}Lesen: ${esc(BACKEND_NAMES[j.backend] || 'Hardware')}</span>`;
+  return '<span class="chip" title="Die Quelldatei wird auf der CPU gelesen (dekodiert). Das Ergebnis ist gleich gut, nur die CPU hat mehr zu tun.">Lesen: CPU</span>';
 }
 function renderQueue() {
   const q = $('#queue');
@@ -339,15 +349,16 @@ function renderQueue() {
     }
     if (j.status === 'done' && j.sizeOut) meta.push(`${fmtSize(j.sizeIn)} → ${fmtSize(j.sizeOut)} (${Math.round(j.sizeOut / j.sizeIn * 100)} %)`);
     if (j.status === 'done') meta.push('Dauer ' + fmtTime((new Date(j.ended) - new Date(j.started)) / 1000));
-    if (j.hwDecodeFallback) meta.push('<span class="warn">HW-Decoding nicht möglich → Software-Decoding</span>');
+    if (j.hwDecodeFallback && j.status !== 'error') meta.push('<span class="muted">Lesen per Hardware ging bei dieser Datei nicht – die CPU liest, geschrieben wird trotzdem in Hardware</span>');
     (j.warnings || []).forEach(w => meta.push('<span class="warn">' + esc(w) + '</span>'));
     const act = (j.status === 'queued' || j.status === 'running') ? `<button class="small ghost" data-cancel="${j.id}">Abbrechen</button>` : '';
-    return `<div class="job ${j.status}"><div class="job-h"><span class="n" title="${esc(j.input)}">${esc(j.name)}</span>${encoderBadge(j)}${statusChip(j)}${act}</div>
+    return `<div class="job ${j.status}"><div class="job-h"><span class="n" title="${esc(j.input)}">${esc(j.name)}</span>${encoderBadge(j)}${decoderBadge(j)}${statusChip(j)}${act}</div>
       <div class="bar"><i style="width:${j.progress.toFixed(1)}%"></i></div>
       <div class="job-m"><span>${j.progress.toFixed(1)} %</span>${meta.map(m => `<span>${m}</span>`).join('')}</div>
-      ${j.error ? `<div class="small ${j.status === 'error' ? '' : 'muted'}" style="color:${j.status === 'error' ? 'var(--err)' : 'var(--mut)'}">${esc(j.error)}</div>` : ''}
+      ${j.error && j.status === 'error' ? `<div class="small" style="color:var(--bad)">${esc(j.error)}</div>` : ''}
       <details data-id="${j.id}" ${openDetails.has(j.id) ? 'open' : ''}><summary>Details</summary>
         <div class="small muted">Ziel: ${esc(j.output || '–')}</div>
+        ${(j.attempts || []).length ? `<div class="small muted">Frühere Versuche:<br>${j.attempts.map(a => esc(a)).join('<br>')}</div>` : ''}
         ${(j.mapLines || []).length ? `<pre>${esc(j.mapLines.join('\n'))}</pre>` : ''}
         <pre>${esc(j.cmd || '')}</pre><pre>${esc((j.log || []).slice(-25).join('\n'))}</pre></details></div>`;
   }).join('');
@@ -363,9 +374,9 @@ function renderMonitor() {
   if (!st) { $('#monitor').innerHTML = ''; return; }
   let h = meter('CPU', st.cpu, running ? 'Bei Hardware-Encoding sollte die CPU niedrig bleiben' : 'Leerlauf – Messung nur während Aufträgen');
   (st.gpus || []).forEach(g => {
-    h += meter(g.name + ' – ' + (g.encode >= 0 ? 'Video-Encode' : 'GPU aktiv'), g.encode >= 0 ? g.encode : g.util, esc(g.source) + (g.decode >= 0 ? ` · Decode ${g.decode.toFixed(0)} %` : '') + (g.encode >= 0 ? ` · Gesamt ${g.util.toFixed(0)} %` : ''));
+    h += meter(g.name + ' – ' + (g.encode >= 0 ? 'Video-Encode' : 'Videoeinheit aktiv'), g.encode >= 0 ? g.encode : g.util, esc(g.source) + (g.decode >= 0 ? ` · Decode ${g.decode.toFixed(0)} %` : '') + (g.encode >= 0 ? ` · Gesamt ${g.util.toFixed(0)} %` : ''));
   });
-  if (!(st.gpus || []).length) h += `<div class="meter"><div class="t"><b>GPU</b><span>n/a</span></div><div class="sub">Keine GPU-Auslastung lesbar (Docker: /dev/dri bzw. NVIDIA-Runtime durchreichen)</div></div>`;
+  if (!(st.gpus || []).length) h += `<div class="meter"><div class="t"><b>Videoeinheit</b><span>n/a</span></div><div class="sub">Keine Auslastung der Videoeinheit lesbar (Docker: /dev/dri bzw. NVIDIA-Runtime durchreichen)</div></div>`;
   $('#monitor').innerHTML = h;
 }
 function renderHero() {
@@ -503,6 +514,7 @@ function openNews() {
   try { localStorage.setItem('p5cNewsSeen', cur); } catch (e) {}
 }
 function wire() {
+  wireRename();
   $('#newsBtn').onclick = openNews;
   $('#gearBtn').onclick = () => { location.hash = '#settings'; };
   $('#logoutBtn').onclick = logout;
@@ -510,7 +522,7 @@ function wire() {
   $('#presetCancel').onclick = () => $('#presetDlg').close();
   $('#presetForm').addEventListener('submit', e => { e.preventDefault(); savePresetFromDialog(); });
   window.addEventListener('hashchange', route);
-  [...FIELDS, ...CHECKS].forEach(f => $('#' + f).addEventListener('input', () => { refreshAudioUI(); refreshVideoUI(); saveSettings(); }));
+  [...FIELDS, ...CHECKS].forEach(f => $('#' + f).addEventListener('input', () => { refreshAudioUI(); refreshVideoUI(); saveSettings(); refreshNamePreview(); }));
   $('#outMode').addEventListener('input', outModeUI);
   $('#addFiles').onclick = async () => {
     const r = await openBrowser('files', S.lastDir); if (!r) return;

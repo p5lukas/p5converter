@@ -6,6 +6,7 @@ Gleiche Zusammenarbeit wie im Schwesterprojekt **p5assets** (Vorbild: `TODO.md` 
 - **„Todo: …“** vom Nutzer = nur notieren: Eintrag in `TODO.md` + eigener Commit `TODO: <kurzer Text>`. **Nichts umsetzen.**
 - Bei offenen Entscheidungen Varianten (A/B/C) mit kurzer Beschreibung vorschlagen; der Nutzer wählt kurz („Dann C“). Die Entscheidung wird als `TODO: … Variante C` festgehalten.
 - **„Leg los“** = alle offenen TODOs umsetzen, danach kleiner Versionssprung (siehe unten) und **nach grüner CI direkt nach `main` mergen** (Entscheidung des Nutzers: „immer direkt mergen, wenn ich leg los sage“; Pull Request erstellen, CI abwarten, Squash-Merge). Ohne „leg los“ wird nichts gemergt, getaggt oder veröffentlicht.
+- CI-/Image-Stand (grün, `:latest` gebaut) meldet der Nutzer sich selbst unter GitHub → Actions; **nicht von selbst berichten** (vor dem Merge die CI abzuwarten bleibt Pflicht).
 - Regeln des Nutzers werden als „Arbeitsregel (Nutzer)“ in `TODO.md` oben festgehalten.
 
 ## Versionen und Veröffentlichung
