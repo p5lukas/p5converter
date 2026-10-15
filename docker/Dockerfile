@@ -3,8 +3,13 @@ FROM golang:1.24 AS build
 WORKDIR /src
 COPY go.mod ./
 COPY . .
-ARG VERSION=dev
-RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o /p5converter .
+ARG P5_TAG=
+ARG P5_BRANCH=
+ARG P5_COMMIT=
+RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w \
+  -X github.com/p5lukas/p5converter/internal/version.Tag=${P5_TAG} \
+  -X github.com/p5lukas/p5converter/internal/version.Branch=${P5_BRANCH} \
+  -X github.com/p5lukas/p5converter/internal/version.Commit=${P5_COMMIT}" -o /p5converter .
 
 # Ubuntu 24.04 ships ffmpeg 6.1 with x264/x265/SVT-AV1, VAAPI, QSV (libvpl) and NVENC (dynamic).
 FROM ubuntu:24.04
@@ -20,14 +25,14 @@ COPY --from=build /p5converter /usr/local/bin/p5converter
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-ENV P5_LISTEN=0.0.0.0:8484 \
-    P5_ROOTS=/media,/output \
+ENV P5_LISTEN=0.0.0.0:8787 \
+    P5_ROOTS=/media,/audio1,/audio2,/video1,/video2,/video3,/video4,/output \
     P5_NO_BROWSER=1 \
     PUID=99 PGID=100 \
     NVIDIA_VISIBLE_DEVICES=all \
     NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
-EXPOSE 8484
+EXPOSE 8787
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s CMD ["p5converter", "-healthcheck"]
-VOLUME ["/media", "/output"]
+VOLUME ["/output"]
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["p5converter"]

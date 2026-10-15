@@ -19,9 +19,8 @@ import (
 
 	"github.com/p5lukas/p5converter/internal/ffmpeg"
 	"github.com/p5lukas/p5converter/internal/server"
+	"github.com/p5lukas/p5converter/internal/version"
 )
-
-var version = "dev"
 
 func env(k, def string) string {
 	if v := os.Getenv(k); v != "" {
@@ -31,7 +30,7 @@ func env(k, def string) string {
 }
 
 func main() {
-	addr := flag.String("listen", env("P5_LISTEN", "127.0.0.1:8484"), "Adresse:Port (Docker: 0.0.0.0:8484)")
+	addr := flag.String("listen", env("P5_LISTEN", "127.0.0.1:8787"), "Adresse:Port (Docker: 0.0.0.0:8787)")
 	roots := flag.String("roots", env("P5_ROOTS", ""), "erlaubte Wurzelordner, kommagetrennt (leer = alles erlaubt)")
 	ffdir := flag.String("ffmpeg-dir", env("P5_FFMPEG_DIR", ""), "Ordner mit ffmpeg/ffprobe")
 	noBrowser := flag.Bool("no-browser", env("P5_NO_BROWSER", "") != "", "Fenster/Browser nicht automatisch öffnen")
@@ -49,7 +48,7 @@ func main() {
 		return
 	}
 	if *showVersion {
-		fmt.Println("p5converter", version)
+		fmt.Println("p5converter", version.Get().Version)
 		return
 	}
 
@@ -61,13 +60,8 @@ func main() {
 	if err != nil {
 		fatal(desktop, fmt.Sprintf("%v\nWindows/Linux-Paket: ffmpeg gehört in denselben Ordner wie p5converter. Bitte neu installieren.", err))
 	}
-	var rs []string
-	for _, r := range strings.Split(*roots, ",") {
-		if r = strings.TrimSpace(r); r != "" {
-			rs = append(rs, r)
-		}
-	}
-	srv := server.New(version, tools, rs, *jobsN)
+	rs := existingRoots(*roots)
+	srv := server.New(version.Get(), tools, rs, *jobsN)
 	if desktop {
 		srv.Quit = func() { time.Sleep(300 * time.Millisecond); os.Exit(0) }
 	}
@@ -90,7 +84,7 @@ func main() {
 		}
 	}
 	url := urlFor(ln.Addr().String())
-	log.Printf("p5converter %s – %s", version, tools.Version())
+	log.Printf("p5converter %s – %s", version.Get().Version, tools.Version())
 	log.Printf("Oberfläche: %s", url)
 	if !*noBrowser {
 		go func() { time.Sleep(400 * time.Millisecond); openWindow(url) }()
@@ -233,4 +227,27 @@ func basicAuth(next http.Handler, password string) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// existingRoots splits a comma-separated root list and drops folders that are not there (optional
+// Docker mounts such as /video3 may be left empty). If none exists, the full list is kept so the
+// problem stays visible instead of silently opening up everything.
+func existingRoots(list string) []string {
+	var all, found []string
+	for _, r := range strings.Split(list, ",") {
+		r = strings.TrimSpace(r)
+		if r == "" {
+			continue
+		}
+		all = append(all, r)
+		if st, err := os.Stat(r); err == nil && st.IsDir() {
+			found = append(found, r)
+		} else {
+			log.Printf("Ordner %s nicht eingehängt – wird übersprungen.", r)
+		}
+	}
+	if len(found) == 0 {
+		return all
+	}
+	return found
 }

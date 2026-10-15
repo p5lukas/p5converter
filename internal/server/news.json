@@ -1,0 +1,6 @@
+[
+  {"id": "design-1", "version": "0.0.2", "title": "Neues Design", "text": "p5converter hat jetzt dieselbe Designlinie wie p5assets: dunkles Matrix-Theme mit Leuchteffekten. Audio und Video sind eigene Welten mit eigener Farbe und eigenem Planeten; beim Wechsel gibt es den Wurmloch-Flug. Neu ist außerdem die Übersicht oben mit Fortschrittsring, Zählern und der Live-Auslastung von CPU und GPU."},
+  {"id": "mobile-1", "version": "0.0.2", "title": "Handy und iPad", "text": "Die Oberfläche passt sich Handy und iPad an (Hoch- und Querformat) und lässt sich auf dem iPhone/iPad als Web-App zum Home-Bildschirm hinzufügen (Teilen → Zum Home-Bildschirm)."},
+  {"id": "port-1", "version": "0.0.2", "title": "Neuer Port 8787", "text": "Der Standard-Port ist jetzt 8787. Im Unraid-Template Container-Port und Mapping auf 8787 stellen (oder das aktuelle Template verwenden)."},
+  {"id": "version-1", "version": "0.0.2", "title": "Version und Neuigkeiten", "text": "Unten steht jetzt die Version mit Branch und Commit, und diese Neuigkeiten-Anzeige gibt es auch. Die Änderungen jeder Version stehen in der CHANGELOG.md."}
+]

@@ -37,9 +37,37 @@ function loadSettings() {
 }
 
 // ---------- worlds ----------
-function setWorld(w) {
+// Welten: jede hat ihre Farbe (Farbton) und ihren Planeten, wie bei p5assets (Themes in planets.js)
+const WORLDS = {audio: {hue: 140, label: 'Audio'}, video: {hue: 270, label: 'Video'}};
+function applyTheme(w) {
+  const hue = WORLDS[w].hue, t = themeOf(hue), root = document.documentElement.style;
+  root.setProperty('--h', hue); root.setProperty('--sat', t.sat + '%'); root.setProperty('--lit', t.lit + '%');
+  $$('#worlds button').forEach(b => {
+    const wh = WORLDS[b.dataset.world].hue, wt = themeOf(wh);
+    b.style.setProperty('--c', `hsl(${wh} ${wt.sat}% ${wt.lit}%)`);
+    const slot = b.querySelector('.pl');
+    if (slot && !slot.firstChild) slot.replaceWith(planetSvg(wh, 22));
+  });
+  const meta = document.querySelector('meta[name=theme-color]');
+  if (meta) meta.content = `hsl(${hue} 80% 2%)`;
+}
+function worldFx(w) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const hue = WORLDS[w].hue, t = themeOf(hue), ms = 1300;
+  const fx = document.createElement('div'); fx.className = 'worldfx';
+  fx.style.setProperty('--c', `hsl(${hue} ${t.sat}% ${t.lit}%)`);
+  const cv = document.createElement('canvas'), pl = document.createElement('div');
+  pl.className = 'wfplanet'; pl.appendChild(planetSvg(hue, 200));
+  fx.append(cv, pl); document.body.appendChild(fx);
+  runWormhole(cv, hue, ms);
+  setTimeout(() => fx.remove(), ms + 60);
+}
+function setWorld(w, animate) {
+  if (animate && w !== S.world) worldFx(w);
   S.world = w;
-  $$('#worlds button').forEach(b => b.classList.toggle('active', b.dataset.world === w));
+  $$('#worlds button').forEach(b => b.classList.toggle('on', b.dataset.world === w));
+  // Der Farbwechsel passiert mitten im Flug (dunkler Bildschirm), damit nichts flackert
+  setTimeout(() => { applyTheme(w); }, animate ? 380 : 0);
   $('#audioSettings').classList.toggle('hidden', w !== 'audio');
   $('#videoSettings').classList.toggle('hidden', w !== 'video');
   $('#hwCard').classList.toggle('hidden', w !== 'video');
@@ -47,6 +75,7 @@ function setWorld(w) {
   renderFiles();
   refreshAudioUI();
   refreshVideoUI();
+  renderStartInfo();
   saveSettings();
 }
 
@@ -182,6 +211,7 @@ function renderFiles() {
   $$('#fileList [data-rm]').forEach(b => b.onclick = () => { list.splice(+b.dataset.rm, 1); renderFiles(); });
   $$('#fileList [data-tr]').forEach(b => b.onclick = () => openTracks(list[+b.dataset.tr]));
   const tot = list.reduce((a, f) => a + (f.size || 0), 0);
+  renderStartInfo();
   $('#fileSummary').textContent = list.length ? `${list.length} Datei(en), ${fmtSize(tot)}` : '';
 }
 function addScanned(files) {
@@ -241,22 +271,30 @@ async function openTracks(f) {
       const desc = s.type === 'video' ? `${s.width}×${s.height} ${s.bitDepth}bit ${s.pixFmt}` : s.type === 'audio' ? `${s.channels} Kanäle ${s.layout || ''} ${s.sampleRate ? s.sampleRate / 1000 + ' kHz' : ''}` : '';
       const keep = s.type === 'video' ? 'disabled checked' : (f.drop.has(s.index) ? '' : 'checked');
       const def = s.type === 'audio' ? `<input type="radio" name="defA" value="${s.index}" ${(f.defaultAudio != null ? f.defaultAudio === s.index : s.default) ? 'checked' : ''}>` : '';
-      return `<tr><td><input type="checkbox" data-s="${s.index}" ${keep}></td><td>#${s.index}</td><td>${s.type}</td><td>${esc(s.codec)}</td>
-        <td>${esc(s.lang || '–')}</td><td>${esc(s.title || '')} <span class="muted">${esc(desc)}</span></td><td>${def}</td></tr>`;
+      return `<tr><td data-l="Behalten"><input type="checkbox" data-s="${s.index}" ${keep}></td><td data-l="Spur">#${s.index} · ${s.type}</td><td data-l="Codec">${esc(s.codec)}</td>
+        <td data-l="Sprache">${esc(s.lang || '–')}</td><td data-l="Info">${esc(s.title || '')} <span class="muted">${esc(desc)}</span></td><td data-l="Standard">${def}</td></tr>`;
     }).join('');
-    $('#tBody').innerHTML = `<table><tr><th>Behalten</th><th>#</th><th>Typ</th><th>Codec</th><th>Sprache</th><th>Titel / Info</th><th>Standard</th></tr>${rows}</table>`;
+    $('#tBody').innerHTML = `<table><tr><th>Behalten</th><th>Spur</th><th>Codec</th><th>Sprache</th><th>Titel / Info</th><th>Standard</th></tr>${rows}</table>`;
     $$('#tBody [data-s]').forEach(c => c.onchange = () => { c.checked ? f.drop.delete(+c.dataset.s) : f.drop.add(+c.dataset.s); renderFiles(); });
     $$('#tBody [name=defA]').forEach(r => r.onchange = () => { f.defaultAudio = +r.value; renderFiles(); });
   } catch (e) { $('#tBody').innerHTML = `<div class="empty warn">${esc(e.message)}</div>`; }
+}
+
+// ---------- Toasts ----------
+function toast(msg, kind) {
+  const t = document.createElement('div'); t.className = 'toast ' + (kind || ''); t.textContent = msg;
+  $('#toasts').appendChild(t); setTimeout(() => t.remove(), kind === 'bad' ? 7000 : 3500);
+}
+function renderStartInfo() {
+  const n = S.files[S.world].length;
+  $('#startInfo').textContent = n ? `${n} ${n === 1 ? 'Datei' : 'Dateien'} · ${WORLDS[S.world].label}` : 'Noch keine Dateien';
 }
 
 // ---------- start job ----------
 function langs(s) { return s.split(',').map(x => x.trim()).filter(Boolean); }
 async function start() {
   const kind = S.world, files = S.files[kind];
-  const msg = $('#startMsg');
-  msg.className = 'small';
-  if (!files.length) { msg.textContent = 'Bitte zuerst Dateien hinzufügen.'; msg.classList.add('warn'); return; }
+  if (!files.length) { toast('Bitte zuerst Dateien hinzufügen.', 'bad'); return; }
   const req = {
     kind,
     items: files.map(f => ({path: f.path, rel: f.rel, overrides: {drop: [...f.drop], defaultAudio: f.defaultAudio}})),
@@ -266,7 +304,7 @@ async function start() {
       deleteSource: $('#deleteSource').checked,
     },
   };
-  if ($('#outMode').value === 'custom' && !req.output.dir) { msg.textContent = 'Bitte einen Zielordner angeben.'; msg.classList.add('warn'); return; }
+  if ($('#outMode').value === 'custom' && !req.output.dir) { toast('Bitte einen Zielordner angeben.', 'bad'); return; }
   if (req.output.deleteSource && !confirm('Quelldateien werden nach erfolgreicher Konvertierung GELÖSCHT. Fortfahren?')) return;
   if (kind === 'audio') {
     const f = $('#aFormat').value, vbr = ($('#aMode').value === 'vbr') && (f === 'mp3' || f === 'ogg');
@@ -282,9 +320,9 @@ async function start() {
   }
   try {
     const r = await api('/api/jobs', req);
-    msg.textContent = r.ids.length + ' Auftrag/Aufträge eingereiht.';
+    toast(r.ids.length + (r.ids.length === 1 ? ' Auftrag eingereiht.' : ' Aufträge eingereiht.'), 'ok');
     files.length = 0; renderFiles(); saveSettings(); poll();
-  } catch (e) { msg.textContent = e.message; msg.classList.add('warn'); }
+  } catch (e) { toast(e.message, 'bad'); }
 }
 
 // ---------- queue / monitor ----------
@@ -341,6 +379,20 @@ function renderMonitor() {
   if (!(st.gpus || []).length) h += `<div class="meter"><div class="t"><b>GPU</b><span>n/a</span></div><div class="sub">Keine GPU-Auslastung lesbar (Docker: /dev/dri bzw. NVIDIA-Runtime durchreichen)</div></div>`;
   $('#monitor').innerHTML = h;
 }
+function renderHero() {
+  const c = {queued: 0, running: 0, done: 0, error: 0, other: 0};
+  let prog = 0;
+  S.jobs.forEach(j => {
+    if (j.status in c) c[j.status]++; else c.other++;
+    prog += j.status === 'running' ? j.progress : (j.status === 'queued' ? 0 : 100);
+  });
+  const total = S.jobs.length, pct = total ? Math.round(prog / total) : 0;
+  $('#stFiles').textContent = S.files[S.world].length;
+  $('#stQueued').textContent = c.queued; $('#stRun').textContent = c.running;
+  $('#stDone').textContent = c.done; $('#stErr').textContent = c.error;
+  $('#ring').style.setProperty('--p', pct);
+  $('#ringTxt').textContent = total ? pct + '%' : '–';
+}
 let polling = false;
 async function poll() {
   if (polling || S.stopped) return; polling = true;
@@ -348,7 +400,7 @@ async function poll() {
     const d = await api('/api/state');
     S.jobs = d.jobs; S.stats = d.stats;
     if (document.activeElement !== $('#conc')) $('#conc').value = d.concurrency;
-    renderQueue(); renderMonitor();
+    renderQueue(); renderMonitor(); renderHero();
   } catch (e) {} finally { polling = false; }
 }
 
@@ -359,7 +411,20 @@ function infoBtn(key) {
   b.title = 'Erklärung'; b.setAttribute('aria-label', 'Erklärung anzeigen');
   return b;
 }
+function wrapLabels() {
+  // jeder Label-Titel bekommt die Klasse .lt (für das "> "-Präfix); Text-Knoten werden dafür eingepackt
+  $$('.panel label').forEach(lab => {
+    if (lab.classList.contains('check') || lab.classList.contains('inline') || lab.querySelector(':scope > .lt')) return;
+    const first = [...lab.childNodes].find(n => (n.nodeType === 3 && n.textContent.trim()) || (n.nodeType === 1 && n.tagName === 'SPAN'));
+    if (!first) return;
+    if (first.nodeType === 3) {
+      const wrap = document.createElement('span'); wrap.className = 'lt';
+      lab.insertBefore(wrap, first); wrap.appendChild(first);
+    } else first.classList.add('lt');
+  });
+}
 function decorateInfo() {
+  wrapLabels();
   Object.keys(INFO).forEach(key => {
     if (key === 'tracksBtn') return;
     let target = null, after = null;
@@ -376,14 +441,9 @@ function decorateInfo() {
       h.appendChild(infoBtn(key)); return;
     }
     const b = infoBtn(key);
-    if (lab_isCheck(target)) {
-      if (after && after.nextSibling) target.insertBefore(b, after.nextSibling); else target.appendChild(b);
-    } else if (after && after.nodeType === 3) {
-      const wrap = document.createElement('span');
-      wrap.className = 'lt';
-      target.insertBefore(wrap, after);
-      wrap.appendChild(after); wrap.appendChild(b);
-    } else if (after) after.appendChild(b);
+    const lt = target.querySelector(':scope > .lt');
+    if (lt) lt.appendChild(b);
+    else if (lab_isCheck(target) || target.classList.contains('inline')) { if (after && after.nextSibling) target.insertBefore(b, after.nextSibling); else target.appendChild(b); }
     else target.insertBefore(b, target.firstChild);
   });
 }
@@ -400,7 +460,7 @@ function showInfo(btn) {
   let x = Math.min(Math.max(8, r.left - 10), window.innerWidth - w - 8);
   let y = Math.max(8, Math.min(r.bottom + 8, window.innerHeight - h - 8));
   pop.style.left = x + 'px'; pop.style.top = y + 'px';
-  btn.classList.add('on'); popFor = btn;
+  btn.classList.add('on'); popFor = btn; popY = scrollY;
   if (btn.closest('dialog')) btn.closest('dialog').appendChild(pop); else document.body.appendChild(pop);
 }
 function hideInfo() {
@@ -413,18 +473,49 @@ document.addEventListener('click', e => {
   if (!e.target.closest('#infoPop')) hideInfo();
 }, true);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') hideInfo(); });
-window.addEventListener('scroll', hideInfo, true);
+let popY = 0;
+window.addEventListener('scroll', () => { if (popFor && Math.abs(scrollY - popY) > 40) hideInfo(); }, true);
 
 // ---------- init ----------
 async function loadInfo() {
   S.info = await api('/api/info');
-  $('#ffver').textContent = 'p5converter ' + S.info.version + ' · ' + S.info.ffmpeg.replace(/^ffmpeg version /, 'ffmpeg ').split(' Copyright')[0] + ' · ' + S.info.os;
+  $('#ffver').textContent = S.info.ffmpeg.replace(/^ffmpeg version /, 'ffmpeg ').split(' Copyright')[0].split(' ').slice(0, 2).join(' ');
+  renderFooter();
   refreshVideoUI();
   $('#quit').classList.toggle('hidden', !S.info.canQuit);
   if (!S.info.hw.done) setTimeout(loadInfo, 1200);
 }
+function renderFooter() {
+  const b = S.info.build, ff = S.info.ffmpeg.replace(/^ffmpeg version /, '').split(' Copyright')[0].split(' ')[0];
+  const ver = b.tag ? `<a href="${esc(b.branchUrl)}" target="_blank" rel="noopener">v${esc(b.tag)}</a>` : `<a href="${esc(b.branchUrl)}" target="_blank" rel="noopener">${esc(b.branch)}</a>`;
+  $('#foot').innerHTML = `<span><b>p5converter</b> ${esc(b.base)}</span><span>${ver}</span>` +
+    (b.commit ? `<span><a href="${esc(b.commitUrl)}" target="_blank" rel="noopener">${esc(b.commitShort)}</a></span>` : '') +
+    `<span>ffmpeg ${esc(ff)}</span><span>${esc(S.info.os)}</span><span><button class="lnk" id="footNews">Neuigkeiten</button></span><span><a href="${esc(b.repo)}" target="_blank" rel="noopener">GitHub</a></span>`;
+  $('#footNews').onclick = openNews;
+}
+async function loadNews() {
+  try { S.news = await api('/api/news'); } catch (e) { S.news = []; }
+  let seen = null;
+  try { seen = localStorage.getItem('p5cNewsSeen'); } catch (e) {}
+  const cur = S.info.build.base;
+  // erster Besuch: nichts anzeigen, nur merken; bei neuer Version: Punkt am Knopf
+  if (seen === null) { try { localStorage.setItem('p5cNewsSeen', cur); } catch (e) {} }
+  else if (seen !== cur && S.news.some(n => n.version === cur)) $('#newsDot').classList.remove('hidden');
+}
+function openNews() {
+  const cur = S.info.build.base;
+  const groups = {};
+  (S.news || []).forEach(n => (groups[n.version] = groups[n.version] || []).push(n));
+  $('#newsBody').innerHTML = Object.keys(groups).sort().reverse().map(v => groups[v].map(n =>
+    `<div class="newsitem"><div class="ver">Version ${esc(v)}</div><h4>${esc(n.title)}</h4><p>${esc(n.text)}</p></div>`).join('')).join('') || '<div class="empty">Keine Neuigkeiten.</div>';
+  $('#newsVer').textContent = 'Aktuell: ' + S.info.build.version;
+  $('#news').showModal();
+  $('#newsDot').classList.add('hidden');
+  try { localStorage.setItem('p5cNewsSeen', cur); } catch (e) {}
+}
 function wire() {
-  $$('#worlds button').forEach(b => b.onclick = () => setWorld(b.dataset.world));
+  $('#newsBtn').onclick = openNews;
+  $$('#worlds button').forEach(b => b.onclick = () => setWorld(b.dataset.world, true));
   [...FIELDS, ...CHECKS].forEach(f => $('#' + f).addEventListener('input', () => { refreshAudioUI(); refreshVideoUI(); saveSettings(); }));
   $('#outMode').addEventListener('input', outModeUI);
   $('#addFiles').onclick = async () => {
@@ -468,6 +559,6 @@ function outModeUI() {
   loadSettings(); renderPresets(); decorateInfo(); wire();
   await loadInfo();
   if (!$('#outDir').value && S.info.roots && S.info.roots.length > 1) $('#outDir').value = S.info.roots[S.info.roots.length - 1];
-  outModeUI(); setWorld(S.world); refreshAudioUI(); refreshVideoUI();
+  outModeUI(); setWorld(S.world, false); refreshAudioUI(); refreshVideoUI(); renderHero(); loadNews();
   poll(); setInterval(poll, 1000);
 })();

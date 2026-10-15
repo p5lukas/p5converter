@@ -50,7 +50,10 @@ jobs:
           file: docker/Dockerfile
           load: true
           tags: p5converter:smoke
-          build-args: VERSION=${{ inputs.version != '' && format('v{0}', inputs.version) || github.ref_name }}
+          build-args: |
+            P5_TAG=${{ inputs.version != '' && format('v{0}', inputs.version) || (github.ref_type == 'tag' && github.ref_name || '') }}
+            P5_BRANCH=${{ github.ref_type == 'branch' && github.ref_name || '' }}
+            P5_COMMIT=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Smoke test (real conversions inside the image)
@@ -70,7 +73,10 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: VERSION=${{ inputs.version != '' && format('v{0}', inputs.version) || github.ref_name }}
+          build-args: |
+            P5_TAG=${{ inputs.version != '' && format('v{0}', inputs.version) || (github.ref_type == 'tag' && github.ref_name || '') }}
+            P5_BRANCH=${{ github.ref_type == 'branch' && github.ref_name || '' }}
+            P5_COMMIT=${{ github.sha }}
           cache-from: type=gha
 
   release:

@@ -2,27 +2,47 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>p5converter</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%232dd4bf%27/%3E%3Ctext x=%2716%27 y=%2722%27 font-size=%2716%27 font-family=%27sans-serif%27 font-weight=%27700%27 text-anchor=%27middle%27 fill=%27%2304201d%27%3Ep5%3C/text%3E%3C/svg%3E">
+<link rel="icon" type="image/png" href="/icon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#02100a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="p5converter">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header>
-  <div class="brand"><span class="logo">p5</span>converter</div>
-  <nav id="worlds">
-    <button data-world="audio" class="active">♪ Audio</button>
-    <button data-world="video">▶ Video</button>
+<header class="top"><div class="in">
+  <a class="logo" href="/"><i class="logomark">p5</i><span>converter<u>_</u></span></a>
+  <nav class="worlds" id="worlds">
+    <button data-world="audio" class="on"><span class="pl"></span>Audio</button>
+    <button data-world="video"><span class="pl"></span>Video</button>
   </nav>
   <div class="spacer"></div>
-  <span id="ffver" class="muted small"></span>
-  <button id="quit" class="small ghost hidden" title="p5converter komplett beenden">⏻ Beenden</button>
-</header>
+  <span id="ffver" class="muted small hidewide"></span>
+  <button id="newsBtn" class="tb" title="Neuigkeiten">✦<span class="lbl"> Neu</span><i id="newsDot" class="dot hidden"></i></button>
+  <button id="quit" class="tb ghost hidden" title="p5converter komplett beenden">⏻<span class="lbl"> Beenden</span></button>
+</div></header>
 
 <main>
+  <section class="hero" id="hero">
+    <div class="ring" id="ring"><b id="ringTxt">–</b></div>
+    <div class="stats">
+      <div class="stat"><b id="stFiles">0</b><span>In Liste</span></div>
+      <div class="stat"><b id="stQueued">0</b><span>Wartet</span></div>
+      <div class="stat ok"><b id="stRun">0</b><span>Läuft</span></div>
+      <div class="stat ok"><b id="stDone">0</b><span>Fertig</span></div>
+      <div class="stat bad"><b id="stErr">0</b><span>Fehler</span></div>
+    </div>
+    <div id="monitor" class="monitor"></div>
+  </section>
+  <div class="cols">
   <section class="col">
-    <div class="card">
-      <div class="card-h"><h2>Dateien</h2>
+    <div class="panel">
+      <div class="panel-h"><h2>Dateien</h2>
         <div class="btns">
           <button id="addFiles">+ Dateien</button>
           <button id="addFolder">+ Ordner</button>
@@ -33,7 +53,7 @@
       <div id="fileSummary" class="muted small"></div>
     </div>
 
-    <div class="card" id="destCard">
+    <div class="panel" id="destCard">
       <h2>Ziel</h2>
       <div class="grid2">
         <label>Speicherort
@@ -65,7 +85,7 @@
   </section>
 
   <section class="col">
-    <div class="card" id="audioSettings">
+    <div class="panel" id="audioSettings">
       <h2>Audio-Einstellungen</h2>
       <div class="grid2">
         <label>Format
@@ -100,7 +120,7 @@
       <p class="muted small">Tags (Titel, Interpret, Album …) werden immer übernommen.</p>
     </div>
 
-    <div class="card hidden" id="videoSettings">
+    <div class="panel hidden" id="videoSettings">
       <h2>Video-Einstellungen</h2>
       <div class="presets" id="vPresets"></div>
       <div class="grid2">
@@ -161,31 +181,44 @@
       <p class="muted small">Einzelne Spuren pro Datei entfernen oder Standard-Audiospur ändern: in der Dateiliste auf „Spuren“ klicken.</p>
     </div>
 
-    <div class="card hidden" id="hwCard">
-      <div class="card-h"><h2 data-info="hwInfo">Hardware</h2><button id="hwRedetect" class="small">Neu erkennen</button></div>
+    <div class="panel hidden" id="hwCard">
+      <div class="panel-h"><h2 data-info="hwInfo">Hardware</h2><button id="hwRedetect" class="small">Neu erkennen</button></div>
       <div id="hwList"></div>
       <div id="hwGpus" class="muted small"></div>
     </div>
   </section>
 
+  </div>
+
+  <div class="startbar" id="startbar">
+    <button id="start" class="primary big">▶ Konvertierung starten</button>
+    <span id="startInfo" class="small muted"></span>
+  </div>
+
   <section class="full">
-    <div class="startbar">
-      <button id="start" class="primary">Konvertierung starten</button>
-      <span id="startMsg" class="small"></span>
-    </div>
-    <div class="card">
-      <div class="card-h"><h2>Warteschlange</h2>
+    <div class="panel">
+      <div class="panel-h"><h2>Warteschlange</h2>
         <div class="btns">
           <label class="inline small">Parallel <select id="conc"><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
           <button id="cancelAll" class="small ghost">Alle abbrechen</button>
           <button id="clearDone" class="small ghost">Fertige entfernen</button>
         </div>
       </div>
-      <div id="monitor" class="monitor"></div>
       <div id="queue"></div>
     </div>
   </section>
 </main>
+
+<footer id="foot"></footer>
+<div id="toasts"></div>
+
+<dialog id="news">
+  <form method="dialog" class="dlg">
+    <h2>✦ Neuigkeiten</h2>
+    <div id="newsBody" class="tbody"></div>
+    <div class="dlg-f"><span class="muted small" id="newsVer"></span><button class="primary">Schließen</button></div>
+  </form>
+</dialog>
 
 <dialog id="browser">
   <form method="dialog" class="dlg">
@@ -215,6 +248,7 @@
   </form>
 </dialog>
 
+<script src="planets.js"></script>
 <script src="info.js"></script>
 <script src="app.js"></script>
 <div id="infoPop" class="infopop hidden" role="dialog"></div>

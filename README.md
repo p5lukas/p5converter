@@ -3,27 +3,31 @@
 Audio- und Video-Konverter mit Web-Oberfläche für **Unraid / Docker** – ein SoundConverter-Klon mit zusätzlicher Video-Welt.
 Ein einzelnes Go-Programm (nur Standardbibliothek) steuert **ffmpeg** an; das Docker-Image bringt alles mit (ffmpeg mit x264/x265/SVT-AV1, Intel-/AMD-Treiber für Quick Sync/VAAPI).
 
-> **Status: v0.0.x Vorabversion.** Windows- und Linux-Desktop-App (mit eigener Oberfläche) folgen später.
+> **Status: v0.0.x Vorabversion** (aktuell 0.0.2, siehe `CHANGELOG.md`). Windows- und Linux-Desktop-App (mit eigener Oberfläche) folgen später.
 
 ## Installation (Unraid)
 
 1. `unraid/p5converter.xml` nach `/boot/config/plugins/dockerMan/templates-user/` kopieren.
 2. Unraid → **Docker → Container hinzufügen → p5converter** → Pfade prüfen → **Apply**.
-3. Weboberfläche: `http://<unraid-ip>:8484`
+3. Weboberfläche: `http://<unraid-ip>:8787`
 
 Oder per Kommandozeile:
 ```bash
-docker run -d --name p5converter -p 8484:8484 \
+docker run -d --name p5converter -p 8787:8787 \
   --device /dev/dri \
-  -v /mnt/user:/media -v /mnt/user/appdata/p5converter/output:/output \
+  -v /mnt/user/musik:/audio1 -v /mnt/user/filme:/video1 -v /mnt/user/appdata/p5converter/output:/output \
   ghcr.io/p5lukas/p5converter:latest
 ```
 * `--device /dev/dri` reicht Intel Quick Sync / VAAPI durch.
 * **NVIDIA NVENC:** Nvidia-Driver-Plugin installieren, `--runtime=nvidia` bei „Extra Parameters“ ergänzen (`NVIDIA_VISIBLE_DEVICES=all` ist voreingestellt).
-* Die Oberfläche sieht nur `/media` und `/output` (`P5_ROOTS`). `/media` braucht Schreibzugriff, wenn die Ergebnisse neben die Quelle sollen oder Quellen gelöscht werden. `PUID`/`PGID` (Standard 99/100) bestimmen den Besitzer neuer Dateien.
+* Die Oberfläche sieht nur eingehängte Ordner: im Unraid-Template **2× Audio** (`/audio1`, `/audio2`), **4× Video** (`/video1` … `/video4`) – alle optional, leer lassen was nicht gebraucht wird – und den Zielordner `/output`. Per Kommandozeile geht auch ein einzelnes `/media`. Die Liste steht in `P5_ROOTS`; nicht eingehängte Ordner werden ausgeblendet. Die Quell-Ordner brauchen Schreibzugriff, wenn die Ergebnisse neben die Quelle sollen oder Quellen gelöscht werden. `PUID`/`PGID` (Standard 99/100) bestimmen den Besitzer neuer Dateien.
 * Optional: `-e P5_PASSWORD=…` schützt die Oberfläche per Login (Benutzer `p5`). Trotzdem nicht ins Internet stellen.
 
 ## Funktionen
+
+### Design
+Gleiche Designlinie wie [p5assets](https://github.com/p5lukas/p5assets): Matrix-Theme, Audio und Video als eigene **Welten** mit Farbe und Planet (Wurmloch-Flug beim Wechsel), Übersicht mit Fortschrittsring und Live-Auslastung, Version und Neuigkeiten in der Fußzeile.
+Läuft auf Desktop, Handy und iPad (Hoch-/Querformat); auf iPhone/iPad per **Teilen → Zum Home-Bildschirm** als Web-App.
 
 ### Hilfe für Einsteiger
 Jede Einstellung hat einen kleinen **ⓘ**-Punkt mit einfacher Erklärung und Beispielen (z. B. wann 10 Bit sinnvoll ist).
@@ -58,7 +62,7 @@ Keine Anmeldung ohne `P5_PASSWORD`. Schreibende API-Aufrufe verlangen JSON und d
 ## Entwicklung
 ```bash
 go test ./...                 # benötigt ffmpeg im PATH
-go build -o p5converter . && P5_NO_BROWSER=1 ./p5converter   # http://127.0.0.1:8484
+go build -o p5converter . && P5_NO_BROWSER=1 ./p5converter   # http://127.0.0.1:8787
 docker build -f docker/Dockerfile -t p5converter .
 ```
 Umgebungsvariablen: `P5_LISTEN`, `P5_ROOTS`, `P5_JOBS`, `P5_PASSWORD`, `P5_FFMPEG_DIR`, `P5_NO_BROWSER`, `PUID`, `PGID`.

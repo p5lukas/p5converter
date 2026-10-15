@@ -4,14 +4,14 @@ Audio- und Video-Konverter mit Web-Oberfläche für **Unraid / Docker**. Ein Sou
 
 ### Installation (Unraid)
 1. Template laden: `unraid/p5converter.xml` aus diesem Release in `/boot/config/plugins/dockerMan/templates-user/` kopieren, danach in Unraid **Docker → Container hinzufügen → p5converter** wählen.
-2. Pfade prüfen (`/media` = deine Medien, `/output` = Zielordner) und **Apply**.
-3. Weboberfläche: `http://<unraid-ip>:8484`
+2. Pfade eintragen (bis zu 2× Audio und 4× Video, alle optional; `/output` = Zielordner) und **Apply**.
+3. Weboberfläche: `http://<unraid-ip>:8787`
 
 Oder per Kommandozeile:
 ```bash
-docker run -d --name p5converter -p 8484:8484 \
+docker run -d --name p5converter -p 8787:8787 \
   --device /dev/dri \
-  -v /mnt/user:/media -v /mnt/user/appdata/p5converter/output:/output \
+  -v /mnt/user/musik:/audio1 -v /mnt/user/filme:/video1 -v /mnt/user/appdata/p5converter/output:/output \
   ghcr.io/p5lukas/p5converter:latest
 ```
 * Intel Quick Sync / VAAPI: `--device /dev/dri` (im Template voreingestellt).
