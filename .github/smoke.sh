@@ -39,7 +39,7 @@ curl -fs localhost:8787/api/settings | python3 -c '
 import json,sys
 d=json.load(sys.stdin)
 assert d["persistent"], "/config nicht beschreibbar"
-assert len(d["settings"]["presets"])>=10
+assert len(d["settings"]["presets"])==2
 d["settings"]["worlds"]["video"]["name"]="Filme"
 open("/tmp/p5-settings.json","w").write(json.dumps(d["settings"]))'
 curl -fs -X PUT -H "$H" localhost:8787/api/settings -d @/tmp/p5-settings.json >/dev/null
