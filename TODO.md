@@ -2,6 +2,7 @@
 > Arbeitsregel (Nutzer): Bei jedem „leg los“ einen kleinen Versionssprung machen (Patch, z. B. 0.0.1 → 0.0.2), neuen Abschnitt oben in `CHANGELOG.md` anlegen (Datum, Neu/Geändert/Behoben), alles testen und auf Feature-Branch (und später `dev`) pushen. `main`, Tag und Release macht der Nutzer bzw. nur auf ausdrücklichen Wunsch (Tags kann ich nicht pushen).
 > Tags/Releases (Nutzer): nur bei Sprüngen der mittleren Stelle (0.1.0 → 0.2.0 → …), nicht bei Patch-Versionen.
 > Prüfregel (Nutzer): Bei jeder UI-Änderung immer **alle Ansichten** kontrollieren: Desktop, iPhone/iPad im Browser (Safari) und iPhone/iPad als Web-App (Home-Bildschirm), Hoch- und Querformat. Sandbox hat nur Chromium: Geräte-Emulation + Screenshots; Nicht-Prüfbares im Bericht als „nicht geprüft“ nennen.
+> Entscheidung (Nutzer): Die Test-Last-Regel von p5assets („Testumgebung doppelt so groß wie die echte Welt“) gilt hier **nicht**.
 > Entscheidung (Nutzer): Erst Unraid/Docker mit „mega Design“, dann Windows-App mit eigener GUI, dann Linux-App (Fedora KDE) mit eigener GUI.
 
 # p5converter – Ideen & Verbesserungen
@@ -15,9 +16,8 @@
   - Toasts, Drop-Zone/Dateiauswahl, Onboarding/Schritte falls sinnvoll
   - Handy/iPad: Web-App-Fähigkeit (manifest, apple-touch-icon, Safe-Areas), eigene Mobilansichten
   - ⓘ-Hilfetexte im neuen Stil beibehalten
-- [ ] **Branch- und Image-Modell wie p5assets**: Feature-Branch → `dev` (Image `:dev`) → `main` (Image `:latest`), Tag `v…` → Versions-Image; Version/Branch/Commit im Footer anzeigen; optional multi-arch (amd64/arm64)
-- [ ] **Versionierung wie p5assets**: Versionsdatei, `CHANGELOG.md`, „Neuigkeiten“-Anzeige in der Oberfläche
-- [ ] Zu klären: Test-Last-Regel von p5assets („Testumgebung doppelt so groß wie echte Welt“) sinngemäß übernehmen? (z. B. Warteschlange mit 500 Dateien)
+- [ ] **Versionierung wie p5assets** (Entscheidung Nutzer: ja): Versionsdatei, `CHANGELOG.md`, „Neuigkeiten“-Anzeige in der Oberfläche; Version/Branch/Commit im Footer anzeigen
+- [ ] Branch-Modell: **erstmal nur `main`**, bis alles stabil läuft. Auf Zuruf des Nutzers dann wie p5assets: Feature-Branch → `dev` (Image `:dev`) → `main` (Image `:latest`); optional multi-arch (amd64/arm64)
 
 ## Vom Nutzer zu prüfen (nicht in der Sandbox möglich)
 - [ ] GPU-Encoding auf echter Hardware (Intel Quick Sync via `/dev/dri`, NVIDIA via `--runtime=nvidia`)
