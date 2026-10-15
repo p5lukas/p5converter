@@ -21,11 +21,19 @@
 
 - [ ] **Einstellungen-Seite** (Nutzer: „wo sind die Einstellungen zu p5converter?“ – bisher gibt es keine; nur `P5_PASSWORD`/`P5_JOBS` per Umgebungsvariable, Eingaben liegen im Browser). Geplant wie bei p5assets: Zahnrad im Kopf, am Handy als Liste mit Gruppen („‹ Einstellungen“ führt zurück):
   - **Welten & Farben**: Farbton/Planet je Welt (Audio, Video) wählbar wie bei p5assets, Reihenfolge/Namen der Welten
-  - **Anmeldung**: Passwort in der Oberfläche setzen/ändern statt nur per `P5_PASSWORD`
+  - **Anmeldung**: siehe eigener Punkt unten (wie p5assets)
   - **Voreinstellungen** (Audio und Video getrennt): anlegen, bearbeiten, umbenennen, löschen, sortieren; je Voreinstellung wählbar, ob sie **als Vorschlag** oben im Einstellungs-Panel erscheint; die bisher fest eingebauten (Archiv H.265 10 Bit, Klein 1080p, Kompatibel H.264, AV1 10 Bit, Nur Remux) werden normale, änderbare Voreinstellungen
   - **Knopf „Als Voreinstellung speichern“** direkt beim Konvertieren (neben „Konvertierung starten“): speichert die aktuell eingestellten Werte unter einem Namen
   - weitere Gruppen: Allgemein (parallele Aufträge, Zielordner-Vorgabe, Startwelt), Hardware (Erkennung, bevorzugter Encoder), Info/Neuigkeiten
-  - **Speicherort**: dauerhaft auf dem Server in einem neuen Pfad `/config` (Unraid-Template: `appdata/p5converter`), damit alle Geräte (PC, iPhone, iPad) dieselben Einstellungen sehen – Entscheidung offen, Varianten siehe Chat (A: `/config` auf dem Server, B: nur im Browser)
+  - **Speicherort (Entscheidung Nutzer: Variante A)**: dauerhaft auf dem Server in einem neuen Pfad `/config` (Unraid-Template: neuer Pfad-Eintrag, Standard `/mnt/user/appdata/p5converter/config`); alle Geräte (PC, iPhone, iPad) sehen dieselben Einstellungen, Voreinstellungen und Farben. Dateien dort: Einstellungen/Voreinstellungen (JSON), `auth.json`, `sessions.json`
+
+- [ ] **Anmeldung wie bei p5assets** (Nutzer): Passwort und Anmeldung werden **im Browser angelegt** (Einstellungen → Anmeldung, optional ein-/ausschaltbar), daher **`P5_PASSWORD` und der Eintrag „Passwort (optional)“ aus dem Unraid-Template und der Doku entfernen** (alte Basic-Auth im Code ersetzen). Gleiches Anmeldefenster und gleiches Verhalten wie p5assets (Referenz: `app/auth.py`, `showLogin`/`funLine` in `app/static/app.js`, `.logincard`/`.funline` in `style.css`):
+  - Karte mit Logo `p5 converter_`, Überschrift „> Anmeldung“, Felder Benutzername und Passwort, Haken „Angemeldet bleiben (30 Tage)“, Knopf „Anmelden“, Fehlerzeile „⚠ …“
+  - **Spaßmeldung** nach falschem Passwort: rote Zeile unter dem Passwortfeld, Buchstabe für Buchstabe getippt mit blinkendem Cursor: `> Ah ah ah, you didn’t write the magic word!` (verschwindet beim Weitertippen; ohne Animation bei „reduzierter Bewegung“); in den Einstellungen abschaltbar (Standard: an)
+  - Passwort nur als scrypt-Hash in `/config/auth.json`; Sitzung = zufälliges Token im Cookie (HttpOnly, SameSite=Lax), serverseitig nur als SHA-256 in `/config/sessions.json`; falsche Versuche werden gebremst (pro IP und Benutzername, ab dem 6. Fehlversuch 30 s, 60 s, 120 s … bis 15 min)
+  - „Passwort vergessen?“ mit den Wegen: Befehl im Container (`docker exec -it p5converter p5converter auth reset`), Umgebungsvariable `P5_AUTH_RESET=1` einmalig setzen, oder `/config/auth.json` löschen
+  - Anmelde-/Einstellungsseite in Welt-Farbe (zuletzt gewählter Farbton), auf Handy/iPad getestet (Prüfregel), Eingabefelder ohne iOS-Zoom
+  - benötigt `/config` (siehe Einstellungen)
 
 ## Vom Nutzer zu prüfen (nicht in der Sandbox möglich)
 - [ ] iPhone/iPad: Safari und Web-App (Safe-Areas, Statusleiste, Pull-to-Refresh) auf dem Gerät ansehen
