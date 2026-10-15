@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/p5lukas/p5converter/internal/ffmpeg"
+	"github.com/p5lukas/p5converter/internal/logs"
 	"github.com/p5lukas/p5converter/internal/rename"
 )
 
@@ -143,6 +144,12 @@ func (s *Server) renameApply(w http.ResponseWriter, r *http.Request) {
 		}
 		x.Done = true
 		ok++
+	}
+	logs.Get("rename").Infof("Umbenennen: %d umbenannt, %d nicht möglich", ok, failed)
+	for _, x := range res {
+		if x.Error != "" {
+			logs.Get("rename").Warnf("%s: %s", x.Path, x.Error)
+		}
 	}
 	writeJSON(w, map[string]any{"items": res, "renamed": ok, "failed": failed})
 }

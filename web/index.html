@@ -24,7 +24,8 @@
   <div class="spacer"></div>
   <span id="ffver" class="muted small hidewide"></span>
   <button id="newsBtn" class="tb" title="Neuigkeiten"><span data-ic="news"></span><span class="lbl"> Neuigkeiten</span><i id="newsDot" class="dot hidden"></i></button>
-  <button id="gearBtn" class="tb" title="Einstellungen"><span data-ic="gear"></span><span class="lbl"> Einstellungen</span></button>
+  <button id="logbtn" class="tb logbtn" title="Logs" aria-label="Logs"><span data-ic="terminal"></span><span class="lbadge"></span></button>
+  <button id="gearBtn" class="tb" title="Einstellungen" aria-label="Einstellungen"><span data-ic="gear"></span></button>
   <button id="logoutBtn" class="tb ghost hidden" title="Abmelden"><span data-ic="logout"></span><span class="lbl"> Abmelden</span></button>
   <button id="quit" class="tb ghost hidden" title="p5converter komplett beenden"><span data-ic="power"></span><span class="lbl"> Beenden</span></button>
 </div></header>
@@ -292,6 +293,7 @@
     <div id="rnPreview" class="rnpreview"></div>
   </div>
 </main>
+<main id="viewLogs" class="hidden"></main>
 <main id="viewSettings" class="hidden"></main>
 <div id="viewLogin" class="hidden"></div>
 
@@ -349,6 +351,7 @@
 <script src="info.js"></script>
 <script src="rename.js"></script>
 <script src="flow.js"></script>
+<script src="logs.js"></script>
 <script src="settings.js"></script>
 <script src="auth.js"></script>
 <script src="app.js"></script>

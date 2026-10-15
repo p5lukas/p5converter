@@ -17,6 +17,7 @@ import (
 	"github.com/p5lukas/p5converter/internal/auth"
 	"github.com/p5lukas/p5converter/internal/config"
 	"github.com/p5lukas/p5converter/internal/ffmpeg"
+	"github.com/p5lukas/p5converter/internal/logs"
 	"github.com/p5lukas/p5converter/internal/version"
 )
 
@@ -477,5 +478,40 @@ func TestStateCarriesSavedTotals(t *testing.T) {
 	}
 	if st.Concurrency["audio"] < 1 || st.Concurrency["video"] < 1 {
 		t.Errorf("Parallelität je Welt fehlt: %v", st.Concurrency)
+	}
+}
+
+func TestLogAPI(t *testing.T) {
+	_, ts := newTestServer(t, []string{t.TempDir()})
+	logs.Get("test").Infof("Probe mit password=geheim123")
+	logs.Get("test").Errorf("Kaputt")
+	get := func(path string) map[string]any {
+		resp, err := http.Get(ts.URL + path)
+		if err != nil || resp.StatusCode != 200 {
+			t.Fatalf("%s: %v %v", path, err, resp)
+		}
+		var m map[string]any
+		json.NewDecoder(resp.Body).Decode(&m)
+		return m
+	}
+	r := get("/api/logs/read?tail=50")
+	b, _ := json.Marshal(r)
+	if !strings.Contains(string(b), "Probe mit password=***") || strings.Contains(string(b), "geheim123") {
+		t.Errorf("Log-Antwort: %s", b)
+	}
+	if a := get("/api/logs/alerts?since=0"); a["errors"].(float64) < 1 {
+		t.Errorf("Fehlerzähler: %v", a)
+	}
+	if resp, _ := http.Get(ts.URL + "/api/logs/read?file=../../etc/passwd"); resp.StatusCode != 400 {
+		t.Errorf("Pfad-Trick: %d", resp.StatusCode)
+	}
+	if resp := post(t, ts, "/api/logs/clear", map[string]string{"file": "p5converter.log"}, nil); resp.StatusCode != 200 {
+		t.Errorf("leeren: %d", resp.StatusCode)
+	}
+	// clearing needs the JSON content type like every other write (CSRF guard)
+	req, _ := http.NewRequest("POST", ts.URL+"/api/logs/clear", strings.NewReader("{}"))
+	req.Header.Set("Content-Type", "text/plain")
+	if resp, _ := http.DefaultClient.Do(req); resp.StatusCode != 415 {
+		t.Errorf("CSRF beim Leeren: %d", resp.StatusCode)
 	}
 }

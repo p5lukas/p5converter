@@ -3,5 +3,5 @@ package web
 
 import "embed"
 
-//go:embed index.html app.js info.js settings.js auth.js planets.js icons.js rename.js flow.js style.css icon.png icon-192.png icon-512.png apple-touch-icon.png
+//go:embed index.html app.js info.js settings.js auth.js planets.js icons.js rename.js flow.js logs.js style.css icon.png icon-192.png icon-512.png apple-touch-icon.png
 var FS embed.FS

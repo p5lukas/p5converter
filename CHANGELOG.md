@@ -1,5 +1,16 @@
 # Änderungen
 
+## 0.0.7 – 2026-10-15
+
+**Neu**
+- **Log-Seite wie bei p5assets** (Kopfzeile: Terminal-Symbol): Logdatei wählen (aktuelle + rotierte), Stufenfilter (DEBUG/INFO/WARNING/ERROR), Suche, Live-Nachladen, Auto-Scroll, „Ganze Datei laden“, Download, „Leeren“; **Zähler** am Symbol für neue Warnungen/Fehler seit dem letzten Besuch
+- **Protokoll** in `/config/logs/p5converter.log` (rotierend, 2 MB × 4; ohne `/config` nur im Speicher): Start und Ordner, Hardware-Erkennung, Aufträge (eingereiht/gestartet/fertig/abgebrochen/Fehler, Ausweichversuche mit ffmpeg-Meldung), Anmeldung, Einstellungen, Umbenennen, Aufräumen; **Passwörter, Sitzungs-Cookies und Tokens werden geschwärzt**
+- **App-Icon** im Aufbau von p5assets (Matrix-Regen, Poster-Rahmen, „p5“, etwas kleiner) mit **Abzeichen aus zwei Pfeilen** unten rechts; alle Größen (Favicon, 192/512, Apple-Touch-Icon für iPhone/iPad-Web-App, Unraid-Icon); SVG-Quelle und Erzeugungs-Skript in `tools/icons/`
+
+**Geändert**
+- Kopfzeile: Log- und Einstellungen-Knopf nur noch als Symbol (wie bei p5assets)
+- Die Konsole schreibt im selben Format wie das Log
+
 ## 0.0.6 – 2026-10-15
 
 **Neu**

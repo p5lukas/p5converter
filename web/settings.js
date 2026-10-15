@@ -164,12 +164,15 @@ function showView(v) {
   $('#viewMain').classList.toggle('hidden', v !== 'main');
   $('#viewSettings').classList.toggle('hidden', v !== 'settings');
   $('#viewRename').classList.toggle('hidden', v !== 'rename');
+  $('#viewLogs').classList.toggle('hidden', v !== 'logs');
+  if (v !== 'logs') stopLogs();
   document.body.classList.toggle('inSettings', v === 'settings');
   window.scrollTo(0, 0);
 }
 function route() {
   const m = /^#settings(?:\/(\w+))?$/.exec(location.hash);
   if (location.hash === '#rename') { showView('rename'); renderRenamePage(); }
+  else if (location.hash === '#logs') { showView('logs'); logsPage(); }
   else if (m) { S.setPage = m[1] || ''; showView('settings'); renderSettings(); }
   else showView('main');
 }
