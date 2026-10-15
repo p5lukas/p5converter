@@ -12,9 +12,15 @@ const INFO = {
   suffix: {t: 'Dateiname-Zusatz', b: `<p>Text, der an den Dateinamen vor der Endung angehängt wird. Hilft, Original und Kopie zu unterscheiden.</p>
     <p class="ex">Beispiel: Zusatz <code>_x265</code> → aus <code>Film.mkv</code> wird <code>Film_x265.mkv</code>.</p>
     <p>Leer lassen ist ok: Haben Quelle und Ziel denselben Namen, hängt das Programm automatisch „(konvertiert)“ an, damit nichts überschrieben wird.</p>`},
-  pattern: {t: 'Namensmuster (Audio)', b: `<p>Benennt Musikdateien anhand ihrer Tags (Interpret, Album …) und legt Ordner an. Leer = Originalname.</p>
-    <p class="ex"><code>{artist}/{album}/{track} - {title}</code><br>→ <code>Die Ärzte/Jazz ist anders/03 - Lied.mp3</code></p>
-    <p>Verfügbar: <code>{artist} {album} {albumartist} {title} {track} {disc} {year} {genre} {filename}</code>. Fehlt ein Tag, steht „Unbekannt“.</p>`},
+  pattern: {t: 'Namensmuster', b: `<p>Legt fest, wie die neue Datei heißt – aus Variablen wie Titel, Jahr, Auflösung oder Codec. Leer = Originalname. Klicke unter dem Feld auf eine Variable, um sie einzufügen.</p>
+    <p class="ex">Video: <code>{title} ({year}) [{res}][{codec}]</code><br>→ <code>Der Flug (2023) [720p][x265].mkv</code></p>
+    <p class="ex">Audio: <code>{artist}/{album}/{track} - {title}</code><br>→ <code>Die Ärzte/Jazz ist anders/03 - Lied.mp3</code> (mit <code>/</code> entstehen Ordner)</p>
+    <p><code>{res}</code>, <code>{codec}</code> und <code>{bit}</code> zeigen den <b>Zielwert</b> deiner Einstellungen (z. B. 720p, x265, 10bit); bei „Remux/kopieren“ den Wert der Quelle. Fehlt ein Tag, steht „Unbekannt“ (beim Titel der Dateiname).</p>`},
+  renReplace: {t: 'Suchen und Ersetzen', b: `<p>Ändert Teile des Dateinamens, nachdem das Muster angewendet wurde – wie in einem Texteditor. Mehrere Ersetzungen laufen von oben nach unten.</p>
+    <p class="ex">Suchen <code>WEBDL</code>, Ersetzen durch <code>WEB</code> → aus <code>Film [WEBDL-1080p]</code> wird <code>Film [WEB-1080p]</code>. „Ersetzen durch“ leer = Text löschen.</p>
+    <ul><li><b>Aa</b>: Groß-/Kleinschreibung beachten (sonst egal).</li>
+    <li><b>Regex</b> (für Fortgeschrittene): Suchtext ist ein regulärer Ausdruck, <code>$1</code> steht für die erste Klammer. Beispiel: <code>\[(\w+)-(\d+p)\]</code> → <code>$2 $1</code>.</li></ul>
+    <p>Die Vorschau zeigt sofort das Ergebnis; Endung und Ordner bleiben unberührt.</p>`},
   exists: {t: 'Wenn Datei existiert', b: `<ul><li><b>Umbenennen:</b> Die neue Datei bekommt „(2)“ im Namen. Nichts geht verloren – sicherste Wahl.</li>
     <li><b>Überspringen:</b> Gibt es das Ziel schon, wird die Datei nicht erneut umgewandelt. Gut, wenn du einen Ordner nach einem Abbruch nochmal startest.</li>
     <li><b>Überschreiben:</b> Die alte Zieldatei wird ersetzt.</li></ul>`},
@@ -59,11 +65,11 @@ const INFO = {
     <p class="ex">Beispiel: 8 GB Film in H.264 → ca. 4–5 GB in H.265, ohne sichtbaren Unterschied.</p>`},
   vBackend: {t: 'Encoder / Hardware', b: `<p>Wer die Rechenarbeit macht.</p>
     <ul><li><b>CPU (Software):</b> beste Qualität pro Dateigröße, aber langsam und belastet den Prozessor stark. Gut für Archiv und Dinge, die du nur einmal machst.</li>
-    <li><b>Grafikchip (Intel Quick Sync, NVIDIA NVENC, AMD AMF, VAAPI):</b> oft 5–20× schneller und schont die CPU. Bei gleicher Qualität werden die Dateien aber meist etwas größer.</li></ul>
+    <li><b>Hardware (Intel Quick Sync – ein Teil der Intel-CPU –, NVIDIA NVENC, AMD AMF, VAAPI):</b> oft 5–20× schneller und schont die CPU. Bei gleicher Qualität werden die Dateien aber meist etwas größer.</li></ul>
     <p><b>Automatisch</b> nimmt die schnellste Hardware, die wirklich funktioniert. Nur Einträge mit ✓ lassen sich nutzen – das Programm testet das beim Start mit einem echten Mini-Encode.</p>
     <p class="ex">Tipp: Ganze Bibliothek schnell verkleinern → Hardware. Lieblingsfilm in bester Qualität archivieren → CPU.</p>`},
-  vResolved: {t: 'Wird verwendet', b: `<p>Zeigt den Encoder, den das Programm mit deinen Einstellungen einsetzt, z. B. <code>hevc_qsv</code> (Intel-GPU) oder <code>libx265</code> (CPU).</p>
-    <p>Beim laufenden Auftrag siehst du unten in der Warteschlange „✓ von ffmpeg bestätigt“ – so weißt du sicher, dass die Hardware wirklich arbeitet.</p>`},
+  vResolved: {t: 'Wird verwendet', b: `<p>Zeigt den Encoder, den das Programm mit deinen Einstellungen einsetzt, z. B. <code>hevc_qsv</code> (Intel Quick Sync) oder <code>libx265</code> (CPU).</p>
+    <p>Beim laufenden Auftrag zeigt die Warteschlange zwei getrennte Angaben: <b>Schreiben</b> (Encoder, z. B. „Quick Sync · hevc_qsv ✓“ – das Häkchen heißt: ffmpeg hat die Nutzung bestätigt) und <b>Lesen</b> (Decoder: Hardware oder CPU).</p>`},
   vCrf: {t: 'Qualität (CRF)', b: `<p>Der wichtigste Regler: bestimmt Bildqualität und Dateigröße. <b>Kleinerer Wert = bessere Qualität, größere Datei.</b></p>
     <ul><li>H.264: 18 (sehr hoch) – <b>21–23 (gut)</b> – 28 (sichtbar schlechter)</li>
     <li>H.265: 20 – <b>23–26</b> – 30</li>
@@ -85,8 +91,8 @@ const INFO = {
     <ul><li>2160p = 4K · 1080p = Full HD · 720p = HD · 480p = DVD-Qualität</li></ul>
     <p class="ex">Beispiel: 4K-Film (60 GB) auf 1080p → oft nur 8–12 GB. Ein 720p-Video bei Wahl „1080p“ wird <b>nicht</b> aufgeblasen.</p>
     <p>Original = keine Änderung der Größe.</p>`},
-  vHwDec: {t: 'Hardware-Decoding', b: `<p>Der Grafikchip <b>liest</b> das Quellvideo (entpackt es), nicht nur das Schreiben des neuen. Entlastet die CPU und kann schneller sein.</p>
-    <p>Klappt es bei einer Datei nicht, versucht das Programm es automatisch nochmal ohne – du musst nichts tun. Im Zweifel angehakt lassen.</p>`},
+  vHwDec: {t: 'Hardware-Decoding', b: `<p>Ein Umwandeln besteht aus <b>Lesen</b> (Quelle entpacken = Decodieren) und <b>Schreiben</b> (neu verpacken = Encodieren). Mit dieser Option macht auch beim Lesen die Hardware (z. B. Quick Sync) die Arbeit. Das entlastet die CPU.</p>
+    <p>Klappt es bei einer Datei nicht, probiert das Programm automatisch andere Wege (zuletzt: die CPU liest) – du musst nichts tun und bekommst keine Fehlermeldung. In der Warteschlange steht dann „Lesen: CPU“. Im Zweifel angehakt lassen.</p>`},
   vAudioMode: {t: 'Audiospuren', b: `<ul><li><b>Passthrough:</b> Der Ton wird 1:1 kopiert – keine Qualitätsverluste, geht blitzschnell (auch Dolby/DTS-Surround). <b>Empfohlen.</b></li>
     <li><b>Neu kodieren:</b> Ton wird in ein anderes Format umgerechnet, z. B. um Platz zu sparen (DTS-HD/TrueHD sind riesig) oder weil ein Gerät das Format nicht kann.</li></ul>
     <p class="ex">Beispiel: Blu-ray mit 4 GB Ton → „AAC“ oder „Opus“ spart mehrere GB.</p>`},
@@ -105,12 +111,12 @@ const INFO = {
   tracksBtn: {t: 'Spuren', b: `<p>Zeigt alle Bild-, Ton- und Untertitelspuren der Datei.</p>
     <ul><li><b>Behalten abwählen</b> = Spur wird entfernt (z. B. Kommentar-Tonspur, fremde Untertitel).</li><li><b>Standard</b> = Tonspur, die der Player automatisch startet.</li></ul>`},
   conc: {t: 'Parallel', b: `<p>Wie viele Dateien gleichzeitig umgewandelt werden.</p>
-    <ul><li><b>Video mit CPU: 1</b> – ein Auftrag nutzt schon alle Kerne.</li><li>Video mit GPU: 1–2.</li><li>Audio: 2–4, geht deutlich schneller.</li></ul>`},
+    <ul><li><b>Video mit CPU: 1</b> – ein Auftrag nutzt schon alle Kerne.</li><li>Video mit Hardware: 1–2.</li><li>Audio: 2–4, geht deutlich schneller.</li></ul>`},
   setStart: {t: 'Startansicht', b: `<p>Welche Welt (Audio oder Video) beim Öffnen von p5converter zuerst erscheint. „Zuletzt benutzte Welt“ merkt sich deine letzte Wahl.</p>`},
   setWorlds: {t: 'Welten & Farben', b: `<p>Audio und Video sind zwei „Welten“. Jede hat einen Namen, eine Farbe und einen Planeten. Die Farbe färbt die ganze Oberfläche – so siehst du sofort, in welcher Welt du gerade bist.</p><p class="ex">Die Änderungen gelten für alle Geräte (PC, Handy, iPad), weil sie auf dem Server gespeichert werden.</p>`},
   setPresets: {t: 'Voreinstellungen', b: `<p>Eine Voreinstellung ist ein gespeicherter Satz von Einstellungen, z. B. „H.265, CRF 22, 1080p“. Ein Klick darauf stellt alles auf einmal ein.</p><ul><li><b>Vorschlag:</b> erscheint oben im Einstellungs-Panel des Konverters.</li><li><b>✎ Werte:</b> öffnet den Konverter mit dieser Voreinstellung – Einstellungen ändern und „Änderungen speichern“.</li></ul><p class="ex">Neue Voreinstellung: im Konverter einstellen und „💾 Als Voreinstellung speichern“ klicken.</p>`},
   setBackend: {t: 'Bevorzugter Encoder', b: `<p>Welche Hardware im Konverter vorausgewählt ist. „Automatisch“ nimmt die schnellste, die wirklich funktioniert. Wählst du hier z. B. VAAPI, ist es beim nächsten Öffnen vorausgewählt (sofern du im Konverter nicht schon selbst etwas gewählt hast).</p>`},
   setAuth: {t: 'Anmeldung', b: `<p>Schützt p5converter mit Benutzername und Passwort. Das Passwort wird nur als Hash auf dem Server gespeichert.</p><p>Bei vergessenem Passwort: Befehl im Container ausführen oder die Datei in /config löschen (siehe „Passwort vergessen?“).</p><p class="ex">Im reinen Heimnetz ist die Anmeldung optional. Ist die Oberfläche von außen erreichbar, sollte sie an sein.</p>`},
-  hwInfo: {t: 'Hardware', b: `<p>Zeigt, welche Grafikchips für schnelles Umwandeln nutzbar sind. Das Programm prüft das mit echten Mini-Umwandlungen.</p>
+  hwInfo: {t: 'Hardware', b: `<p>Zeigt, welche Hardware (Intel-CPU-Videoeinheit, Grafikkarte) für schnelles Umwandeln nutzbar sind. Das Programm prüft das mit echten Mini-Umwandlungen.</p>
     <p>„nicht nutzbar“ heißt: nicht vorhanden, Treiber fehlt, oder (Docker) das Gerät wurde nicht durchgereicht. Der Grund steht darunter.</p>`},
 };

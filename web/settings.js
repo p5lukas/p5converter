@@ -76,14 +76,14 @@ function applyPreset(p) {
   Object.entries(v).filter(([k]) => !LATE_FIELDS.includes(k)).forEach(([k, x]) => setField(k, x));
   refreshAudioUI(); refreshVideoUI();
   Object.entries(v).filter(([k]) => LATE_FIELDS.includes(k)).forEach(([k, x]) => setField(k, x));
-  refreshAudioUI(); refreshVideoUI(); saveSettings();
+  refreshAudioUI(); refreshVideoUI(); syncNameUI(); saveSettings();
 }
 function renderPresetChips() {
   [['audio', '#aPresets'], ['video', '#vPresets']].forEach(([world, sel]) => {
     const box = $(sel); if (!box) return;
     const list = cfg().presets.filter(p => p.world === world && p.suggest);
     fill(box, list.map(p => h('button', {title: describePreset(p), onclick: () => { applyPreset(p); toast('Voreinstellung „' + p.name + '“ geladen', 'ok'); }}, p.name)),
-      h('button', {class: 'ghost', title: 'Voreinstellungen verwalten', onclick: () => { location.hash = '#settings/presets'; }}, list.length ? '⚙' : '⚙ Keine Vorschläge – Voreinstellungen verwalten'));
+      h('button', {class: 'ghost', title: 'Voreinstellungen verwalten', onclick: () => { location.hash = '#settings/presets'; }}, icon('gear'), list.length ? '' : ' Keine Vorschläge – Voreinstellungen verwalten'));
   });
 }
 
@@ -140,7 +140,7 @@ function renderEditBanner() {
   const b = $('#editBanner'), p = S.editPreset && cfg().presets.find(x => x.id === S.editPreset);
   if (!p) { b.classList.add('hidden'); b.replaceChildren(); return; }
   b.classList.remove('hidden');
-  fill(b, h('span', {}, '✎ Voreinstellung „' + p.name + '“ wird bearbeitet – Einstellungen ändern, dann speichern'),
+  fill(b, h('span', {}, icon('edit'), ' Voreinstellung „' + p.name + '“ wird bearbeitet – Einstellungen ändern, dann speichern'),
     h('button', {class: 'primary small', onclick: async () => {
       const values = collectPresetValues(p.world);
       if (await saveCfg(c => { c.presets.find(x => x.id === p.id).values = values; }, 'Voreinstellung „' + p.name + '“ aktualisiert ✓')) { S.editPreset = null; renderEditBanner(); }
@@ -150,24 +150,26 @@ function renderEditBanner() {
 
 // ---------- Seite „Einstellungen“ ----------
 const SET_GROUPS = [
-  {id: 'general', icon: '⚙', title: 'Allgemein', sub: 'Startansicht, Zielordner, parallele Aufträge'},
-  {id: 'worlds', icon: '◉', title: 'Welten & Farben', sub: 'Namen, Farben, Planeten'},
-  {id: 'presets', icon: '★', title: 'Voreinstellungen', sub: 'Vorschläge anlegen und ordnen'},
-  {id: 'hardware', icon: '⚡', title: 'Hardware', sub: 'Encoder, Erkennung, Diagnose'},
-  {id: 'auth', icon: '🔒', title: 'Anmeldung', sub: 'Passwort und Benutzer'},
-  {id: 'about', icon: 'ⓘ', title: 'Info', sub: 'Version, Neuigkeiten, Speicherort'},
+  {id: 'general', icon: 'gear', title: 'Allgemein', sub: 'Startansicht, Zielordner, parallele Aufträge'},
+  {id: 'worlds', icon: 'planet', title: 'Welten & Farben', sub: 'Namen, Farben, Planeten'},
+  {id: 'presets', icon: 'star', title: 'Voreinstellungen', sub: 'Vorschläge anlegen und ordnen'},
+  {id: 'hardware', icon: 'bolt', title: 'Hardware', sub: 'Encoder, Erkennung, Diagnose'},
+  {id: 'auth', icon: 'lock', title: 'Anmeldung', sub: 'Passwort und Benutzer'},
+  {id: 'about', icon: 'info', title: 'Info', sub: 'Version, Neuigkeiten, Speicherort'},
 ];
 const isMobile = () => matchMedia('(max-width:700px)').matches;
 
 function showView(v) {
   $('#viewMain').classList.toggle('hidden', v !== 'main');
   $('#viewSettings').classList.toggle('hidden', v !== 'settings');
+  $('#viewRename').classList.toggle('hidden', v !== 'rename');
   document.body.classList.toggle('inSettings', v === 'settings');
   window.scrollTo(0, 0);
 }
 function route() {
   const m = /^#settings(?:\/(\w+))?$/.exec(location.hash);
-  if (m) { S.setPage = m[1] || ''; showView('settings'); renderSettings(); }
+  if (location.hash === '#rename') { showView('rename'); renderRenamePage(); }
+  else if (m) { S.setPage = m[1] || ''; showView('settings'); renderSettings(); }
   else showView('main');
 }
 
@@ -184,15 +186,15 @@ function renderSettings() {
   const page = S.setPage || (mobile ? '' : 'general');
   const group = SET_GROUPS.find(g => g.id === page);
   const back = h('button', {class: 'ghost', onclick: () => { location.hash = ''; }}, '← Zum Konverter');
-  const warn = S.cfg && !S.cfg.persistent ? h('div', {class: 'banner warn'}, '⚠ Die Einstellungen werden nicht dauerhaft gespeichert: Der Pfad ', h('code', {}, '/config'), ' ist nicht eingehängt oder nicht beschreibbar. Im Unraid-Template den Pfad „Einstellungen“ eintragen.') : null;
+  const warn = S.cfg && !S.cfg.persistent ? h('div', {class: 'banner warn'}, icon('warn'), ' Die Einstellungen werden nicht dauerhaft gespeichert: Der Pfad ', h('code', {}, '/config'), ' ist nicht eingehängt oder nicht beschreibbar. Im Unraid-Template den Pfad „Einstellungen“ eintragen.') : null;
 
   if (mobile && !group) {
     fill(root, h('div', {class: 'sethead'}, back, h('h1', {}, 'Einstellungen')), warn,
       h('div', {class: 'mlist'}, SET_GROUPS.map(g => h('button', {class: 'mitem', onclick: () => { location.hash = '#settings/' + g.id; }},
-        h('i', {}, g.icon), h('span', {}, h('b', {}, g.title), h('small', {}, g.sub)), h('em', {}, '›')))));
+        h('i', {}, icon(g.icon)), h('span', {}, h('b', {}, g.title), h('small', {}, g.sub)), h('em', {}, '›')))));
     return;
   }
-  const nav = h('nav', {class: 'setnav'}, SET_GROUPS.map(g => h('button', {class: g.id === page ? 'on' : '', onclick: () => { location.hash = '#settings/' + g.id; }}, h('i', {}, g.icon), g.title)));
+  const nav = h('nav', {class: 'setnav'}, SET_GROUPS.map(g => h('button', {class: g.id === page ? 'on' : '', onclick: () => { location.hash = '#settings/' + g.id; }}, h('i', {}, icon(g.icon)), g.title)));
   const builders = {general: pageGeneral, worlds: pageWorlds, presets: pagePresets, hardware: pageHardware, auth: pageAuth, about: pageAbout};
   const content = (builders[page] || pageGeneral)();
   fill(root, h('div', {class: 'sethead'}, mobile ? h('button', {class: 'ghost', onclick: () => { location.hash = '#settings'; }}, '‹ Einstellungen') : back,
@@ -214,7 +216,7 @@ function pageGeneral() {
     row('Startansicht', start, 'setStart', 'Welche Welt beim Öffnen erscheint'),
     row('Parallele Aufträge', conc, 'conc', 'Wie viele Dateien gleichzeitig laufen'),
     row('Standard-Zielordner', h('div', {class: 'row'}, out, pick), 'outDir', 'Wird vorgeschlagen, wenn im Konverter nichts anderes gewählt ist'),
-    row('Neuigkeiten', check(c.showNews, v => saveCfg(x => { x.showNews = v; }), 'Hinweis „Neu“ bei neuer Version zeigen')));
+    row('Neuigkeiten', check(c.showNews, v => saveCfg(x => { x.showNews = v; }), 'Hinweis „Neuigkeiten“ bei neuer Version zeigen')));
 }
 
 // --- Welten & Farben ---
@@ -260,14 +262,14 @@ function pagePresets() {
         check(p.suggest, v => saveCfg(x => { x.presets.find(q => q.id === p.id).suggest = v; }), 'Vorschlag'),
         h('button', {class: 'small', title: 'Nach oben', disabled: i === 0, onclick: () => move(p, -1)}, '↑'),
         h('button', {class: 'small', title: 'Nach unten', disabled: i === mine.length - 1, onclick: () => move(p, 1)}, '↓'),
-        h('button', {class: 'small', title: 'Werte im Konverter bearbeiten', onclick: () => editPreset(p.id)}, '✎ Werte'),
-        h('button', {class: 'small', title: 'Duplizieren', onclick: () => saveCfg(x => { const q = x.presets.find(r => r.id === p.id); x.presets.push({...JSON.parse(JSON.stringify(q)), id: '', name: (q.name + ' Kopie').slice(0, 40)}); })}, '⧉'),
-        h('button', {class: 'small danger', title: 'Löschen', onclick: () => { if (confirm('Voreinstellung „' + p.name + '“ löschen?')) saveCfg(x => { x.presets = x.presets.filter(q => q.id !== p.id); }); }}, '🗑')));
+        h('button', {class: 'small', title: 'Werte im Konverter bearbeiten', onclick: () => editPreset(p.id)}, icon('edit'), ' Werte'),
+        h('button', {class: 'small', title: 'Duplizieren', onclick: () => saveCfg(x => { const q = x.presets.find(r => r.id === p.id); x.presets.push({...JSON.parse(JSON.stringify(q)), id: '', name: (q.name + ' Kopie').slice(0, 40)}); })}, icon('copy')),
+        h('button', {class: 'small danger', title: 'Löschen', onclick: () => { if (confirm('Voreinstellung „' + p.name + '“ löschen?')) saveCfg(x => { x.presets = x.presets.filter(q => q.id !== p.id); }); }}, icon('trash'))));
   }) : h('div', {class: 'empty'}, 'Keine Voreinstellungen in dieser Welt.');
   return h('div', {}, h('h2', {}, 'Voreinstellungen', infoBtn('setPresets')),
     h('p', {class: 'muted'}, 'Voreinstellungen füllen alle Einstellungen einer Welt mit einem Klick. Die mit „Vorschlag“ erscheinen oben im Einstellungs-Panel des Konverters.'),
     tabs, h('div', {class: 'plist'}, list),
-    h('p', {class: 'muted small'}, 'Neue Voreinstellung: im Konverter die Einstellungen wählen und auf „💾 Als Voreinstellung speichern“ klicken.'),
+    h('p', {class: 'muted small'}, 'Neue Voreinstellung: im Konverter die Einstellungen wählen und auf „Als Voreinstellung speichern“ (Diskette) klicken.'),
     h('div', {class: 'btns'}, h('button', {onclick: () => { location.hash = ''; setWorld(tab, false); }}, '→ Zum Konverter'),
       h('button', {class: 'ghost', onclick: restoreDefaultPresets}, 'Standard-Voreinstellungen wiederherstellen')));
 }
@@ -301,9 +303,9 @@ function pageHardware() {
     row('Hardware-Decoding', check(c.hwDecode, v => saveCfg(x => { x.hwDecode = v; }), 'Standardmäßig nutzen'), 'vHwDec'),
     h('h3', {}, 'Erkannte Hardware'), h('div', {}, hw.done ? backends : h('span', {class: 'muted'}, 'Erkennung läuft …')),
     h('div', {class: 'btns', style: 'margin-top:12px'}, h('button', {onclick: async () => { await api('/api/hw/detect', {}); S.info.hw.done = false; renderSettings(); setTimeout(refreshInfoUntilDone, 800); }}, 'Neu erkennen'),
-      h('button', {class: 'ghost', onclick: () => copyText(diagText)}, '📋 Diagnose kopieren')),
+      h('button', {class: 'ghost', onclick: () => copyText(diagText)}, icon('clip'), ' Diagnose kopieren')),
     h('details', {class: 'diag'}, h('summary', {}, 'Diagnose (Details der Tests)'),
-      h('p', {class: 'muted small'}, 'GPUs: ' + ((hw.gpus || []).join(', ') || 'keine gemeldet') + ' · Render-Geräte: ' + ((hw.renderNodes || []).join(', ') || 'keine') + ' · Test dauerte ' + ((hw.tookMs || 0) / 1000).toFixed(1) + ' s'),
+      h('p', {class: 'muted small'}, 'Grafik-/Videoeinheiten: ' + ((hw.gpus || []).join(', ') || 'keine gemeldet') + ' · Render-Geräte: ' + ((hw.renderNodes || []).join(', ') || 'keine') + ' · Test dauerte ' + ((hw.tookMs || 0) / 1000).toFixed(1) + ' s'),
       (hw.vainfo || []).map(v => h('p', {class: 'small'}, h('b', {}, v.node), ': ' + (v.driver || v.error || '–') + (v.encode && v.encode.length ? ' · Encode: ' + v.encode.join(', ') : ''))),
       diagRows.length ? h('div', {class: 'tbody'}, h('table', {}, h('tr', {}, h('th', {}, 'Backend'), h('th', {}, 'Codec'), h('th', {}, 'Start-Variante'), h('th', {}, ''), h('th', {}, 'ffmpeg-Meldung')), diagRows)) : h('p', {class: 'muted small'}, 'Keine Testergebnisse.')));
 }
@@ -314,7 +316,7 @@ async function refreshInfoUntilDone() {
 }
 function buildDiagText(hw) {
   const l = ['p5converter ' + ((S.info && S.info.build && S.info.build.version) || ''), (S.info && S.info.ffmpeg) || ''];
-  l.push('GPUs: ' + ((hw.gpus || []).join(', ') || '-'), 'Render-Geräte: ' + ((hw.renderNodes || []).join(', ') || '-'));
+  l.push('Grafik-/Videoeinheiten: ' + ((hw.gpus || []).join(', ') || '-'), 'Render-Geräte: ' + ((hw.renderNodes || []).join(', ') || '-'));
   (hw.vainfo || []).forEach(v => l.push('vainfo ' + v.node + ': ' + (v.driver || v.error || '-') + ' | Encode: ' + ((v.encode || []).join(', ') || '-')));
   (hw.backends || []).forEach(b => l.push(`[${b.id}] ${Object.keys(b.codecs || {}).filter(k => b.codecs[k]).join(',') || 'nicht nutzbar'}${b.variant ? ' via ' + b.variant : ''}${b.detail ? ' – ' + b.detail : ''}`));
   (hw.diag || []).forEach(d => l.push(`${d.backend} ${d.codec}${d.ten ? ' 10b' : ''} ${d.variant || ''}: ${d.ok ? 'ok' : 'FEHLER ' + (d.msg || '')}`));
@@ -337,22 +339,22 @@ function pageAuth() {
     const st = h('div', {class: 'status small'});
     return h('div', {}, h('h2', {}, 'Anmeldung', infoBtn('setAuth')),
       h('p', {class: 'muted'}, 'Optional: Schütze p5converter mit Benutzername und Passwort. Im reinen Heimnetz brauchst du das nicht zwingend – sobald die Oberfläche von außen erreichbar ist, solltest du es einschalten.'),
-      S.cfg && !S.cfg.persistent ? h('div', {class: 'banner warn'}, '⚠ Ohne eingehängten Pfad /config geht die Anmeldung beim Neustart verloren – sie lässt sich deshalb noch nicht einschalten.') : null,
+      S.cfg && !S.cfg.persistent ? h('div', {class: 'banner warn'}, icon('warn'), ' Ohne eingehängten Pfad /config geht die Anmeldung beim Neustart verloren – sie lässt sich deshalb noch nicht einschalten.') : null,
       h('div', {class: 'form'}, u, p1, p2,
         h('button', {class: 'primary', onclick: async e => {
           if (p1.value !== p2.value) { st.className = 'status small bad'; st.textContent = 'Die Passwörter stimmen nicht überein'; return; }
           e.currentTarget.disabled = true;
           try { S.auth = await api('/api/auth/setup', {username: u.value, password: p1.value}); toast('Anmeldung eingeschaltet ✓', 'ok'); updateAuthUI(); renderSettings(); }
-          catch (err) { st.className = 'status small bad'; st.textContent = '⚠ ' + err.message; e.currentTarget.disabled = false; }
+          catch (err) { st.className = 'status small bad'; st.textContent = err.message; e.currentTarget.disabled = false; }
         }}, 'Anmeldung einschalten'), st));
   }
   const cur = h('input', {type: 'password', autocomplete: 'current-password', placeholder: 'Aktuelles Passwort'});
   const nu = h('input', {autocomplete: 'username', autocapitalize: 'none', placeholder: 'Neuer Benutzername (optional)'});
   const np = h('input', {type: 'password', autocomplete: 'new-password', placeholder: 'Neues Passwort (optional)'});
   const st = h('div', {class: 'status small'});
-  const fail = m => { st.className = 'status small bad'; st.textContent = '⚠ ' + m; };
+  const fail = m => { st.className = 'status small bad'; st.textContent = m; };
   return h('div', {}, h('h2', {}, 'Anmeldung', infoBtn('setAuth')),
-    h('p', {}, 'Angemeldet als ', h('b', {}, a.user || ''), '. ', h('button', {class: 'small', onclick: logout}, '⎋ Abmelden')),
+    h('p', {}, 'Angemeldet als ', h('b', {}, a.user || ''), '. ', h('button', {class: 'small', onclick: logout}, icon('logout'), ' Abmelden')),
     row('Spaßmeldung', check(a.fun !== false, async v => { try { S.auth = await api('/api/auth/change', {fun: v}); toast('Gespeichert ✓', 'ok'); } catch (e) { toast(e.message, 'bad'); } }, 'Nach falschem Passwort eine Meldung zeigen'), null, 'Die rote Zeile im Anmeldefenster'),
     h('h3', {}, 'Benutzer oder Passwort ändern'),
     h('div', {class: 'form'}, cur, nu, np, h('button', {onclick: async e => {
@@ -384,5 +386,5 @@ function pageAbout() {
       h('span', {}, 'ffmpeg'), (S.info && S.info.ffmpeg || '').replace(/^ffmpeg version /, '').split(' Copyright')[0],
       h('span', {}, 'System'), (S.info && S.info.os) || '',
       h('span', {}, 'Einstellungen'), c.persistent ? h('span', {}, 'gespeichert in ', h('code', {}, c.dir)) : h('span', {class: 'warn'}, 'nicht dauerhaft (Pfad /config fehlt)')),
-    h('div', {class: 'btns', style: 'margin-top:14px'}, h('button', {onclick: openNews}, '✦ Neuigkeiten'), h('a', {href: b.repo, target: '_blank', rel: 'noopener'}, h('button', {class: 'ghost'}, 'GitHub'))));
+    h('div', {class: 'btns', style: 'margin-top:14px'}, h('button', {onclick: openNews}, icon('news'), ' Neuigkeiten'), h('a', {href: b.repo, target: '_blank', rel: 'noopener'}, h('button', {class: 'ghost'}, 'GitHub'))));
 }

@@ -18,7 +18,11 @@ type VideoOpts struct {
 	BitDepth    int    `json:"bitDepth"` // 0 = like source, 8, 10
 	Height      int    `json:"height"`   // 0 = keep; never upscales
 	HWDecode    bool   `json:"hwDecode"`
-	AV1Aom      bool   `json:"av1Aom"` // use libaom instead of SVT-AV1 on cpu
+	// HWDecodeMode picks how hardware-decoded Quick Sync frames are handled (set by the job runner, never by the
+	// client): "" or "full" = the whole chain stays on the GPU (vpp_qsv), "download" = frames are copied back to
+	// normal memory (hwdownload) before the software filters.
+	HWDecodeMode string `json:"-"`
+	AV1Aom       bool   `json:"av1Aom"` // use libaom instead of SVT-AV1 on cpu
 	// HWInit are extra ffmpeg input options found by the hardware detection (e.g. Quick Sync via a VAAPI device).
 	// Set by the server, never by the client.
 	HWInit     []string `json:"-"`
@@ -136,7 +140,7 @@ func BuildVideo(info *ffmpeg.Info, o VideoOpts, ov Overrides, in, out string) (*
 		if o.HWDecode {
 			switch o.Backend {
 			case "qsv":
-				args = append(args, "-hwaccel", "qsv")
+				args = append(args, "-hwaccel", "qsv", "-hwaccel_output_format", "qsv")
 				if len(o.HWInit) > 0 {
 					args = append(args, "-hwaccel_device", "hw")
 				}
@@ -177,8 +181,11 @@ func BuildVideo(info *ffmpeg.Info, o VideoOpts, ov Overrides, in, out string) (*
 		plan.TenBit = ten
 
 		var vf []string
+		scaleH, scaleW := 0, 0
 		if o.Height > 0 && vs.Height > 0 {
 			if o.Height < vs.Height {
+				scaleH = o.Height
+				scaleW = (vs.Width*o.Height/vs.Height + 1) / 2 * 2
 				vf = append(vf, fmt.Sprintf("scale=-2:%d", o.Height))
 			} else if o.Height > vs.Height {
 				plan.Warnings = append(plan.Warnings, "Quelle ist kleiner als Zielauflösung – keine Hochskalierung")
@@ -220,7 +227,31 @@ func BuildVideo(info *ffmpeg.Info, o VideoOpts, ov Overrides, in, out string) (*
 				enargs = append(enargs, "-crf", crf, "-b:v", "0", "-row-mt", "1", "-cpu-used", []string{"1", "2", "3", "4"}[pi])
 			}
 		case "qsv":
-			vf = append(vf, "format="+hwPix)
+			switch {
+			case !o.HWDecode:
+				vf = append(vf, "format="+hwPix)
+			case o.HWDecodeMode == "download":
+				// frames live on the GPU: copy them back, then the normal software filters apply
+				srcFmt := "nv12"
+				if vs.BitDepth > 8 {
+					srcFmt = "p010le"
+				}
+				vf = append([]string{"hwdownload", "format=" + srcFmt}, vf...)
+				vf = append(vf, "format="+hwPix)
+			default:
+				// whole chain on the GPU: software filters cannot read Quick Sync frames
+				vf = nil
+				var vpp []string
+				if scaleH > 0 && scaleW > 0 {
+					vpp = append(vpp, fmt.Sprintf("w=%d", scaleW), fmt.Sprintf("h=%d", scaleH))
+				}
+				if (vs.BitDepth > 8) != ten {
+					vpp = append(vpp, "format="+hwPix)
+				}
+				if len(vpp) > 0 {
+					vf = []string{"vpp_qsv=" + strings.Join(vpp, ":")}
+				}
+			}
 			enargs = append(enargs, "-preset", []string{"slow", "medium", "fast", "veryfast"}[pi], "-global_quality", crf)
 			if ten && o.Codec == "hevc" {
 				enargs = append(enargs, "-profile:v", "main10")
@@ -250,7 +281,9 @@ func BuildVideo(info *ffmpeg.Info, o VideoOpts, ov Overrides, in, out string) (*
 		default:
 			return nil, fmt.Errorf("unbekanntes Backend %q", o.Backend)
 		}
-		args = append(args, "-vf", strings.Join(vf, ","))
+		if len(vf) > 0 {
+			args = append(args, "-vf", strings.Join(vf, ","))
+		}
 		args = append(args, enargs...)
 	}
 	if o.Container == "mkv" {

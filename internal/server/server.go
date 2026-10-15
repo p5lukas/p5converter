@@ -24,6 +24,7 @@ import (
 	"github.com/p5lukas/p5converter/internal/ffmpeg"
 	"github.com/p5lukas/p5converter/internal/hw"
 	"github.com/p5lukas/p5converter/internal/jobs"
+	"github.com/p5lukas/p5converter/internal/rename"
 	"github.com/p5lukas/p5converter/internal/version"
 	"github.com/p5lukas/p5converter/web"
 )
@@ -109,6 +110,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/probe", s.probe)
 	mux.HandleFunc("POST /api/jobs", s.submit)
 	mux.HandleFunc("GET /api/state", s.state)
+	mux.HandleFunc("POST /api/rename/preview", s.renamePreview)
+	mux.HandleFunc("POST /api/rename", s.renameApply)
 	mux.HandleFunc("POST /api/jobs/{id}/cancel", func(w http.ResponseWriter, r *http.Request) {
 		s.Jobs.Cancel(r.PathValue("id"))
 		writeJSON(w, map[string]bool{"ok": true})
@@ -335,7 +338,7 @@ func (s *Server) scan(w http.ResponseWriter, r *http.Request) {
 				}
 				return nil
 			}
-			if k := mediaKind(d.Name()); k == b.Kind {
+			if k := mediaKind(d.Name()); k == b.Kind || (b.Kind == "media" && k != "") {
 				rel, _ := filepath.Rel(p, fp)
 				var size int64
 				if inf, err := d.Info(); err == nil {
@@ -378,6 +381,10 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(req.Items) == 0 {
 		httpErr(w, 400, "keine Dateien")
+		return
+	}
+	if err := rename.Validate(req.Output.Replace); err != nil {
+		httpErr(w, 400, err.Error())
 		return
 	}
 	if req.Output.Dir != "" {

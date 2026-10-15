@@ -13,7 +13,7 @@ func TestDefaultsPersistAndReload(t *testing.T) {
 		t.Fatalf("persistent=%v existed=%v", st.Persistent(), st.Existed())
 	}
 	s := st.Get()
-	if len(s.Presets) < 10 || s.Worlds["video"].Hue != 270 {
+	if len(s.Presets) != 2 || s.Worlds["video"].Hue != 270 {
 		t.Fatalf("Standardwerte: %+v", s)
 	}
 	s.Worlds["audio"] = World{Name: "Musik", Hue: 205}

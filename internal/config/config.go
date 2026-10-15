@@ -41,9 +41,9 @@ type Settings struct {
 
 // Fields a preset may contain, per world (the ids of the UI controls).
 var presetFields = map[string][]string{
-	"audio": {"aFormat", "aMode", "aQuality", "aBitrate", "aFlac", "aWav", "aRate", "aCh", "aCover"},
+	"audio": {"aFormat", "aMode", "aQuality", "aBitrate", "aFlac", "aWav", "aRate", "aCh", "aCover", "pattern", "suffix", "renRules"},
 	"video": {"vContainer", "vCodec", "vBackend", "vCrf", "vPreset", "vDepth", "vHeight", "vHwDec",
-		"vAudioMode", "vAudioCodec", "vAudioKbps", "vAudioLangs", "vSubMode", "vSubLangs"},
+		"vAudioMode", "vAudioCodec", "vAudioKbps", "vAudioLangs", "vSubMode", "vSubLangs", "pattern", "suffix", "renRules"},
 }
 
 func Defaults() Settings {
@@ -58,16 +58,8 @@ func Defaults() Settings {
 		PreferredBackend: "auto",
 		HWDecode:         true,
 		Presets: []Preset{
-			p("v-archiv", "Archiv · H.265 10 Bit", "video", map[string]any{"vCodec": "hevc", "vCrf": 20, "vDepth": "10", "vPreset": "slow", "vHeight": "0"}),
-			p("v-klein", "Klein · H.265 1080p", "video", map[string]any{"vCodec": "hevc", "vCrf": 24, "vDepth": "8", "vPreset": "medium", "vHeight": "1080"}),
-			p("v-kompatibel", "Kompatibel · H.264 1080p", "video", map[string]any{"vCodec": "h264", "vCrf": 21, "vDepth": "8", "vPreset": "medium", "vHeight": "1080"}),
-			p("v-av1", "AV1 · 10 Bit", "video", map[string]any{"vCodec": "av1", "vCrf": 28, "vDepth": "10", "vPreset": "medium", "vHeight": "0"}),
-			p("v-remux", "Nur Remux → MKV", "video", map[string]any{"vCodec": "copy", "vContainer": "mkv"}),
-			p("a-mp3-v2", "MP3 · Standard (V2)", "audio", map[string]any{"aFormat": "mp3", "aMode": "vbr", "aQuality": 2}),
-			p("a-mp3-v0", "MP3 · Beste Qualität (V0)", "audio", map[string]any{"aFormat": "mp3", "aMode": "vbr", "aQuality": 0}),
-			p("a-opus-sprache", "Opus · Sprache (64 kbit/s)", "audio", map[string]any{"aFormat": "opus", "aMode": "vbr", "aBitrate": 64, "aCh": "1"}),
-			p("a-aac-192", "AAC (M4A) · 192 kbit/s", "audio", map[string]any{"aFormat": "m4a", "aMode": "cbr", "aBitrate": 192}),
-			p("a-flac", "FLAC · verlustfrei", "audio", map[string]any{"aFormat": "flac", "aFlac": 5}),
+			p("v-remux", "Remux als MKV", "video", map[string]any{"vCodec": "copy", "vContainer": "mkv"}),
+			p("a-flac", "Remux als FLAC", "audio", map[string]any{"aFormat": "flac", "aFlac": 5}),
 		},
 	}
 }
@@ -221,7 +213,7 @@ func Validate(in Settings) (Settings, error) {
 			}
 			switch t := v.(type) {
 			case string:
-				if len(t) > 200 {
+				if len(t) > 3000 {
 					return Settings{}, fmt.Errorf("Wert %s zu lang", k)
 				}
 			case float64, bool:

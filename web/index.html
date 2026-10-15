@@ -23,10 +23,11 @@
   </nav>
   <div class="spacer"></div>
   <span id="ffver" class="muted small hidewide"></span>
-  <button id="newsBtn" class="tb" title="Neuigkeiten">✦<span class="lbl"> Neu</span><i id="newsDot" class="dot hidden"></i></button>
-  <button id="gearBtn" class="tb" title="Einstellungen">⚙<span class="lbl"> Einstellungen</span></button>
-  <button id="logoutBtn" class="tb ghost hidden" title="Abmelden">⎋<span class="lbl"> Abmelden</span></button>
-  <button id="quit" class="tb ghost hidden" title="p5converter komplett beenden">⏻<span class="lbl"> Beenden</span></button>
+  <button id="renameBtn" class="tb" title="Umbenennen"><span data-ic="rename"></span><span class="lbl"> Umbenennen</span></button>
+  <button id="newsBtn" class="tb" title="Neuigkeiten"><span data-ic="news"></span><span class="lbl"> Neuigkeiten</span><i id="newsDot" class="dot hidden"></i></button>
+  <button id="gearBtn" class="tb" title="Einstellungen"><span data-ic="gear"></span><span class="lbl"> Einstellungen</span></button>
+  <button id="logoutBtn" class="tb ghost hidden" title="Abmelden"><span data-ic="logout"></span><span class="lbl"> Abmelden</span></button>
+  <button id="quit" class="tb ghost hidden" title="p5converter komplett beenden"><span data-ic="power"></span><span class="lbl"> Beenden</span></button>
 </div></header>
 
 <main id="viewMain">
@@ -70,17 +71,21 @@
         <label>Dateiname-Zusatz
           <input id="suffix" placeholder="z. B. _x265">
         </label>
-        <label id="patternRow">Namensmuster (optional)
-          <input id="pattern" list="patterns" placeholder="{artist}/{album}/{track} - {title}">
-          <datalist id="patterns">
-            <option value="{artist}/{album}/{track} - {title}">
-            <option value="{artist} - {title}">
-            <option value="{albumartist}/{year} - {album}/{track} - {title}">
-          </datalist>
-        </label>
         <label>Wenn Datei existiert
           <select id="exists"><option value="rename">Umbenennen (2)</option><option value="skip">Überspringen</option><option value="overwrite">Überschreiben</option></select>
         </label>
+      </div>
+      <div class="namebox" id="nameBox">
+        <h3 data-info="pattern">Dateiname</h3>
+        <label id="patternRow">Namensmuster (optional)
+          <input id="pattern" placeholder="{title} ({year}) [{res}][{codec}]" autocomplete="off" spellcheck="false">
+        </label>
+        <div class="varchips" id="varChips"></div>
+        <h3 data-info="renReplace">Suchen und Ersetzen</h3>
+        <input type="hidden" id="renRules" value="[]">
+        <div id="ruleRows" class="rulerows"></div>
+        <button type="button" class="small" id="addRule">+ Ersetzung</button>
+        <div class="namepreview" id="namePreview"></div>
       </div>
       <label class="check"><input type="checkbox" id="deleteSource"> Quelldatei nach Erfolg löschen <span class="warn small">(unwiderruflich)</span></label>
     </div>
@@ -196,8 +201,8 @@
   <div id="editBanner" class="editbanner hidden"></div>
 
   <div class="startbar" id="startbar">
-    <button id="start" class="primary big">▶ Konvertierung starten</button>
-    <button id="savePreset" title="Die aktuellen Einstellungen als Voreinstellung speichern">💾<span class="lbl2"> Als Voreinstellung speichern</span></button>
+    <button id="start" class="primary big"><span data-ic="play"></span> Konvertierung starten</button>
+    <button id="savePreset" title="Die aktuellen Einstellungen als Voreinstellung speichern"><span data-ic="floppy"></span><span class="lbl2"> Als Voreinstellung speichern</span></button>
     <span id="startInfo" class="small muted"></span>
   </div>
 
@@ -215,6 +220,29 @@
   </section>
 </main>
 
+<main id="viewRename" class="hidden">
+  <div class="sethead"><button class="ghost" id="rnBack">← Zum Konverter</button><h1>Umbenennen</h1></div>
+  <p class="muted small rnintro">Dateien umbenennen, ohne sie zu konvertieren: mit Namensmuster, Variablen und Suchen &amp; Ersetzen. Es wird nur der Name geändert – nichts wird verschoben oder überschrieben.</p>
+  <div class="panel">
+    <div class="panel-h"><h2>Dateien</h2>
+      <div class="btns"><button id="rnAddFiles">+ Dateien</button><button id="rnAddFolder">+ Ordner</button><button id="rnClear" class="ghost">Leeren</button></div></div>
+    <div id="rnSummary" class="muted small"></div>
+  </div>
+  <div class="panel" style="margin-top:16px">
+    <h2>Neuer Name</h2>
+    <label>Namensmuster (optional)
+      <input id="rnPattern" placeholder="{title} ({year}) [{res}][{codec}]" autocomplete="off" spellcheck="false">
+    </label>
+    <div class="varchips" id="rnChips"></div>
+    <h3 data-info="renReplace">Suchen und Ersetzen</h3>
+    <div id="rnRules" class="rulerows"></div>
+    <button type="button" class="small" id="rnAddRule">+ Ersetzung</button>
+  </div>
+  <div class="panel" style="margin-top:16px">
+    <div class="panel-h"><h2>Vorschau</h2><button id="rnApply" class="primary">Umbenennen</button></div>
+    <div id="rnPreview" class="rnpreview"></div>
+  </div>
+</main>
 <main id="viewSettings" class="hidden"></main>
 <div id="viewLogin" class="hidden"></div>
 
@@ -223,7 +251,7 @@
 
 <dialog id="presetDlg">
   <form method="dialog" class="dlg" id="presetForm">
-    <h2>💾 Als Voreinstellung speichern</h2>
+    <h2><span data-ic="floppy"></span> Als Voreinstellung speichern</h2>
     <label>Name<input id="presetName" maxlength="40" placeholder="z. B. Filme klein H.265" autocomplete="off"></label>
     <label class="check"><input type="checkbox" id="presetSuggest" checked> Als Vorschlag oben im Einstellungs-Panel anzeigen</label>
     <p class="muted small" id="presetHint"></p>
@@ -233,7 +261,7 @@
 
 <dialog id="news">
   <form method="dialog" class="dlg">
-    <h2>✦ Neuigkeiten</h2>
+    <h2><span data-ic="news"></span> Neuigkeiten</h2>
     <div id="newsBody" class="tbody"></div>
     <div class="dlg-f"><span class="muted small" id="newsVer"></span><button class="primary">Schließen</button></div>
   </form>
@@ -242,7 +270,7 @@
 <dialog id="browser">
   <form method="dialog" class="dlg">
     <div class="dlg-h">
-      <button type="button" id="bUp" class="small">⬆</button>
+      <button type="button" id="bUp" class="small" title="Eine Ebene hoch"><span data-ic="up"></span></button>
       <input id="bPath">
       <button type="button" id="bGo" class="small">Gehe</button>
     </div>
@@ -267,8 +295,10 @@
   </form>
 </dialog>
 
+<script src="icons.js"></script>
 <script src="planets.js"></script>
 <script src="info.js"></script>
+<script src="rename.js"></script>
 <script src="settings.js"></script>
 <script src="auth.js"></script>
 <script src="app.js"></script>

@@ -9,6 +9,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -368,5 +370,82 @@ func TestSettingsEndpoint(t *testing.T) {
 	got.Settings.Worlds["video"] = config.World{Name: "Filme", Hue: 999}
 	if r, m := doJSON(t, c, "PUT", ts.URL+"/api/settings", got.Settings); r.StatusCode != 400 {
 		t.Errorf("ungültiger Farbton: %d %v", r.StatusCode, m)
+	}
+}
+
+func TestRenameTool(t *testing.T) {
+	dir := t.TempDir()
+	_, ts := newTestServer(t, []string{dir})
+	for _, n := range []string{"Show S01E01 [WEBDL].mkv", "Show S01E02 [WEBDL].mkv", "Show S01E02 [WEB].mkv", "Show.mkv"} {
+		os.WriteFile(filepath.Join(dir, n), []byte("x"), 0o644)
+	}
+	items := []string{filepath.Join(dir, "Show S01E01 [WEBDL].mkv"), filepath.Join(dir, "Show S01E02 [WEBDL].mkv")}
+	rules := []map[string]any{{"find": " [WEBDL]", "with": ""}}
+
+	read := func(resp *http.Response) map[string]any {
+		var m map[string]any
+		json.NewDecoder(resp.Body).Decode(&m)
+		return m
+	}
+	// preview changes nothing
+	m := read(post(t, ts, "/api/rename/preview", map[string]any{"items": items, "replace": rules, "mode": "rename"}, nil))
+	got := m["items"].([]any)
+	if got[0].(map[string]any)["new"] != "Show S01E01.mkv" {
+		t.Fatalf("Vorschau: %v", got)
+	}
+	if _, err := os.Stat(items[0]); err != nil {
+		t.Fatal("Vorschau hat umbenannt")
+	}
+	// apply: first works, second collides with nothing -> both fine
+	m = read(post(t, ts, "/api/rename", map[string]any{"items": items, "replace": rules}, nil))
+	if m["renamed"].(float64) != 2 || m["failed"].(float64) != 0 {
+		t.Fatalf("Umbenennen: %v", m)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "Show S01E02.mkv")); err != nil {
+		t.Error("Datei fehlt nach Umbenennen")
+	}
+	// collision: never overwrites an existing file
+	os.WriteFile(filepath.Join(dir, "Show S01E02 [WEB].mkv"), []byte("keep"), 0o644)
+	m = read(post(t, ts, "/api/rename", map[string]any{"items": []string{filepath.Join(dir, "Show S01E02 [WEB].mkv")}, "replace": []map[string]any{{"find": " [WEB]", "with": ""}}}, nil))
+	if m["failed"].(float64) != 1 {
+		t.Errorf("Kollision muss abgelehnt werden: %v", m)
+	}
+	if b, _ := os.ReadFile(filepath.Join(dir, "Show S01E02.mkv")); string(b) != "x" {
+		t.Error("vorhandene Datei überschrieben")
+	}
+	// outside the roots and invalid regex
+	m = read(post(t, ts, "/api/rename", map[string]any{"items": []string{"/etc/hostname"}, "replace": rules}, nil))
+	if m["failed"].(float64) != 1 {
+		t.Errorf("Pfad außerhalb der Roots: %v", m)
+	}
+	if r := post(t, ts, "/api/rename/preview", map[string]any{"items": items, "replace": []map[string]any{{"find": "(", "regex": true}}}, nil); r.StatusCode != 400 {
+		t.Errorf("ungültige Regex: %d", r.StatusCode)
+	}
+	// converter: output name uses variables and rules (invalid rules are refused on submit)
+	if r := post(t, ts, "/api/jobs", map[string]any{"kind": "audio", "items": []map[string]any{{"path": items[0]}},
+		"output": map[string]any{"replace": []map[string]any{{"find": "(", "regex": true}}}}, nil); r.StatusCode != 400 {
+		t.Errorf("Auftrag mit ungültiger Regex: %d", r.StatusCode)
+	}
+}
+
+// every script/style referenced by the page must be embedded and served with the right type
+func TestPageAssetsServed(t *testing.T) {
+	_, ts := newTestServer(t, nil)
+	resp, _ := http.Get(ts.URL + "/")
+	var page bytes.Buffer
+	page.ReadFrom(resp.Body)
+	refs := regexp.MustCompile(`(?:src|href)="([a-z0-9-]+\.(?:js|css|png))"`).FindAllStringSubmatch(page.String(), -1)
+	if len(refs) < 8 {
+		t.Fatalf("zu wenige Verweise gefunden: %d", len(refs))
+	}
+	for _, m := range refs {
+		r, err := http.Get(ts.URL + "/" + m[1])
+		if err != nil || r.StatusCode != 200 {
+			t.Errorf("%s nicht ausgeliefert: %v %v", m[1], err, r)
+			continue
+		}
+		if ct := r.Header.Get("Content-Type"); strings.HasSuffix(m[1], ".js") && !strings.Contains(ct, "javascript") {
+			t.Errorf("%s: Content-Type %q", m[1], ct)
+		}
 	}
 }

@@ -302,3 +302,41 @@ body.loginmode header .tb,body.loginmode .worlds,body.loginmode #ffver{display:n
   .pact{width:100%}
 }
 @media(hover:none){.setnav button,.mitem{min-height:44px}.swatch{min-height:64px}}
+
+/* Symbole (einfarbig, Theme-Farbe) */
+.icw{display:inline-flex;align-items:center;vertical-align:middle}
+.ic{width:1.15em;height:1.15em;flex:none;vertical-align:-.2em;filter:drop-shadow(0 0 3px var(--glow))}
+.icw .ic{vertical-align:middle}
+button.tb .ic{width:1.7em;height:1.7em}
+.chip .ic{width:1.1em;height:1.1em;margin-right:4px;vertical-align:-.2em}
+button.small .ic,.blist .ic{width:1.3em;height:1.3em}
+.startbar #savePreset .ic{width:1.6em;height:1.6em}
+.dlg h2 .ic{width:1.4em;height:1.4em}
+.mitem i .ic,.setnav i .ic{width:1.5em;height:1.5em}
+.setnav i{font-style:normal;display:inline-flex;margin-right:8px;vertical-align:middle}
+.banner .ic{margin-right:4px}
+
+/* Dateiname: Muster, Variablen, Ersetzungen, Vorschau */
+.namebox{margin-top:14px}
+.namebox h3{margin-top:18px}
+.varchips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0 2px}
+.chipbtn{padding:2px 8px;font-size:12px;font-family:ui-monospace,Menlo,Consolas,monospace;min-height:0}
+.rulerows{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+.rulerow{display:grid;grid-template-columns:1fr 1fr auto auto auto;gap:8px;align-items:center}
+.rulerow .check{margin:0;white-space:nowrap}
+.namepreview{margin-top:12px}
+.rnrows{display:flex;flex-direction:column;gap:4px;max-height:420px;overflow:auto}
+.rnrow{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:baseline;font-size:13px;padding:5px 0;border-bottom:1px solid var(--line)}
+.rnrow .old{color:var(--muted);overflow-wrap:anywhere}.rnrow .new{color:var(--text);overflow-wrap:anywhere}.rnrow .arr{color:var(--accent)}
+.rnrow .err,.rnrow .ok{grid-column:1/-1}
+.rnrow.bad .new{color:var(--bad)}.rnrow .err{color:var(--bad)}.rnrow .ok{color:var(--ok)}
+#viewRename{max-width:1100px;margin:0 auto;padding:18px 22px 40px}
+.rnintro{margin:0 0 16px}
+.small.bad,.bad{color:var(--bad)}
+@media(max-width:700px){
+  .rulerow{grid-template-columns:1fr 1fr}
+  .rulerow .check,.rulerow>button{justify-self:start}
+  .rnrow{grid-template-columns:1fr}.rnrow .arr{display:none}
+  #viewRename{padding:14px}
+}
+.presets .ic{width:1.35em;height:1.35em}

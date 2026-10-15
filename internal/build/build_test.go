@@ -89,3 +89,42 @@ func TestQSVInitArgs(t *testing.T) {
 		t.Error("ohne Init keine Zusatzoptionen")
 	}
 }
+
+func TestQSVDecodeModes(t *testing.T) {
+	base := VideoOpts{Codec: "hevc", Backend: "qsv", CRF: 20, HWDecode: true, Height: 720, BitDepth: 10}
+	// full: the chain stays on the GPU, no software filter may see Quick Sync frames
+	p, err := BuildVideo(sample(), base, Overrides{}, "in.mkv", "out.part")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := join(p.Args)
+	for _, w := range []string{"-hwaccel qsv", "-hwaccel_output_format qsv", "vpp_qsv=w=", ":h=720", "format=p010le", "-c:v hevc_qsv"} {
+		if !strings.Contains(s, w) {
+			t.Errorf("full: fehlt %q in%s", w, s)
+		}
+	}
+	if strings.Contains(s, "scale=") || strings.Contains(s, "hwdownload") {
+		t.Errorf("full: kein Software-Filter erlaubt:%s", s)
+	}
+	// download: frames are copied back before the software filters
+	base.HWDecodeMode = "download"
+	p, _ = BuildVideo(sample(), base, Overrides{}, "in.mkv", "out.part")
+	s = join(p.Args)
+	for _, w := range []string{"-hwaccel_output_format qsv", "hwdownload,format=", "scale=-2:720", "format=p010le"} {
+		if !strings.Contains(s, w) {
+			t.Errorf("download: fehlt %q in%s", w, s)
+		}
+	}
+	// software decoding: no hwaccel at all, plain software filters
+	base.HWDecode = false
+	p, _ = BuildVideo(sample(), base, Overrides{}, "in.mkv", "out.part")
+	s = join(p.Args)
+	if strings.Contains(s, "-hwaccel") || !strings.Contains(s, "scale=-2:720,format=p010le") {
+		t.Errorf("software:%s", s)
+	}
+	// nothing to filter on the GPU: no -vf at all
+	p, _ = BuildVideo(sample(), VideoOpts{Codec: "hevc", Backend: "qsv", CRF: 20, HWDecode: true, BitDepth: 8}, Overrides{}, "in.mkv", "out.part")
+	if strings.Contains(join(p.Args), " -vf ") {
+		t.Errorf("ohne Skalierung/Formatwechsel kein -vf:%s", join(p.Args))
+	}
+}
