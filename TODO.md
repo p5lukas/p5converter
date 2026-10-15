@@ -10,6 +10,7 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
+- [ ] **Abbrechen: Aufräumen prüfen/absichern** (Nutzer-Frage): Aktuell wird beim Abbrechen/Fehler die unfertige `.part`-Datei gelöscht (Zieldatei erst nach Erfolg umbenannt, Quelle bleibt unberührt). Lücken: (1) beim Absturz/Neustart des Containers mitten im Lauf bleibt die `.part`-Datei liegen → beim Start alte `.part`-Dateien im Zielordner aufräumen; (2) beim Abbrechen angelegte leere Zielordner bleiben stehen → leere, vom Auftrag neu angelegte Ordner wieder entfernen; (3) Test: Abbruch mitten im Lauf hinterlässt keine `.part`-Datei; (4) in der Oberfläche kurz erklären, was beim Abbrechen passiert
 - [ ] **Warteschlange: Haken und Farben vereinheitlichen** (Nutzer, Screenshot): (1) Bei „Schreiben: Quick Sync · hevc_qsv ✓“ steht ein Haken, bei „Lesen: Quick Sync“ nicht – verwirrend: entweder bei beiden einen Haken (soweit ffmpeg es bestätigt; Decoder-Bestätigung aus dem ffmpeg-Log prüfen, z. B. Stream-Zeile `(hevc (hevc_qsv) …)`) oder den Haken erklären/weglassen; (2) Kacheln (Chips) farblich nach Ergebnis: **grün** = hat geklappt/bestätigt, **gelb** = Hinweis/Info/Ausweichweg (z. B. „Lesen: CPU“), **rot** = Fehler (Idee des Nutzers, Variante noch zu bestätigen)
 - [ ] Branch-Modell: **erstmal nur `main`**, bis alles stabil läuft. Auf Zuruf des Nutzers dann wie p5assets: Feature-Branch → `dev` (Image `:dev`) → `main` (Image `:latest`); optional multi-arch (amd64/arm64)
 - [ ] Design weiter verfeinern nach Rückmeldung vom Gerät (iPhone/iPad Safari und Web-App)
