@@ -9,6 +9,7 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
+- [ ] **„Neu“ im Kopf in „Neuigkeiten“ umbenennen** (Nutzer): Beschriftung oben in der Kopfzeile ändern (Tooltip/Seitentitel dabei mitprüfen, auch Handy-Ansicht wegen Platz)
 - [ ] **Standard-Voreinstellungen auf je 1 reduzieren** (Nutzer): Audio: „Remux als FLAC“, Video: „Remux als MKV“ (statt der bisherigen je 5). Dabei prüfen: Tests, „Standard wiederherstellen“, Beschreibungen/README
 - [ ] **Symbole überarbeiten** (Nutzer): Zahnrad und Stern (Neuigkeiten) sind zu klein → größer; Diskette (Speichern) als **Matrix-Style-Diskette**; **keine bunten Emojis** mehr in der Oberfläche (Ausnahme: die Planeten, die bleiben) – stattdessen einfarbige Symbole im Theme
 - [ ] **Unraid zeigt „Passwort (optional)“ (`P5_PASSWORD`) noch an** (Nutzer, Screenshot): Ursache (1) bis zum Merge von 0.0.3 enthielt die Vorlage auf `main` den Eintrag noch; (2) bestehende Container behalten alte Variablen auch mit neuer Vorlage – der Eintrag muss dort per **REMOVE** gelöscht werden (die Variable wird vom Programm seit 0.0.3 ignoriert, schadet also nicht). Ideen: Hinweis dazu in „Neuigkeiten“, README und Release-Text; prüfen, ob sich der Eintrag bei Neuinstallation wirklich nicht mehr zeigt
