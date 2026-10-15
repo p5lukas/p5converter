@@ -20,17 +20,24 @@ function varChips(mount, input, vars, onChange) {
     }}, '{' + k + '}')));
 }
 
-// Liste der Ersetzungen: get() liefert, set(arr) speichert das Array [{find, with, regex, case}]
+// Liste der Ersetzungen: get() liefert das Array [{find, with, regex, case}], set(arr) speichert es.
+// Jede Änderung liest die Liste frisch über get() (keine alten Kopien) – so tauchen gelöschte Zeilen nie wieder auf.
+// Rückgabe: Funktion, die eine leere Ersetzung anhängt.
 function ruleEditor(mount, get, set, onChange) {
-  const rows = get();
-  const upd = () => { set(rows); onChange(); };
-  fill(mount, rows.map((r, i) => h('div', {class: 'rulerow'},
-    h('input', {value: r.find || '', placeholder: 'Suchen', 'aria-label': 'Suchen', autocomplete: 'off', spellcheck: 'false', oninput: e => { r.find = e.target.value; upd(); }}),
-    h('input', {value: r.with || '', placeholder: 'Ersetzen durch', 'aria-label': 'Ersetzen durch', autocomplete: 'off', spellcheck: 'false', oninput: e => { r.with = e.target.value; upd(); }}),
-    h('label', {class: 'check', title: 'Suchtext ist ein regulärer Ausdruck ($1 … in „Ersetzen durch“)'}, h('input', {type: 'checkbox', checked: !!r.regex, onchange: e => { r.regex = e.target.checked; upd(); }}), 'Regex'),
-    h('label', {class: 'check', title: 'Groß-/Kleinschreibung beachten'}, h('input', {type: 'checkbox', checked: !!r.case, onchange: e => { r.case = e.target.checked; upd(); }}), 'Aa'),
-    h('button', {type: 'button', class: 'small ghost', title: 'Entfernen', onclick: () => { rows.splice(i, 1); set(rows); ruleEditor(mount, get, set, onChange); onChange(); }}, '✕'))));
-  return () => { rows.push({find: '', with: '', regex: false, case: false}); set(rows); ruleEditor(mount, get, set, onChange); mount.querySelector('.rulerow:last-child input').focus(); };
+  const edit = (i, fn) => { const cur = get(); if (cur[i]) { fn(cur[i]); set(cur); onChange(); } };
+  const render = () => {
+    fill(mount, get().map((r, i) => h('div', {class: 'rulerow'},
+      h('input', {value: r.find || '', placeholder: 'Suchen', 'aria-label': 'Suchen', autocomplete: 'off', spellcheck: 'false', oninput: e => edit(i, x => { x.find = e.target.value; })}),
+      h('input', {value: r.with || '', placeholder: 'Ersetzen durch', 'aria-label': 'Ersetzen durch', autocomplete: 'off', spellcheck: 'false', oninput: e => edit(i, x => { x.with = e.target.value; })}),
+      h('label', {class: 'check', title: 'Suchtext ist ein regulärer Ausdruck ($1 … in „Ersetzen durch“)'}, h('input', {type: 'checkbox', checked: !!r.regex, onchange: e => edit(i, x => { x.regex = e.target.checked; })}), 'Regex'),
+      h('label', {class: 'check', title: 'Groß-/Kleinschreibung beachten'}, h('input', {type: 'checkbox', checked: !!r.case, onchange: e => edit(i, x => { x.case = e.target.checked; })}), 'Aa'),
+      h('button', {type: 'button', class: 'small ghost', title: 'Entfernen', onclick: () => { const cur = get(); cur.splice(i, 1); set(cur); render(); onChange(); }}, '✕'))));
+  };
+  render();
+  return () => {
+    const cur = get(); cur.push({find: '', with: '', regex: false, case: false}); set(cur); render(); onChange();
+    const last = mount.querySelector('.rulerow:last-child input'); if (last) last.focus();
+  };
 }
 const cleanRules = rows => (rows || []).filter(r => r && r.find);
 
@@ -96,8 +103,8 @@ function wireRename() {
   $('#addRule').onclick = () => addRuleFn && addRuleFn();
   $('#rnAddRule').onclick = () => rnAddRule && rnAddRule();
   $('#rnPattern').addEventListener('input', () => { R.pattern = $('#rnPattern').value; rnRefresh(); });
-  $('#pattern').addEventListener('input', refreshNamePreview);
-  $('#suffix').addEventListener('input', refreshNamePreview);
+  $('#pattern').addEventListener('input', () => { saveSettings(); refreshNamePreview(); });
+  $('#suffix').addEventListener('input', () => { saveSettings(); refreshNamePreview(); });
   const add = files => { const have = new Set(R.files.map(f => f.path)); files.forEach(f => have.has(f.path) || R.files.push({path: f.path, size: f.size})); rnRefresh(); };
   $('#rnAddFiles').onclick = async () => {
     const r = await openBrowser('files', S.lastDir); if (!r) return;
@@ -120,7 +127,7 @@ function wireRename() {
       // Liste auf die neuen Namen umstellen, damit weiter gearbeitet werden kann
       R.files = r.items.map(x => ({path: x.done ? x.path.slice(0, x.path.length - x.old.length) + x.new : x.path}));
       R.pattern = ''; R.rules = []; $('#rnPattern').value = '';
-      ruleEditor($('#rnRules'), () => R.rules, rows => { R.rules = rows; }, rnRefresh);
+      rnAddRule = ruleEditor($('#rnRules'), () => R.rules, rows => { R.rules = rows; }, rnRefresh);
       $('#rnApply').disabled = true; $('#rnSummary').textContent = n + ' Datei(en)';
     } catch (e) { toast(e.message, 'bad'); }
   };

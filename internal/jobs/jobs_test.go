@@ -82,3 +82,153 @@ func TestHWDecodeFallbackIsQuiet(t *testing.T) {
 		t.Errorf("Reihenfolge der Versuche:\n%s", b)
 	}
 }
+
+// helpers: a real test video/audio plus a fake ffmpeg (script) that behaves as the test needs
+func testMedia(t *testing.T) (real ffmpeg.Tools, video, audio string) {
+	t.Helper()
+	real, err := ffmpeg.Locate("")
+	if err != nil {
+		t.Skip("ffmpeg nicht installiert")
+	}
+	dir := t.TempDir()
+	video, audio = filepath.Join(dir, "in.mkv"), filepath.Join(dir, "in.mp3")
+	for _, a := range [][]string{
+		{"-f", "lavfi", "-i", "testsrc=duration=1:size=320x240:rate=10", "-c:v", "libx264", video},
+		{"-f", "lavfi", "-i", "sine=duration=1", audio},
+	} {
+		if out, err := exec.Command(real.FFmpeg, append([]string{"-loglevel", "error"}, a...)...).CombinedOutput(); err != nil {
+			t.Fatalf("Testdatei: %v %s", err, out)
+		}
+	}
+	return real, video, audio
+}
+
+func fakeFFmpeg(t *testing.T, body string) string {
+	t.Helper()
+	p := filepath.Join(t.TempDir(), "ffmpeg")
+	if err := os.WriteFile(p, []byte("#!/bin/sh\n"+body+"\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+func waitJobs(m *Manager, n int, done func(Job) bool) []Job {
+	for i := 0; i < 150; i++ {
+		time.Sleep(100 * time.Millisecond)
+		s := m.Snapshot()
+		ok := len(s) == n
+		for _, j := range s {
+			ok = ok && done(j)
+		}
+		if ok {
+			return s
+		}
+	}
+	return m.Snapshot()
+}
+
+// audio and video have their own queue: a long video job must not hold back audio jobs
+func TestQueuesAreSeparatePerWorld(t *testing.T) {
+	real, video, audio := testMedia(t)
+	fake := fakeFFmpeg(t, "for a; do last=$a; done\ncase \"$*\" in *matroska*) sleep 3;; esac\necho x > \"$last\"")
+	m := New(ffmpeg.Tools{FFmpeg: fake, FFprobe: real.FFprobe}, hw.NewSampler(), 1)
+	out := OutputOpts{Dir: t.TempDir(), Exists: "rename"}
+	m.Submit(&Request{Kind: "video", Items: []Item{{Path: video}}, Video: build.VideoOpts{Container: "mkv", Codec: "copy"}, Output: out})
+	m.Submit(&Request{Kind: "audio", Items: []Item{{Path: audio}}, Audio: build.AudioOpts{Format: "mp3", Mode: "cbr", Bitrate: 128}, Output: out})
+	var audioDone, videoRunning bool
+	for i := 0; i < 20 && !audioDone; i++ {
+		time.Sleep(100 * time.Millisecond)
+		for _, j := range m.Snapshot() {
+			if j.Kind == "audio" && j.Status == "done" {
+				audioDone = true
+			}
+			if j.Kind == "video" && j.Status == "running" {
+				videoRunning = true
+			}
+		}
+	}
+	if !audioDone || !videoRunning {
+		t.Fatalf("Audio muss neben dem laufenden Video-Auftrag fertig werden (audio fertig=%v, video läuft=%v)", audioDone, videoRunning)
+	}
+	// cancel / clear only touch their own world
+	m.CancelAll("audio")
+	m.ClearFinished("audio")
+	var kinds []string
+	for _, j := range m.Snapshot() {
+		kinds = append(kinds, j.Kind)
+	}
+	if len(kinds) != 1 || kinds[0] != "video" {
+		t.Errorf("Aufräumen nur für Audio: übrig %v", kinds)
+	}
+	m.CancelAll("")
+	m.SetConcurrency("audio", 3)
+	if m.Concurrency("audio") != 3 || m.Concurrency("video") != 1 {
+		t.Errorf("Parallelität je Welt: audio=%d video=%d", m.Concurrency("audio"), m.Concurrency("video"))
+	}
+}
+
+// a failed or canceled job leaves no .part file and no empty folder it created itself
+func TestFailedJobCleansUp(t *testing.T) {
+	real, video, _ := testMedia(t)
+	fake := fakeFFmpeg(t, "for a; do last=$a; done\necho partial > \"$last\"\nexit 1")
+	m := New(ffmpeg.Tools{FFmpeg: fake, FFprobe: real.FFprobe}, hw.NewSampler(), 1)
+	base := t.TempDir()
+	keep := filepath.Join(base, "vorhanden")
+	os.MkdirAll(keep, 0o755)
+	target := filepath.Join(keep, "neu", "unterordner")
+	m.Submit(&Request{Kind: "video", Items: []Item{{Path: video}}, Video: build.VideoOpts{Container: "mkv", Codec: "copy"},
+		Output: OutputOpts{Dir: target, Exists: "rename"}})
+	s := waitJobs(m, 1, func(j Job) bool { return j.Status == "error" })
+	if s[0].Status != "error" {
+		t.Fatalf("Status %q", s[0].Status)
+	}
+	if _, err := os.Stat(filepath.Join(keep, "neu")); err == nil {
+		t.Error("vom Auftrag angelegte Ordner blieben stehen")
+	}
+	if _, err := os.Stat(keep); err != nil {
+		t.Error("ein schon vorhandener Ordner darf nicht gelöscht werden")
+	}
+}
+
+// .part files of a run that crashed are removed at the next start – and only those we recorded
+func TestPartialFilesRemovedAtStart(t *testing.T) {
+	dir := t.TempDir()
+	leftover := filepath.Join(dir, "film.mkv.part")
+	other := filepath.Join(dir, "wichtig.mkv")
+	os.WriteFile(leftover, []byte("x"), 0o644)
+	os.WriteFile(other, []byte("y"), 0o644)
+	logf := filepath.Join(dir, "partials.json")
+	os.WriteFile(logf, []byte(`["`+leftover+`","`+other+`"]`), 0o644) // a non-.part entry must never be deleted
+	m := New(ffmpeg.Tools{}, hw.NewSampler(), 1)
+	if n := m.SetPartialLog(logf); n != 1 {
+		t.Errorf("entfernt: %d", n)
+	}
+	if _, err := os.Stat(leftover); err == nil {
+		t.Error(".part-Rest wurde nicht entfernt")
+	}
+	if _, err := os.Stat(other); err != nil {
+		t.Error("eine Datei ohne .part wurde gelöscht")
+	}
+	if b, _ := os.ReadFile(logf); string(b) != "[]" {
+		t.Errorf("Protokoll nicht geleert: %s", b)
+	}
+}
+
+func TestDecoderOfMappingLine(t *testing.T) {
+	cases := []struct {
+		line string
+		name string
+		hw   bool
+	}{
+		{"Stream #0:0 -> #0:0 (hevc (hevc_qsv) -> hevc (hevc_qsv))", "hevc_qsv", true},
+		{"Stream #0:0 -> #0:0 (hevc (native) -> hevc (hevc_qsv))", "native", false},
+		{"Stream #0:0 -> #0:0 (h264 (native) -> hevc (libx265))", "native", false},
+		{"Stream #0:1 -> #0:1 (copy)", "", false},
+	}
+	for _, c := range cases {
+		n := decoderOf(c.line)
+		if n != c.name || (n != "" && isHWDecoder(n) != c.hw) {
+			t.Errorf("%q: %q hw=%v", c.line, n, isHWDecoder(n))
+		}
+	}
+}

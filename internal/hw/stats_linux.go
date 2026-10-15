@@ -1,6 +1,7 @@
 package hw
 
 import (
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -47,10 +48,26 @@ func (s *Sampler) cpu() float64 {
 	}
 	prevT, prevI := s.st.cpuTotal, s.st.cpuIdle
 	s.st.cpuTotal, s.st.cpuIdle = total, idle
-	if prevT == 0 || total <= prevT {
+	return cpuPercent(prevT, prevI, total, idle)
+}
+
+// cpuPercent is the busy share between two /proc/stat readings (-1 = no valid interval yet).
+func cpuPercent(prevTotal, prevIdle, total, idle uint64) float64 {
+	if prevTotal == 0 || total <= prevTotal || idle < prevIdle {
 		return -1
 	}
-	return 100 * (1 - float64(idle-prevI)/float64(total-prevT))
+	v := 100 * (1 - float64(idle-prevIdle)/float64(total-prevTotal))
+	return math.Max(0, math.Min(100, v))
+}
+
+// rc6Busy turns the RC6 (GPU sleep) residency counter into "GPU awake %" for an interval.
+// ok=false: counter went backwards or the interval was too short.
+func rc6Busy(prevMs, ms uint64, elapsed time.Duration) (float64, bool) {
+	if ms < prevMs || elapsed < 200*time.Millisecond {
+		return 0, false
+	}
+	idle := float64(ms-prevMs) / float64(elapsed.Milliseconds()) * 100
+	return math.Max(0, math.Min(100, 100-idle)), true
 }
 
 func nvidiaStats() []GPUStat {
@@ -120,15 +137,11 @@ func (s *Sampler) sysfsStats() []GPUStat {
 			if !ok || now.Sub(prev.at) < 200*time.Millisecond {
 				continue
 			}
-			idle := float64(ms-prev.idleMs) / float64(now.Sub(prev.at).Milliseconds()) * 100
-			busy := 100 - idle
-			if busy < 0 {
-				busy = 0
+			busy, valid := rc6Busy(prev.idleMs, ms, now.Sub(prev.at))
+			if !valid {
+				continue
 			}
-			if busy > 100 {
-				busy = 100
-			}
-			o = append(o, GPUStat{Name: "Intel " + name, Kind: "intel", Util: busy, Encode: -1, Decode: -1, Source: "sysfs RC6 (GPU aktiv = 100 − Ruhezustand)"})
+			o = append(o, GPUStat{Name: "Intel " + name, Kind: "intel", Util: busy, Encode: -1, Decode: -1, Source: "sysfs RC6: Intel-Grafik nicht im Ruhezustand (gesamte Grafik, nicht nur Video)"})
 		}
 	}
 	return o

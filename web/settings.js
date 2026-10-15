@@ -28,7 +28,7 @@ const worldOrder = () => cfg().worldOrder || ['audio', 'video'];
 function renderWorldNav() {
   const nav = $('#worlds');
   fill(nav, worldOrder().map(id => h('button', {'data-world': id, class: id === S.world ? 'on' : '', onclick: () => setWorld(id, true)},
-    h('span', {class: 'pl'}), h('span', {class: 'wl'}, W(id).name))));
+    h('span', {class: 'pl'}), h('span', {class: 'wl'}, W(id).name), h('span', {class: 'wbadge hidden', title: 'Aufträge laufen oder warten'}))));
 }
 
 async function saveCfg(mutate, msg) {
@@ -54,8 +54,8 @@ function applyCfg() {
 
 // ---------- Voreinstellungen ----------
 const PRESET_FIELDS = {
-  audio: ['aFormat', 'aMode', 'aQuality', 'aBitrate', 'aFlac', 'aWav', 'aRate', 'aCh', 'aCover'],
-  video: ['vContainer', 'vCodec', 'vBackend', 'vCrf', 'vPreset', 'vDepth', 'vHeight', 'vHwDec', 'vAudioMode', 'vAudioCodec', 'vAudioKbps', 'vAudioLangs', 'vSubMode', 'vSubLangs'],
+  audio: ['aFormat', 'aMode', 'aQuality', 'aBitrate', 'aFlac', 'aWav', 'aRate', 'aCh', 'aCover', 'pattern', 'suffix', 'renRules'],
+  video: ['vContainer', 'vCodec', 'vBackend', 'vCrf', 'vPreset', 'vDepth', 'vHeight', 'vHwDec', 'vAudioMode', 'vAudioCodec', 'vAudioKbps', 'vAudioLangs', 'vSubMode', 'vSubLangs', 'pattern', 'suffix', 'renRules'],
 };
 // diese Felder hängen von anderen ab (Optionen werden erst nach dem ersten Durchgang neu aufgebaut)
 const LATE_FIELDS = ['vBackend', 'aMode', 'aQuality', 'aBitrate'];
@@ -208,13 +208,14 @@ function pageGeneral() {
   const c = cfg();
   const start = h('select', {onchange: () => saveCfg(x => { x.startWorld = start.value; })}, opt('last', 'Zuletzt benutzte Welt'), opt('audio', W('audio').name), opt('video', W('video').name));
   start.value = c.startWorld;
-  const conc = h('select', {onchange: () => saveCfg(x => { x.concurrency = +conc.value; })}, [1, 2, 3, 4, 5, 6, 7, 8].map(n => opt(n, n)));
-  conc.value = c.concurrency || S.concurrency || 1;
+  const concSel = (key, fallback) => { const s = h('select', {onchange: () => saveCfg(x => { x[key] = +s.value; })}, [1, 2, 3, 4, 5, 6, 7, 8].map(n => opt(n, n))); s.value = c[key] || fallback || 1; return s; };
+  const concA = concSel('concurrencyAudio', S.conc && S.conc.audio), concV = concSel('concurrency', S.conc && S.conc.video);
   const out = h('input', {value: c.defaultOutDir || '', placeholder: 'leer = neben der Quelldatei', onchange: () => saveCfg(x => { x.defaultOutDir = out.value.trim(); })});
   const pick = h('button', {onclick: async () => { const r = await openBrowser('dir', out.value); if (r) { out.value = r.dir; out.dispatchEvent(new Event('change')); } }}, '…');
   return h('div', {}, h('h2', {}, 'Allgemein'),
     row('Startansicht', start, 'setStart', 'Welche Welt beim Öffnen erscheint'),
-    row('Parallele Aufträge', conc, 'conc', 'Wie viele Dateien gleichzeitig laufen'),
+    row('Parallele Aufträge – ' + W('audio').name, concA, 'conc', 'Wie viele Audio-Dateien gleichzeitig laufen'),
+    row('Parallele Aufträge – ' + W('video').name, concV, 'conc', 'Wie viele Videos gleichzeitig laufen (bei CPU-Encoding 1)'),
     row('Standard-Zielordner', h('div', {class: 'row'}, out, pick), 'outDir', 'Wird vorgeschlagen, wenn im Konverter nichts anderes gewählt ist'),
     row('Neuigkeiten', check(c.showNews, v => saveCfg(x => { x.showNews = v; }), 'Hinweis „Neuigkeiten“ bei neuer Version zeigen')));
 }

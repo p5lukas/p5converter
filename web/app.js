@@ -20,11 +20,18 @@ const CODEC_LABEL = {h264: 'H.264', hevc: 'H.265', av1: 'AV1', vp9: 'VP9'};
 const SWENC = {h264: 'libx264', hevc: 'libx265', av1: 'libsvtav1', vp9: 'libvpx-vp9'};
 
 // ---------- persisted settings ----------
-const FIELDS = ['outMode', 'outDir', 'outStruct', 'suffix', 'pattern', 'renRules', 'exists', 'aFormat', 'aMode', 'aQuality', 'aBitrate', 'aFlac', 'aWav', 'aRate', 'aCh',
+const FIELDS = ['outMode', 'outDir', 'outStruct', 'exists', 'aFormat', 'aMode', 'aQuality', 'aBitrate', 'aFlac', 'aWav', 'aRate', 'aCh',
   'vContainer', 'vCodec', 'vBackend', 'vCrf', 'vPreset', 'vDepth', 'vHeight', 'vAudioMode', 'vAudioCodec', 'vAudioKbps', 'vAudioLangs', 'vSubMode', 'vSubLangs'];
 const CHECKS = ['deleteSource', 'aCover', 'vHwDec'];
+// Namensmuster, Zusatz und Ersetzungen gehören je Welt (Audio und Video getrennt)
+const NAME_FIELDS = ['pattern', 'suffix', 'renRules'];
+const NAME_EMPTY = {pattern: '', suffix: '', renRules: '[]'};
+S.name = {audio: {...NAME_EMPTY}, video: {...NAME_EMPTY}};
+function stashName(world) { const o = {}; NAME_FIELDS.forEach(k => { o[k] = $('#' + k).value; }); S.name[world] = o; }
+function showName(world) { NAME_FIELDS.forEach(k => { $('#' + k).value = (S.name[world] || NAME_EMPTY)[k] ?? NAME_EMPTY[k]; }); S.nameFor = world; }
 function saveSettings() {
-  const o = {};
+  if (S.nameFor) stashName(S.nameFor);
+  const o = {name: S.name};
   FIELDS.forEach(f => o[f] = $('#' + f).value);
   CHECKS.forEach(f => o[f] = $('#' + f).checked);
   o.world = S.world;
@@ -35,6 +42,7 @@ function loadSettings() {
     const o = JSON.parse(localStorage.getItem('p5c') || '{}');
     FIELDS.forEach(f => { if (o[f] !== undefined) $('#' + f).value = o[f]; });
     CHECKS.forEach(f => { if (o[f] !== undefined) $('#' + f).checked = o[f]; });
+    if (o.name) ['audio', 'video'].forEach(w => { if (o.name[w]) S.name[w] = {...NAME_EMPTY, ...o.name[w]}; });
     if (o.world) S.world = o.world;
   } catch (e) {}
 }
@@ -68,6 +76,8 @@ function worldFx(w) {
 }
 function setWorld(w, animate) {
   if (animate && w !== S.world) worldFx(w);
+  if (S.nameFor && S.nameFor !== w) stashName(S.nameFor);
+  if (S.nameFor !== w) showName(w);
   S.world = w;
   $$('#worlds button').forEach(b => b.classList.toggle('on', b.dataset.world === w));
   // Der Farbwechsel passiert mitten im Flug (dunkler Bildschirm), damit nichts flackert
@@ -80,6 +90,7 @@ function setWorld(w, animate) {
   refreshVideoUI();
   renderStartInfo();
   syncNameUI();
+  renderConc(); renderQueue(); renderHero(); renderWorldBadges();
   saveSettings();
 }
 
@@ -322,25 +333,34 @@ function statusChip(j) {
   return `<span class="chip ${m[1]}">${m[0]}</span>`;
 }
 const BACKEND_NAMES = {qsv: 'Quick Sync', nvenc: 'NVIDIA NVENC', vaapi: 'VAAPI', amf: 'AMD AMF', cpu: 'CPU'};
-// „Schreiben“ = Encoder, „Lesen“ = Decoder: zwei getrennte Angaben, damit klar ist, was wo läuft
+// „Schreiben“ = Encoder, „Lesen“ = Decoder: zwei getrennte Angaben mit gleicher Logik –
+// grün + Haken = ffmpeg hat es bestätigt, gelb = nicht bestätigt bzw. Ausweichweg, grau = so eingestellt/noch offen
 function encoderBadge(j) {
   if (j.kind !== 'video' || !j.encoder) return '';
   if (j.encoder === 'copy') return '<span class="chip">Video kopiert</span>';
   const hw = j.backend && j.backend !== 'cpu';
-  const conf = j.encoderConfirmed ? ' ✓' : (j.status === 'running' ? ' (warte auf ffmpeg …)' : '');
   const who = hw ? BACKEND_NAMES[j.backend] || j.backend : 'CPU';
-  const title = hw ? 'Der Encoder läuft in der Hardware. ' + (j.encoderConfirmed ? 'ffmpeg hat die Nutzung bestätigt.' : '') : 'Der Encoder läuft in Software auf der CPU.';
-  return `<span class="chip ${hw ? 'ok' : ''}" title="${esc(title)}">${hw ? ic('bolt') : ''}Schreiben: ${esc(who)} · ${esc(j.encoder)}${conf}</span>`;
+  let cls = '', mark = '', title = hw ? 'Der Encoder läuft in der Hardware.' : 'Der Encoder läuft in Software auf der CPU (so eingestellt).';
+  if (hw && j.encoderConfirmed) { cls = 'ok'; mark = ' ✓'; title += ' ffmpeg hat die Nutzung bestätigt (✓).'; }
+  else if (hw && j.status === 'done') { cls = 'warn'; title += ' ffmpeg hat die Nutzung nicht ausdrücklich bestätigt.'; }
+  else if (hw && j.status === 'running') mark = ' (warte auf ffmpeg …)';
+  return `<span class="chip ${cls}" title="${esc(title)}">${hw ? ic('bolt') : ''}Schreiben: ${esc(who)} · ${esc(j.encoder)}${mark}</span>`;
 }
 function decoderBadge(j) {
   if (j.kind !== 'video' || !j.decoder || j.encoder === 'copy') return '';
-  if (j.decoder === 'hardware') return `<span class="chip ok" title="Die Quelldatei wird in der Hardware gelesen (dekodiert).">${ic('bolt')}Lesen: ${esc(BACKEND_NAMES[j.backend] || 'Hardware')}</span>`;
-  return '<span class="chip" title="Die Quelldatei wird auf der CPU gelesen (dekodiert). Das Ergebnis ist gleich gut, nur die CPU hat mehr zu tun.">Lesen: CPU</span>';
+  if (j.decoder === 'hardware') {
+    const who = BACKEND_NAMES[j.backend] || 'Hardware';
+    if (j.decoderConfirmed) return `<span class="chip ok" title="Die Quelldatei wird in der Hardware gelesen. ffmpeg hat den Hardware-Decoder bestätigt (${esc(j.decoderName)}).">${ic('bolt')}Lesen: ${esc(who)} ✓</span>`;
+    const unsure = j.backend === 'qsv' && j.status === 'done';
+    return `<span class="chip ${unsure ? 'warn' : ''}" title="Die Quelldatei wird in der Hardware gelesen. ffmpeg meldet den Decoder bei ${esc(who)} nicht ausdrücklich, deshalb ohne Haken.">${ic('bolt')}Lesen: ${esc(who)}</span>`;
+  }
+  return `<span class="chip ${j.hwDecodeFallback ? 'warn' : ''}" title="Die Quelldatei wird auf der CPU gelesen${j.hwDecodeFallback ? ' (Hardware ging bei dieser Datei nicht)' : ' (so eingestellt)'}. Das Ergebnis ist gleich gut, nur die CPU hat mehr zu tun.">Lesen: CPU</span>`;
 }
 function renderQueue() {
-  const q = $('#queue');
-  if (!S.jobs.length) { q.innerHTML = '<div class="empty" style="margin-top:8px">Keine Aufträge.</div>'; return; }
-  q.innerHTML = S.jobs.slice().reverse().map(j => {
+  const q = $('#queue'), mine = S.jobs.filter(j => j.kind === S.world);
+  $('#queueWorld').textContent = '· ' + W(S.world).name;
+  if (!mine.length) { q.innerHTML = '<div class="empty" style="margin-top:8px">Keine Aufträge in ' + esc(W(S.world).name) + '.</div>'; return; }
+  q.innerHTML = mine.slice().reverse().map(j => {
     const meta = [];
     if (j.status === 'running') {
       if (j.speed) meta.push('Speed ' + esc(j.speed));
@@ -351,8 +371,9 @@ function renderQueue() {
     if (j.status === 'done') meta.push('Dauer ' + fmtTime((new Date(j.ended) - new Date(j.started)) / 1000));
     if (j.hwDecodeFallback && j.status !== 'error') meta.push('<span class="muted">Lesen per Hardware ging bei dieser Datei nicht – die CPU liest, geschrieben wird trotzdem in Hardware</span>');
     (j.warnings || []).forEach(w => meta.push('<span class="warn">' + esc(w) + '</span>'));
-    const act = (j.status === 'queued' || j.status === 'running') ? `<button class="small ghost" data-cancel="${j.id}">Abbrechen</button>` : '';
-    return `<div class="job ${j.status}"><div class="job-h"><span class="n" title="${esc(j.input)}">${esc(j.name)}</span>${encoderBadge(j)}${decoderBadge(j)}${statusChip(j)}${act}</div>
+    const act = (j.status === 'queued' || j.status === 'running') ? `<button class="small ghost" data-cancel="${j.id}" title="Bricht diesen Auftrag ab und löscht die unfertige Datei. Die Quelldatei bleibt unberührt.">Abbrechen</button>` : '';
+    const note = j.status === 'done' && (j.hwDecodeFallback || (j.warnings || []).length);
+    return `<div class="job ${j.status}${note ? ' note' : ''}"><div class="job-h"><span class="n" title="${esc(j.input)}">${esc(j.name)}</span>${encoderBadge(j)}${decoderBadge(j)}${statusChip(j)}${act}</div>
       <div class="bar"><i style="width:${j.progress.toFixed(1)}%"></i></div>
       <div class="job-m"><span>${j.progress.toFixed(1)} %</span>${meta.map(m => `<span>${m}</span>`).join('')}</div>
       ${j.error && j.status === 'error' ? `<div class="small" style="color:var(--bad)">${esc(j.error)}</div>` : ''}
@@ -365,41 +386,70 @@ function renderQueue() {
   $$('#queue [data-cancel]').forEach(b => b.onclick = () => api('/api/jobs/' + b.dataset.cancel + '/cancel', {}).then(poll));
   $$('#queue details').forEach(d => d.ontoggle = () => d.open ? openDetails.add(d.dataset.id) : openDetails.delete(d.dataset.id));
 }
-function meter(title, val, sub) {
+// Auslastungsanzeige: die Elemente bleiben bestehen und werden nur aktualisiert, damit die Balken sichtbar gleiten
+function meter(key, title, val, sub) {
   const v = val < 0 ? null : Math.max(0, Math.min(100, val));
-  return `<div class="meter"><div class="t"><b>${esc(title)}</b><span>${v === null ? 'n/a' : v.toFixed(0) + ' %'}</span></div><div class="bar"><i style="width:${v || 0}%"></i></div><div class="sub">${sub || ''}</div></div>`;
+  let el = document.querySelector(`#monitor [data-m="${key}"]`);
+  if (!el) {
+    el = document.createElement('div'); el.className = 'meter'; el.dataset.m = key;
+    el.innerHTML = '<div class="t"><b></b><span></span></div><div class="bar"><i></i></div><div class="sub"></div>';
+    $('#monitor').appendChild(el);
+  }
+  el.querySelector('b').textContent = title;
+  el.querySelector('.t span').textContent = v === null ? 'keine Messung' : v.toFixed(0) + ' %';
+  el.querySelector('.bar i').style.width = (v || 0) + '%';
+  el.querySelector('.sub').textContent = sub || '';
+  return key;
 }
 function renderMonitor() {
-  const st = S.stats, running = S.jobs.some(j => j.status === 'running');
-  if (!st) { $('#monitor').innerHTML = ''; return; }
-  let h = meter('CPU', st.cpu, running ? 'Bei Hardware-Encoding sollte die CPU niedrig bleiben' : 'Leerlauf – Messung nur während Aufträgen');
-  (st.gpus || []).forEach(g => {
-    h += meter(g.name + ' – ' + (g.encode >= 0 ? 'Video-Encode' : 'Videoeinheit aktiv'), g.encode >= 0 ? g.encode : g.util, esc(g.source) + (g.decode >= 0 ? ` · Decode ${g.decode.toFixed(0)} %` : '') + (g.encode >= 0 ? ` · Gesamt ${g.util.toFixed(0)} %` : ''));
+  const st = S.stats, running = S.jobs.some(j => j.status === 'running'), box = $('#monitor');
+  if (!st) { box.replaceChildren(); return; }
+  const fresh = st.at && Date.now() - st.at < 15000;
+  const keep = [];
+  keep.push(meter('cpu', 'CPU', fresh ? st.cpu : -1, !fresh ? 'Keine aktuelle Messung' : running ? 'Bei Hardware-Encoding sollte die CPU niedrig bleiben' : 'Gerade nichts los – Live-Wert des ganzen Rechners'));
+  (st.gpus || []).forEach((g, i) => {
+    const enc = g.encode >= 0;
+    keep.push(meter('gpu' + i, g.name + ' – ' + (enc ? 'Video-Encode' : 'Grafik aktiv'), fresh ? (enc ? g.encode : g.util) : -1,
+      g.source + (g.decode >= 0 ? ` · Decode ${g.decode.toFixed(0)} %` : '') + (enc ? ` · Gesamt ${g.util.toFixed(0)} %` : '')));
   });
-  if (!(st.gpus || []).length) h += `<div class="meter"><div class="t"><b>Videoeinheit</b><span>n/a</span></div><div class="sub">Keine Auslastung der Videoeinheit lesbar (Docker: /dev/dri bzw. NVIDIA-Runtime durchreichen)</div></div>`;
-  $('#monitor').innerHTML = h;
+  if (!(st.gpus || []).length) {
+    keep.push(meter('nogpu', 'Videoeinheit', -1, 'Keine Auslastung lesbar (Docker: /dev/dri bzw. NVIDIA-Runtime durchreichen)'));
+  }
+  [...box.children].forEach(c => { if (!keep.includes(c.dataset.m)) c.remove(); });
 }
 function renderHero() {
   const c = {queued: 0, running: 0, done: 0, error: 0, other: 0};
   let prog = 0;
-  S.jobs.forEach(j => {
+  const mine = S.jobs.filter(j => j.kind === S.world);
+  mine.forEach(j => {
     if (j.status in c) c[j.status]++; else c.other++;
     prog += j.status === 'running' ? j.progress : (j.status === 'queued' ? 0 : 100);
   });
-  const total = S.jobs.length, pct = total ? Math.round(prog / total) : 0;
+  const total = mine.length, pct = total ? Math.round(prog / total) : 0;
   $('#stFiles').textContent = S.files[S.world].length;
   $('#stQueued').textContent = c.queued; $('#stRun').textContent = c.running;
   $('#stDone').textContent = c.done; $('#stErr').textContent = c.error;
   $('#ring').style.setProperty('--p', pct);
   $('#ringTxt').textContent = total ? pct + '%' : '–';
 }
+// „Parallel“ gilt für die gerade gewählte Welt; an den Welt-Knöpfen zeigt ein Zähler, wo etwas läuft oder wartet
+function renderConc() {
+  if (S.conc && document.activeElement !== $('#conc')) $('#conc').value = S.conc[S.world];
+}
+function renderWorldBadges() {
+  $$('#worlds button').forEach(b => {
+    const n = S.jobs.filter(j => j.kind === b.dataset.world && (j.status === 'running' || j.status === 'queued')).length;
+    const el = b.querySelector('.wbadge');
+    if (el) { el.textContent = n; el.classList.toggle('hidden', !n || b.dataset.world === S.world); }
+  });
+}
 let polling = false;
 async function poll() {
   if (polling || S.stopped) return; polling = true;
   try {
     const d = await api('/api/state');
-    S.jobs = d.jobs; S.stats = d.stats;
-    if (document.activeElement !== $('#conc')) $('#conc').value = d.concurrency;
+    S.jobs = d.jobs; S.stats = d.stats; S.conc = d.concurrency;
+    renderConc(); renderWorldBadges();
     renderQueue(); renderMonitor(); renderHero();
   } catch (e) {} finally { polling = false; }
 }
@@ -551,9 +601,9 @@ function wire() {
     document.body.innerHTML = '<div style="padding:60px;text-align:center;font:18px system-ui">p5converter wurde beendet.<br><br><small>Du kannst dieses Fenster schließen. Zum Neustart das Programm erneut öffnen.</small></div>';
     S.stopped = true;
   };
-  $('#cancelAll').onclick = () => api('/api/jobs/cancel-all', {}).then(poll);
-  $('#clearDone').onclick = () => api('/api/jobs/clear', {}).then(poll);
-  $('#conc').onchange = () => api('/api/concurrency', {n: +$('#conc').value});
+  $('#cancelAll').onclick = () => api('/api/jobs/cancel-all', {kind: S.world}).then(poll);
+  $('#clearDone').onclick = () => api('/api/jobs/clear', {kind: S.world}).then(poll);
+  $('#conc').onchange = () => api('/api/concurrency', {kind: S.world, n: +$('#conc').value});
   $('#hwRedetect').onclick = async () => { await api('/api/hw/detect', {}); S.info.hw.done = false; S.info.hw.backends = []; renderHwCard(); setTimeout(loadInfo, 800); };
 }
 function outModeUI() {

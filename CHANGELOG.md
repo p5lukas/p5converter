@@ -1,5 +1,21 @@
 # Änderungen
 
+## 0.0.5 – 2026-10-15
+
+**Neu**
+- **Warteschlange je Welt**: Audio und Video haben je eine eigene Warteschlange (eigene Anzahl paralleler Aufträge, Zähler und Fortschrittsring, „Alle abbrechen“/„Fertige entfernen“ nur für die gewählte Welt); Zähler am Welt-Knopf für Aufträge der anderen Welt
+- **Farben der Auftragskarten und Kacheln**: grün = geklappt, gelb = Hinweis/Ausweichweg/abgebrochen, rot = Fehler; „Lesen“ bekommt wie „Schreiben“ einen Haken, wenn ffmpeg den Hardware-Decoder bestätigt hat (z. B. `hevc_qsv`)
+- **Aufräumen**: beim Abbrechen/Fehler werden `.part`-Datei und vom Auftrag neu angelegte leere Ordner entfernt; `.part`-Reste eines Absturzes werden beim nächsten Start entfernt (`/config/partials.json`, nur selbst angelegte Dateien); Hinweis am „Abbrechen“-Knopf
+
+**Geändert**
+- **Auslastungsanzeige** wird dauernd live gemessen (auch im Leerlauf, alle 3 s), Balken gleiten statt zu springen; ohne aktuelle Messung steht „keine Messung“; Intel-Wert heißt ehrlich „Grafik aktiv“ (gesamte Grafik, nicht nur Video)
+- **Parallele Aufträge** je Welt in den Einstellungen (Audio/Video)
+- Namensmuster, Dateiname-Zusatz und Ersetzungen gelten **je Welt getrennt** (Audio/Video) und gehören zu den Voreinstellungen
+
+**Behoben**
+- **„+ Ersetzung“** brachte gelöschte Zeilen wieder zurück (alte Liste im Knopf); Audio und Video teilten sich dieselben Ersetzungen
+- Die Auslastung blieb nach einem Auftrag auf dem letzten Wert stehen (CPU 14 %, Videoeinheit 100 % im Leerlauf), weil nur während Aufträgen gemessen wurde
+
 ## 0.0.4 – 2026-10-15
 
 **Neu**

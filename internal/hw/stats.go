@@ -1,6 +1,9 @@
 package hw
 
-import "sync"
+import (
+	"sync"
+	"time"
+)
 
 // GPUStat is one live utilisation reading. Negative values mean "unknown".
 type GPUStat struct {
@@ -15,9 +18,10 @@ type GPUStat struct {
 type Stats struct {
 	CPU  float64   `json:"cpu"` // -1 unknown
 	GPUs []GPUStat `json:"gpus"`
+	At   int64     `json:"at"` // unix ms of the reading (0 = none yet)
 }
 
-// Sampler keeps the latest reading; Sample is called periodically while jobs run.
+// Sampler keeps the latest reading; Sample is called periodically (also when idle, so the numbers are never stale).
 type Sampler struct {
 	mu   sync.Mutex
 	last Stats
@@ -34,6 +38,7 @@ func (s *Sampler) Latest() Stats {
 
 func (s *Sampler) Sample() {
 	st := s.sample()
+	st.At = time.Now().UnixMilli()
 	s.mu.Lock()
 	s.last = st
 	s.mu.Unlock()
