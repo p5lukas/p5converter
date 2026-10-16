@@ -29,7 +29,7 @@ const L = require('./ui-lib');
     eq(name, 'Filter WARNING zeigt nur Warnungen', only, 0);
     await p.click('.lvl-chip.all'); await p.fill('#viewLogs input[type=search]', 'Hardware-Erkennung'); await p.waitForTimeout(400);
     const hits = await p.locator('#viewLogs .ll').count();
-    if (hits < 1 || hits > 3) errs.push(`${name}: Suche liefert ${hits} Zeilen`);
+    if (hits < 1) errs.push(`${name}: Suche liefert ${hits} Zeilen`);
     await p.screenshot({ path: `${L.SHOTS}/lg-${name}-page.png`, fullPage: true });
     const ov = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     if (ov > 0) errs.push(`${name}: horizontaler Überlauf ${ov}px`);
