@@ -2,7 +2,7 @@ name: build
 
 on:
   push:
-    branches: [main, dev, "claude/**"]
+    branches: [main, dev]
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
@@ -156,6 +156,7 @@ jobs:
           $env:PATH = "$PWD\build;$env:PATH"
           go test ./...
       - name: Installer bauen
+        if: github.event_name != 'pull_request'
         shell: pwsh
         run: |
           if (-not (Get-Command iscc -ErrorAction SilentlyContinue) -and -not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
@@ -164,6 +165,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup fehlgeschlagen" }
           Get-ChildItem build\out
       - name: Installer testen (still installieren, starten, deinstallieren)
+        if: github.event_name != 'pull_request'
         shell: pwsh
         run: |
           $dir = "$env:RUNNER_TEMP\p5inst"
@@ -174,11 +176,13 @@ jobs:
           Start-Sleep 2
           if (Test-Path "$dir\p5converter.exe") { throw "Deinstallation hat das Programm nicht entfernt" }
       - name: Größen
+        if: github.event_name != 'pull_request'
         shell: pwsh
         run: |
           $rows = Get-ChildItem build\out\*.exe, build\*.exe | ForEach-Object { "| {0} | {1:N1} MB |" -f $_.Name, ($_.Length/1MB) }
           "### Größen`n| Datei | Größe |`n|---|---|`n" + ($rows -join "`n") | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
       - uses: actions/upload-artifact@v4
+        if: github.event_name != 'pull_request'
         with:
           name: p5converter-setup
           path: build/out/p5converter-setup.exe

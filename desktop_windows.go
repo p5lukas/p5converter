@@ -5,9 +5,12 @@ package main
 import (
 	_ "embed"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
+	"time"
 	"unsafe"
 
 	"fyne.io/systray"
@@ -45,20 +48,16 @@ func setupDesktop() {
 	windows.AssignProcessToJobObject(job, windows.CurrentProcess())
 }
 
-// bringToFront holt das Fenster eines schon laufenden p5converter nach vorn (zweiter Start). false = kein Fenster gefunden.
-func bringToFront() bool {
-	title, _ := windows.UTF16PtrFromString(windowTitle)
-	class, _ := windows.UTF16PtrFromString("webview") // Fensterklasse der WebView2-Bibliothek
-	find := user32.NewProc("FindWindowW")
-	hwnd, _, _ := find.Call(0, uintptr(unsafe.Pointer(title)))
-	if hwnd == 0 {
-		hwnd, _, _ = find.Call(uintptr(unsafe.Pointer(class)), 0)
-	}
-	if hwnd == 0 {
+// bringToFront bittet ein schon laufendes p5converter über seine Adresse, sein Fenster zu zeigen (auch ein im Infobereich
+// verstecktes). false = Anfrage ging nicht durch.
+func bringToFront(base string) bool {
+	c := http.Client{Timeout: 3 * time.Second}
+	resp, err := c.Post(base+"/api/desktop/show", "application/json", strings.NewReader("{}"))
+	if err != nil {
 		return false
 	}
-	showWindow(hwnd) // zeigt auch ein im Infobereich verstecktes Fenster
-	return true
+	defer resp.Body.Close()
+	return resp.StatusCode == 200
 }
 
 // externalLinks: Links auf andere Adressen (GitHub …) öffnen im Standardbrowser, nicht im App-Fenster.
@@ -70,7 +69,7 @@ const externalLinks = `(function(){
 
 // desktopWindow zeigt die Oberfläche im App-Fenster und kehrt erst zurück, wenn das Fenster geschlossen wurde (true).
 // false = WebView2 fehlt oder ließ sich nicht starten; dann öffnet der Aufrufer ersatzweise einen Browser.
-func desktopWindow(url string, busy func() int) (shown bool) {
+func desktopWindow(url string, busy func() int, setShow func(func())) (shown bool) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("App-Fenster fehlgeschlagen: %v", r)
@@ -94,6 +93,7 @@ func desktopWindow(url string, busy func() int) (shown bool) {
 	}
 	defer w.Destroy()
 	hwnd := uintptr(w.Window())
+	setShow(func() { showWindow(hwnd) })
 	startTray(hwnd, busy)
 	hideOnClose(hwnd)
 	w.SetSize(960, 640, webview2.HintMin)

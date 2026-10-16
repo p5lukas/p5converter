@@ -108,7 +108,7 @@ func main() {
 		// Port busy: if it is another p5converter, just bring up its window instead of failing.
 		if running(*addr) {
 			log.Printf("p5converter läuft bereits auf %s – öffne das Fenster.", *addr)
-			if !*noBrowser && !bringToFront() {
+			if !*noBrowser && !bringToFront(urlFor(*addr)) {
 				openWindow(urlFor(*addr))
 			}
 			return
@@ -135,7 +135,7 @@ func main() {
 	}()
 	if !*noBrowser {
 		// Windows: eigenes App-Fenster (WebView2); endet das Programm, wenn das Fenster geschlossen wird.
-		if desktopWindow(url, func() int { return busyJobs(srv) }) {
+		if desktopWindow(url, func() int { return busyJobs(srv) }, func(f func()) { srv.ShowWindow = f }) {
 			os.Exit(0)
 		}
 		time.Sleep(400 * time.Millisecond)
