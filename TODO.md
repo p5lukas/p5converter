@@ -12,9 +12,11 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
+- [ ] **Windows-App: Folgearbeiten** (erste Version 0.1.1 steht auf `dev`): (1) **Symbol im Infobereich (Tray)** mit „Öffnen/Beenden“ und Weiterlaufen beim Schließen des Fensters (heute beendet Schließen das Programm samt laufender Aufträge); (2) **Prüfung durch den Nutzer** auf dem Windows-PC (Fenster, Symbol, Hardware-Erkennung, echte Konvertierung, Deinstallation); (3) Größe der `setup.exe` aus dem CI-Lauf (Zusammenfassung „Größen“) mitteilen; (4) Linux-App danach; (5) Windows erst nach Freigabe nach `main`
 - [ ] Optional: Image als multi-arch (amd64/arm64) bauen
 
 ## Vom Nutzer zu prüfen (nicht in der Sandbox möglich)
+- [ ] 0.1.1 Windows: `p5converter-setup.exe` aus `dev-latest` laden, SmartScreen bestätigen, installieren; öffnet das Fenster mit der Oberfläche? Symbol/Titel ok? Unter Einstellungen → Hardware: werden Quick Sync/NVENC/AMF erkannt (Diagnose kopieren, falls nicht)? Eine echte Konvertierung mit Hardware; Laufwerke im Datei-Browser; Schließen beendet laufende ffmpeg; Deinstallation über die Windows-Einstellungen
 - [ ] 0.0.10: Schritt „Audio & Untertitel“ auf dem Gerät ansehen (Desktop und iPhone/iPad, hoch und quer): Ist jetzt klar, was „So lassen / Kleiner machen“ bedeutet? Sind „Erweitert“ (Titel, Sprache, Forced, startet automatisch) und die Tipps verständlich? Eine echte Datei mit mehreren Sprachen ausprobieren, auch „Kleiner machen“ (Zielbitrate stimmt mit der Anzeige?) und danach in Plex neu analysieren
 - [ ] 0.0.10: „Gewonnener Platz“ in Audio und Video getrennt ansehen; „Zurücksetzen“ in einer Welt (Rückfrage, andere Welt bleibt)
 - [ ] 0.0.10: Nach dem Update einmal den Hinweis „Neu in Version 0.0.10“ sehen (nur einmal, auf anderen Geräten nicht noch einmal); „Alle ansehen“ und Fußzeile „Neuigkeiten“ öffnen die Liste
@@ -33,6 +35,7 @@
 - [ ] Linux-App (Fedora KDE) mit eigener Oberfläche
 
 ## Erledigt
+- [x] 0.1.1: **Windows-App (Variante B) auf `dev`**: eine `p5converter-setup.exe` (Programm + ffmpeg + WebView2-Starter), eigenes App-Fenster mit der Weboberfläche, automatische Hardware-Erkennung, Installation ohne Admin, CI baut/testet unter Windows und veröffentlicht `dev-latest`
 - [x] 0.1.0: **Branch-Modell wie p5assets**: Feature-Branch → `dev` (Image `:dev`, Vorlage `p5converter-dev.xml`) → `main` (Image `:latest`); Pre-Releases `v0.1.0` und `v0.1.0-dev`
 - [x] 0.0.10: **Audio & Untertitel verständlich** (Variante C): Klartext-Karten, „So lassen/Kleiner machen“, „Erweitert“, Tipps-Assistent, vorausgefüllte Empfehlungen mit angezeigter Zielbitrate, korrigierter Info-Text (5.1 = 3×)
 - [x] 0.0.10: **Gewonnener Platz strikt je Welt** + Zurücksetzen je Welt (mit Rückfrage)

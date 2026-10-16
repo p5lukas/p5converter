@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/p5lukas/p5converter/internal/proc"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -59,7 +60,7 @@ func Locate(overrideDir string) (Tools, error) {
 }
 
 func (t Tools) Version() string {
-	out, err := exec.Command(t.FFmpeg, "-version").Output()
+	out, err := proc.Command(t.FFmpeg, "-version").Output()
 	if err != nil {
 		return ""
 	}
@@ -70,7 +71,7 @@ func (t Tools) Version() string {
 // Encoders returns the set of encoder names compiled into ffmpeg.
 func (t Tools) Encoders() map[string]bool {
 	set := map[string]bool{}
-	out, err := exec.Command(t.FFmpeg, "-hide_banner", "-encoders").Output()
+	out, err := proc.Command(t.FFmpeg, "-hide_banner", "-encoders").Output()
 	if err != nil {
 		return set
 	}
@@ -152,7 +153,7 @@ func lowerKeys(m map[string]string) map[string]string {
 }
 
 func (t Tools) Probe(ctx context.Context, path string) (*Info, error) {
-	cmd := exec.CommandContext(ctx, t.FFprobe, "-v", "error", "-print_format", "json", "-show_format", "-show_streams", path)
+	cmd := proc.CommandContext(ctx, t.FFprobe, "-v", "error", "-print_format", "json", "-show_format", "-show_streams", path)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	out, err := cmd.Output()
