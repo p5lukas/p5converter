@@ -15,7 +15,8 @@ Gleicher Aufbau wie bei **p5assets** (Matrix-Regen, Poster-Rahmen, „p5“); da
 * Die Oberfläche öffnet in einem **eigenen Fenster** (Microsoft Edge WebView2, in Windows 11 und aktuellem Windows 10 schon vorhanden; sonst richtet der Installer es ein) und sieht genauso aus wie im Browser.
 * **Hardware wird automatisch erkannt:** Intel Quick Sync, NVIDIA NVENC und AMD AMF (jeweils mit aktuellem Grafiktreiber), sonst rechnet die CPU.
 * Einstellungen und Logs liegen in `%APPDATA%\p5converter`.
-* Noch nicht dabei: Symbol im Infobereich (Tray); Schließen des Fensters beendet das Programm samt laufender Aufträge.
+* **Symbol im Infobereich (Tray):** Das Schließen-Kreuz versteckt nur das Fenster, p5converter und laufende Aufträge laufen weiter. Klick auf das Symbol (oder ein zweiter Start) zeigt das Fenster wieder; **Beenden** über das Symbol oder den Knopf „Beenden“ in der Oberfläche.
+* Die Datei liegt immer in der laufenden Vorabversion `dev-latest` (nicht in `v0.1.0-dev`, das sind die Docker-Stände); bei einer neuen Versions-Vorabversion vom Branch `dev` hängt sie zusätzlich dort als Anhang.
 
 ## Kanäle: `:latest` und `:dev`
 | Image | Branch | Wofür |

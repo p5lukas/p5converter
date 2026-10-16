@@ -139,6 +139,16 @@ jobs:
           "Laufwerke: $($fs.drives -join ' ')"
           if (-not $fs.drives -or $fs.drives.Count -lt 1) { throw "Keine Laufwerke gemeldet" }
           Stop-Process -Id $p.Id -Force
+      - name: GUI-Test unter Windows (Fenster, Oberfläche, Schließen versteckt, zweiter Start)
+        continue-on-error: true
+        shell: pwsh
+        run: pwsh windows/gui-test.ps1 "$PWD\build" "$PWD\gui-out"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gui-test
+          path: gui-out
+          if-no-files-found: ignore
       - name: Go-Tests unter Windows (nur Information)
         continue-on-error: true
         shell: pwsh
@@ -196,3 +206,17 @@ jobs:
           prerelease: ${{ startsWith(inputs.version != '' && format('v{0}', inputs.version) || github.ref_name, 'v0.') }}
           files: |
             unraid/p5converter.xml
+
+  # Zu einer Versions-Vorabversion vom Branch dev (z. B. v0.2.0-dev) kommt die Windows-setup.exe als Anhang dazu
+  release-windows:
+    needs: [windows, release]
+    if: github.ref == 'refs/heads/dev' && github.event_name == 'workflow_dispatch' && inputs.version != ''
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: p5converter-setup
+          path: dl
+      - run: gh release upload "v${{ inputs.version }}" dl/p5converter-setup.exe -R ${{ github.repository }} --clobber

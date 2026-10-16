@@ -135,7 +135,7 @@ func main() {
 	}()
 	if !*noBrowser {
 		// Windows: eigenes App-Fenster (WebView2); endet das Programm, wenn das Fenster geschlossen wird.
-		if desktopWindow(url) {
+		if desktopWindow(url, func() int { return busyJobs(srv) }) {
 			os.Exit(0)
 		}
 		time.Sleep(400 * time.Millisecond)
@@ -287,4 +287,15 @@ func existingRoots(list string) []string {
 		return all
 	}
 	return found
+}
+
+// busyJobs zählt laufende und wartende Aufträge (für die Rückfrage beim Beenden).
+func busyJobs(srv *server.Server) int {
+	n := 0
+	for _, j := range srv.Jobs.Snapshot() {
+		if j.Status == "running" || j.Status == "queued" {
+			n++
+		}
+	}
+	return n
 }
