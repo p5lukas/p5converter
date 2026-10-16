@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>p5converter</Name>
+  <Repository>ghcr.io/p5lukas/p5converter:dev</Repository>
+  <Registry>https://github.com/p5lukas/p5converter/pkgs/container/p5converter</Registry>
+  <Network>bridge</Network>
+  <Privileged>false</Privileged>
+  <TemplateURL>https://raw.githubusercontent.com/p5lukas/p5converter/dev/unraid/p5converter-dev.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/p5lukas/p5converter/dev/unraid/icon.png</Icon>
+  <Support>https://github.com/p5lukas/p5converter/issues</Support>
+  <Project>https://github.com/p5lukas/p5converter</Project>
+  <Overview>TEST-VERSION (:dev): neue Funktionen zuerst hier, danach in :latest.[br][br]Audio- und Video-Konverter mit Web-Oberfläche (ffmpeg). Audio wie SoundConverter, Video nach MKV mit Auflösung, CRF, 10 Bit, x264/x265/AV1 und GPU-Encoding (Intel Quick Sync, AMD und Intel per VAAPI, NVIDIA NVENC).[br][br]GPU einrichten (alles optional, ohne GPU läuft es auf der CPU):[br]• Intel (Quick Sync) und AMD: nichts weiter tun – das Gerät /dev/dri ist unten schon eingetragen. Hat der Server keine Intel/AMD-Grafik, den Wert dort löschen.[br]• NVIDIA: das Plugin „Nvidia-Driver“ installieren, dann hier oben unter „Erweiterte Ansicht“ (Advanced View) bei „Extra Parameters“ genau --runtime=nvidia eintragen. NVIDIA_VISIBLE_DEVICES=all und NVIDIA_DRIVER_CAPABILITIES=compute,video,utility sind im Image schon voreingestellt. Das ist absichtlich nicht vorausgefüllt: Ohne das Plugin würde der Container sonst gar nicht starten.[br]Ob die GPU erkannt wurde, zeigt p5converter unter Einstellungen → Hardware.</Overview>
+  <Category>MediaApp:Video MediaApp:Music Tools:</Category>
+  <WebUI>http://[IP]:[PORT:8787]/</WebUI>
+  <ExtraParams/>
+  <PostArgs/>
+  <Config Name="WebUI-Port" Target="8787" Default="8787" Mode="tcp" Description="Port der Weboberfläche" Type="Port" Display="always" Required="true">8787</Config>
+  <Config Name="Audio 1 (optional)" Target="/audio1" Default="" Mode="rw" Description="Musik-Ordner 1 (optional). Leer lassen, wenn nicht gebraucht. Lese-/Schreibzugriff, falls Ergebnisse daneben gespeichert oder Quellen gelöscht werden sollen." Type="Path" Display="always" Required="false"/>
+  <Config Name="Audio 2 (optional)" Target="/audio2" Default="" Mode="rw" Description="Musik-Ordner 2 (optional). Leer lassen, wenn nicht gebraucht. Lese-/Schreibzugriff, falls Ergebnisse daneben gespeichert oder Quellen gelöscht werden sollen." Type="Path" Display="always" Required="false"/>
+  <Config Name="Video 1 (optional)" Target="/video1" Default="" Mode="rw" Description="Video-Ordner 1 (optional). Leer lassen, wenn nicht gebraucht. Lese-/Schreibzugriff, falls Ergebnisse daneben gespeichert oder Quellen gelöscht werden sollen." Type="Path" Display="always" Required="false"/>
+  <Config Name="Video 2 (optional)" Target="/video2" Default="" Mode="rw" Description="Video-Ordner 2 (optional). Leer lassen, wenn nicht gebraucht. Lese-/Schreibzugriff, falls Ergebnisse daneben gespeichert oder Quellen gelöscht werden sollen." Type="Path" Display="always" Required="false"/>
+  <Config Name="Video 3 (optional)" Target="/video3" Default="" Mode="rw" Description="Video-Ordner 3 (optional). Leer lassen, wenn nicht gebraucht. Lese-/Schreibzugriff, falls Ergebnisse daneben gespeichert oder Quellen gelöscht werden sollen." Type="Path" Display="always" Required="false"/>
+  <Config Name="Video 4 (optional)" Target="/video4" Default="" Mode="rw" Description="Video-Ordner 4 (optional). Leer lassen, wenn nicht gebraucht. Lese-/Schreibzugriff, falls Ergebnisse daneben gespeichert oder Quellen gelöscht werden sollen." Type="Path" Display="always" Required="false"/>
+  <Config Name="Ausgabe" Target="/output" Default="/mnt/user/appdata/p5converter/output" Mode="rw" Description="Zielordner für fertige Dateien (empfohlen)" Type="Path" Display="always" Required="true">/mnt/user/appdata/p5converter/output</Config>
+  <Config Name="Einstellungen" Target="/config" Default="/mnt/user/appdata/p5converter/config" Mode="rw" Description="Speichert Einstellungen, Voreinstellungen, Farben und die Anmeldung dauerhaft" Type="Path" Display="always" Required="true">/mnt/user/appdata/p5converter/config</Config>
+  <Config Name="Intel/AMD Grafik (/dev/dri)" Target="" Default="/dev/dri" Mode="" Description="Für Intel Quick Sync und für Intel/AMD per VAAPI. Schon richtig eingetragen – nichts ändern. Nur löschen, wenn der Server keine Intel/AMD-Grafik hat (NVIDIA braucht diesen Eintrag nicht)." Type="Device" Display="always" Required="false">/dev/dri</Config>
+  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="Benutzer-ID (Unraid: 99 = nobody)" Type="Variable" Display="advanced" Required="false">99</Config>
+  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Gruppen-ID (Unraid: 100 = users)" Type="Variable" Display="advanced" Required="false">100</Config>
+  <Config Name="Parallele Jobs" Target="P5_JOBS" Default="1" Mode="" Description="Gleichzeitige Konvertierungen" Type="Variable" Display="advanced" Required="false">1</Config>
+  <Config Name="NVIDIA GPU" Target="NVIDIA_VISIBLE_DEVICES" Default="" Mode="" Description="Nur für NVIDIA. Normalerweise leer lassen (im Image steht schon 'all' = alle GPUs). Wichtig ist etwas anderes: Nvidia-Driver-Plugin installieren und oben bei Extra Parameters --runtime=nvidia eintragen (Erweiterte Ansicht). Nur eine bestimmte GPU nutzen: hier ihre UUID eintragen (Nvidia-Driver-Plugin zeigt sie an)." Type="Variable" Display="advanced" Required="false"/>
+</Container>

@@ -2,7 +2,7 @@ name: build
 
 on:
   push:
-    branches: [main, "claude/**"]
+    branches: [main, dev, "claude/**"]
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
@@ -43,6 +43,7 @@ jobs:
             type=raw,value=${{ inputs.version }},enable=${{ inputs.version != '' }}
             type=ref,event=branch
             type=ref,event=pr
+            # main -> :latest (stabil) · dev -> :dev (Testen) · Tag/Version -> :<version>
       - name: Build image (local) for smoke test
         uses: docker/build-push-action@v6
         with:

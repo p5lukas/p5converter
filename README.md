@@ -10,6 +10,15 @@ Ein einzelnes Go-Programm (nur Standardbibliothek) steuert **ffmpeg** an; das Do
 ## App-Icon
 Gleicher Aufbau wie bei **p5assets** (Matrix-Regen, Poster-Rahmen, „p5“); das Abzeichen unten rechts unterscheidet die Apps: bei p5converter **silberne Audio-CD + blaue Blu-ray** (Audio und Video), bei p5assets ein oranger Komet. Dateien: `web/icon*.png`, `web/apple-touch-icon.png` (iPhone/iPad-Web-App), `unraid/icon.png`; Quelle und Erzeugung: `tools/icons/` (`make_icons.py converter <Ordner>`).
 
+## Kanäle: `:latest` und `:dev`
+| Image | Branch | Wofür |
+|---|---|---|
+| `ghcr.io/p5lukas/p5converter:latest` | `main` | stabil |
+| `ghcr.io/p5lukas/p5converter:dev` | `dev` | Neues zuerst testen (Unraid vorher mit der Vorlage `unraid/p5converter-dev.xml` oder im Container das Image auf `:dev` stellen) |
+| `ghcr.io/p5lukas/p5converter:<Version>` | Tag | feste Version |
+
+Neue Funktionen landen zuerst auf `dev`; nach dem Test geht es nach `main`. Der Build läuft per GitHub Action bei Push auf `dev` bzw. `main`.
+
 ## Installation (Unraid)
 
 1. `unraid/p5converter.xml` nach `/boot/config/plugins/dockerMan/templates-user/` kopieren.

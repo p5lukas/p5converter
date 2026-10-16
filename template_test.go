@@ -9,7 +9,13 @@ import (
 
 // Die Unraid-Vorlage muss gültiges XML sein und die GPU-Anleitung enthalten (Intel/AMD: /dev/dri, NVIDIA: --runtime=nvidia).
 func TestUnraidTemplate(t *testing.T) {
-	b, err := os.ReadFile("unraid/p5converter.xml")
+	for file, image := range map[string]string{"unraid/p5converter.xml": ":latest", "unraid/p5converter-dev.xml": ":dev"} {
+		t.Run(file, func(t *testing.T) { checkTemplate(t, file, image) })
+	}
+}
+
+func checkTemplate(t *testing.T, file, image string) {
+	b, err := os.ReadFile(file)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -21,9 +27,13 @@ func TestUnraidTemplate(t *testing.T) {
 			Type   string `xml:"Type,attr"`
 		} `xml:"Config"`
 		ExtraParams string `xml:"ExtraParams"`
+		Repository  string `xml:"Repository"`
 	}
 	if err := xml.Unmarshal(b, &c); err != nil {
 		t.Fatalf("XML ungültig: %v", err)
+	}
+	if !strings.HasSuffix(c.Repository, image) {
+		t.Errorf("Image %q sollte auf %s enden", c.Repository, image)
 	}
 	for _, w := range []string{"/dev/dri", "--runtime=nvidia", "Nvidia-Driver", "Quick Sync", "AMD"} {
 		if !strings.Contains(c.Overview, w) {
