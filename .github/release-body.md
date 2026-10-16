@@ -24,6 +24,7 @@ docker run -d --name p5converter -p 8787:8787 \
 
 ### Bekannt / ungetestet
 * Software-Encoding (CPU) und Audio sind automatisiert getestet (inkl. Docker-Image-Smoketest in der CI).
-* **GPU-Encoding (QSV/NVENC/VAAPI) wurde noch nicht auf echter Hardware geprüft.** Bitte erste Läufe über „Details“ am Auftrag kontrollieren (zeigt den von ffmpeg bestätigten Encoder und den kompletten Befehl) und Probleme melden.
+* **GPU-Encoding:** Intel Quick Sync und VAAPI sind auf echter Hardware geprüft; **NVIDIA NVENC noch nicht**. Läufe über „Details“ am Auftrag kontrollieren (zeigt den von ffmpeg bestätigten Encoder und den kompletten Befehl) und Probleme melden.
+* **Kanäle:** `:latest` (Branch `main`, stabil) und `:dev` (Branch `dev`, zum Testen; Vorlage `unraid/p5converter-dev.xml`).
 * Keine Windows-/Linux-Desktop-App in diesem Release (geplant, mit eigener Oberfläche).
 * Anmeldung optional (Einstellungen → Anmeldung). Nicht ins Internet stellen.

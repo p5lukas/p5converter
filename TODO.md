@@ -1,7 +1,8 @@
 > Arbeitsregel (Nutzer): Bei „Todo: …“ nur hier eintragen und als Commit `TODO: …` festhalten, nichts umsetzen. Bei „leg los“ alle offenen Punkte umsetzen.
 > Arbeitsregel (Nutzer): Bei jedem „leg los“ einen kleinen Versionssprung machen (Patch, z. B. 0.0.1 → 0.0.2), neuen Abschnitt oben in `CHANGELOG.md` anlegen (Datum, Neu/Geändert/Behoben), alles testen und auf Feature-Branch (und später `dev`) pushen. Tag und Release nur auf ausdrücklichen Wunsch (Tags kann ich nicht pushen).
-> Arbeitsregel (Nutzer): Bei „leg los“ nach grüner CI **direkt nach `main` mergen** (Pull Request, Squash). Ohne „leg los“ nichts mergen.
-> Tags/Releases (Nutzer): nur bei Sprüngen der mittleren Stelle (0.1.0 → 0.2.0 → …), nicht bei Patch-Versionen.
+> Arbeitsregel (Nutzer): Bei „leg los“ nach grüner CI **nach `dev` mergen** (Pull Request, Squash; Image `:dev`, dort testet der Nutzer zuerst). **Nach `main` nur, wenn der Nutzer es sagt** („passt so, nach main“; Pull Request `dev` → `main`, Merge-Commit). Wie bei p5assets.
+> Tags/Releases (Nutzer): nur bei Sprüngen der mittleren Stelle (0.1.0 → 0.2.0 → …), nicht bei Patch-Versionen; je ein Pre-Release von `main` (`vX.Y.Z`) und von `dev` (`vX.Y.Z-dev`).
+> Entscheidung (Nutzer): Die **Windows-App entsteht erstmal nur auf `dev`**.
 > Prüfregel (Nutzer): Bei jeder UI-Änderung immer **alle Ansichten** kontrollieren: Desktop, iPhone/iPad im Browser (Safari) und iPhone/iPad als Web-App (Home-Bildschirm), Hoch- und Querformat. Sandbox hat nur Chromium: Geräte-Emulation + Screenshots; Nicht-Prüfbares im Bericht als „nicht geprüft“ nennen.
 > Entscheidung (Nutzer): Die Test-Last-Regel von p5assets („Testumgebung doppelt so groß wie die echte Welt“) gilt hier **nicht**.
 > Arbeitsregel (Nutzer): Ob die CI grün und das Image `:latest` gebaut ist, sieht der Nutzer selbst unter GitHub → Actions – nicht von selbst melden.
@@ -11,7 +12,7 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
-- [ ] Branch-Modell: **erstmal nur `main`**, bis alles stabil läuft. Auf Zuruf des Nutzers dann wie p5assets: Feature-Branch → `dev` (Image `:dev`) → `main` (Image `:latest`); optional multi-arch (amd64/arm64)
+- [ ] Optional: Image als multi-arch (amd64/arm64) bauen
 
 ## Vom Nutzer zu prüfen (nicht in der Sandbox möglich)
 - [ ] 0.0.10: Schritt „Audio & Untertitel“ auf dem Gerät ansehen (Desktop und iPhone/iPad, hoch und quer): Ist jetzt klar, was „So lassen / Kleiner machen“ bedeutet? Sind „Erweitert“ (Titel, Sprache, Forced, startet automatisch) und die Tipps verständlich? Eine echte Datei mit mehreren Sprachen ausprobieren, auch „Kleiner machen“ (Zielbitrate stimmt mit der Anzeige?) und danach in Plex neu analysieren
@@ -28,10 +29,11 @@
 - [x] Unraid: leere optionale Pfade (Audio/Video) und neuer Pfad `/config` (Rechte) ausprobieren (Nutzer: passt)
 
 ## Später
-- [ ] Windows-App mit eigener Oberfläche
+- [ ] Windows-App mit eigener Oberfläche (zuerst nur auf `dev`)
 - [ ] Linux-App (Fedora KDE) mit eigener Oberfläche
 
 ## Erledigt
+- [x] 0.1.0: **Branch-Modell wie p5assets**: Feature-Branch → `dev` (Image `:dev`, Vorlage `p5converter-dev.xml`) → `main` (Image `:latest`); Pre-Releases `v0.1.0` und `v0.1.0-dev`
 - [x] 0.0.10: **Audio & Untertitel verständlich** (Variante C): Klartext-Karten, „So lassen/Kleiner machen“, „Erweitert“, Tipps-Assistent, vorausgefüllte Empfehlungen mit angezeigter Zielbitrate, korrigierter Info-Text (5.1 = 3×)
 - [x] 0.0.10: **Gewonnener Platz strikt je Welt** + Zurücksetzen je Welt (mit Rückfrage)
 - [x] 0.0.10: **Neuigkeiten wie bei p5assets** (Hinweis einmal pro Version, Merker auf dem Server, Punkt entfällt)

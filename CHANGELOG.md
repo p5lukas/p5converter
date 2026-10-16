@@ -1,5 +1,16 @@
 # Änderungen
 
+## 0.1.0 – 2026-10-16
+
+**Erste getestete Vorabversion (Pre-Release)** – Quick Sync und VAAPI laufen auf echter Hardware; Ablauf, Spuren-Editor, Statistik, Neuigkeiten und Oberfläche sind abgenommen.
+
+**Neu**
+- **Zwei Kanäle wie bei p5assets**: Image `:dev` (Branch `dev`, zum Testen) und `:latest` (Branch `main`, stabil); eigene Unraid-Vorlage `unraid/p5converter-dev.xml` für `:dev`
+- Neue Funktionen kommen zuerst auf `dev` und werden erst nach Freigabe nach `main` übernommen
+
+**Geändert**
+- Version 0.1.0 (Sprung der mittleren Stelle) → Tag und Pre-Release; zusätzlich Pre-Release `v0.1.0-dev` vom Branch `dev`
+
 ## 0.0.10 – 2026-10-16
 
 **Neu**
