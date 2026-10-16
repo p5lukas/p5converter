@@ -435,7 +435,7 @@ button.danger{color:var(--bad);border-color:#ff4d5e66}
 
 /* ===== 0.0.9: Spuren-Editor, Hardware-Kachel, Intel-Status, Zurücksetzen, Ziehen zum Aktualisieren ===== */
 .newsdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--bad);box-shadow:0 0 6px var(--bad);margin-left:5px;vertical-align:middle}
-#existsHint{display:block;margin-top:6px;line-height:1.4}
+#existsHint{display:block;margin-top:6px;line-height:1.4;text-transform:none;letter-spacing:0}
 #existsHint.warn{color:var(--warn)}
 .presetnote{flex-basis:100%}
 #resetAll .ic{width:1.1em;height:1.1em}
@@ -495,5 +495,5 @@ details.why p{margin:4px 0 2px;line-height:1.45}
 /* kleine Rückfrage: auch auf dem Handy nur so hoch wie nötig, mittig */
 @media(max-width:700px),(max-height:520px){
   #resetDlg,#resetDlg .dlg{height:auto}
-  #resetDlg{margin:auto;width:min(94vw,440px);max-width:94vw;border:1px solid var(--accent);border-radius:10px}
+  #resetDlg{margin:auto;width:min(94vw,440px);max-width:94vw;height:fit-content;max-height:90dvh;border:1px solid var(--accent);border-radius:10px}
 }
