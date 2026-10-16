@@ -7,7 +7,7 @@ import (
 )
 
 func TestQSVVariantsIncludeVaapiChild(t *testing.T) {
-	v := qsvVariants([]string{"/dev/dri/renderD128", "/dev/dri/renderD129"})
+	v := qsvVariantsFor("linux", []string{"/dev/dri/renderD128", "/dev/dri/renderD129"})
 	if len(v) != 4 || v[0].init != nil || v[1].name != "qsv=hw" {
 		t.Fatalf("Varianten: %+v", v)
 	}
@@ -15,8 +15,13 @@ func TestQSVVariantsIncludeVaapiChild(t *testing.T) {
 	if !reflect.DeepEqual(v[3].init, want) {
 		t.Errorf("init = %v", v[3].init)
 	}
-	if len(qsvVariants(nil)) != 2 {
+	if len(qsvVariantsFor("linux", nil)) != 2 {
 		t.Error("ohne Render-Knoten nur die beiden einfachen Varianten")
+	}
+	// Windows: zusätzlich Direct3D 11 und DXVA2 (kein VAAPI-Gerät)
+	w := qsvVariantsFor("windows", nil)
+	if len(w) != 4 || !strings.Contains(strings.Join(w[2].init, " "), "d3d11va") || !strings.Contains(strings.Join(w[3].init, " "), "dxva2") {
+		t.Errorf("Windows-Varianten: %+v", w)
 	}
 }
 

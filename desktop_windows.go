@@ -48,7 +48,12 @@ func setupDesktop() {
 // bringToFront holt das Fenster eines schon laufenden p5converter nach vorn (zweiter Start). false = kein Fenster gefunden.
 func bringToFront() bool {
 	title, _ := windows.UTF16PtrFromString(windowTitle)
-	hwnd, _, _ := user32.NewProc("FindWindowW").Call(0, uintptr(unsafe.Pointer(title)))
+	class, _ := windows.UTF16PtrFromString("webview") // Fensterklasse der WebView2-Bibliothek
+	find := user32.NewProc("FindWindowW")
+	hwnd, _, _ := find.Call(0, uintptr(unsafe.Pointer(title)))
+	if hwnd == 0 {
+		hwnd, _, _ = find.Call(uintptr(unsafe.Pointer(class)), 0)
+	}
 	if hwnd == 0 {
 		return false
 	}

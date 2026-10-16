@@ -24,6 +24,10 @@ try {
   # 1) Fenster erscheint
   $h = [IntPtr]::Zero
   for ($i = 0; $i -lt 40 -and $h -eq [IntPtr]::Zero; $i++) { Start-Sleep 1; $h = [W32]::FindWindowW($null, 'p5converter') }
+  $res.findWindowTitel = ($h -ne [IntPtr]::Zero)
+  $p.Refresh(); $res.prozessFensterHandle = $p.MainWindowHandle.ToInt64(); $res.prozessFensterTitel = $p.MainWindowTitle
+  if ($h -eq [IntPtr]::Zero -and $p.MainWindowHandle -ne [IntPtr]::Zero) { $h = $p.MainWindowHandle }  # Ersatz: Handle des Prozesses
+  $c = [W32]::FindWindowW('webview', $null); $res.findWindowKlasse = ($c -ne [IntPtr]::Zero)
   $res.fensterGefunden = ($h -ne [IntPtr]::Zero)
   if (-not $res.fensterGefunden) { throw 'Kein Fenster "p5converter" gefunden (WebView2 fehlt oder kein Desktop?)' }
   $res.fensterSichtbar = [W32]::IsWindowVisible($h)
