@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 FROM golang:1.24 AS build
 WORKDIR /src
-COPY go.mod ./
+COPY go.mod go.sum ./
 COPY . .
 ARG P5_TAG=
 ARG P5_BRANCH=

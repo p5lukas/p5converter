@@ -3,10 +3,12 @@ package hw
 
 import (
 	"context"
+	"github.com/p5lukas/p5converter/internal/proc"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -93,6 +95,10 @@ type variant struct {
 // newer ones (Gen 12+) oneVPL; which one finds the GPU can depend on how the device is opened, so several are tried.
 func qsvVariants(nodes []string) []variant {
 	v := []variant{{"automatisch", nil}, {"qsv=hw", []string{"-init_hw_device", "qsv=hw"}}}
+	if runtime.GOOS == "windows" { // Windows: Quick Sync läuft über Direct3D 11 (neuere Chips) oder DXVA2 (ältere)
+		v = append(v, variant{"über Direct3D 11", []string{"-init_hw_device", "qsv=hw:hw_any,child_device_type=d3d11va"}},
+			variant{"über DXVA2", []string{"-init_hw_device", "qsv=hw:hw_any,child_device_type=dxva2"}})
+	}
 	for _, n := range nodes {
 		v = append(v, variant{"über VAAPI-Gerät " + n, []string{"-init_hw_device", "vaapi=va:" + n, "-init_hw_device", "qsv=hw@va"}})
 	}
@@ -259,7 +265,7 @@ func (d *Detector) test(backend, device, encoder string, ten bool, init []string
 		vf += ",hwupload"
 	}
 	args = append(args, "-vf", vf, "-frames:v", "5", "-c:v", encoder, "-f", "null", "-")
-	out, err := exec.CommandContext(ctx, d.tools.FFmpeg, args...).CombinedOutput()
+	out, err := proc.CommandContext(ctx, d.tools.FFmpeg, args...).CombinedOutput()
 	if err != nil {
 		var keep []string
 		for _, l := range strings.Split(strings.TrimSpace(string(out)), "\n") {
@@ -322,7 +328,7 @@ func collectVainfo(nodes []string) []Vainfo {
 	var out []Vainfo
 	for _, n := range nodes {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		b, err := exec.CommandContext(ctx, p, "--display", "drm", "--device", n).CombinedOutput()
+		b, err := proc.CommandContext(ctx, p, "--display", "drm", "--device", n).CombinedOutput()
 		cancel()
 		v := parseVainfo(n, string(b))
 		if err != nil && v.Driver == "" && v.Error == "" {

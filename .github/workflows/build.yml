@@ -80,6 +80,107 @@ jobs:
             P5_COMMIT=${{ github.sha }}
           cache-from: type=gha
 
+  # Windows-App: p5converter-setup.exe (EINE Datei mit Programm, ffmpeg und WebView2-Starter). Veröffentlicht wird sie nur vom Branch dev
+  # als laufende Vorabversion "dev-latest" (feste Adresse, wird nach jedem Push auf dev ersetzt); sonst nur Bau, Test und Artefakt.
+  windows:
+    needs: test
+    runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: "1.24" }
+      - name: Version bestimmen
+        shell: pwsh
+        run: |
+          $base = (Select-String -Path internal/version/version.go -Pattern 'Base = "([^"]+)"').Matches[0].Groups[1].Value
+          "BASE=$base" | Out-File -FilePath $env:GITHUB_ENV -Append
+          $nums = ($base -split '[.-]')[0..2] -join '.'
+          "NUMVER=$nums.0" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Windows-Ressourcen (Symbol, Manifest, Version)
+        shell: pwsh
+        run: |
+          go install github.com/tc-hib/go-winres@latest
+          go-winres make --in windows/winres/winres.json --out rsrc --file-version "$env:NUMVER" --product-version "$env:NUMVER"
+      - name: Programm bauen (ohne Konsole, ohne cgo)
+        shell: pwsh
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          New-Item -ItemType Directory -Force build | Out-Null
+          go vet ./...
+          go build -trimpath -ldflags "-s -w -H=windowsgui -X github.com/p5lukas/p5converter/internal/version.Branch=${{ github.ref_name }} -X github.com/p5lukas/p5converter/internal/version.Commit=${{ github.sha }}" -o build/p5converter.exe .
+      - name: ffmpeg (statisch, mit NVENC/Quick Sync/AMF) laden
+        shell: pwsh
+        run: |
+          $assets = gh release view latest -R BtbN/FFmpeg-Builds --json assets --jq '.assets[].name'
+          $pick = $assets | Where-Object { $_ -match '^ffmpeg-n[0-9.]+-latest-win64-gpl-[0-9.]+\.zip$' } | Sort-Object { [version](($_ -replace '^ffmpeg-n','') -replace '-latest.*','') } -Descending | Select-Object -First 1
+          if (-not $pick) { $pick = 'ffmpeg-master-latest-win64-gpl.zip' }
+          "ffmpeg-Paket: $pick" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          gh release download latest -R BtbN/FFmpeg-Builds -p $pick -O ffmpeg.zip
+          Expand-Archive ffmpeg.zip -DestinationPath ffmpeg-x
+          $bin = (Get-ChildItem ffmpeg-x -Recurse -Filter ffmpeg.exe | Select-Object -First 1).DirectoryName
+          Copy-Item "$bin\ffmpeg.exe","$bin\ffprobe.exe" build\
+          Copy-Item windows\ffmpeg-LICENSE.txt build\
+          Invoke-WebRequest "https://go.microsoft.com/fwlink/p/?LinkId=2124703" -OutFile build\MicrosoftEdgeWebview2Setup.exe
+      - name: Server-Test unter Windows (echtes Windows, ffmpeg, Hardware-Erkennung)
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath build\p5converter.exe -ArgumentList "--no-browser","--listen","127.0.0.1:8787","--config","$env:RUNNER_TEMP\cfg","--ffmpeg-dir","build" -PassThru
+          $ok = $false
+          for ($i=0; $i -lt 40; $i++) { try { $r = Invoke-RestMethod http://127.0.0.1:8787/api/info; $ok = $true; break } catch { Start-Sleep 1 } }
+          if (-not $ok) { throw "Server startet nicht" }
+          for ($i=0; $i -lt 60; $i++) { $r = Invoke-RestMethod http://127.0.0.1:8787/api/info; if ($r.hw.done) { break }; Start-Sleep 1 }
+          "os=$($r.os) version=$($r.version)"
+          $r.hw.backends | ForEach-Object { "{0}: {1} {2}" -f $_.id, (($_.codecs.PSObject.Properties | Where-Object Value | ForEach-Object Name) -join ','), $_.detail }
+          if (-not $r.hw.backends[0].codecs.hevc) { throw "CPU-HEVC fehlt" }
+          $fs = Invoke-RestMethod "http://127.0.0.1:8787/api/fs?path="
+          "Laufwerke: $($fs.drives -join ' ')"
+          if (-not $fs.drives -or $fs.drives.Count -lt 1) { throw "Keine Laufwerke gemeldet" }
+          Stop-Process -Id $p.Id -Force
+      - name: Go-Tests unter Windows (nur Information)
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $env:PATH = "$PWD\build;$env:PATH"
+          go test ./...
+      - name: Installer bauen
+        shell: pwsh
+        run: |
+          if (-not (Get-Command iscc -ErrorAction SilentlyContinue) -and -not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
+          $iscc = if (Get-Command iscc -ErrorAction SilentlyContinue) { 'iscc' } else { "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" }
+          & $iscc "/DAppVersion=$env:BASE" "/DSourceDir=$PWD\build" windows\p5converter.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup fehlgeschlagen" }
+          Get-ChildItem build\out
+      - name: Installer testen (still installieren, starten, deinstallieren)
+        shell: pwsh
+        run: |
+          $dir = "$env:RUNNER_TEMP\p5inst"
+          Start-Process -FilePath build\out\p5converter-setup.exe -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=$dir","/TASKS=" -Wait
+          foreach ($f in 'p5converter.exe','ffmpeg.exe','ffprobe.exe') { if (-not (Test-Path "$dir\$f")) { throw "$f fehlt nach der Installation" } }
+          & "$dir\p5converter.exe" --version
+          Start-Process -FilePath "$dir\unins000.exe" -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -Wait
+          Start-Sleep 2
+          if (Test-Path "$dir\p5converter.exe") { throw "Deinstallation hat das Programm nicht entfernt" }
+      - name: Größen
+        shell: pwsh
+        run: |
+          $rows = Get-ChildItem build\out\*.exe, build\*.exe | ForEach-Object { "| {0} | {1:N1} MB |" -f $_.Name, ($_.Length/1MB) }
+          "### Größen`n| Datei | Größe |`n|---|---|`n" + ($rows -join "`n") | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p5converter-setup
+          path: build/out/p5converter-setup.exe
+          if-no-files-found: error
+      - name: Vorabversion "dev-latest" aktualisieren (nur Branch dev)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+        shell: pwsh
+        run: |
+          gh release delete dev-latest -R ${{ github.repository }} --cleanup-tag -y 2>$null
+          $notes = "Windows-App (Test-Version vom Branch dev, Stand $($env:BASE), Commit ${{ github.sha }}).`n`nEINE Datei: p5converter-setup.exe laden, starten (Windows meldet einmal „Unbekannter Herausgeber“: Weitere Informationen → Trotzdem ausführen), durchklicken, fertig. Enthält Programm, ffmpeg und alles Nötige; Hardware (Intel Quick Sync, NVIDIA, AMD) wird automatisch erkannt.`n`nDiese Vorabversion wird bei jedem Update von dev ersetzt."
+          gh release create dev-latest build/out/p5converter-setup.exe -R ${{ github.repository }} --target ${{ github.sha }} --prerelease --title "p5converter Windows (dev-latest)" --notes $notes
+
   release:
     needs: docker
     if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.version != '')

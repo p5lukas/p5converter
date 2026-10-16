@@ -1,5 +1,17 @@
 # Änderungen
 
+## 0.1.1 – 2026-10-16
+
+**Neu (nur Branch `dev`)**
+- **Windows-App** (Variante B): `p5converter-setup.exe` – **eine einzige Datei** mit Programm, ffmpeg und Installer; die Weboberfläche läuft in einem **eigenen App-Fenster** (Microsoft Edge WebView2, gleiches Aussehen wie im Browser), eigenes Programmsymbol, Installation nur für den Benutzer ohne Administrator-Abfrage (Startmenü, optional Desktop-Symbol und Autostart), die WebView2-Komponente wird nur bei Fehlen nachinstalliert
+- Hardware wird automatisch erkannt (Intel Quick Sync, NVIDIA NVENC, AMD AMF per echtem Test-Encode; für Quick Sync zusätzliche Windows-Startvarianten über Direct3D 11/DXVA2)
+- Links nach außen (z. B. GitHub) öffnen im Standardbrowser; ein zweiter Start holt das vorhandene Fenster nach vorn; beim Beenden werden laufende ffmpeg-Prozesse mit beendet
+- Die CI baut den Installer auf Windows, testet Server, Hardware-Erkennung und Laufwerksliste unter echtem Windows sowie Installation und Deinstallation und veröffentlicht die Datei als laufende Vorabversion **`dev-latest`** (nur vom Branch `dev`)
+- Einstellungen → Hardware: Hilfetext für Windows
+
+**Geändert**
+- Hilfsprogramme (ffmpeg, ffprobe, …) starten unter Windows ohne aufblitzendes Konsolenfenster
+
 ## 0.1.0 – 2026-10-16
 
 **Erste getestete Vorabversion (Pre-Release)** – Quick Sync und VAAPI laufen auf echter Hardware; Ablauf, Spuren-Editor, Statistik, Neuigkeiten und Oberfläche sind abgenommen.

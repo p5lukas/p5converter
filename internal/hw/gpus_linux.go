@@ -1,6 +1,7 @@
 package hw
 
 import (
+	"github.com/p5lukas/p5converter/internal/proc"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,7 +11,7 @@ import (
 func listGPUs() []string {
 	var out []string
 	if p, err := exec.LookPath("nvidia-smi"); err == nil {
-		if b, err := exec.Command(p, "--query-gpu=name", "--format=csv,noheader").Output(); err == nil {
+		if b, err := proc.Command(p, "--query-gpu=name", "--format=csv,noheader").Output(); err == nil {
 			for _, l := range strings.Split(strings.TrimSpace(string(b)), "\n") {
 				if l = strings.TrimSpace(l); l != "" {
 					out = append(out, "NVIDIA "+strings.TrimPrefix(l, "NVIDIA "))
@@ -34,7 +35,7 @@ func listGPUs() []string {
 		}
 		name := v + " GPU"
 		if lp, err := exec.LookPath("lspci"); err == nil && slot != "" {
-			if b, err := exec.Command(lp, "-mm", "-s", slot).Output(); err == nil {
+			if b, err := proc.Command(lp, "-mm", "-s", slot).Output(); err == nil {
 				f := strings.Split(string(b), "\"")
 				if len(f) >= 6 {
 					name = f[3] + " " + f[5]

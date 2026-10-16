@@ -2,7 +2,7 @@ package hw
 
 import (
 	"encoding/csv"
-	"os/exec"
+	"github.com/p5lukas/p5converter/internal/proc"
 	"strconv"
 	"strings"
 )
@@ -12,7 +12,7 @@ type samplerState struct{}
 // sample uses typeperf (ships with Windows): GPU engine counters per engine type.
 func (s *Sampler) sample() Stats {
 	out := Stats{CPU: -1}
-	b, err := exec.Command("typeperf", `\GPU Engine(*)\Utilization Percentage`, `\Processor(_Total)\% Processor Time`, "-sc", "1").Output()
+	b, err := proc.Command("typeperf", `\GPU Engine(*)\Utilization Percentage`, `\Processor(_Total)\% Processor Time`, "-sc", "1").Output()
 	if err != nil {
 		return out
 	}

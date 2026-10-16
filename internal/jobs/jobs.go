@@ -6,9 +6,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/p5lukas/p5converter/internal/proc"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -536,7 +536,7 @@ func (m *Manager) run(j *Job) {
 }
 
 func (m *Manager) exec(ctx context.Context, j *Job, args []string, duration float64) error {
-	cmd := exec.CommandContext(ctx, m.tools.FFmpeg, args...)
+	cmd := proc.CommandContext(ctx, m.tools.FFmpeg, args...)
 	m.update(j, func() { j.Error = "" })
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()

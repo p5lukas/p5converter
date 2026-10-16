@@ -1,0 +1,3 @@
+ffmpeg ist unter der GNU GPL v3 lizenziert (https://www.gnu.org/licenses/gpl-3.0.html).
+Quelle und Lizenzdetails dieser Build-Variante: https://github.com/BtbN/FFmpeg-Builds
+Der Quellcode von FFmpeg: https://ffmpeg.org/download.html

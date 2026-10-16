@@ -10,6 +10,13 @@ Ein einzelnes Go-Programm (nur Standardbibliothek) steuert **ffmpeg** an; das Do
 ## App-Icon
 Gleicher Aufbau wie bei **p5assets** (Matrix-Regen, Poster-Rahmen, „p5“); das Abzeichen unten rechts unterscheidet die Apps: bei p5converter **silberne Audio-CD + blaue Blu-ray** (Audio und Video), bei p5assets ein oranger Komet. Dateien: `web/icon*.png`, `web/apple-touch-icon.png` (iPhone/iPad-Web-App), `unraid/icon.png`; Quelle und Erzeugung: `tools/icons/` (`make_icons.py converter <Ordner>`).
 
+## Windows (Test auf `dev`)
+**Eine Datei:** `p5converter-setup.exe` aus der Vorabversion [`dev-latest`](https://github.com/p5lukas/p5converter/releases/tag/dev-latest) laden und starten. Windows meldet beim ersten Start einmal „Unbekannter Herausgeber“ (die Datei ist nicht mit einem Zertifikat signiert): **Weitere Informationen → Trotzdem ausführen**. Danach durchklicken – fertig. Der Installer richtet sich nur für dein Konto ein (keine Administrator-Abfrage), enthält Programm und ffmpeg und legt ein Startmenü-Symbol an (Desktop-Symbol und Autostart optional).
+* Die Oberfläche öffnet in einem **eigenen Fenster** (Microsoft Edge WebView2, in Windows 11 und aktuellem Windows 10 schon vorhanden; sonst richtet der Installer es ein) und sieht genauso aus wie im Browser.
+* **Hardware wird automatisch erkannt:** Intel Quick Sync, NVIDIA NVENC und AMD AMF (jeweils mit aktuellem Grafiktreiber), sonst rechnet die CPU.
+* Einstellungen und Logs liegen in `%APPDATA%\p5converter`.
+* Noch nicht dabei: Symbol im Infobereich (Tray); Schließen des Fensters beendet das Programm samt laufender Aufträge.
+
 ## Kanäle: `:latest` und `:dev`
 | Image | Branch | Wofür |
 |---|---|---|

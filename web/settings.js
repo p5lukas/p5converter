@@ -306,9 +306,13 @@ function pageHardware() {
     row('Hardware-Decoding', check(c.hwDecode, v => saveCfg(x => { x.hwDecode = v; }), 'Standardmäßig nutzen'), 'vHwDec'),
     h('h3', {}, 'Erkannte Hardware'), h('div', {}, hw.done ? backends : h('span', {class: 'muted'}, 'Erkennung läuft …')),
     h('details', {class: 'gpuhelp'}, h('summary', {}, 'Wie schalte ich meine GPU frei?'),
-      h('p', {class: 'small'}, h('b', {}, 'Intel (Quick Sync) und AMD (VAAPI): '), 'Das Gerät ', h('code', {}, '/dev/dri'), ' muss an den Container durchgereicht werden. Im Unraid-Template ist es schon eingetragen; bei Docker: ', h('code', {}, '--device /dev/dri'), '.'),
-      h('p', {class: 'small'}, h('b', {}, 'NVIDIA (NVENC): '), 'Nvidia-Treiber auf dem Server (Unraid: Plugin „Nvidia-Driver“) und beim Container ', h('code', {}, '--runtime=nvidia'), ' eintragen (Unraid: Erweiterte Ansicht → „Extra Parameters“). Alles Weitere ist im Image schon voreingestellt.'),
-      h('p', {class: 'small muted'}, 'AMD AMF gibt es nur unter Windows. Danach hier „Neu erkennen“ klicken.')),
+      ...((S.info && S.info.os) === 'windows' ? [
+        h('p', {class: 'small'}, h('b', {}, 'Windows: '), 'Hier musst du nichts einstellen. Intel Quick Sync, NVIDIA NVENC und AMD AMF werden automatisch erkannt, sobald der aktuelle Grafiktreiber des Herstellers installiert ist (Intel, NVIDIA oder AMD).'),
+        h('p', {class: 'small muted'}, 'Wird eine Grafikkarte nicht erkannt: Treiber aktualisieren, danach hier „Neu erkennen“ klicken. Quick Sync gibt es nur bei Intel-Prozessoren mit Grafikeinheit; NVIDIA-NVENC nur bei GeForce/Quadro ab der 600er-Reihe.')]
+      : [
+        h('p', {class: 'small'}, h('b', {}, 'Intel (Quick Sync) und AMD (VAAPI): '), 'Das Gerät ', h('code', {}, '/dev/dri'), ' muss an den Container durchgereicht werden. Im Unraid-Template ist es schon eingetragen; bei Docker: ', h('code', {}, '--device /dev/dri'), '.'),
+        h('p', {class: 'small'}, h('b', {}, 'NVIDIA (NVENC): '), 'Nvidia-Treiber auf dem Server (Unraid: Plugin „Nvidia-Driver“) und beim Container ', h('code', {}, '--runtime=nvidia'), ' eintragen (Unraid: Erweiterte Ansicht → „Extra Parameters“). Alles Weitere ist im Image schon voreingestellt.'),
+        h('p', {class: 'small muted'}, 'AMD AMF gibt es nur unter Windows. Danach hier „Neu erkennen“ klicken.')])),
     h('div', {class: 'btns', style: 'margin-top:12px'}, h('button', {onclick: async () => { await api('/api/hw/detect', {}); S.info.hw.done = false; renderSettings(); setTimeout(refreshInfoUntilDone, 800); }}, 'Neu erkennen'),
       h('button', {class: 'ghost', onclick: () => copyText(diagText)}, icon('clip'), ' Diagnose kopieren')),
     h('details', {class: 'diag'}, h('summary', {}, 'Diagnose (Details der Tests)'),
