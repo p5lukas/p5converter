@@ -19,7 +19,6 @@
 - [ ] **Anzeige „Intel card0 – Grafik aktiv“ verständlicher und schöner** (Nutzer): Die Anzeige springt auf 100 % und der Nutzer versteht nicht, was sie meint. Hintergrund: Der Wert ist die Zeit, in der die Intel-Grafik **nicht schläft** (RC6-Ruhezustand), also die ganze Grafik – nicht die Auslastung von Quick Sync; schon geringe Arbeit weckt sie voll. Varianten: **A** statt Prozent eine klare Statusanzeige („Quick Sync: Leerlauf / aktiv“, abgeleitet aus RC6 und laufenden Aufträgen mit Quick Sync), ohne Zahl; **B** echte Auslastung der Video-Engine über `intel_gpu_top` (Paket `intel-gpu-tools` im Image, braucht Zugriff auf Leistungsdaten/CAP_PERFMON im Container – auf dem i9-9900 auszuprobieren) mit Balken für „Video-Encode“ und „Video-Decode“; **C** beides: Status plus (wenn messbar) Prozentwerte, sonst nur Status. Dazu: Bezeichnung statt „Intel card0 – Grafik aktiv“ z. B. „Intel Quick Sync (UHD 630)“, Erklärung per ⓘ, ruhigere Darstellung (Glättung/Mittelwert, kein Springen). **Entscheidung Nutzer: Variante A** – keine Prozentzahl für die Intel-Grafik, sondern eine klare Statusanzeige „Quick Sync: Leerlauf / aktiv“ (abgeleitet aus RC6 und laufenden Aufträgen mit Quick Sync), Name z. B. „Intel Quick Sync (UHD 630)“, ⓘ-Erklärung, ruhig statt springend (kurze Glättung); `intel_gpu_top` (B) bleibt als späterer Ausbau
 - [ ] Branch-Modell: **erstmal nur `main`**, bis alles stabil läuft. Auf Zuruf des Nutzers dann wie p5assets: Feature-Branch → `dev` (Image `:dev`) → `main` (Image `:latest`); optional multi-arch (amd64/arm64)
 - [ ] Design weiter verfeinern nach Rückmeldung vom Gerät (iPhone/iPad Safari und Web-App)
-- [ ] Quick Sync (Intel Core i9-9900): Wirkung des Fixes in 0.0.3 beim Nutzer bestätigen; bleibt es „nicht nutzbar“, die kopierte Diagnose (Einstellungen → Hardware) auswerten
 
 ## Vom Nutzer zu prüfen (nicht in der Sandbox möglich)
 - [ ] Neues Icon: auf iPhone/iPad die Web-App einmal vom Home-Bildschirm löschen und neu hinzufügen (iOS merkt sich das alte Icon); in Unraid wird das Icon aus `unraid/icon.png` auf `main` geholt (Container ggf. neu anlegen/„Force Update“)
@@ -27,7 +26,7 @@
 - [ ] Neuen Ablauf auf iPhone/iPad ansehen (Reiter-Leiste scrollt, Zurück/Weiter-Leiste unten, Safe-Areas in der Web-App)
 - [ ] Auslastungsanzeige auf dem Unraid-Server ansehen: im Leerlauf soll die CPU kleine, wechselnde Werte zeigen; „Grafik aktiv“ (Intel) im Leerlauf niedrig, beim Konvertieren hoch. Falls der Intel-Wert weiter nicht stimmt: Diagnose (Einstellungen → Hardware) schicken
 - [ ] iPhone/iPad: Safari und Web-App (Safe-Areas, Statusleiste, Pull-to-Refresh) auf dem Gerät ansehen
-- [ ] Quick Sync auf dem i9-9900: mit Hardware-Decoding an muss in der Warteschlange „Schreiben: Quick Sync …“ **und** „Lesen: Quick Sync“ stehen (auch mit Verkleinern/10 Bit); sonst „Details“ (Befehl, Log, Frühere Versuche) schicken
+- [x] Quick Sync auf dem i9-9900: mit Hardware-Decoding an muss in der Warteschlange „Schreiben: Quick Sync …“ **und** „Lesen: Quick Sync“ stehen (auch mit Verkleinern/10 Bit); sonst „Details“ (Befehl, Log, Frühere Versuche) schicken (Nutzer 16.10.: Quick Sync scheint zu klappen; Screenshot zeigt „Schreiben“ und „Lesen“ per Quick Sync)
 - [ ] GPU-Encoding auf echter Hardware prüfen (Intel Quick Sync und VAAPI auf dem i9-9900; NVIDIA via `--runtime=nvidia`): in „Details“ am Auftrag muss z. B. `hevc_qsv ✓ von ffmpeg bestätigt` stehen
 - [ ] Unraid: leere optionale Pfade (Audio/Video) und neuer Pfad `/config` (Rechte) ausprobieren
 
@@ -36,6 +35,7 @@
 - [ ] Linux-App (Fedora KDE) mit eigener Oberfläche
 
 ## Erledigt
+- [x] Quick Sync auf dem i9-9900 (Nutzer-Rückmeldung: scheint zu klappen, Lesen und Schreiben); offen bleibt nur die Frage, ob Hardware-Decoding schneller ist als Software-Decoding (Speed 2,8× vs. 5,8× bei zwei verschiedenen Folgen, nicht verglichen)
 - [x] 0.0.8: **Endgültiges App-Icon**: zwei zentrierte Discs (silberne Audio-CD + blaue Blu-ray) als Abzeichen; in allen Größen, Einstellungen → Info, README, Release-Text, Unraid-Icon. p5assets: oranger Komet (0.4.8 auf `dev`)
 - [x] 0.0.7: **Log-Fenster wie bei p5assets** (Seite, Kopfzeilen-Symbol mit Zähler, rotierendes Protokoll, Schwärzung von Geheimnissen)
 - [x] 0.0.7: **App-Icon wie p5assets** mit Abzeichen (zwei Pfeile) in allen Größen inkl. Apple-Touch- und Unraid-Icon; p5assets bekommt das Feuerball-Abzeichen im selben Aufbau (eigener Stand dort)
