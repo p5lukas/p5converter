@@ -26,14 +26,22 @@ docker run -d --name p5converter -p 8787:8787 \
 ```
 * `--device /dev/dri` reicht Intel Quick Sync / VAAPI durch (im Unraid-Template ein sichtbarer Eintrag „Intel/AMD Grafik“).
 * `/config` speichert Einstellungen, Voreinstellungen, Farben und die Anmeldung dauerhaft (gilt auf allen Geräten). Ohne diesen Pfad funktioniert alles, wird aber nicht gespeichert; die Anmeldung lässt sich dann nicht einschalten.
-* **NVIDIA NVENC:** Nvidia-Driver-Plugin installieren, `--runtime=nvidia` bei „Extra Parameters“ ergänzen (`NVIDIA_VISIBLE_DEVICES=all` ist voreingestellt).
+* **GPU einrichten (alles optional, ohne GPU rechnet die CPU):**
+
+  | Hardware | Was du tun musst |
+  |---|---|
+  | **Intel Quick Sync** | nichts – `--device /dev/dri` (im Unraid-Template schon eingetragen) |
+  | **AMD** (unter Linux per VAAPI) | nichts – ebenfalls `--device /dev/dri`; AMD AMF gibt es nur unter Windows |
+  | **NVIDIA NVENC** | Nvidia-Driver-Plugin (Unraid) bzw. NVIDIA Container Toolkit installieren und `--runtime=nvidia` bei „Extra Parameters“ ergänzen (Unraid: Erweiterte Ansicht). `NVIDIA_VISIBLE_DEVICES=all` und `NVIDIA_DRIVER_CAPABILITIES=compute,video,utility` sind im Image voreingestellt |
+
+  `--runtime=nvidia` ist bewusst **nicht** vorausgefüllt: Ohne NVIDIA-Treiber würde Docker den Container gar nicht starten. Ob die GPU erkannt wurde, steht unter Einstellungen → Hardware (dort auch ein Hinweis, falls eine GPU fehlt).
 * Die Oberfläche sieht nur eingehängte Ordner: im Unraid-Template **2× Audio** (`/audio1`, `/audio2`), **4× Video** (`/video1` … `/video4`) – alle optional, leer lassen was nicht gebraucht wird – und den Zielordner `/output`. Per Kommandozeile geht auch ein einzelnes `/media`. Die Liste steht in `P5_ROOTS`; nicht eingehängte Ordner werden ausgeblendet. Die Quell-Ordner brauchen Schreibzugriff, wenn die Ergebnisse neben die Quelle sollen oder Quellen gelöscht werden. `PUID`/`PGID` (Standard 99/100) bestimmen den Besitzer neuer Dateien.
 * Anmeldung (optional): wird in der Oberfläche unter **Einstellungen → Anmeldung** angelegt, nicht per Umgebungsvariable. Trotzdem nicht ins Internet stellen.
 
 ## Funktionen
 
 ### Design
-Gleiche Designlinie wie [p5assets](https://github.com/p5lukas/p5assets): Matrix-Theme, Audio und Video als eigene **Welten** mit Farbe und Planet (Wurmloch-Flug beim Wechsel), Übersicht mit Fortschrittsring und Live-Auslastung, Version und Neuigkeiten in der Fußzeile; in der iPhone/iPad-Web-App Ziehen zum Aktualisieren.
+Gleiche Designlinie wie [p5assets](https://github.com/p5lukas/p5assets): Matrix-Theme, Audio und Video als eigene **Welten** mit Farbe und Planet (Wurmloch-Flug beim Wechsel), Übersicht mit Fortschrittsring und Live-Auslastung, Version und Neuigkeiten in der Fußzeile (nach einem Update einmal pro Version ein kurzer Hinweis, der Merker liegt auf dem Server); in der iPhone/iPad-Web-App Ziehen zum Aktualisieren.
 Läuft auf Desktop, Handy und iPad (Hoch-/Querformat); auf iPhone/iPad per **Teilen → Zum Home-Bildschirm** als Web-App.
 
 ### Hilfe für Einsteiger
@@ -47,7 +55,7 @@ Zielordner mit Struktur oder Namensmuster (`{artist}/{album}/{track} - {title}`)
 * Container **MKV** (Standard) oder MP4, „Nur Remux“ (Video kopieren)
 * Codec **H.264, H.265, AV1, VP9**
 * **Auflösung** (max. Höhe, nie hochskaliert), **CRF**, Geschwindigkeits-Preset, **8/10 Bit** (oder „wie Quelle“)
-* **Audio & Untertitel in einem Schritt:** oben Regeln für alle Dateien (Standard: **Passthrough**, Sprachfilter), darunter eine **Spurtabelle** je Datei: Behalten, Aktion (Standard / unverändert kopieren / Audio neu kodieren mit Codec und kbit/s), **Titel**, **Sprache** (drei Buchstaben, ISO 639-2), **Forced**, **Standard**; „Alle auswählen/abwählen“ je Art und „Auf alle Dateien anwenden“
+* **Audio & Untertitel in einem Schritt, auch für Einsteiger:** Standard ist **Passthrough** (nichts ändern). Oben Regeln für alle Dateien (Sprachfilter, Kleiner machen mit vorausgefüllter Empfehlung und angezeigter Zielbitrate), darunter je Spur eine **Karte in Klartext** mit Behalten-Häkchen, bei Ton „So lassen / Kleiner machen“ und hinter „Erweitert“ **Titel, Sprache, Forced, Standard**; „Alle auswählen/abwählen“, „Auf alle Dateien anwenden“ und **Tipps** (z. B. nur Deutsch und Englisch behalten, Forced-Untertitel markieren, fehlende Sprache)
 * **Plex:** Sprache wird als dreibuchstabiger Code geschrieben; „Forced“ erkennt Plex nur in **MKV** (bei MP4 kommt eine Warnung) und die Untertitelsprache muss zur Tonspur passen; danach in Plex neu **analysieren**
 * Schriftarten-Anhänge bleiben in MKV erhalten
 
@@ -63,7 +71,7 @@ Zielordner mit Struktur oder Namensmuster (`{artist}/{album}/{track} - {title}`)
 * **Terminal-Symbol** in der Kopfzeile: Log-Seite mit Suche, Stufenfilter, Live-Ansicht, Download und „Leeren“; Zähler für neue Warnungen/Fehler. Datei: `/config/logs/p5converter.log` (rotierend). Passwörter, Cookies und Tokens werden nie geschrieben.
 
 ### Ablauf in Schritten
-* **Startseite:** Statistik, Auslastung, Hardware, **gewonnener Platz** (Summe aller bisher gesparten Größen) und Warteschlange, dazu „Konvertierung starten“ und „Umbenennen starten“
+* **Startseite:** Statistik, Auslastung, Hardware, **gewonnener Platz** (je Welt eigene Zählung, mit „Zurücksetzen“) und Warteschlange, dazu „Konvertierung starten“ und „Umbenennen starten“
 * **Konvertieren:** Dateien → Ziel → Benennen → Einstellungen (Video: Video, dann Audio & Untertitel · Audio: Format) → **Zusammenfassung** → Start (Voreinstellungen gibt es nur im Schritt „Video“ bzw. „Einstellungen“; „Zurücksetzen“ stellt die gewählte Welt auf „Remux“ zurück); oben als Reiter anklickbar, unten Zurück/Weiter; danach zurück zur Startseite mit der laufenden Warteschlange
 
 ### Warteschlange

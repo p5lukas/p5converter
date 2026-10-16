@@ -441,40 +441,38 @@ button.danger{color:var(--bad);border-color:#ff4d5e66}
 #resetAll .ic{width:1.1em;height:1.1em}
 #resetDlg p{margin:0}
 
+.trkintro{margin:0 0 6px;line-height:1.55}
 .trkbar{display:flex;justify-content:space-between;align-items:center;gap:10px 14px;flex-wrap:wrap;margin:0 0 12px}
 .trkbar label{display:flex;align-items:center;gap:8px;flex:1;min-width:220px}
 .trkbar select{min-width:0}
-.trkgroup{margin:0 0 18px}
+.trkgroup{margin:0 0 20px}
 .trkhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 8px}
 .trkhead h4{margin:0;font-size:13px;color:var(--text)}
-.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--panel2)}
-.trktable{min-width:760px}
-.trktable td,.trktable th{vertical-align:middle}
-.trktable tr:last-child td{border-bottom:0}
-.trktable td.c,.trktable th:nth-child(1),.trktable th:nth-child(6),.trktable th:nth-child(7){text-align:center}
-.trktable td.c{width:1%}
-.trktable input:not([type=checkbox]):not([type=radio]),.trktable select{padding:5px 8px;font-size:12px}
-.trktable .trk-lang{width:64px;text-align:center;text-transform:lowercase}
-.trktable .trk-title{min-width:150px}
-.trk.off td:not(:first-child){opacity:.45}
-.trk.edited td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
-.trk-enc{display:flex;gap:6px;align-items:center;margin-top:6px}
-.trk-enc input{width:78px}
-.trkhint{margin:4px 0 0;line-height:1.5}
+.trklist{display:flex;flex-direction:column;gap:8px}
+.trkhints{border:1px solid var(--accent);border-radius:var(--r);background:var(--dim);padding:10px 14px;margin:0 0 16px}
+.trkhintshead{font-weight:700;color:var(--accent);margin-bottom:6px}
+.trkhint2{display:flex;justify-content:space-between;align-items:center;gap:10px 14px;flex-wrap:wrap;padding:7px 0;border-top:1px solid var(--line);line-height:1.45}
+.trkhint2:first-of-type{border-top:0}
+.trkhint2>span{flex:1;min-width:220px}
+.trkcard{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:8px 14px;background:var(--panel2);border:1px solid var(--line);border-radius:var(--r);padding:10px 14px}
+.trkcard.edited{border-left:3px solid var(--accent)}
+.trkcard.off .trkmain{opacity:.55}
+.trkkeep{display:flex}
+.trkmain{min-width:0}
+.trkname{line-height:1.5}
+.trkname .chip{margin-left:4px;vertical-align:1px}
+.trkact select{padding:6px 10px;font-size:12px;min-width:200px}
+.trkadv{grid-column:1/-1;border-top:1px dashed var(--line);padding-top:12px;margin-top:2px}
+.trkgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 16px;align-items:end}
+.trkgrid label.check{display:flex;align-items:center;gap:8px;align-self:center}
+.trkenc{margin-top:12px}
+.trkenc p{margin:8px 0 0;line-height:1.5}
+.trkfoot{margin:6px 0 0;line-height:1.5}
 @media(max-width:700px){
-  .trktable{min-width:0}
-  .trktable thead{display:none}
-  .trktable,.trktable tbody{display:block}
-  .trktable tr.trk{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;padding:10px 12px;border-bottom:1px solid var(--line)}
-  .trktable tr.trk:last-child{border-bottom:0}
-  .trktable td{display:block;border:0;padding:0;width:auto!important;text-align:left!important}
-  .trktable td:before{content:attr(data-l);display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:3px}
-  .trktable td[data-l=Behalten],.trktable td[data-l=Forced],.trktable td[data-l=Standard]{display:flex;align-items:center;gap:8px}
-  .trktable td[data-l=Behalten]:before,.trktable td[data-l=Forced]:before,.trktable td[data-l=Standard]:before{margin:0;order:2;font-size:11px}
-  .trktable td[data-l=Spur],.trktable td[data-l=Aktion],.trktable td[data-l=Titel]{grid-column:1/-1}
-  .trktable .trk-lang{width:100%;text-align:left}
-  .trktable .trk-title{min-width:0}
-  .trk.off td:not(:first-child){opacity:.5}
+  .trkcard{grid-template-columns:auto 1fr}
+  .trkact,.trkmore{grid-column:2}
+  .trkact select{width:100%;min-width:0}
+  .trkmore{justify-self:start}
 }
 
 /* Hardware-Kachel */
@@ -494,6 +492,11 @@ details.why p{margin:4px 0 2px;line-height:1.45}
 #ptr{position:fixed;top:-48px;left:0;right:0;height:40px;z-index:80;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--accent);background:hsl(var(--h) var(--sat) 6% / .92);border-bottom:1px solid var(--line);transition:transform .15s;pointer-events:none}
 /* kleine Rückfrage: auch auf dem Handy nur so hoch wie nötig, mittig */
 @media(max-width:700px),(max-height:520px){
-  #resetDlg,#resetDlg .dlg{height:auto}
-  #resetDlg{margin:auto;width:min(94vw,440px);max-width:94vw;height:fit-content;max-height:90dvh;border:1px solid var(--accent);border-radius:10px}
+  #resetDlg,#resetDlg .dlg,#savedResetDlg,#savedResetDlg .dlg,#newsNotice,#newsNotice .dlg{height:auto}
+  #resetDlg,#savedResetDlg,#newsNotice{margin:auto;width:min(94vw,440px);max-width:94vw;height:fit-content;max-height:90dvh;border:1px solid var(--accent);border-radius:10px}
 }
+
+.newshl{margin:6px 0 10px;padding-left:20px}.newshl li{margin:4px 0}
+#nnTitle .ic{margin-right:4px}
+#savedResetDlg p,#newsNotice p{margin:0 0 8px}
+details.gpuhelp{margin-top:14px}details.gpuhelp p{margin:6px 0;line-height:1.5}

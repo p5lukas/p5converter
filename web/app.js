@@ -170,6 +170,9 @@ function refreshVideoUI() {
   [...depth.options].forEach(o => { if (o.value === '10') o.disabled = !tenOK; });
   if (!tenOK && depth.value === '10') depth.value = '8';
   $('#vAudioCodecRow').classList.toggle('hidden', $('#vAudioMode').value !== 'encode');
+  $('#vAudioHint').classList.toggle('hidden', $('#vAudioMode').value !== 'encode');
+  trkRuleHint();
+  if (S.step === 'tracks') trkRender();
   if (container === 'mp4' && !copy) { /* mp4 shows subtitles warning in job */ }
   renderHwCard();
 }
@@ -553,28 +556,40 @@ function renderFooter() {
   const ver = b.tag ? `<a href="${esc(b.branchUrl)}" target="_blank" rel="noopener">v${esc(b.tag)}</a>` : `<a href="${esc(b.branchUrl)}" target="_blank" rel="noopener">${esc(b.branch)}</a>`;
   $('#foot').innerHTML = `<span><b>p5converter</b> ${esc(b.base)}</span><span>${ver}</span>` +
     (b.commit ? `<span><a href="${esc(b.commitUrl)}" target="_blank" rel="noopener">${esc(b.commitShort)}</a></span>` : '') +
-    `<span>ffmpeg ${esc(ff)}</span><span>${esc(S.info.os)}</span><span><button class="lnk" id="footNews">Neuigkeiten${S.newsNew ? '<i class="newsdot" title="Neu seit deinem letzten Besuch"></i>' : ''}</button></span><span><a href="${esc(b.repo)}" target="_blank" rel="noopener">GitHub</a></span>`;
+    `<span>ffmpeg ${esc(ff)}</span><span>${esc(S.info.os)}</span><span><button class="lnk" id="footNews">Neuigkeiten</button></span><span><a href="${esc(b.repo)}" target="_blank" rel="noopener">GitHub</a></span>`;
   $('#footNews').onclick = openNews;
 }
+// Neuigkeiten wie bei p5assets: je Version einmal ein kurzer Hinweis mit den Überschriften; die ganze Liste steht in der Fußzeile.
+// Was schon gezeigt wurde, merkt sich der Server (gilt für alle Geräte).
+const markNewsSeen = (ids, version) => api('/api/news/seen', {ids: ids || [], version: !!version}).catch(() => {});
 async function loadNews() {
-  try { S.news = await api('/api/news'); } catch (e) { S.news = []; }
-  let seen = null;
-  try { seen = localStorage.getItem('p5cNewsSeen'); } catch (e) {}
-  const cur = S.info.build.base;
-  // erster Besuch: nichts anzeigen, nur merken; bei neuer Version: Punkt am Knopf
-  if (seen === null) { try { localStorage.setItem('p5cNewsSeen', cur); } catch (e) {} }
-  else if (seen !== cur && S.news.some(n => n.version === cur)) { S.newsNew = true; renderFooter(); }
+  try {
+    const r = await api('/api/news');
+    if (r.show) openNewsNotice(r);
+  } catch (e) { /* optional */ }
 }
-function openNews() {
-  const cur = S.info.build.base;
+function openNewsNotice(r) {
+  const dlg = $('#newsNotice');
+  fill($('#nnTitle'), icon('news'), ' Neu in Version ' + r.version);
+  fill($('#nnBody'), h('p', {class: 'muted'}, r.count + (r.count === 1 ? ' Neuerung' : ' Neuerungen') + ', zum Beispiel:'),
+    h('ul', {class: 'newshl'}, r.highlights.map(t => h('li', {}, t))),
+    h('p', {class: 'muted small'}, 'Alle Neuigkeiten findest du jederzeit unten in der Fußzeile unter „Neuigkeiten“.'));
+  const done = () => { markNewsSeen([], true); dlg.close(); };
+  $('#nnClose').onclick = done;
+  $('#nnAll').onclick = () => { done(); openNews(); };
+  dlg.showModal();
+}
+async function openNews() {
+  let r;
+  try { r = await api('/api/news'); } catch (e) { toast('Neuigkeiten konnten nicht geladen werden.', 'bad'); return; }
   const groups = {};
-  (S.news || []).forEach(n => (groups[n.version] = groups[n.version] || []).push(n));
-  $('#newsBody').innerHTML = Object.keys(groups).sort().reverse().map(v => groups[v].map(n =>
+  r.all.forEach(n => (groups[n.version] = groups[n.version] || []).push(n));
+  const vkey = v => v.split('.').reduce((a, x) => a * 1000 + (+x || 0), 0);
+  $('#newsBody').innerHTML = Object.keys(groups).sort((a, b) => vkey(b) - vkey(a)).map(v => groups[v].map(n =>
     `<div class="newsitem"><div class="ver">Version ${esc(v)}</div><h4>${esc(n.title)}</h4><p>${esc(n.text)}</p></div>`).join('')).join('') || '<div class="empty">Keine Neuigkeiten.</div>';
   $('#newsVer').textContent = 'Aktuell: ' + S.info.build.version;
   $('#news').showModal();
-  S.newsNew = false; renderFooter();
-  try { localStorage.setItem('p5cNewsSeen', cur); } catch (e) {}
+  markNewsSeen(r.all.map(n => n.id), true);
 }
 function wire() {
   wireRename(); wireFlow();

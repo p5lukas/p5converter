@@ -48,25 +48,28 @@ function showStep(id, keepScroll) {
 const stepMove = d => { const ids = stepIds(), i = ids.indexOf(S.step) + d; showStep(i < 0 ? 'start' : ids[Math.min(i, ids.length - 1)]); };
 
 // ---------- Startseite: gewonnener Platz ----------
-function savedLine(name, t) {
-  if (!t || !t.count) return null;
-  const diff = t.in - t.out, pct = t.in ? Math.round(Math.abs(diff) / t.in * 100) : 0;
-  return h('div', {class: 'savedrow'},
-    h('b', {}, name), h('span', {class: diff >= 0 ? 'good' : 'warn'}, (diff >= 0 ? '−' : '+') + fmtSize(Math.abs(diff)) + ' (' + pct + ' %)'),
-    h('small', {class: 'muted'}, t.count + (t.count === 1 ? ' Datei' : ' Dateien') + ' · ' + fmtSize(t.in) + ' → ' + fmtSize(t.out)));
-}
+// Gewonnener Platz: strikt je Welt – Audio zeigt nur Audio, Video nur Video (eigene Zählung, eigenes Zurücksetzen)
 function renderSaved() {
-  const d = S.saved, box = $('#savedBody');
-  if (!d || (!d.audio.count && !d.video.count)) {
-    fill(box, h('p', {class: 'muted small'}, 'Noch nichts umgewandelt. Hier siehst du bald, wie viel Speicherplatz du durch das Konvertieren gewonnen hast.'));
+  const d = S.saved, box = $('#savedBody'), t = d && d[S.world];
+  $('#savedReset').classList.toggle('hidden', !(t && t.count));
+  if (!t || !t.count) {
+    fill(box, h('p', {class: 'muted small'}, 'In „' + W(S.world).name + '“ noch nichts umgewandelt. Hier siehst du bald, wie viel Speicherplatz du in dieser Welt durch das Konvertieren gewonnen hast.'));
     return;
   }
-  const total = {count: d.audio.count + d.video.count, in: d.audio.in + d.video.in, out: d.audio.out + d.video.out};
-  const order = S.world === 'video' ? [['video', d.video], ['audio', d.audio]] : [['audio', d.audio], ['video', d.video]];
-  const diff = total.in - total.out;
+  const diff = t.in - t.out, pct = t.in ? Math.round(Math.abs(diff) / t.in * 100) : 0;
   fill(box, h('div', {class: 'savedbig ' + (diff >= 0 ? 'good' : 'warn')}, (diff >= 0 ? '−' : '+') + fmtSize(Math.abs(diff))),
-    h('div', {class: 'muted small'}, diff >= 0 ? 'Platz gewonnen' + (d.since ? ' seit ' + d.since.split('-').reverse().join('.') : '') : 'Mehrbedarf (z. B. durch verlustfreie Formate)'),
-    order.map(([w, t]) => savedLine(W(w).name, t)));
+    h('div', {class: 'muted small'}, (diff >= 0 ? 'Platz gewonnen' : 'Mehrbedarf (z. B. durch verlustfreie Formate)') + ' (' + pct + ' %)' + (t.since ? ' seit ' + t.since.split('-').reverse().join('.') : '')),
+    h('div', {class: 'savedrow'}, h('small', {class: 'muted'}, t.count + (t.count === 1 ? ' Datei' : ' Dateien') + ' · ' + fmtSize(t.in) + ' → ' + fmtSize(t.out))));
+}
+function openSavedReset() {
+  const t = S.saved && S.saved[S.world];
+  $('#savedResetText').textContent = `Die Zählung „Gewonnener Platz“ der Welt „${W(S.world).name}“` + (t && t.since ? ' (seit ' + t.since.split('-').reverse().join('.') + ')' : '') + ' wird gelöscht. Die andere Welt behält ihre Zahlen.';
+  $('#savedResetDlg').showModal();
+}
+async function doSavedReset() {
+  $('#savedResetDlg').close();
+  try { const r = await api('/api/stats/reset', {kind: S.world}); S.saved = r.saved; renderSaved(); toast('Statistik von „' + W(S.world).name + '“ zurückgesetzt.', 'ok'); }
+  catch (e) { toast(e.message, 'bad'); }
 }
 
 // ---------- Zusammenfassung ----------
@@ -159,6 +162,9 @@ function openReset() {
 }
 
 function wireFlow() {
+  $('#savedReset').onclick = openSavedReset;
+  $('#savedResetNo').onclick = () => $('#savedResetDlg').close();
+  $('#savedResetYes').onclick = doSavedReset;
   $('#exists').addEventListener('input', existsUI);
   $('#resetAll').onclick = openReset;
   $('#resetNo').onclick = () => $('#resetDlg').close();

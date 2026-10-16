@@ -98,7 +98,7 @@ const INFO = {
     <li><b>Neu kodieren:</b> Ton wird in ein anderes Format umgerechnet, z. B. um Platz zu sparen (DTS-HD/TrueHD sind riesig) oder weil ein Gerät das Format nicht kann.</li></ul>
     <p class="ex">Beispiel: Blu-ray mit 4 GB Ton → „AAC“ oder „Opus“ spart mehrere GB.</p>`},
   vAudioCodec: {t: 'Audio-Codec / Bitrate', b: `<ul><li><b>AAC:</b> läuft überall, guter Standard.</li><li><b>Opus:</b> sehr effizient, kleine Dateien (MKV ok, manche TVs nicht).</li><li><b>AC-3 / E-AC-3:</b> Dolby-Formate, nötig für manche Heimkino-Receiver.</li><li><b>FLAC:</b> verlustfrei, groß.</li></ul>
-    <p>Die Bitrate gilt für <b>Stereo</b> (z. B. 160 kbit/s). Surround-Spuren bekommen automatisch mehr (5.1 ≈ 2,5×).</p>`},
+    <p>Die Bitrate gilt <b>je Stereo-Paar</b> (Empfehlung: AAC 160 kbit/s). Spuren mit mehr Kanälen bekommen automatisch mehr: Wert × Kanäle ÷ 2, höchstens 640. Bei 160 kbit/s sind das für Stereo 160, für 5.1 (6 Kanäle) <b>480</b> und für 7.1 (8 Kanäle) 640 kbit/s. Unter dem Feld steht, was bei dir herauskommt.</p>`},
   vAudioLangs: {t: 'Audio-Sprachen behalten', b: `<p>Entfernt alle Tonspuren, deren Sprache nicht in der Liste steht. Leer = alle behalten.</p>
     <p class="ex">Beispiel: <code>ger,eng</code> behält Deutsch und Englisch, entfernt z. B. Französisch und Spanisch. Auch <code>de,en</code> funktioniert.</p>
     <p>Spuren ohne Sprachangabe bleiben erhalten. Würde der Filter <b>alle</b> Spuren entfernen, wird er ignoriert.</p>`},
@@ -109,14 +109,12 @@ const INFO = {
     <p class="ex">Beispiel: <code>ger</code> → nur deutsche Untertitel.</p>`},
   vAudioTracks: {t: 'Audiospuren', b: `<p>Regeln für den Ton in <b>allen</b> Dateien. Standard ist „Passthrough“: Alle Tonspuren bleiben unverändert. Einzelne Spuren änderst du unten in der Tabelle.</p>`},
   vSubTracks: {t: 'Untertitel', b: `<p>Regeln für die Untertitel in <b>allen</b> Dateien. Standard ist „Passthrough“: Alle Untertitel bleiben unverändert.</p>`},
-  trkTable: {t: 'Einzelne Spuren', b: `<p>Zeigt alle Ton- und Untertitelspuren der gewählten Datei. Was du hier änderst, gilt nur für diese Datei – oder per „Auf alle Dateien anwenden“ für alle.</p>
-    <ul><li><b>Behalten:</b> Abwählen entfernt die Spur (z. B. Kommentar-Tonspur, fremde Untertitel).</li>
-    <li><b>Aktion:</b> „Standard“ folgt den Regeln oben, „Unverändert kopieren“ lässt die Spur unberührt (auch wenn die Regeln oben sie entfernen würden), „Neu kodieren“ wandelt nur diese Tonspur um.</li>
-    <li><b>Titel:</b> Name der Spur im Player-Menü, z. B. „Deutsch 5.1“.</li>
-    <li><b>Sprache:</b> Dreibuchstabiger Code (ISO 639-2), z. B. <code>ger</code>, <code>eng</code>, <code>jpn</code>. Nur so erkennt Plex die Sprache sicher.</li>
-    <li><b>Forced:</b> Markiert einen Untertitel als „erzwungen“ (nur fremdsprachige Stellen). Plex erkennt das nur in MKV und nur, wenn die Untertitelsprache zur Tonspur passt.</li>
-    <li><b>Standard:</b> Die Spur, die der Player von selbst startet. Bei Ton gibt es genau eine.</li></ul>
-    <p class="ex">Nach dem Umwandeln in Plex das Element bzw. die Bibliothek neu analysieren („Analysieren“), sonst zeigt Plex noch die alten Angaben.</p>`},
+  trkTable: {t: 'Spuren dieser Datei', b: `<p>Jede Ton- und Untertitelspur der gewählten Datei als Karte. Was du hier änderst, gilt nur für diese Datei – oder mit „Auf alle Dateien anwenden“ für alle.</p>
+    <ul><li><b>Häkchen:</b> Spur behalten. Ohne Häkchen wird sie entfernt (z. B. Kommentar-Tonspur, fremde Untertitel).</li>
+    <li><b>So lassen / Kleiner machen (nur Ton):</b> „So lassen“ ist verlustfrei und am schnellsten. „Kleiner machen“ rechnet nur diese Tonspur um; Format und Bitrate sind schon sinnvoll vorausgefüllt.</li>
+    <li><b>Erweitert:</b> Titel (so heißt die Spur im Player), Sprache, „Forced“ (bei Untertiteln nur fremdsprachige Stellen zeigen) und „startet automatisch“.</li></ul>
+    <p><b>Plex:</b> Die Sprache wird als Code aus drei Buchstaben geschrieben, nur so erkennt Plex sie sicher. „Forced“ erkennt Plex nur in MKV-Dateien, und die Untertitelsprache muss zur Tonspur passen. Danach in Plex das Element neu analysieren („Analysieren“).</p>
+    <p class="ex">Die „Tipps zu dieser Datei“ schlagen Sinnvolles per Knopfdruck vor, z. B. nur Deutsch und Englisch behalten.</p>`},
   conc: {t: 'Parallel', b: `<p>Wie viele Dateien gleichzeitig umgewandelt werden.</p>
     <ul><li><b>Video mit CPU: 1</b> – ein Auftrag nutzt schon alle Kerne.</li><li>Video mit Hardware: 1–2.</li><li>Audio: 2–4, geht deutlich schneller.</li></ul>`},
   setStart: {t: 'Startansicht', b: `<p>Welche Welt (Audio oder Video) beim Öffnen von p5converter zuerst erscheint. „Zuletzt benutzte Welt“ merkt sich deine letzte Wahl.</p>`},
@@ -124,8 +122,9 @@ const INFO = {
   setPresets: {t: 'Voreinstellungen', b: `<p>Eine Voreinstellung ist ein gespeicherter Satz von Einstellungen, z. B. „H.265, CRF 22, 1080p“. Ein Klick darauf stellt alles auf einmal ein.</p><ul><li><b>Vorschlag:</b> erscheint oben im Einstellungs-Panel des Konverters.</li><li><b>✎ Werte:</b> öffnet den Konverter mit dieser Voreinstellung – Einstellungen ändern und „Änderungen speichern“.</li></ul><p class="ex">Neue Voreinstellung: im Konverter einstellen und „💾 Als Voreinstellung speichern“ klicken.</p>`},
   setBackend: {t: 'Bevorzugter Encoder', b: `<p>Welche Hardware im Konverter vorausgewählt ist. „Automatisch“ nimmt die schnellste, die wirklich funktioniert. Wählst du hier z. B. VAAPI, ist es beim nächsten Öffnen vorausgewählt (sofern du im Konverter nicht schon selbst etwas gewählt hast).</p>`},
   setAuth: {t: 'Anmeldung', b: `<p>Schützt p5converter mit Benutzername und Passwort. Das Passwort wird nur als Hash auf dem Server gespeichert.</p><p>Bei vergessenem Passwort: Befehl im Container ausführen oder die Datei in /config löschen (siehe „Passwort vergessen?“).</p><p class="ex">Im reinen Heimnetz ist die Anmeldung optional. Ist die Oberfläche von außen erreichbar, sollte sie an sein.</p>`},
-  savedInfo: {t: 'Gewonnener Platz', b: `<p>Zeigt, wie viel Speicherplatz du durch das Konvertieren insgesamt gewonnen hast: Größe der Originale minus Größe der Ergebnisse, getrennt für Audio und Video.</p>
-    <p>Gezählt wird jede erfolgreich fertige Datei. Wird eine Datei größer (z. B. MP3 → FLAC), zählt das als Mehrbedarf. Die Summe bleibt gespeichert (Pfad <code>/config</code>), solange dieser Pfad eingehängt ist.</p>`},
+  savedInfo: {t: 'Gewonnener Platz', b: `<p>Zeigt, wie viel Speicherplatz du in <b>dieser Welt</b> durch das Konvertieren insgesamt gewonnen hast: Größe der Originale minus Größe der Ergebnisse. Audio und Video werden getrennt gezählt – jede Welt hat ihre eigene Zahl.</p>
+    <p>Gezählt wird jede erfolgreich fertige Datei. Wird eine Datei größer (z. B. MP3 → FLAC), zählt das als Mehrbedarf. Die Summe bleibt gespeichert (Pfad <code>/config</code>), solange dieser Pfad eingehängt ist.</p>
+    <p>Mit „Zurücksetzen“ beginnt die Zählung dieser Welt bei 0.</p>`},
   hwInfo: {t: 'Hardware', b: `<p>Zeigt, welche Hardware (Intel-CPU-Videoeinheit, Grafikkarte) für schnelles Umwandeln nutzbar sind. Das Programm prüft das mit echten Mini-Umwandlungen.</p>
     <p>„nicht nutzbar“ heißt: nicht vorhanden, Treiber fehlt, oder (Docker) das Gerät wurde nicht durchgereicht. Der Grund steht darunter.</p>`},
 };

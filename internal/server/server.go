@@ -33,18 +33,20 @@ import (
 )
 
 type Server struct {
-	Build    version.Info
-	Tools    ffmpeg.Tools
-	Det      *hw.Detector
-	Sampler  *hw.Sampler
-	Stats    *stats.Store
-	Jobs     *jobs.Manager
-	Auth     *auth.Manager
-	Settings *config.Store
-	Roots    []string // empty = unrestricted (desktop mode)
-	Quit     func()   // set in desktop mode: enables the Beenden button
-	enc      map[string]bool
-	ffver    string
+	Build       version.Info
+	Tools       ffmpeg.Tools
+	Det         *hw.Detector
+	Sampler     *hw.Sampler
+	Stats       *stats.Store
+	news        *newsStore
+	newsEntries []newsEntry
+	Jobs        *jobs.Manager
+	Auth        *auth.Manager
+	Settings    *config.Store
+	Roots       []string // empty = unrestricted (desktop mode)
+	Quit        func()   // set in desktop mode: enables the Beenden button
+	enc         map[string]bool
+	ffver       string
 }
 
 func New(build version.Info, t ffmpeg.Tools, roots []string, concurrency int, configDir string) *Server {
@@ -53,6 +55,8 @@ func New(build version.Info, t ffmpeg.Tools, roots []string, concurrency int, co
 	s.Jobs = jobs.New(t, s.Sampler, concurrency)
 	s.Stats = stats.Open(statsDir(s.Settings, configDir))
 	s.Jobs.OnDone = s.Stats.Add
+	json.Unmarshal(newsJSON, &s.newsEntries)
+	s.news = openNews(configDir, s.Settings.Persistent(), s.newsEntries, build.Base)
 	cfg := s.Settings.Get()
 	if cfg.Concurrency > 0 { // the values saved in the settings win over the start default
 		s.Jobs.SetConcurrency("video", cfg.Concurrency)
@@ -113,11 +117,9 @@ func (s *Server) Handler() http.Handler {
 		static.ServeHTTP(w, r)
 	}))
 	mux.HandleFunc("GET /manifest.webmanifest", s.manifest)
-	mux.HandleFunc("GET /api/news", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Cache-Control", "no-store")
-		w.Write(newsJSON)
-	})
+	mux.HandleFunc("GET /api/news", s.newsGet)
+	mux.HandleFunc("POST /api/news/seen", s.newsSeen)
+	mux.HandleFunc("POST /api/stats/reset", s.statsReset)
 	mux.HandleFunc("GET /api/info", s.info)
 	mux.HandleFunc("POST /api/hw/detect", func(w http.ResponseWriter, r *http.Request) {
 		go s.Det.Detect()
@@ -732,4 +734,18 @@ func describeRequest(req *jobs.Request) string {
 		return "Video kopiert"
 	}
 	return req.Video.Codec + " mit " + req.Video.Backend
+}
+
+// statsReset setzt die gewonnene-Platz-Zählung EINER Welt zurück (audio | video).
+func (s *Server) statsReset(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Kind string `json:"kind"`
+	}
+	if json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<12)).Decode(&body) != nil || (body.Kind != "audio" && body.Kind != "video") {
+		http.Error(w, `{"error":"Welt fehlt (audio oder video)"}`, 400)
+		return
+	}
+	s.Stats.Reset(body.Kind)
+	logs.Get("app").Infof("Statistik „Gewonnener Platz“ zurückgesetzt (%s)", body.Kind)
+	writeJSON(w, map[string]any{"ok": true, "saved": s.Stats.Get()})
 }

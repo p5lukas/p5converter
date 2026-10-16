@@ -14,6 +14,10 @@
 - [ ] Branch-Modell: **erstmal nur `main`**, bis alles stabil läuft. Auf Zuruf des Nutzers dann wie p5assets: Feature-Branch → `dev` (Image `:dev`) → `main` (Image `:latest`); optional multi-arch (amd64/arm64)
 
 ## Vom Nutzer zu prüfen (nicht in der Sandbox möglich)
+- [ ] 0.0.10: Schritt „Audio & Untertitel“ auf dem Gerät ansehen (Desktop und iPhone/iPad, hoch und quer): Ist jetzt klar, was „So lassen / Kleiner machen“ bedeutet? Sind „Erweitert“ (Titel, Sprache, Forced, startet automatisch) und die Tipps verständlich? Eine echte Datei mit mehreren Sprachen ausprobieren, auch „Kleiner machen“ (Zielbitrate stimmt mit der Anzeige?) und danach in Plex neu analysieren
+- [ ] 0.0.10: „Gewonnener Platz“ in Audio und Video getrennt ansehen; „Zurücksetzen“ in einer Welt (Rückfrage, andere Welt bleibt)
+- [ ] 0.0.10: Nach dem Update einmal den Hinweis „Neu in Version 0.0.10“ sehen (nur einmal, auf anderen Geräten nicht noch einmal); „Alle ansehen“ und Fußzeile „Neuigkeiten“ öffnen die Liste
+- [ ] 0.0.10: Unraid-Vorlage neu laden und die GPU-Anleitung unter „Overview“ lesen; Einstellungen → Hardware → „Wie schalte ich meine GPU frei?“
 - [x] Neues Icon: auf iPhone/iPad die Web-App einmal vom Home-Bildschirm löschen und neu hinzufügen (iOS merkt sich das alte Icon); in Unraid wird das Icon aus `unraid/icon.png` auf `main` geholt (Container ggf. neu anlegen/„Force Update“) (Nutzer 16.10.: passt)
 - [x] Log-Seite auf dem Server ansehen: nach einer Konvertierung stehen Start/Ende/Fehler im Log, Zähler am Terminal-Symbol (Nutzer: passt)
 - [x] Neuen Ablauf auf iPhone/iPad ansehen (Reiter-Leiste scrollt, Zurück/Weiter-Leiste unten, Safe-Areas in der Web-App) (Nutzer: passt)
@@ -28,6 +32,10 @@
 - [ ] Linux-App (Fedora KDE) mit eigener Oberfläche
 
 ## Erledigt
+- [x] 0.0.10: **Audio & Untertitel verständlich** (Variante C): Klartext-Karten, „So lassen/Kleiner machen“, „Erweitert“, Tipps-Assistent, vorausgefüllte Empfehlungen mit angezeigter Zielbitrate, korrigierter Info-Text (5.1 = 3×)
+- [x] 0.0.10: **Gewonnener Platz strikt je Welt** + Zurücksetzen je Welt (mit Rückfrage)
+- [x] 0.0.10: **Neuigkeiten wie bei p5assets** (Hinweis einmal pro Version, Merker auf dem Server, Punkt entfällt)
+- [x] 0.0.10: **Unraid-Vorlage/README/Einstellungen: GPU-Anleitung** (Intel/AMD `/dev/dri`, NVIDIA `--runtime=nvidia`)
 - [x] 0.0.9: **Audio & Untertitel als ein Schritt** mit Spurtabelle (Behalten, Aktion/Neu kodieren je Tonspur, Titel, Sprache ISO 639-2, Forced, Standard), „Alle auswählen/abwählen“ (auch Datei-Browser, Vorschläge), „Auf alle Dateien anwenden“, Plex-Hinweise; Dialog „Spuren“ entfällt
 - [x] 0.0.9: **Alles zurücksetzen** (je Welt, Standard Remux), **Ziehen zum Aktualisieren** (Web-App), **Lesen per VAAPI/NVIDIA nachweisbar**, **„Wenn Datei existiert“** verständlich, **Farbflackern** behoben, **Intel-Status** „Leerlauf/aktiv“, **Voreinstellungen nur im Einstellungs-Schritt**, **Hardware-Kachel** aufgeräumt, **Tab-Icons** versioniert (p5converter + p5assets 0.4.9), **Neuigkeiten** nur in der Fußzeile
 - [x] Quick Sync auf dem i9-9900 (Nutzer-Rückmeldung: scheint zu klappen, Lesen und Schreiben); Geschwindigkeit geklärt: S01E02 (36:41 min) in 6:26 min = ca. 5,7× (≈137 fps), gleich schnell wie der Lauf mit Software-Lesen (5,8×) → das Lesen ist nicht der Engpass, der Encoder (hevc_qsv, Preset „slow“) bestimmt das Tempo; der Anfangswert 2,8× war nur die Anlaufphase

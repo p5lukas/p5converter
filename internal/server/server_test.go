@@ -199,10 +199,10 @@ func TestInfoNewsManifest(t *testing.T) {
 	if info.Version == "" || info.Build.Base != version.Base {
 		t.Errorf("info: %+v", info)
 	}
-	var news []map[string]string
+	var news newsReply
 	resp, _ = http.Get(ts.URL + "/api/news")
-	if err := json.NewDecoder(resp.Body).Decode(&news); err != nil || len(news) == 0 || news[0]["version"] == "" {
-		t.Errorf("news: %v %v", err, news)
+	if err := json.NewDecoder(resp.Body).Decode(&news); err != nil || len(news.All) == 0 || news.All[0].Version == "" || news.Version != version.Base {
+		t.Errorf("news: %v %+v", err, news)
 	}
 	resp, _ = http.Get(ts.URL + "/manifest.webmanifest")
 	var mf map[string]any
@@ -540,5 +540,96 @@ func TestIconLinksAreVersioned(t *testing.T) {
 	m.ReadFrom(r.Body)
 	if !strings.Contains(m.String(), "icon-192.png"+v) {
 		t.Errorf("Manifest-Icons ohne Version: %s", m.String())
+	}
+}
+
+func getJSON(t *testing.T, ts *httptest.Server, path string, v any) {
+	t.Helper()
+	resp, err := http.Get(ts.URL + path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if err := json.NewDecoder(resp.Body).Decode(v); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestVersionKey(t *testing.T) {
+	if !(vKey("0.0.10") > vKey("0.0.9") && vKey("0.1.0") > vKey("0.0.99") && vKey("v0.0.9") == vKey("0.0.9")) {
+		t.Error("Versionsvergleich")
+	}
+}
+
+// Neuigkeiten: Update einer älteren Version zeigt den Hinweis einmal, frische Installation nie; der Merker liegt auf dem Server.
+func TestNewsNoticeOncePerVersion(t *testing.T) {
+	entries := []newsEntry{{ID: "a", Version: "0.0.9", Title: "Alt"}, {ID: "b", Version: "0.0.10", Title: "Neu 1"}, {ID: "c", Version: "0.0.10", Title: "Neu 2"}}
+	cur := "0.0.10"
+
+	// frische Installation: leerer Ordner → nichts zeigen
+	fresh := openNews(t.TempDir(), true, entries, cur)
+	if fresh.state.VersionSeen != cur || len(fresh.state.Seen) != 3 {
+		t.Errorf("frisch: %+v", fresh.state)
+	}
+
+	// Update: Ordner hat schon Einstellungen, aber keinen Merker
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "settings.json"), []byte(`{"showNews":true}`), 0o644)
+	tl, err := ffmpeg.Locate("")
+	if err != nil {
+		t.Skip("ffmpeg nicht installiert")
+	}
+	b := version.Get()
+	b.Base = cur
+	s := New(b, tl, nil, 1, dir)
+	s.newsEntries = entries
+	os.Remove(filepath.Join(dir, "news-seen.json")) // New() hat mit den echten Einträgen schon einen Merker angelegt
+	s.news = openNews(dir, true, entries, cur)
+	ts := httptest.NewServer(s.Handler())
+	defer ts.Close()
+	var r newsReply
+	getJSON(t, ts, "/api/news", &r)
+	if !r.Show || r.Count != 2 || len(r.Highlights) != 2 || r.Highlights[0] != "Neu 1" {
+		t.Fatalf("Update zeigt den Hinweis: %+v", r)
+	}
+	post(t, ts, "/api/news/seen", map[string]any{"ids": []string{"b", "nix"}, "version": true}, nil).Body.Close()
+	getJSON(t, ts, "/api/news", &r)
+	if r.Show || r.Count != 0 {
+		t.Errorf("nach „gesehen“ kein Hinweis mehr: %+v", r)
+	}
+	seen := map[string]bool{}
+	for _, id := range r.Seen {
+		seen[id] = true
+	}
+	if !seen["a"] || !seen["b"] || seen["c"] || seen["nix"] {
+		t.Errorf("gelesen: %v", r.Seen)
+	}
+	// überlebt einen Neustart
+	if again := openNews(dir, true, entries, cur); again.state.VersionSeen != cur {
+		t.Errorf("Merker nicht gespeichert: %+v", again.state)
+	}
+	// „Neuigkeiten anzeigen“ aus → kein Hinweis
+	s.news.state.VersionSeen = "0.0.9"
+	cfg := s.Settings.Get()
+	cfg.ShowNews = false
+	if _, err := s.Settings.Put(cfg); err != nil {
+		t.Fatal(err)
+	}
+	if s.newsReply().Show {
+		t.Error("showNews=false muss den Hinweis unterdrücken")
+	}
+}
+
+func TestStatsResetPerWorld(t *testing.T) {
+	s, ts := newTestServer(t, nil)
+	s.Stats.Add("audio", 100, 50)
+	s.Stats.Add("video", 100, 40)
+	if resp := post(t, ts, "/api/stats/reset", map[string]string{"kind": "x"}, nil); resp.StatusCode != 400 {
+		t.Errorf("ungültige Welt: %d", resp.StatusCode)
+	}
+	post(t, ts, "/api/stats/reset", map[string]string{"kind": "audio"}, nil).Body.Close()
+	g := s.Stats.Get()
+	if g.Audio.Count != 0 || g.Video.Count != 1 {
+		t.Errorf("nur Audio zurücksetzen: %+v", g)
 	}
 }

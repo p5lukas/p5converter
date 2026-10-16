@@ -37,26 +37,31 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
     eq(name, 'Voreinstellungen im Schritt Video an', await p.isVisible('#presetBar'), true);
     await L.goStep(p, 'tracks');
     eq(name, 'Voreinstellungen im Schritt Spuren aus', await p.isVisible('#presetBar'), false);
-    await p.waitForSelector('#trackEditor .trktable'); 
-    eq(name, 'Zeilen (2 Ton + 2 Untertitel)', await p.locator('#trackEditor tr.trk').count(), 4);
+    await p.waitForSelector('#trackEditor .trkcard');
+    eq(name, 'Karten (2 Ton + 2 Untertitel)', await p.locator('#trackEditor .trkcard').count(), 4);
     if (await ov() > 0) errs.push(`${name}: Überlauf im Spuren-Schritt: ${await ov()}px`);
     await p.screenshot({ path: `${L.SHOTS}/t-${name}-2-tracks.png`, fullPage: true });
     // Alle abwählen / auswählen (Untertitel)
     const subs = p.locator('#trackEditor .trkgroup >> nth=1');
     await subs.getByText('Alle abwählen').click();
-    eq(name, 'Untertitel alle abgewählt', await subs.locator('tr.trk.off').count(), 2);
+    eq(name, 'Untertitel alle abgewählt', await subs.locator('.trkcard.off').count(), 2);
     await subs.getByText('Alle auswählen').click();
-    eq(name, 'Untertitel alle ausgewählt', await subs.locator('tr.trk.off').count(), 0);
-    // Titel + Sprache der ersten Tonspur ändern, zweite Tonspur Standard, Untertitel 1 forced
-    const rows = p.locator('#trackEditor tr.trk');
-    await rows.nth(0).locator('.trk-title').fill('Deutsch Stereo'); await rows.nth(0).locator('.trk-title').dispatchEvent('change'); await p.waitForTimeout(150);
-    await p.locator('#trackEditor tr.trk >> nth=1').locator('input[type=radio]').check(); await p.waitForTimeout(150);
-    await p.locator('#trackEditor tr.trk >> nth=2').locator('input[aria-label^="Forced"]').check(); await p.waitForTimeout(150);
-    eq(name, 'bearbeitete Zeilen markiert', await p.locator('#trackEditor tr.trk.edited').count() >= 3, true);
+    eq(name, 'Untertitel alle ausgewählt', await subs.locator('.trkcard.off').count(), 0);
+    const card = i => p.locator('#trackEditor .trkcard').nth(i);
+    const expand = async i => { if (!(await card(i).locator('.trkadv').count())) { await card(i).locator('.trkmore').click(); await p.waitForTimeout(150); } };
+    // Titel der 1. Tonspur, 2. Tonspur automatisch, 1. Untertitel Forced (alles unter „Erweitert“)
+    await expand(0); await card(0).locator('.trkadv input:not([type])').first().fill('Deutsch Stereo'); await card(0).locator('.trkadv input:not([type])').first().dispatchEvent('change'); await p.waitForTimeout(200);
+    await expand(1); await card(1).locator('.trkadv input[type=radio]').check(); await p.waitForTimeout(200);
+    await expand(2); await card(2).locator('.trkadv input[type=checkbox]').first().check(); await p.waitForTimeout(200);
+    eq(name, 'bearbeitete Karten markiert', await p.locator('#trackEditor .trkcard.edited').count() >= 3, true);
+    // Neu kodieren: Empfehlung und Zielbitrate sichtbar
+    await card(1).locator('.trk-act').selectOption('encode'); await p.waitForTimeout(250);
+    if (!/Ergebnis für diese Spur: 160 kbit\/s/.test(await card(1).textContent())) errs.push(name + ': Zielbitrate fehlt: ' + (await card(1).textContent()).slice(0, 300));
+    await card(1).locator('.trk-act').selectOption(''); await p.waitForTimeout(250);
     await p.screenshot({ path: `${L.SHOTS}/t-${name}-3-edited.png`, fullPage: true });
     await p.getByText('Auf alle Dateien anwenden').click(); await p.waitForTimeout(800);
     await p.selectOption('#trkFile', '1'); await p.waitForTimeout(400);
-    eq(name, 'Änderungen auf 2. Datei übertragen', await p.locator('#trackEditor tr.trk.edited').count() >= 3, true);
+    eq(name, 'Änderungen auf 2. Datei übertragen', await p.locator('#trackEditor .trkcard.edited').count() >= 3, true);
     // Zusammenfassung nennt die Änderung
     await L.goStep(p, 'summary');
     if (!/Einzelne Spuren geändert bei 2 Dateien/.test(await p.textContent('#summaryBody'))) errs.push(name + ': Zusammenfassung ohne Spur-Hinweis');
@@ -76,8 +81,17 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
         eq(name, 'Ergebnis: Untertitel 1 forced', s[0].disposition.forced, 1);
       }
     }
+    // Assistent: Datei mit mehreren Sprachen und einem Forced-Untertitel ohne Markierung
+    await L.goStep(p, 'files'); await p.click('#clearFiles'); await L.addFile(p, 'hint.mkv'); await L.goStep(p, 'tracks'); await p.waitForSelector('#trackEditor .trkcard');
+    const hintTxt = await p.textContent('#trackEditor .trkhints');
+    if (!/Nur Deutsch und Englisch behalten/.test(hintTxt) || !/Als Forced markieren/.test(hintTxt)) errs.push(name + ': Assistent-Hinweise fehlen: ' + hintTxt);
+    await p.screenshot({ path: `${L.SHOTS}/t-${name}-3b-hints.png`, fullPage: true });
+    await p.getByRole('button', { name: 'Als Forced markieren' }).click(); await p.waitForTimeout(300);
+    eq(name, 'Forced-Hinweis erledigt', /Als Forced markieren/.test(await p.textContent('#trackEditor')), false);
+    while (await p.getByRole('button', { name: 'Nur Deutsch und Englisch behalten' }).count()) { await p.getByRole('button', { name: 'Nur Deutsch und Englisch behalten' }).first().click(); await p.waitForTimeout(300); }
+    eq(name, 'Fremdsprachen entfernt (1 Ton + 2 Untertitel)', await p.locator('#trackEditor .trkcard.off').count(), 3);
+    await L.goStep(p, 'files'); await p.click('#clearFiles'); await L.addFile(p, 'long.mkv');
     // Alles zurücksetzen
-    await L.goStep(p, 'files'); await L.addFile(p, 'long.mkv');
     await p.click('#resetAll'); await p.waitForTimeout(250);
     eq(name, 'Rücksetz-Dialog offen', await p.isVisible('#resetDlg'), true);
     await p.screenshot({ path: `${L.SHOTS}/t-${name}-4-reset.png` });
