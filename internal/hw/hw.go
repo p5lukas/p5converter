@@ -93,9 +93,11 @@ type variant struct {
 
 // qsvVariants lists the ways Quick Sync can be started. Older Intel chips (Gen 8-11) use the Media SDK runtime,
 // newer ones (Gen 12+) oneVPL; which one finds the GPU can depend on how the device is opened, so several are tried.
-func qsvVariants(nodes []string) []variant {
+func qsvVariants(nodes []string) []variant { return qsvVariantsFor(runtime.GOOS, nodes) }
+
+func qsvVariantsFor(goos string, nodes []string) []variant {
 	v := []variant{{"automatisch", nil}, {"qsv=hw", []string{"-init_hw_device", "qsv=hw"}}}
-	if runtime.GOOS == "windows" { // Windows: Quick Sync läuft über Direct3D 11 (neuere Chips) oder DXVA2 (ältere)
+	if goos == "windows" { // Windows: Quick Sync läuft über Direct3D 11 (neuere Chips) oder DXVA2 (ältere)
 		v = append(v, variant{"über Direct3D 11", []string{"-init_hw_device", "qsv=hw:hw_any,child_device_type=d3d11va"}},
 			variant{"über DXVA2", []string{"-init_hw_device", "qsv=hw:hw_any,child_device_type=dxva2"}})
 	}

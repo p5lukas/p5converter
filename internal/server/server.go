@@ -17,6 +17,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/p5lukas/p5converter/internal/auth"
@@ -45,6 +46,8 @@ type Server struct {
 	Settings    *config.Store
 	Roots       []string // empty = unrestricted (desktop mode)
 	Quit        func()   // set in desktop mode: enables the Beenden button
+	ShowWindow  func()   // set in the Windows app: a second start asks the running one to show its window
+	uiOnce      sync.Once
 	enc         map[string]bool
 	ffver       string
 }
@@ -160,6 +163,14 @@ func (s *Server) Handler() http.Handler {
 		}
 		writeJSON(w, map[string]bool{"ok": true})
 		go s.Quit()
+	})
+	mux.HandleFunc("POST /api/desktop/show", func(w http.ResponseWriter, r *http.Request) {
+		if s.ShowWindow == nil {
+			httpErr(w, 404, "kein App-Fenster")
+			return
+		}
+		s.ShowWindow()
+		writeJSON(w, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("POST /api/concurrency", func(w http.ResponseWriter, r *http.Request) {
 		var b struct {
@@ -494,6 +505,8 @@ func (s *Server) concurrencies() map[string]int {
 }
 
 func (s *Server) state(w http.ResponseWriter, r *http.Request) {
+	// einmal protokollieren, womit die Oberfläche läuft (zeigt z. B. „Edg/…“ = WebView2-Fenster der Windows-App)
+	s.uiOnce.Do(func() { logs.Get("app").Infof("Oberfläche verbunden (%s)", shortUA(r.UserAgent())) })
 	writeJSON(w, map[string]any{
 		"jobs": s.Jobs.Snapshot(), "stats": s.Sampler.Latest(), "concurrency": s.concurrencies(), "saved": s.Stats.Get(),
 	})
@@ -748,4 +761,13 @@ func (s *Server) statsReset(w http.ResponseWriter, r *http.Request) {
 	s.Stats.Reset(body.Kind)
 	logs.Get("app").Infof("Statistik „Gewonnener Platz“ zurückgesetzt (%s)", body.Kind)
 	writeJSON(w, map[string]any{"ok": true, "saved": s.Stats.Get()})
+}
+
+// shortUA kürzt den User-Agent auf die Browser-Kennung (letzte zwei Teile, z. B. "Chrome/154.0.0.0 Edg/154.0.0.0").
+func shortUA(ua string) string {
+	f := strings.Fields(ua)
+	if len(f) > 2 {
+		f = f[len(f)-2:]
+	}
+	return strings.Join(f, " ")
 }

@@ -2,7 +2,7 @@ name: build
 
 on:
   push:
-    branches: [main, dev, "claude/**"]
+    branches: [main, dev]
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
@@ -139,6 +139,16 @@ jobs:
           "Laufwerke: $($fs.drives -join ' ')"
           if (-not $fs.drives -or $fs.drives.Count -lt 1) { throw "Keine Laufwerke gemeldet" }
           Stop-Process -Id $p.Id -Force
+      - name: GUI-Test unter Windows (Fenster, Oberfläche, Schließen versteckt, zweiter Start)
+        continue-on-error: true
+        shell: pwsh
+        run: pwsh windows/gui-test.ps1 "$PWD\build" "$PWD\gui-out"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gui-test
+          path: gui-out
+          if-no-files-found: ignore
       - name: Go-Tests unter Windows (nur Information)
         continue-on-error: true
         shell: pwsh
@@ -146,6 +156,7 @@ jobs:
           $env:PATH = "$PWD\build;$env:PATH"
           go test ./...
       - name: Installer bauen
+        if: github.event_name != 'pull_request'
         shell: pwsh
         run: |
           if (-not (Get-Command iscc -ErrorAction SilentlyContinue) -and -not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
@@ -154,6 +165,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup fehlgeschlagen" }
           Get-ChildItem build\out
       - name: Installer testen (still installieren, starten, deinstallieren)
+        if: github.event_name != 'pull_request'
         shell: pwsh
         run: |
           $dir = "$env:RUNNER_TEMP\p5inst"
@@ -164,11 +176,13 @@ jobs:
           Start-Sleep 2
           if (Test-Path "$dir\p5converter.exe") { throw "Deinstallation hat das Programm nicht entfernt" }
       - name: Größen
+        if: github.event_name != 'pull_request'
         shell: pwsh
         run: |
           $rows = Get-ChildItem build\out\*.exe, build\*.exe | ForEach-Object { "| {0} | {1:N1} MB |" -f $_.Name, ($_.Length/1MB) }
           "### Größen`n| Datei | Größe |`n|---|---|`n" + ($rows -join "`n") | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
       - uses: actions/upload-artifact@v4
+        if: github.event_name != 'pull_request'
         with:
           name: p5converter-setup
           path: build/out/p5converter-setup.exe
@@ -196,3 +210,17 @@ jobs:
           prerelease: ${{ startsWith(inputs.version != '' && format('v{0}', inputs.version) || github.ref_name, 'v0.') }}
           files: |
             unraid/p5converter.xml
+
+  # Zu einer Versions-Vorabversion vom Branch dev (z. B. v0.2.0-dev) kommt die Windows-setup.exe als Anhang dazu
+  release-windows:
+    needs: [windows, release]
+    if: github.ref == 'refs/heads/dev' && github.event_name == 'workflow_dispatch' && inputs.version != ''
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: p5converter-setup
+          path: dl
+      - run: gh release upload "v${{ inputs.version }}" dl/p5converter-setup.exe -R ${{ github.repository }} --clobber

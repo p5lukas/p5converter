@@ -633,3 +633,27 @@ func TestStatsResetPerWorld(t *testing.T) {
 		t.Errorf("nur Audio zurücksetzen: %+v", g)
 	}
 }
+
+// Windows-App: ein zweiter Start bittet das laufende Programm über die Adresse, sein Fenster zu zeigen.
+func TestDesktopShow(t *testing.T) {
+	s, ts := newTestServer(t, nil)
+	if resp := post(t, ts, "/api/desktop/show", map[string]string{}, nil); resp.StatusCode != 404 {
+		t.Errorf("ohne App-Fenster: %d", resp.StatusCode)
+	}
+	called := make(chan struct{}, 1)
+	s.ShowWindow = func() { called <- struct{}{} }
+	if resp := post(t, ts, "/api/desktop/show", map[string]string{}, nil); resp.StatusCode != 200 {
+		t.Errorf("mit App-Fenster: %d", resp.StatusCode)
+	}
+	select {
+	case <-called:
+	default:
+		t.Error("ShowWindow wurde nicht aufgerufen")
+	}
+}
+
+func TestShortUA(t *testing.T) {
+	if got := shortUA("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0"); got != "Safari/537.36 Edg/154.0.0.0" {
+		t.Errorf("shortUA: %q", got)
+	}
+}

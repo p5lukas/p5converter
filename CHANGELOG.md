@@ -1,5 +1,13 @@
 # Änderungen
 
+## 0.1.2 – 2026-10-16
+
+**Neu (nur Branch `dev`)**
+- **Windows: Symbol im Infobereich (Tray)** mit „p5converter öffnen“ und „Beenden“ (Rückfrage, wenn noch Aufträge laufen); Klick auf das Symbol zeigt das Fenster
+- **Das Schließen-Kreuz versteckt nur das Fenster**: p5converter und laufende Aufträge laufen im Infobereich weiter; ein zweiter Start oder das Symbol holt das Fenster zurück; beendet wird über das Symbol oder den Knopf „Beenden“ in der Oberfläche
+- **GUI-Test in der CI unter echtem Windows**: startet die App mit Fenster, prüft über die WebView2-Schnittstelle, dass die Oberfläche geladen ist (inkl. Bild als Artefakt `gui-test`), dass Schließen nur versteckt und dass der zweite Start das Fenster zurückholt
+- Bei einer Versions-Vorabversion vom Branch `dev` (z. B. `v0.2.0-dev`) hängt die CI die `p5converter-setup.exe` als Anhang an; sonst liegt sie immer in der laufenden Vorabversion `dev-latest`
+
 ## 0.1.1 – 2026-10-16
 
 **Neu (nur Branch `dev`)**
