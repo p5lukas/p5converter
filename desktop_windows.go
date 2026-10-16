@@ -3,7 +3,7 @@
 package main
 
 import (
-	"github.com/p5lukas/p5converter/internal/proc"
+	_ "embed"
 	"log"
 	"os"
 	"path/filepath"
@@ -12,6 +12,7 @@ import (
 
 	"fyne.io/systray"
 	webview2 "github.com/jchv/go-webview2"
+	"github.com/p5lukas/p5converter/internal/proc"
 	"golang.org/x/sys/windows"
 )
 
