@@ -73,6 +73,11 @@ func New(build version.Info, t ffmpeg.Tools, roots []string, concurrency int, co
 	s.enc = t.Encoders()
 	s.ffver = t.Version()
 	go func() {
+		// P5_TEST_HW_DELAY (Millisekunden) verzögert die Erkennung künstlich – nur für Tests (die Oberfläche muss auch dann starten,
+		// wenn sie schon fragt, bevor die Erkennung fertig ist)
+		if ms, _ := strconv.Atoi(os.Getenv("P5_TEST_HW_DELAY")); ms > 0 {
+			time.Sleep(time.Duration(ms) * time.Millisecond)
+		}
 		s.Det.Detect()
 		logHardware(s.Det.Result())
 	}()
@@ -163,6 +168,13 @@ func (s *Server) Handler() http.Handler {
 		}
 		writeJSON(w, map[string]bool{"ok": true})
 		go s.Quit()
+	})
+	mux.HandleFunc("POST /api/client-error", func(w http.ResponseWriter, r *http.Request) {
+		var b struct{ Msg string }
+		if json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&b) == nil && b.Msg != "" {
+			logs.Get("ui").Errorf("Fehler in der Oberfläche: %s", b.Msg)
+		}
+		writeJSON(w, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("POST /api/desktop/show", func(w http.ResponseWriter, r *http.Request) {
 		if s.ShowWindow == nil {

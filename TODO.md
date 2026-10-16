@@ -16,6 +16,7 @@
 - [ ] Optional: Image als multi-arch (amd64/arm64) bauen
 
 ## Vom Nutzer zu prüfen (nicht in der Sandbox möglich)
+- [ ] 0.1.3 Windows: neue `setup.exe` aus `dev-latest` über die alte installieren: erscheint die Hardware-Kachel (Quick Sync nutzbar, NVIDIA mit Klartext-Meldung), kein „Start fehlgeschlagen“, „Beenden“ sofort da? Nach NVIDIA-Treiber-Update: wird NVENC erkannt (Einstellungen → Hardware)?
 - [ ] 0.1.1 Windows: `p5converter-setup.exe` aus `dev-latest` laden, SmartScreen bestätigen, installieren; öffnet das Fenster mit der Oberfläche? Symbol/Titel ok? Tray-Symbol da, Schließen-Kreuz versteckt nur, „Beenden“ fragt bei laufenden Aufträgen? Unter Einstellungen → Hardware: werden Quick Sync/NVENC/AMF erkannt (Diagnose kopieren, falls nicht)? Eine echte Konvertierung mit Hardware; Laufwerke im Datei-Browser; Schließen beendet laufende ffmpeg; Deinstallation über die Windows-Einstellungen
 - [ ] 0.0.10: Schritt „Audio & Untertitel“ auf dem Gerät ansehen (Desktop und iPhone/iPad, hoch und quer): Ist jetzt klar, was „So lassen / Kleiner machen“ bedeutet? Sind „Erweitert“ (Titel, Sprache, Forced, startet automatisch) und die Tipps verständlich? Eine echte Datei mit mehreren Sprachen ausprobieren, auch „Kleiner machen“ (Zielbitrate stimmt mit der Anzeige?) und danach in Plex neu analysieren
 - [ ] 0.0.10: „Gewonnener Platz“ in Audio und Video getrennt ansehen; „Zurücksetzen“ in einer Welt (Rückfrage, andere Welt bleibt)
@@ -35,6 +36,7 @@
 - [ ] Linux-App (Fedora KDE) mit eigener Oberfläche
 
 ## Erledigt
+- [x] 0.1.3: **Windows: Hardware-Anzeige/Start-Fehler** (null-Listen, Absturz in `loadInfo`), **„Beenden“-Knopf sofort**, **NVENC: ältere ffmpeg-Reihe 6.1 + verständliche Treiber-Meldung** (A + B); Fehler der Oberfläche im Protokoll; Tests (UI-Prüfung `ui-check-hwnull.js`, Go-Tests, GUI-Test mit verzögerter Erkennung)
 - [x] 0.1.2: **Windows: Tray-Symbol**, Schließen versteckt nur das Fenster, „Beenden“ mit Rückfrage bei laufenden Aufträgen; GUI-Test in der CI unter echtem Windows; setup.exe zusätzlich als Anhang an Versions-Vorabversionen vom `dev`
 - [x] 0.1.1: **Windows-App (Variante B) auf `dev`**: eine `p5converter-setup.exe` (Programm + ffmpeg + WebView2-Starter), eigenes App-Fenster mit der Weboberfläche, automatische Hardware-Erkennung, Installation ohne Admin, CI baut/testet unter Windows und veröffentlicht `dev-latest`
 - [x] 0.1.0: **Branch-Modell wie p5assets**: Feature-Branch → `dev` (Image `:dev`, Vorlage `p5converter-dev.xml`) → `main` (Image `:latest`); Pre-Releases `v0.1.0` und `v0.1.0-dev`

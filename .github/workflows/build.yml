@@ -114,16 +114,26 @@ jobs:
       - name: ffmpeg (statisch, mit NVENC/Quick Sync/AMF) laden
         shell: pwsh
         run: |
-          $assets = gh release view latest -R BtbN/FFmpeg-Builds --json assets --jq '.assets[].name'
-          $pick = $assets | Where-Object { $_ -match '^ffmpeg-n[0-9.]+-latest-win64-gpl-[0-9.]+\.zip$' } | Sort-Object { [version](($_ -replace '^ffmpeg-n','') -replace '-latest.*','') } -Descending | Select-Object -First 1
-          if (-not $pick) { $pick = 'ffmpeg-master-latest-win64-gpl.zip' }
-          "ffmpeg-Paket: $pick" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
-          gh release download latest -R BtbN/FFmpeg-Builds -p $pick -O ffmpeg.zip
+          # Bevorzugt ffmpeg 6.1.1 (gyan.dev, Reihe wie im getesteten Docker-Image): braucht von NVIDIA nur die NVENC-Schnittstelle 12.1
+          # und läuft damit mit viel mehr Treibern als die neueste Reihe (9.0 verlangt 13.1). Ersatz: neueste BtbN-Version.
+          $ok = $false
+          try {
+            $asset = gh release view 6.1.1 -R GyanD/codexffmpeg --json assets --jq '.assets[].name' | Where-Object { $_ -match '^ffmpeg-6\.1\.1-full_build\.zip$' } | Select-Object -First 1
+            if ($asset) { gh release download 6.1.1 -R GyanD/codexffmpeg -p $asset -O ffmpeg.zip; if ($LASTEXITCODE -eq 0) { $ok = $true; "ffmpeg-Paket: gyan.dev $asset" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append } }
+          } catch { "gyan.dev nicht erreichbar: $_" }
+          if (-not $ok) {
+            $assets = gh release view latest -R BtbN/FFmpeg-Builds --json assets --jq '.assets[].name'
+            $pick = $assets | Where-Object { $_ -match '^ffmpeg-n[0-9.]+-latest-win64-gpl-[0-9.]+\.zip$' } | Sort-Object { [version](($_ -replace '^ffmpeg-n','') -replace '-latest.*','') } -Descending | Select-Object -First 1
+            if (-not $pick) { $pick = 'ffmpeg-master-latest-win64-gpl.zip' }
+            "ffmpeg-Paket (Ersatz): BtbN $pick" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
+            gh release download latest -R BtbN/FFmpeg-Builds -p $pick -O ffmpeg.zip
+          }
           Expand-Archive ffmpeg.zip -DestinationPath ffmpeg-x
           $bin = (Get-ChildItem ffmpeg-x -Recurse -Filter ffmpeg.exe | Select-Object -First 1).DirectoryName
           Copy-Item "$bin\ffmpeg.exe","$bin\ffprobe.exe" build\
           Copy-Item windows\ffmpeg-LICENSE.txt build\
           Invoke-WebRequest "https://go.microsoft.com/fwlink/p/?LinkId=2124703" -OutFile build\MicrosoftEdgeWebview2Setup.exe
+          & build\ffmpeg.exe -hide_banner -version | Select-Object -First 1
       - name: Server-Test unter Windows (echtes Windows, ffmpeg, Hardware-Erkennung)
         shell: pwsh
         run: |

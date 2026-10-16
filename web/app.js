@@ -117,8 +117,15 @@ function refreshAudioUI() {
 }
 
 // ---------- video UI ----------
+// Antworten von /api/info: Listen sind nie null (die Erkennung kann noch laufen, wenn die Oberfläche schon fragt)
+function normInfo(info) {
+  const h = info.hw || {};
+  ['backends', 'gpus', 'renderNodes', 'diag', 'vainfo'].forEach(k => { if (!Array.isArray(h[k])) h[k] = []; });
+  info.hw = h; info.encoders = info.encoders || {};
+  return info;
+}
 function hwResult() { return (S.info && S.info.hw) || {backends: [], done: false}; }
-function backendCaps(id) { return hwResult().backends.find(b => b.id === id); }
+function backendCaps(id) { return (hwResult().backends || []).find(b => b.id === id); }
 function workingBackends(codec) {
   return BACKEND_ORDER.filter(id => { const b = backendCaps(id); return b && b.codecs && b.codecs[codec]; });
 }
@@ -544,13 +551,22 @@ window.addEventListener('scroll', () => { if (popFor && Math.abs(scrollY - popY)
 
 // ---------- init ----------
 async function loadInfo() {
-  S.info = await api('/api/info');
+  S.info = normInfo(await api('/api/info'));
+  // zuerst das, was nicht von der Hardware abhängt: Fußzeile und „Beenden“ (erscheint sofort)
   $('#ffver').textContent = S.info.ffmpeg.replace(/^ffmpeg version /, 'ffmpeg ').split(' Copyright')[0].split(' ').slice(0, 2).join(' ');
-  renderFooter();
-  refreshVideoUI();
   $('#quit').classList.toggle('hidden', !S.info.canQuit);
-  if (!S.info.hw.done) setTimeout(loadInfo, 1200);
+  renderFooter();
+  try { refreshVideoUI(); } catch (e) { reportError('Hardware-Anzeige: ' + (e && e.message)); }
+  if (!S.info.hw.done) setTimeout(() => loadInfo().catch(() => {}), 1200);
 }
+// Fehler der Oberfläche ins Protokoll des Programms schreiben (damit sie auch ohne Entwicklerwerkzeuge sichtbar sind)
+let reported = 0;
+function reportError(msg) {
+  if (reported++ > 5) return;
+  try { fetch('/api/client-error', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({msg: String(msg).slice(0, 500)})}); } catch (e) {}
+}
+window.addEventListener('error', e => reportError((e.message || 'Fehler') + (e.filename ? ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')' : '')));
+window.addEventListener('unhandledrejection', e => reportError('Promise: ' + (e.reason && e.reason.message || e.reason)));
 function renderFooter() {
   const b = S.info.build, ff = S.info.ffmpeg.replace(/^ffmpeg version /, '').split(' Copyright')[0].split(' ')[0];
   const ver = b.tag ? `<a href="${esc(b.branchUrl)}" target="_blank" rel="noopener">v${esc(b.tag)}</a>` : `<a href="${esc(b.branchUrl)}" target="_blank" rel="noopener">${esc(b.branch)}</a>`;
@@ -697,5 +713,5 @@ async function startApp() {
   await loadAuth();
   if (S.auth.enabled && !S.auth.authenticated) { showLogin(); return; }
   updateAuthUI();
-  try { await startApp(); } catch (e) { if (e.status !== 401) toast('Start fehlgeschlagen: ' + e.message, 'bad'); }
+  try { await startApp(); } catch (e) { if (e.status !== 401) { toast('Start fehlgeschlagen: ' + e.message, 'bad'); reportError('Start fehlgeschlagen: ' + e.message); } }
 })();

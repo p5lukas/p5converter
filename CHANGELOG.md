@@ -1,5 +1,17 @@
 # Änderungen
 
+## 0.1.3 – 2026-10-16
+
+**Behoben (Windows-App, nur `dev`)**
+- **Hardware wurde nicht angezeigt, beim Start erschien „Start fehlgeschlagen: Cannot read properties of null (reading 'find')“**: Das App-Fenster fragt schon, bevor die Hardware-Erkennung fertig ist (Windows: ca. 3 s); der Server lieferte dann `null` statt leerer Listen und die Oberfläche brach ab. Jetzt liefert der Server immer leere Listen, die Oberfläche kommt auch mit unvollständigen Antworten zurecht und zeigt „Erkennung läuft …“
+- **„Beenden“ erschien erst sehr spät**: Der Knopf und die Fußzeile erscheinen jetzt sofort beim Start, unabhängig von der Hardware-Erkennung
+- **NVIDIA: ältere ffmpeg-Version** (6.1.1 von gyan.dev, dieselbe Reihe wie im getesteten Docker-Image) statt der neuesten (9.0): sie braucht nur die NVENC-Schnittstelle 12.1 (Treiber ab ca. 531) statt 13.1 und läuft mit viel mehr NVIDIA-Treibern
+- **Verständliche Meldung, wenn der NVIDIA-Treiber zu alt ist** („Dein NVIDIA-Treiber ist zu alt für NVENC: er kann NVENC 12.0, dieses ffmpeg braucht … Bitte den Treiber aktualisieren“) und wenn keine NVIDIA-Grafik/kein Treiber da ist, statt der rohen ffmpeg-Zeilen
+
+**Neu**
+- Fehler der Oberfläche werden ins Protokoll des Programms geschrieben („Fehler in der Oberfläche: …“), damit sie auch ohne Entwicklerwerkzeuge sichtbar sind
+- Tests: UI-Prüfung mit unvollständiger Hardware-Antwort (hätte den Fehler gefunden), Go-Tests für leere Listen und die NVIDIA-Meldung; der GUI-Test in der CI verzögert die Erkennung künstlich und prüft, dass kein Fehler auftritt
+
 ## 0.1.2 – 2026-10-16
 
 **Neu (nur Branch `dev`)**
