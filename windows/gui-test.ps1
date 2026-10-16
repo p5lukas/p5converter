@@ -51,6 +51,12 @@ try {
   if (-not $res.sichtbarNachZweitemStart) { throw 'Zweiter Start holte das Fenster nicht zurück' }
   $res.ergebnis = 'ok'
 } finally {
+  # Diagnose: wer hat Fenster, was steht im Protokoll, ist WebView2 da, gibt es eine Desktop-Sitzung?
+  "--- Prozesse mit Fenster ---"; Get-Process | Where-Object { $_.MainWindowHandle -ne 0 } | ForEach-Object { "{0} | {1}" -f $_.ProcessName, $_.MainWindowTitle }
+  "--- WebView2-Laufzeit ---"; foreach ($k in 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}','HKCU:\Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}') { if (Test-Path $k) { "$k pv=" + (Get-ItemProperty $k).pv } else { "$k fehlt" } }
+  "--- Sitzung ---"; "SESSIONNAME=$env:SESSIONNAME USERNAME=$env:USERNAME"; try { query session 2>&1 } catch {}
+  "--- Protokoll (Cache) ---"; $lf = Join-Path $env:LOCALAPPDATA 'p5converter\p5converter.log'; if (Test-Path $lf) { Get-Content $lf -Tail 40 } else { "keine Datei $lf" }
+  "--- Protokoll (Konfig) ---"; $cl = Join-Path $cfg 'logs\p5converter.log'; if (Test-Path $cl) { Get-Content $cl -Tail 40 } else { "keine Datei $cl" }
   $res | ConvertTo-Json | Tee-Object -FilePath (Join-Path $Out 'gui-ergebnis.json')
   if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
 }
