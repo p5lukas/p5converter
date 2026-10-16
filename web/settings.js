@@ -272,8 +272,11 @@ function pagePresets() {
         h('button', {class: 'small danger', title: 'Löschen', onclick: () => { if (confirm('Voreinstellung „' + p.name + '“ löschen?')) saveCfg(x => { x.presets = x.presets.filter(q => q.id !== p.id); }); }}, icon('trash'))));
   }) : h('div', {class: 'empty'}, 'Keine Voreinstellungen in dieser Welt.');
   return h('div', {}, h('h2', {}, 'Voreinstellungen', infoBtn('setPresets')),
-    h('p', {class: 'muted'}, 'Voreinstellungen füllen alle Einstellungen einer Welt mit einem Klick. Die mit „Vorschlag“ erscheinen oben im Einstellungs-Panel des Konverters.'),
-    tabs, h('div', {class: 'plist'}, list),
+    h('p', {class: 'muted'}, 'Voreinstellungen füllen alle Einstellungen einer Welt mit einem Klick. Die mit „Vorschlag“ erscheinen im Konverter oben im Schritt „Video“ bzw. „Einstellungen“.'),
+    tabs, mine.length > 1 ? h('div', {class: 'btns', style: 'margin-bottom:10px'}, h('span', {class: 'muted small'}, 'Vorschläge:'),
+      h('button', {class: 'small', onclick: () => saveCfg(x => x.presets.forEach(q => { if (q.world === tab) q.suggest = true; }), false)}, 'Alle auswählen'),
+      h('button', {class: 'small', onclick: () => saveCfg(x => x.presets.forEach(q => { if (q.world === tab) q.suggest = false; }), false)}, 'Alle abwählen')) : null,
+    h('div', {class: 'plist'}, list),
     h('p', {class: 'muted small'}, 'Neue Voreinstellung: im Konverter die Einstellungen wählen und auf „Als Voreinstellung speichern“ (Diskette) klicken.'),
     h('div', {class: 'btns'}, h('button', {onclick: () => { location.hash = ''; setWorld(tab, false); }}, '→ Zum Konverter'),
       h('button', {class: 'ghost', onclick: restoreDefaultPresets}, 'Standard-Voreinstellungen wiederherstellen')));
@@ -294,12 +297,7 @@ function pageHardware() {
   const pref = h('select', {onchange: () => saveCfg(x => { x.preferredBackend = pref.value; })},
     opt('auto', 'Automatisch (schnellste verfügbare)'), opt('cpu', 'CPU (Software)'), opt('qsv', 'Intel Quick Sync'), opt('nvenc', 'NVIDIA NVENC'), opt('vaapi', 'VAAPI'), opt('amf', 'AMD AMF'));
   pref.value = c.preferredBackend;
-  const backends = hw.backends.map(b => {
-    const cs = ['h264', 'hevc', 'av1', 'vp9'].filter(k => b.codecs && b.codecs[k]);
-    return h('div', {class: 'hw'}, h('div', {}, h('b', {}, b.label, b.gpu ? h('span', {class: 'muted small'}, ' (' + b.gpu + (b.device ? ', ' + b.device : '') + ')') : null),
-      h('span', {class: 'small muted'}, cs.length ? cs.map(k => CODEC_LABEL[k] + (b.tenBit && b.tenBit[k] ? ' 10b' : '')).join(' · ') + (b.variant ? ' · gestartet: ' + b.variant : '') : (b.detail || 'nicht verfügbar'))),
-      h('span', {class: 'chip ' + (cs.length ? 'ok' : 'err')}, cs.length ? 'nutzbar' : 'nicht nutzbar'));
-  });
+  const backends = hwRows(hw);
   const diagText = buildDiagText(hw);
   const diagRows = (hw.diag || []).map(d => h('tr', {}, h('td', {}, d.backend), h('td', {}, d.codec + (d.ten ? ' 10b' : '')), h('td', {}, d.variant || ''),
     h('td', {class: d.ok ? '' : 'warn'}, d.ok ? '✓ ok' : '✗'), h('td', {class: 'muted'}, d.msg || '')));

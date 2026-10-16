@@ -100,6 +100,7 @@ type Stream struct {
 	BitRate     int64  `json:"bitRate,omitempty"`
 	SampleRate  int    `json:"sampleRate,omitempty"`
 	Default     bool   `json:"default,omitempty"`
+	Forced      bool   `json:"forced,omitempty"`
 	AttachedPic bool   `json:"attachedPic,omitempty"`
 }
 
@@ -171,7 +172,7 @@ func (t Tools) Probe(ctx context.Context, path string) (*Info, error) {
 		st := Stream{Index: s.Index, Type: s.CodecType, Codec: s.CodecName, Profile: s.Profile,
 			Lang: tags["language"], Title: tags["title"], Channels: s.Channels, Layout: s.ChannelLayout,
 			Width: s.Width, Height: s.Height, PixFmt: s.PixFmt, BitRate: atoi(s.BitRate),
-			SampleRate: int(atoi(s.SampleRate)), Default: s.Disposition["default"] == 1,
+			SampleRate: int(atoi(s.SampleRate)), Default: s.Disposition["default"] == 1, Forced: s.Disposition["forced"] == 1,
 			AttachedPic: s.Disposition["attached_pic"] == 1}
 		if st.Type == "video" {
 			st.BitDepth = bitDepth(s.PixFmt, int(atoi(s.BitsPerRaw)))

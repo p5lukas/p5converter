@@ -151,3 +151,46 @@ func TestAudioRealEncodes(t *testing.T) {
 		}
 	}
 }
+
+// Real file: title, ISO 639-2 language, forced flag and the single default audio track must come out of ffmpeg as set.
+func TestTrackEditsRealFile(t *testing.T) {
+	tl := tools(t)
+	dir := t.TempDir()
+	src := makeSource(t, tl, dir)
+	info, err := tl.Probe(context.Background(), src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	str := func(s string) *string { return &s }
+	yes := true
+	ov := Overrides{Tracks: map[string]TrackEdit{
+		"1": {Title: str("Deutsch Stereo"), Lang: str("de")},
+		"2": {Title: str("English"), Lang: str("en"), Default: &yes},
+		"3": {Title: str("Deutsch (Forced)"), Forced: &yes},
+	}}
+	out := filepath.Join(dir, "out.mkv")
+	p, err := BuildVideo(info, VideoOpts{Codec: "copy", Container: "mkv", AudioMode: "copy", SubMode: "copy"}, ov, src, out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if o, err := exec.Command(tl.FFmpeg, p.Args...).CombinedOutput(); err != nil {
+		t.Fatalf("ffmpeg: %v\n%s", err, o)
+	}
+	got, err := tl.Probe(context.Background(), out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a, s := got.ByType("audio"), got.ByType("subtitle")
+	if len(a) != 2 || len(s) != 1 {
+		t.Fatalf("Spuren: %d Audio, %d Untertitel", len(a), len(s))
+	}
+	if a[0].Title != "Deutsch Stereo" || a[0].Lang != "ger" || a[0].Default {
+		t.Errorf("Audio 1: %+v", a[0])
+	}
+	if a[1].Title != "English" || a[1].Lang != "eng" || !a[1].Default {
+		t.Errorf("Audio 2: %+v", a[1])
+	}
+	if s[0].Title != "Deutsch (Forced)" || !s[0].Forced {
+		t.Errorf("Untertitel: %+v", s[0])
+	}
+}

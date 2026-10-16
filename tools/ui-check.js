@@ -26,10 +26,6 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
     eq(name, 'Dateien nach „Konvertierung starten“', await vis(), 'files');
     await L.addFile(p, 'long.mkv');
     await p.screenshot({ path: `${L.SHOTS}/st-${name}-2-files.png` });
-    // Spuren-Dialog erreichbar
-    await p.click('[data-tr="0"]'); await p.waitForTimeout(500);
-    await p.screenshot({ path: `${L.SHOTS}/st-${name}-2b-tracks-dialog.png` });
-    await p.keyboard.press('Escape'); await p.waitForTimeout(200);
     const seq = ['dest', 'name', 'video', 'tracks', 'summary'];
     for (const s of seq) {
       await p.click('#stepNext'); await p.waitForTimeout(300);

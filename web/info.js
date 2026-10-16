@@ -21,9 +21,10 @@ const INFO = {
     <ul><li><b>Aa</b>: Groß-/Kleinschreibung beachten (sonst egal).</li>
     <li><b>Regex</b> (für Fortgeschrittene): Suchtext ist ein regulärer Ausdruck, <code>$1</code> steht für die erste Klammer. Beispiel: <code>\[(\w+)-(\d+p)\]</code> → <code>$2 $1</code>.</li></ul>
     <p>Die Vorschau zeigt sofort das Ergebnis; Endung und Ordner bleiben unberührt.</p>`},
-  exists: {t: 'Wenn Datei existiert', b: `<ul><li><b>Umbenennen:</b> Die neue Datei bekommt „(2)“ im Namen. Nichts geht verloren – sicherste Wahl.</li>
-    <li><b>Überspringen:</b> Gibt es das Ziel schon, wird die Datei nicht erneut umgewandelt. Gut, wenn du einen Ordner nach einem Abbruch nochmal startest.</li>
-    <li><b>Überschreiben:</b> Die alte Zieldatei wird ersetzt.</li></ul>`},
+  exists: {t: 'Wenn Datei existiert', b: `<p>Was passieren soll, wenn es die Zieldatei schon gibt.</p>
+    <ul><li><b>Beide behalten, neue Datei nummerieren:</b> Die vorhandene Datei bleibt, die neue bekommt eine Nummer, z. B. <code>Film (2).mkv</code>. Nichts geht verloren – die sicherste Wahl.</li>
+    <li><b>Überspringen, vorhandene Datei nicht anfassen:</b> Die Datei wird nicht erneut umgewandelt. Gut, wenn du einen Ordner nach einem Abbruch noch einmal startest.</li>
+    <li><b>Überschreiben, vorhandene Datei ersetzen:</b> Die alte Zieldatei wird durch die neue ersetzt. Das lässt sich nicht rückgängig machen.</li></ul>`},
   deleteSource: {t: 'Quelldatei löschen', b: `<p>Löscht das Original, <b>nachdem</b> die neue Datei erfolgreich fertig ist. Das ist <b>endgültig</b> (kein Papierkorb).</p>
     <p>Empfehlung für Anfänger: aus lassen, erst Ergebnis ansehen/anhören, dann selbst aufräumen.</p>`},
 
@@ -102,14 +103,20 @@ const INFO = {
     <p class="ex">Beispiel: <code>ger,eng</code> behält Deutsch und Englisch, entfernt z. B. Französisch und Spanisch. Auch <code>de,en</code> funktioniert.</p>
     <p>Spuren ohne Sprachangabe bleiben erhalten. Würde der Filter <b>alle</b> Spuren entfernen, wird er ignoriert.</p>`},
   vSubMode: {t: 'Untertitel', b: `<ul><li><b>Passthrough:</b> alle Untertitel werden übernommen (in MKV ohne Verlust).</li><li><b>Alle entfernen:</b> keine Untertitel in der neuen Datei.</li></ul>
-    <p>Einzelne Untertitel pro Datei löschen: in der Dateiliste auf „Spuren“ klicken.</p>
+    <p>Einzelne Untertitel pro Datei änderst du unten in der Tabelle „Einzelne Spuren“.</p>
     <p class="ex">Hinweis: In MP4 gehen Bild-Untertitel (Blu-ray/PGS, DVD) nicht – nimm dafür MKV.</p>`},
   vSubLangs: {t: 'Untertitel-Sprachen behalten', b: `<p>Wie bei den Audio-Sprachen: nur diese Sprachen behalten, leer = alle.</p>
     <p class="ex">Beispiel: <code>ger</code> → nur deutsche Untertitel.</p>`},
-  vAudioTracks: {t: 'Audiospuren', b: `<p>Einstellungen für den Ton im Video. Einzelne Spuren pro Datei abwählen oder die Standardspur ändern: bei der Datei auf <b>Spuren</b> klicken.</p>`},
-  vSubTracks: {t: 'Untertitel', b: `<p>Einstellungen für Untertitel im Video.</p>`},
-  tracksBtn: {t: 'Spuren', b: `<p>Zeigt alle Bild-, Ton- und Untertitelspuren der Datei.</p>
-    <ul><li><b>Behalten abwählen</b> = Spur wird entfernt (z. B. Kommentar-Tonspur, fremde Untertitel).</li><li><b>Standard</b> = Tonspur, die der Player automatisch startet.</li></ul>`},
+  vAudioTracks: {t: 'Audiospuren', b: `<p>Regeln für den Ton in <b>allen</b> Dateien. Standard ist „Passthrough“: Alle Tonspuren bleiben unverändert. Einzelne Spuren änderst du unten in der Tabelle.</p>`},
+  vSubTracks: {t: 'Untertitel', b: `<p>Regeln für die Untertitel in <b>allen</b> Dateien. Standard ist „Passthrough“: Alle Untertitel bleiben unverändert.</p>`},
+  trkTable: {t: 'Einzelne Spuren', b: `<p>Zeigt alle Ton- und Untertitelspuren der gewählten Datei. Was du hier änderst, gilt nur für diese Datei – oder per „Auf alle Dateien anwenden“ für alle.</p>
+    <ul><li><b>Behalten:</b> Abwählen entfernt die Spur (z. B. Kommentar-Tonspur, fremde Untertitel).</li>
+    <li><b>Aktion:</b> „Standard“ folgt den Regeln oben, „Unverändert kopieren“ lässt die Spur unberührt (auch wenn die Regeln oben sie entfernen würden), „Neu kodieren“ wandelt nur diese Tonspur um.</li>
+    <li><b>Titel:</b> Name der Spur im Player-Menü, z. B. „Deutsch 5.1“.</li>
+    <li><b>Sprache:</b> Dreibuchstabiger Code (ISO 639-2), z. B. <code>ger</code>, <code>eng</code>, <code>jpn</code>. Nur so erkennt Plex die Sprache sicher.</li>
+    <li><b>Forced:</b> Markiert einen Untertitel als „erzwungen“ (nur fremdsprachige Stellen). Plex erkennt das nur in MKV und nur, wenn die Untertitelsprache zur Tonspur passt.</li>
+    <li><b>Standard:</b> Die Spur, die der Player von selbst startet. Bei Ton gibt es genau eine.</li></ul>
+    <p class="ex">Nach dem Umwandeln in Plex das Element bzw. die Bibliothek neu analysieren („Analysieren“), sonst zeigt Plex noch die alten Angaben.</p>`},
   conc: {t: 'Parallel', b: `<p>Wie viele Dateien gleichzeitig umgewandelt werden.</p>
     <ul><li><b>Video mit CPU: 1</b> – ein Auftrag nutzt schon alle Kerne.</li><li>Video mit Hardware: 1–2.</li><li>Audio: 2–4, geht deutlich schneller.</li></ul>`},
   setStart: {t: 'Startansicht', b: `<p>Welche Welt (Audio oder Video) beim Öffnen von p5converter zuerst erscheint. „Zuletzt benutzte Welt“ merkt sich deine letzte Wahl.</p>`},

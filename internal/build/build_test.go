@@ -128,3 +128,97 @@ func TestQSVDecodeModes(t *testing.T) {
 		t.Errorf("ohne Skalierung/Formatwechsel kein -vf:%s", join(p.Args))
 	}
 }
+
+func TestTrackEditsAndMetadata(t *testing.T) {
+	str := func(s string) *string { return &s }
+	yes := true
+	info := &ffmpeg.Info{Streams: []ffmpeg.Stream{
+		{Index: 0, Type: "video", Codec: "hevc", Width: 1920, Height: 1080, BitDepth: 8},
+		{Index: 1, Type: "audio", Codec: "eac3", Lang: "ger", Channels: 6, Default: true},
+		{Index: 2, Type: "audio", Codec: "dts", Lang: "eng", Channels: 6},
+		{Index: 3, Type: "subtitle", Codec: "subrip", Lang: "ger"},
+		{Index: 4, Type: "subtitle", Codec: "subrip", Lang: "eng", Forced: true},
+		{Index: 5, Type: "subtitle", Codec: "hdmv_pgs_subtitle", Lang: "fre"},
+	}}
+	ov := Overrides{Tracks: map[string]TrackEdit{
+		"1": {Title: str("Deutsch 5.1"), Lang: str("de")},
+		"2": {Action: "encode", Codec: "opus", Kbps: 96, Title: str("English (Opus)"), Default: &yes},
+		"3": {Forced: &yes, Title: str("Deutsch (Forced)")},
+		"5": {Action: "drop"},
+	}}
+	p, err := BuildVideo(info, VideoOpts{Codec: "copy", Container: "mkv", AudioMode: "copy", SubMode: "copy"}, ov, "in.mkv", "out.part")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := join(p.Args)
+	for _, w := range []string{
+		"-c:a:0 copy", "-metadata:s:a:0 title=Deutsch 5.1", "-metadata:s:a:0 language=ger", // 2-letter input is written as ISO 639-2
+		"-c:a:1 libopus", "-b:a:1 288k", "-metadata:s:a:1 title=English (Opus)", // 96 kbit per stereo pair x 3 for 5.1
+		"-disposition:a:1 default", "-disposition:a:0 0", // default moves to the second track
+		"-c:s:0 copy", "-disposition:s:0 forced", "-metadata:s:s:0 title=Deutsch (Forced)",
+	} {
+		if !strings.Contains(s, w) {
+			t.Errorf("fehlt %q in%s", w, s)
+		}
+	}
+	if strings.Contains(s, "-map 0:5") {
+		t.Errorf("verworfene Spur wurde gemappt:%s", s)
+	}
+	// forced in MP4: Plex does not read it -> warning
+	p, _ = BuildVideo(info, VideoOpts{Codec: "copy", Container: "mp4", AudioMode: "copy", SubMode: "copy"}, ov, "in.mkv", "out.part")
+	found := false
+	for _, w := range p.Warnings {
+		if strings.Contains(w, "nur in MKV") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("Warnung zu Forced in MP4 fehlt: %v", p.Warnings)
+	}
+	// an invalid language code is ignored with a warning, never written
+	bad := Overrides{Tracks: map[string]TrackEdit{"1": {Lang: str("deutsch!")}}}
+	p, _ = BuildVideo(info, VideoOpts{Codec: "copy", Container: "mkv"}, bad, "in.mkv", "out.part")
+	if strings.Contains(join(p.Args), "language=") || len(p.Warnings) == 0 {
+		t.Errorf("ungültige Sprache: %s %v", join(p.Args), p.Warnings)
+	}
+	// explicit "copy" beats "remove all subtitles" and the language filter
+	keep := Overrides{Tracks: map[string]TrackEdit{"4": {Action: "copy"}}}
+	p, _ = BuildVideo(info, VideoOpts{Codec: "copy", Container: "mkv", SubMode: "none", AudioLangs: []string{"ger"}}, keep, "in.mkv", "out.part")
+	s = join(p.Args)
+	if !strings.Contains(s, "-map 0:4") || strings.Contains(s, "-map 0:3") || strings.Contains(s, "-map 0:2") {
+		t.Errorf("explizite Wahl vs. allgemeine Regeln:%s", s)
+	}
+}
+
+func TestVaapiAndNvencDecodeChains(t *testing.T) {
+	src := sample()
+	for _, c := range []struct {
+		backend, codec, accel, scale string
+	}{{"vaapi", "hevc", "-hwaccel vaapi", "scale_vaapi="}, {"nvenc", "hevc", "-hwaccel cuda", "scale_cuda="}} {
+		// full: frames stay on the GPU, a software filter would break it
+		p, err := BuildVideo(src, VideoOpts{Codec: c.codec, Backend: c.backend, CRF: 24, HWDecode: true, Height: 360, BitDepth: 10}, Overrides{}, "in.mkv", "out.part")
+		if err != nil {
+			t.Fatal(err)
+		}
+		s := join(p.Args)
+		for _, w := range []string{c.accel, "-hwaccel_output_format", c.scale, ":h=360:format="} {
+			if !strings.Contains(s, w) {
+				t.Errorf("%s full: fehlt %q in%s", c.backend, w, s)
+			}
+		}
+		if strings.Contains(s, "hwdownload") || strings.Contains(s, " scale=") {
+			t.Errorf("%s full: kein Software-Filter erlaubt:%s", c.backend, s)
+		}
+		// download: back to normal memory, then the software filters
+		p, _ = BuildVideo(src, VideoOpts{Codec: c.codec, Backend: c.backend, CRF: 24, HWDecode: true, HWDecodeMode: "download", Height: 360}, Overrides{}, "in.mkv", "out.part")
+		s = join(p.Args)
+		if !strings.Contains(s, "hwdownload,format=") || !strings.Contains(s, "scale=-2:360") {
+			t.Errorf("%s download:%s", c.backend, s)
+		}
+		// software reading: no hwaccel at all
+		p, _ = BuildVideo(src, VideoOpts{Codec: c.codec, Backend: c.backend, CRF: 24, Height: 360}, Overrides{}, "in.mkv", "out.part")
+		if strings.Contains(join(p.Args), "-hwaccel ") {
+			t.Errorf("%s ohne HW-Decoding darf kein hwaccel stehen", c.backend)
+		}
+	}
+}

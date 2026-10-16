@@ -53,7 +53,7 @@ function loadSettings() {
 function applyTheme(w) {
   const hue = W(w).hue, t = themeOf(hue), root = document.documentElement.style;
   root.setProperty('--h', hue); root.setProperty('--sat', t.sat + '%'); root.setProperty('--lit', t.lit + '%');
-  try { localStorage.setItem('p5hue', hue); } catch (e) {}
+  try { localStorage.setItem('p5hue', hue); localStorage.setItem('p5theme', JSON.stringify({h: hue, sat: t.sat, lit: t.lit})); } catch (e) {}
   $$('#worlds button').forEach(b => {
     const wh = W(b.dataset.world).hue, wt = themeOf(wh);
     b.style.setProperty('--c', `hsl(${wh} ${wt.sat}% ${wt.lit}%)`);
@@ -181,20 +181,32 @@ function encoderName(backend, codec) {
   }
   return codec + m[backend];
 }
+// Hardware-Liste (Startseite und Einstellungen → Hardware): nutzbare zuerst, nicht nutzbare eingeklappt, Gründe auf Klick
+const HW_FOREIGN = {linux: ['amf'], windows: ['vaapi'], darwin: ['amf', 'vaapi', 'nvenc', 'qsv']};
+function hwRows(hw) {
+  const os = (S.info && S.info.os) || '', hide = HW_FOREIGN[os] || [];
+  const list = hw.backends.filter(b => !hide.includes(b.id));
+  const codecsOf = b => ['h264', 'hevc', 'av1', 'vp9'].filter(c => b.codecs && b.codecs[c]);
+  const name = b => h('b', {}, b.label, b.gpu ? h('span', {class: 'muted small'}, ' (' + b.gpu + (b.device ? ', ' + b.device : '') + ')') : null);
+  const good = list.filter(b => codecsOf(b).length), bad = list.filter(b => !codecsOf(b).length);
+  const rows = good.map(b => h('div', {class: 'hw'}, h('div', {}, name(b),
+    h('span', {class: 'small muted'}, codecsOf(b).map(c => CODEC_LABEL[c] + (b.tenBit && b.tenBit[c] ? ' 10 Bit' : '')).join(' · ') + (b.variant && b.variant !== 'automatisch' ? ' · gestartet: ' + b.variant : ''))),
+    h('span', {class: 'chip ok'}, 'nutzbar')));
+  if (bad.length) rows.push(h('details', {class: 'hwoff'}, h('summary', {}, 'Nicht nutzbar (' + bad.length + ')'),
+    bad.map(b => h('div', {class: 'hw off'}, h('div', {}, name(b),
+      h('details', {class: 'why'}, h('summary', {}, 'Warum?'), h('p', {class: 'small muted'}, b.detail || (b.compiled === false ? 'Dieses ffmpeg wurde ohne diesen Encoder gebaut.' : 'Der Test-Encode hat nicht funktioniert.')))),
+      h('span', {class: 'chip'}, 'nicht nutzbar')))));
+  return rows;
+}
+function hwFoot(h2) {
+  return (h2.gpus && h2.gpus.length ? 'Erkannte Grafik-/Videoeinheiten: ' + h2.gpus.join(', ') : 'Keine Grafik-/Videoeinheit gemeldet.') +
+    (h2.done ? ` · Test: ${(h2.tookMs / 1000).toFixed(1)} s` : '');
+}
 function renderHwCard() {
-  const h = hwResult();
-  if (!h.backends.length) { $('#hwList').innerHTML = '<span class="muted">Erkennung läuft …</span>'; return; }
-  $('#hwList').innerHTML = h.backends.map(b => {
-    const cs = ['h264', 'hevc', 'av1', 'vp9'].filter(c => b.codecs && b.codecs[c]);
-    const ok = cs.length > 0;
-    const gpu = b.gpu ? ` <span class="muted small">(${esc(b.gpu)}${b.device ? ', ' + esc(b.device) : ''})</span>` : '';
-    return `<div class="hw"><div><b>${esc(b.label)}${gpu}</b>` +
-      (ok ? `<span class="small muted">${cs.map(c => CODEC_LABEL[c] + (b.tenBit && b.tenBit[c] ? ' <span title="10 Bit">10b</span>' : '')).join(' · ')}${b.variant && b.variant !== 'automatisch' ? ' · gestartet: ' + esc(b.variant) : ''}</span>`
-          : `<span class="small muted">${esc(b.detail || 'nicht verfügbar')}</span>`) +
-      `</div><span class="chip ${ok ? 'ok' : 'err'}">${ok ? 'nutzbar' : 'nicht nutzbar'}</span></div>`;
-  }).join('');
-  $('#hwGpus').innerHTML = esc((h.gpus && h.gpus.length ? 'Erkannte Grafik-/Videoeinheiten: ' + h.gpus.join(', ') : 'Keine Grafik-/Videoeinheit gemeldet.') +
-    (h.done ? ` · Test dauerte ${(h.tookMs / 1000).toFixed(1)} s (echte Test-Encodes)` : '')) + ' · <a href="#settings/hardware">Diagnose</a>';
+  const hw = hwResult(), box = $('#hwList');
+  if (!hw.backends.length) { box.innerHTML = '<span class="muted">Erkennung läuft …</span>'; return; }
+  fill(box, hwRows(hw));
+  fill($('#hwGpus'), hwFoot(hw) + ' · ', h('a', {href: '#settings/hardware'}, 'Diagnose'));
 }
 
 // ---------- files ----------
@@ -204,10 +216,10 @@ function renderFiles() {
   if (!list.length) el.innerHTML = `<div class="empty">Noch keine Dateien.<br>„+ Dateien“ oder „+ Ordner“ wählen.</div>`;
   else el.innerHTML = list.map((f, i) => `<div class="file"><span class="n" title="${esc(f.path)}">${esc(f.rel || f.path)}</span>
     <span class="muted small">${fmtSize(f.size)}</span>
-    ${S.world === 'video' ? `<button class="small" data-tr="${i}">Spuren${f.drop.size || f.defaultAudio != null ? ' ●' : ''}</button><button type="button" class="info" data-key="tracksBtn" aria-label="Erklärung anzeigen">i</button>` : ''}
+    ${S.world === 'video' && trkCount(f) ? `<button class="small ghost" data-tr="${i}" title="Für diese Datei sind einzelne Spuren geändert. Klicken zum Ansehen.">${trkCount(f)} ${trkCount(f) === 1 ? 'Spur' : 'Spuren'} geändert</button>` : ''}
     <button class="small ghost rm" data-rm="${i}">✕</button></div>`).join('');
   $$('#fileList [data-rm]').forEach(b => b.onclick = () => { list.splice(+b.dataset.rm, 1); renderFiles(); });
-  $$('#fileList [data-tr]').forEach(b => b.onclick = () => openTracks(list[+b.dataset.tr]));
+  $$('#fileList [data-tr]').forEach(b => b.onclick = () => { TRK.cur = +b.dataset.tr; showStep('tracks'); });
   const tot = list.reduce((a, f) => a + (f.size || 0), 0);
   renderStartInfo();
   renderSteps();
@@ -217,7 +229,7 @@ function renderFiles() {
 function addScanned(files) {
   const list = S.files[S.world];
   const have = new Set(list.map(f => f.path));
-  files.forEach(f => { if (!have.has(f.path)) list.push({path: f.path, rel: f.rel, size: f.size, drop: new Set(), defaultAudio: null}); });
+  files.forEach(f => { if (!have.has(f.path)) list.push({path: f.path, rel: f.rel, size: f.size, tracks: {}}); });
   renderFiles();
 }
 
@@ -253,32 +265,13 @@ async function browseTo(path) {
 function openBrowser(mode, start) {
   B.mode = mode;
   $('#bAddSel').classList.toggle('hidden', mode !== 'files');
+  $('#bAll').parentElement.classList.toggle('hidden', mode !== 'files');
   $('#bAddDir').textContent = mode === 'dir' ? 'Diesen Ordner wählen' : 'Diesen Ordner (rekursiv)';
   $('#browser').showModal();
   browseTo(start || '');
   return new Promise(res => B.resolve = res);
 }
 function closeBrowser(v) { $('#browser').close(); if (B.resolve) B.resolve(v); B.resolve = null; }
-
-// ---------- tracks dialog ----------
-async function openTracks(f) {
-  $('#tTitle').textContent = 'Spuren – ' + f.path.split(/[\\/]/).pop();
-  $('#tBody').innerHTML = '<div class="empty">Lade …</div>';
-  $('#tracks').showModal();
-  try {
-    const info = await api('/api/probe?path=' + encodeURIComponent(f.path));
-    const rows = info.streams.filter(s => ['video', 'audio', 'subtitle'].includes(s.type) && !s.attachedPic).map(s => {
-      const desc = s.type === 'video' ? `${s.width}×${s.height} ${s.bitDepth}bit ${s.pixFmt}` : s.type === 'audio' ? `${s.channels} Kanäle ${s.layout || ''} ${s.sampleRate ? s.sampleRate / 1000 + ' kHz' : ''}` : '';
-      const keep = s.type === 'video' ? 'disabled checked' : (f.drop.has(s.index) ? '' : 'checked');
-      const def = s.type === 'audio' ? `<input type="radio" name="defA" value="${s.index}" ${(f.defaultAudio != null ? f.defaultAudio === s.index : s.default) ? 'checked' : ''}>` : '';
-      return `<tr><td data-l="Behalten"><input type="checkbox" data-s="${s.index}" ${keep}></td><td data-l="Spur">#${s.index} · ${s.type}</td><td data-l="Codec">${esc(s.codec)}</td>
-        <td data-l="Sprache">${esc(s.lang || '–')}</td><td data-l="Info">${esc(s.title || '')} <span class="muted">${esc(desc)}</span></td><td data-l="Standard">${def}</td></tr>`;
-    }).join('');
-    $('#tBody').innerHTML = `<table><tr><th>Behalten</th><th>Spur</th><th>Codec</th><th>Sprache</th><th>Titel / Info</th><th>Standard</th></tr>${rows}</table>`;
-    $$('#tBody [data-s]').forEach(c => c.onchange = () => { c.checked ? f.drop.delete(+c.dataset.s) : f.drop.add(+c.dataset.s); renderFiles(); });
-    $$('#tBody [name=defA]').forEach(r => r.onchange = () => { f.defaultAudio = +r.value; renderFiles(); });
-  } catch (e) { $('#tBody').innerHTML = `<div class="empty warn">${esc(e.message)}</div>`; }
-}
 
 // ---------- Toasts ----------
 function toast(msg, kind) {
@@ -297,7 +290,7 @@ async function start() {
   if (!files.length) { toast('Bitte zuerst Dateien hinzufügen.', 'bad'); return; }
   const req = {
     kind,
-    items: files.map(f => ({path: f.path, rel: f.rel, overrides: {drop: [...f.drop], defaultAudio: f.defaultAudio}})),
+    items: files.map(f => ({path: f.path, rel: f.rel, overrides: kind === 'video' ? trackOverrides(f) : {}})),
     output: {
       dir: $('#outMode').value === 'custom' ? $('#outDir').value.trim() : '', structure: $('#outStruct').value,
       suffix: $('#suffix').value, pattern: $('#pattern').value.trim(), replace: cleanRules(nameRules()), exists: $('#exists').value,
@@ -400,6 +393,26 @@ function meter(key, title, val, sub) {
   el.querySelector('.sub').textContent = sub || '';
   return key;
 }
+// Intel meldet nur „Grafik nicht im Ruhezustand“ (gesamte Grafik, kein Video-Wert): deshalb ein Status statt einer Prozentzahl.
+// Hysterese: erst ab 5 % „aktiv“, danach mindestens 4 s lang, damit die Anzeige nicht flackert.
+function intelStatus(key, g, fresh) {
+  const now = Date.now(), M = S.intel = S.intel || {};
+  if (fresh && g.util >= 5) M.last = now;
+  const active = !!M.last && now - M.last < 4000;
+  const qsv = backendCaps('qsv'), nm = 'Intel Quick Sync' + (qsv && qsv.gpu ? ' (' + qsv.gpu.replace(/^Intel\(R\)\s*/i, '').replace(/\s*Graphics.*$/i, '') + ')' : '');
+  let el = document.querySelector(`#monitor [data-m="${key}"]`);
+  if (!el) {
+    el = document.createElement('div'); el.className = 'meter status'; el.dataset.m = key;
+    el.innerHTML = '<div class="t"><b></b><span class="chip"></span></div><div class="sub"></div>';
+    $('#monitor').appendChild(el);
+  }
+  el.querySelector('b').textContent = nm;
+  const chip = el.querySelector('.chip');
+  chip.textContent = !fresh ? 'keine Messung' : active ? 'aktiv' : 'Leerlauf';
+  chip.className = 'chip ' + (!fresh ? '' : active ? 'acc' : 'ok');
+  el.querySelector('.sub').textContent = !fresh ? 'Keine aktuelle Messung' : active ? 'Die Video-Einheit der Intel-CPU arbeitet gerade (gemessen: Grafik nicht im Ruhezustand).' : 'Die Intel-Grafik ruht. Beim Konvertieren mit Quick Sync springt sie auf „aktiv“.';
+  return key;
+}
 function renderMonitor() {
   const st = S.stats, running = S.jobs.some(j => j.status === 'running'), box = $('#monitor');
   if (!st) { box.replaceChildren(); return; }
@@ -407,6 +420,7 @@ function renderMonitor() {
   const keep = [];
   keep.push(meter('cpu', 'CPU', fresh ? st.cpu : -1, !fresh ? 'Keine aktuelle Messung' : running ? 'Bei Hardware-Encoding sollte die CPU niedrig bleiben' : 'Gerade nichts los – Live-Wert des ganzen Rechners'));
   (st.gpus || []).forEach((g, i) => {
+    if (g.kind === 'intel') { keep.push(intelStatus('gpu' + i, g, fresh)); return; }
     const enc = g.encode >= 0;
     keep.push(meter('gpu' + i, g.name + ' – ' + (enc ? 'Video-Encode' : 'Grafik aktiv'), fresh ? (enc ? g.encode : g.util) : -1,
       g.source + (g.decode >= 0 ? ` · Decode ${g.decode.toFixed(0)} %` : '') + (enc ? ` · Gesamt ${g.util.toFixed(0)} %` : '')));
@@ -476,7 +490,6 @@ function wrapLabels() {
 function decorateInfo() {
   wrapLabels();
   Object.keys(INFO).forEach(key => {
-    if (key === 'tracksBtn') return;
     let target = null, after = null;
     const el = document.getElementById(key);
     if (el) {
@@ -540,7 +553,7 @@ function renderFooter() {
   const ver = b.tag ? `<a href="${esc(b.branchUrl)}" target="_blank" rel="noopener">v${esc(b.tag)}</a>` : `<a href="${esc(b.branchUrl)}" target="_blank" rel="noopener">${esc(b.branch)}</a>`;
   $('#foot').innerHTML = `<span><b>p5converter</b> ${esc(b.base)}</span><span>${ver}</span>` +
     (b.commit ? `<span><a href="${esc(b.commitUrl)}" target="_blank" rel="noopener">${esc(b.commitShort)}</a></span>` : '') +
-    `<span>ffmpeg ${esc(ff)}</span><span>${esc(S.info.os)}</span><span><button class="lnk" id="footNews">Neuigkeiten</button></span><span><a href="${esc(b.repo)}" target="_blank" rel="noopener">GitHub</a></span>`;
+    `<span>ffmpeg ${esc(ff)}</span><span>${esc(S.info.os)}</span><span><button class="lnk" id="footNews">Neuigkeiten${S.newsNew ? '<i class="newsdot" title="Neu seit deinem letzten Besuch"></i>' : ''}</button></span><span><a href="${esc(b.repo)}" target="_blank" rel="noopener">GitHub</a></span>`;
   $('#footNews').onclick = openNews;
 }
 async function loadNews() {
@@ -550,7 +563,7 @@ async function loadNews() {
   const cur = S.info.build.base;
   // erster Besuch: nichts anzeigen, nur merken; bei neuer Version: Punkt am Knopf
   if (seen === null) { try { localStorage.setItem('p5cNewsSeen', cur); } catch (e) {} }
-  else if (seen !== cur && S.news.some(n => n.version === cur)) $('#newsDot').classList.remove('hidden');
+  else if (seen !== cur && S.news.some(n => n.version === cur)) { S.newsNew = true; renderFooter(); }
 }
 function openNews() {
   const cur = S.info.build.base;
@@ -560,12 +573,11 @@ function openNews() {
     `<div class="newsitem"><div class="ver">Version ${esc(v)}</div><h4>${esc(n.title)}</h4><p>${esc(n.text)}</p></div>`).join('')).join('') || '<div class="empty">Keine Neuigkeiten.</div>';
   $('#newsVer').textContent = 'Aktuell: ' + S.info.build.version;
   $('#news').showModal();
-  $('#newsDot').classList.add('hidden');
+  S.newsNew = false; renderFooter();
   try { localStorage.setItem('p5cNewsSeen', cur); } catch (e) {}
 }
 function wire() {
   wireRename(); wireFlow();
-  $('#newsBtn').onclick = openNews;
   $('#gearBtn').onclick = () => { location.hash = '#settings'; };
   $('#logbtn').onclick = () => { location.hash = '#logs'; };
   $('#logoutBtn').onclick = logout;
@@ -592,6 +604,8 @@ function wire() {
   $('#bPath').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); browseTo($('#bPath').value); } };
   $('#bCancel').onclick = () => closeBrowser(null);
   $('#browser').addEventListener('cancel', () => { if (B.resolve) B.resolve(null); B.resolve = null; });
+  const bAll = on => { $$('#bList input[type=checkbox]').forEach(cb => { if (cb.checked !== on) cb.closest('.bi').click(); }); };
+  $('#bAll').onclick = () => bAll(true); $('#bNone').onclick = () => bAll(false);
   $('#bAddSel').onclick = () => closeBrowser({paths: [...B.sel], dir: B.path});
   $('#bAddDir').onclick = () => closeBrowser(B.mode === 'dir' ? {dir: B.path, paths: [B.path]} : {paths: [B.path], dir: B.path});
   $('#start').onclick = start;
@@ -625,7 +639,7 @@ function applyDefaultsFromCfg() {
 
 async function startApp() {
   S.cfg = await api('/api/settings');
-  loadSettings(); decorateInfo(); wire(); renderWorldNav();
+  captureDefaults(); loadSettings(); decorateInfo(); wire(); renderWorldNav();
   await loadInfo();
   applyDefaultsFromCfg();
   const sw = cfg().startWorld;
@@ -638,6 +652,31 @@ async function startApp() {
   checkAlerts(); S.alertTimer = setInterval(() => checkAlerts(), 30000);
   route();
 }
+
+// ---------- Ziehen zum Aktualisieren (nur als Web-App vom Home-Bildschirm) ----------
+// Eine Web-App vom Home-Bildschirm hat in iOS kein Pull-to-Refresh: am oberen Rand nach unten ziehen lädt die Seite neu (wie bei p5assets).
+(function pullToRefresh() {
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  if (!standalone) return;
+  const bar = document.createElement('div'); bar.id = 'ptr'; bar.textContent = '↓ Zum Aktualisieren ziehen';
+  document.body.appendChild(bar);
+  let y0 = null, dist = 0;
+  const THRESHOLD = 90, GO = THRESHOLD / 2 + 10;
+  const blocked = t => !!(t.closest && t.closest('dialog, textarea, input, select, .tablewrap, .blist, .steps, pre, details[open] > pre')) || document.querySelector('dialog[open]');
+  addEventListener('touchstart', e => { y0 = (window.scrollY <= 0 && e.touches.length === 1 && !blocked(e.target)) ? e.touches[0].clientY : null; dist = 0; }, {passive: true});
+  addEventListener('touchmove', e => {
+    if (y0 == null) return;
+    dist = e.touches[0].clientY - y0;
+    if (dist <= 0 || window.scrollY > 0) { bar.style.transform = ''; return; }
+    const d = Math.min(dist / 2, THRESHOLD + 20);
+    bar.style.transform = `translateY(${d}px)`;
+    bar.textContent = d >= GO ? '↑ Loslassen zum Aktualisieren' : '↓ Zum Aktualisieren ziehen';
+  }, {passive: true});
+  addEventListener('touchend', () => {
+    if (y0 != null && dist / 2 >= GO) { bar.textContent = 'Lade neu …'; location.reload(); }
+    bar.style.transform = ''; y0 = null; dist = 0;
+  }, {passive: true});
+})();
 
 (async function boot() {
   await loadAuth();

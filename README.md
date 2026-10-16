@@ -33,7 +33,7 @@ docker run -d --name p5converter -p 8787:8787 \
 ## Funktionen
 
 ### Design
-Gleiche Designlinie wie [p5assets](https://github.com/p5lukas/p5assets): Matrix-Theme, Audio und Video als eigene **Welten** mit Farbe und Planet (Wurmloch-Flug beim Wechsel), Übersicht mit Fortschrittsring und Live-Auslastung, Version und Neuigkeiten in der Fußzeile.
+Gleiche Designlinie wie [p5assets](https://github.com/p5lukas/p5assets): Matrix-Theme, Audio und Video als eigene **Welten** mit Farbe und Planet (Wurmloch-Flug beim Wechsel), Übersicht mit Fortschrittsring und Live-Auslastung, Version und Neuigkeiten in der Fußzeile; in der iPhone/iPad-Web-App Ziehen zum Aktualisieren.
 Läuft auf Desktop, Handy und iPad (Hoch-/Querformat); auf iPhone/iPad per **Teilen → Zum Home-Bildschirm** als Web-App.
 
 ### Hilfe für Einsteiger
@@ -41,15 +41,15 @@ Jede Einstellung hat einen kleinen **ⓘ**-Punkt mit einfacher Erklärung und Be
 
 ### Audio (wie SoundConverter)
 MP3, Ogg Vorbis, Opus, AAC/M4A, FLAC, WAV · VBR-Qualität oder konstante Bitrate · Samplerate/Kanäle · Tags und Cover bleiben erhalten · Ordner rekursiv hinzufügen ·
-Zielordner mit Struktur oder Namensmuster (`{artist}/{album}/{track} - {title}`) · „Datei existiert“: umbenennen/überspringen/überschreiben · Quelle optional löschen (nur nach Prüfung der Ergebnis-Laufzeit).
+Zielordner mit Struktur oder Namensmuster (`{artist}/{album}/{track} - {title}`) · „Wenn Datei existiert“: beide behalten und die neue nummerieren (`Film (2).mkv`) / überspringen / überschreiben (mit Warnfarbe) · Quelle optional löschen (nur nach Prüfung der Ergebnis-Laufzeit).
 
 ### Video
 * Container **MKV** (Standard) oder MP4, „Nur Remux“ (Video kopieren)
 * Codec **H.264, H.265, AV1, VP9**
 * **Auflösung** (max. Höhe, nie hochskaliert), **CRF**, Geschwindigkeits-Preset, **8/10 Bit** (oder „wie Quelle“)
-* **Audio:** Passthrough oder neu kodieren, Sprachfilter, einzelne Spuren entfernen, Standard-Spur ändern
-* **Untertitel:** Passthrough, alle entfernen, Sprachfilter, einzelne Spuren entfernen (Schriftarten-Anhänge bleiben in MKV erhalten)
-* Pro Datei über **„Spuren“** einstellbar
+* **Audio & Untertitel in einem Schritt:** oben Regeln für alle Dateien (Standard: **Passthrough**, Sprachfilter), darunter eine **Spurtabelle** je Datei: Behalten, Aktion (Standard / unverändert kopieren / Audio neu kodieren mit Codec und kbit/s), **Titel**, **Sprache** (drei Buchstaben, ISO 639-2), **Forced**, **Standard**; „Alle auswählen/abwählen“ je Art und „Auf alle Dateien anwenden“
+* **Plex:** Sprache wird als dreibuchstabiger Code geschrieben; „Forced“ erkennt Plex nur in **MKV** (bei MP4 kommt eine Warnung) und die Untertitelsprache muss zur Tonspur passen; danach in Plex neu **analysieren**
+* Schriftarten-Anhänge bleiben in MKV erhalten
 
 > **Unraid:** Zeigt dein Container noch „Passwort (optional)“ (`P5_PASSWORD`), mit REMOVE löschen – die Variable wird seit 0.0.3 nicht mehr benutzt; die Anmeldung legst du in den Einstellungen an.
 
@@ -64,7 +64,7 @@ Zielordner mit Struktur oder Namensmuster (`{artist}/{album}/{track} - {title}`)
 
 ### Ablauf in Schritten
 * **Startseite:** Statistik, Auslastung, Hardware, **gewonnener Platz** (Summe aller bisher gesparten Größen) und Warteschlange, dazu „Konvertierung starten“ und „Umbenennen starten“
-* **Konvertieren:** Dateien → Ziel → Benennen → Einstellungen (Video: Video, dann Audio & Untertitel · Audio: Format) → **Zusammenfassung** → Start; oben als Reiter anklickbar, unten Zurück/Weiter; danach zurück zur Startseite mit der laufenden Warteschlange
+* **Konvertieren:** Dateien → Ziel → Benennen → Einstellungen (Video: Video, dann Audio & Untertitel · Audio: Format) → **Zusammenfassung** → Start (Voreinstellungen gibt es nur im Schritt „Video“ bzw. „Einstellungen“; „Zurücksetzen“ stellt die gewählte Welt auf „Remux“ zurück); oben als Reiter anklickbar, unten Zurück/Weiter; danach zurück zur Startseite mit der laufenden Warteschlange
 
 ### Warteschlange
 * **Je Welt eine eigene Warteschlange** (Audio/Video) mit eigener Anzahl paralleler Aufträge; Farben: grün = geklappt, gelb = Hinweis/Ausweichweg, rot = Fehler; „Schreiben“/„Lesen“ mit Haken, wenn ffmpeg die Hardware bestätigt hat
@@ -78,8 +78,8 @@ Zielordner mit Struktur oder Namensmuster (`{artist}/{album}/{track} - {title}`)
 ### Hardware-Encoding
 * **Erkennung per echtem Test-Encode** (Quick Sync, NVENC, VAAPI, AMF – je Codec und 8/10 Bit), nicht nur „Encoder im ffmpeg vorhanden“
 * „Automatisch“ oder festes Backend; ein nicht funktionierendes Backend wird **abgelehnt, nicht still durch die CPU ersetzt**
-* **Nachweis der Nutzung:** pro Auftrag der von ffmpeg gemeldete Encoder („Schreiben: Quick Sync · hevc_qsv ✓“, dazu „Lesen: Hardware/CPU“), kompletter Befehl und Log; live CPU- und GPU-Auslastung (NVIDIA: `nvidia-smi` mit Encode/Decode-Engine · Intel: sysfs-RC6 „GPU aktiv“ · AMD: `gpu_busy_percent`)
-* Hardware-Decoding optional (bei Quick Sync mit durchgängiger Hardware-Kette); bei Fehlern probiert das Programm automatisch weitere Wege, zuletzt die CPU zum Lesen – ohne Fehlermeldung
+* **Nachweis der Nutzung:** pro Auftrag der von ffmpeg gemeldete Encoder („Schreiben: Quick Sync · hevc_qsv ✓“, dazu „Lesen: Hardware/CPU“), kompletter Befehl und Log; live CPU- und GPU-Auslastung (NVIDIA: `nvidia-smi` mit Encode/Decode-Engine · Intel: Status „Quick Sync: Leerlauf/aktiv“ aus sysfs-RC6 · AMD: `gpu_busy_percent`)
+* Hardware-Decoding optional (bei Quick Sync, VAAPI und NVIDIA mit durchgängiger Hardware-Kette, daher „Lesen: … ✓“ nachweisbar); bei Fehlern probiert das Programm automatisch weitere Wege, zuletzt die CPU zum Lesen – ohne Fehlermeldung
 * **Quick Sync auch auf älteren Intel-Chips** (Gen 8–11, z. B. i9-9900): das Image enthält die Media-SDK-Runtime *und* oneVPL (Gen 12+); die Erkennung probiert mehrere Startvarianten
 * **Diagnose** unter Einstellungen → Hardware (Ergebnis jedes Tests, `vainfo`, GPUs) mit „Diagnose kopieren“
 

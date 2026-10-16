@@ -12,24 +12,25 @@
 
 ## Offen
 - [ ] Branch-Modell: **erstmal nur `main`**, bis alles stabil läuft. Auf Zuruf des Nutzers dann wie p5assets: Feature-Branch → `dev` (Image `:dev`) → `main` (Image `:latest`); optional multi-arch (amd64/arm64)
-- [ ] Design weiter verfeinern nach Rückmeldung vom Gerät (iPhone/iPad Safari und Web-App)
-- [ ] Quick Sync (Intel Core i9-9900): Wirkung des Fixes in 0.0.3 beim Nutzer bestätigen; bleibt es „nicht nutzbar“, die kopierte Diagnose (Einstellungen → Hardware) auswerten
 
 ## Vom Nutzer zu prüfen (nicht in der Sandbox möglich)
-- [ ] Neues Icon: auf iPhone/iPad die Web-App einmal vom Home-Bildschirm löschen und neu hinzufügen (iOS merkt sich das alte Icon); in Unraid wird das Icon aus `unraid/icon.png` auf `main` geholt (Container ggf. neu anlegen/„Force Update“)
-- [ ] Log-Seite auf dem Server ansehen: nach einer Konvertierung stehen Start/Ende/Fehler im Log, Zähler am Terminal-Symbol
-- [ ] Neuen Ablauf auf iPhone/iPad ansehen (Reiter-Leiste scrollt, Zurück/Weiter-Leiste unten, Safe-Areas in der Web-App)
-- [ ] Auslastungsanzeige auf dem Unraid-Server ansehen: im Leerlauf soll die CPU kleine, wechselnde Werte zeigen; „Grafik aktiv“ (Intel) im Leerlauf niedrig, beim Konvertieren hoch. Falls der Intel-Wert weiter nicht stimmt: Diagnose (Einstellungen → Hardware) schicken
-- [ ] iPhone/iPad: Safari und Web-App (Safe-Areas, Statusleiste, Pull-to-Refresh) auf dem Gerät ansehen
-- [ ] Quick Sync auf dem i9-9900: mit Hardware-Decoding an muss in der Warteschlange „Schreiben: Quick Sync …“ **und** „Lesen: Quick Sync“ stehen (auch mit Verkleinern/10 Bit); sonst „Details“ (Befehl, Log, Frühere Versuche) schicken
-- [ ] GPU-Encoding auf echter Hardware prüfen (Intel Quick Sync und VAAPI auf dem i9-9900; NVIDIA via `--runtime=nvidia`): in „Details“ am Auftrag muss z. B. `hevc_qsv ✓ von ffmpeg bestätigt` stehen
-- [ ] Unraid: leere optionale Pfade (Audio/Video) und neuer Pfad `/config` (Rechte) ausprobieren
+- [x] Neues Icon: auf iPhone/iPad die Web-App einmal vom Home-Bildschirm löschen und neu hinzufügen (iOS merkt sich das alte Icon); in Unraid wird das Icon aus `unraid/icon.png` auf `main` geholt (Container ggf. neu anlegen/„Force Update“) (Nutzer 16.10.: passt)
+- [x] Log-Seite auf dem Server ansehen: nach einer Konvertierung stehen Start/Ende/Fehler im Log, Zähler am Terminal-Symbol (Nutzer: passt)
+- [x] Neuen Ablauf auf iPhone/iPad ansehen (Reiter-Leiste scrollt, Zurück/Weiter-Leiste unten, Safe-Areas in der Web-App) (Nutzer: passt)
+- [x] Auslastungsanzeige auf dem Unraid-Server ansehen: im Leerlauf soll die CPU kleine, wechselnde Werte zeigen; „Grafik aktiv“ (Intel) im Leerlauf niedrig, beim Konvertieren hoch. Falls der Intel-Wert weiter nicht stimmt: Diagnose (Einstellungen → Hardware) schicken (Nutzer: passt; wird mit der Intel-Statusanzeige noch überarbeitet)
+- [x] iPhone/iPad: Safari und Web-App (Safe-Areas, Statusleiste, Pull-to-Refresh) auf dem Gerät ansehen (Nutzer: Safe-Areas/Statusleiste ok; Pull-to-Refresh geht nicht → eigener Eintrag unter „Offen“)
+- [x] Quick Sync auf dem i9-9900: mit Hardware-Decoding an muss in der Warteschlange „Schreiben: Quick Sync …“ **und** „Lesen: Quick Sync“ stehen (auch mit Verkleinern/10 Bit); sonst „Details“ (Befehl, Log, Frühere Versuche) schicken (Nutzer 16.10.: Quick Sync scheint zu klappen; Screenshot zeigt „Schreiben“ und „Lesen“ per Quick Sync)
+- [x] GPU-Encoding auf echter Hardware prüfen (Intel Quick Sync und VAAPI auf dem i9-9900; NVIDIA via `--runtime=nvidia`): in „Details“ am Auftrag muss z. B. `hevc_qsv ✓ von ffmpeg bestätigt` stehen (Nutzer: VAAPI schreiben klappt; „Lesen: VAAPI“ ohne Haken → eigener Eintrag; NVIDIA kann der Nutzer erst mit der Windows-App testen)
+- [x] Unraid: leere optionale Pfade (Audio/Video) und neuer Pfad `/config` (Rechte) ausprobieren (Nutzer: passt)
 
 ## Später
 - [ ] Windows-App mit eigener Oberfläche
 - [ ] Linux-App (Fedora KDE) mit eigener Oberfläche
 
 ## Erledigt
+- [x] 0.0.9: **Audio & Untertitel als ein Schritt** mit Spurtabelle (Behalten, Aktion/Neu kodieren je Tonspur, Titel, Sprache ISO 639-2, Forced, Standard), „Alle auswählen/abwählen“ (auch Datei-Browser, Vorschläge), „Auf alle Dateien anwenden“, Plex-Hinweise; Dialog „Spuren“ entfällt
+- [x] 0.0.9: **Alles zurücksetzen** (je Welt, Standard Remux), **Ziehen zum Aktualisieren** (Web-App), **Lesen per VAAPI/NVIDIA nachweisbar**, **„Wenn Datei existiert“** verständlich, **Farbflackern** behoben, **Intel-Status** „Leerlauf/aktiv“, **Voreinstellungen nur im Einstellungs-Schritt**, **Hardware-Kachel** aufgeräumt, **Tab-Icons** versioniert (p5converter + p5assets 0.4.9), **Neuigkeiten** nur in der Fußzeile
+- [x] Quick Sync auf dem i9-9900 (Nutzer-Rückmeldung: scheint zu klappen, Lesen und Schreiben); Geschwindigkeit geklärt: S01E02 (36:41 min) in 6:26 min = ca. 5,7× (≈137 fps), gleich schnell wie der Lauf mit Software-Lesen (5,8×) → das Lesen ist nicht der Engpass, der Encoder (hevc_qsv, Preset „slow“) bestimmt das Tempo; der Anfangswert 2,8× war nur die Anlaufphase
 - [x] 0.0.8: **Endgültiges App-Icon**: zwei zentrierte Discs (silberne Audio-CD + blaue Blu-ray) als Abzeichen; in allen Größen, Einstellungen → Info, README, Release-Text, Unraid-Icon. p5assets: oranger Komet (0.4.8 auf `dev`)
 - [x] 0.0.7: **Log-Fenster wie bei p5assets** (Seite, Kopfzeilen-Symbol mit Zähler, rotierendes Protokoll, Schwärzung von Geheimnissen)
 - [x] 0.0.7: **App-Icon wie p5assets** mit Abzeichen (zwei Pfeile) in allen Größen inkl. Apple-Touch- und Unraid-Icon; p5assets bekommt das Feuerball-Abzeichen im selben Aufbau (eigener Stand dort)

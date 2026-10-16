@@ -2,6 +2,7 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
@@ -105,6 +106,8 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	sub, _ := fs.Sub(web.FS, ".")
 	static := http.FileServerFS(sub)
+	mux.HandleFunc("GET /{$}", s.indexPage)
+	mux.HandleFunc("GET /index.html", s.indexPage)
 	mux.Handle("GET /", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-cache") // always revalidate (ETag): new versions show up immediately
 		static.ServeHTTP(w, r)
@@ -208,6 +211,19 @@ func csrfGuard(next http.Handler) http.Handler {
 //go:embed news.json
 var newsJSON []byte
 
+// indexPage serves the page with the version in the icon links (…png?v=0.0.9): a new version shows its new icon at once,
+// browsers keep favicons for a very long time otherwise.
+func (s *Server) indexPage(w http.ResponseWriter, r *http.Request) {
+	b, err := web.FS.ReadFile("index.html")
+	if err != nil {
+		httpErr(w, 500, "Seite nicht gefunden")
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Write(bytes.ReplaceAll(b, []byte("__V__"), []byte(url.QueryEscape(s.Build.Base))))
+}
+
 // manifest makes the UI installable as an app on the home screen (iPhone/iPad: Share > Add to Home Screen).
 func (s *Server) manifest(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/manifest+json")
@@ -217,9 +233,9 @@ func (s *Server) manifest(w http.ResponseWriter, r *http.Request) {
 		"start_url": "/", "scope": "/", "display": "standalone", "orientation": "any", "lang": "de",
 		"background_color": "#02100a", "theme_color": "#02100a",
 		"icons": []map[string]string{
-			{"src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
-			{"src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
-			{"src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+			{"src": "/icon-192.png?v=" + url.QueryEscape(s.Build.Base), "sizes": "192x192", "type": "image/png", "purpose": "any"},
+			{"src": "/icon-512.png?v=" + url.QueryEscape(s.Build.Base), "sizes": "512x512", "type": "image/png", "purpose": "any"},
+			{"src": "/icon-512.png?v=" + url.QueryEscape(s.Build.Base), "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
 		},
 	})
 }
