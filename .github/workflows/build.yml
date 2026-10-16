@@ -178,8 +178,7 @@ jobs:
         shell: pwsh
         run: |
           gh release delete dev-latest -R ${{ github.repository }} --cleanup-tag -y 2>$null
-          $notes = "Windows-App (Test-Version vom Branch dev, Stand $($env:BASE), Commit ${{ github.sha }}).`n`nEINE Datei: p5converter-setup.exe laden, starten (Windows meldet einmal „Unbekannter Herausgeber“: Weitere Informationen → Trotzdem ausführen), durchklicken, fertig. Enthält Programm, ffmpeg und alles Nötige; Hardware (Intel Quick Sync, NVIDIA, AMD) wird automatisch erkannt.`n`nDiese Vorabversion wird bei jedem Update von dev ersetzt."
-          gh release create dev-latest build/out/p5converter-setup.exe -R ${{ github.repository }} --target ${{ github.sha }} --prerelease --title "p5converter Windows (dev-latest)" --notes $notes
+          gh release create dev-latest build/out/p5converter-setup.exe -R ${{ github.repository }} --target ${{ github.sha }} --prerelease --title "p5converter Windows (dev-latest)" --notes-file windows/dev-latest-notes.md
 
   release:
     needs: docker
