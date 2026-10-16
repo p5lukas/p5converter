@@ -294,6 +294,7 @@ async function restoreDefaultPresets() {
 // --- Hardware ---
 function pageHardware() {
   const c = cfg(), hw = (S.info && S.info.hw) || {backends: [], done: false};
+  hw.backends = hw.backends || []; hw.diag = hw.diag || [];
   const pref = h('select', {onchange: () => saveCfg(x => { x.preferredBackend = pref.value; })},
     opt('auto', 'Automatisch (schnellste verfügbare)'), opt('cpu', 'CPU (Software)'), opt('qsv', 'Intel Quick Sync'), opt('nvenc', 'NVIDIA NVENC'), opt('vaapi', 'VAAPI'), opt('amf', 'AMD AMF'));
   pref.value = c.preferredBackend;
@@ -321,7 +322,7 @@ function pageHardware() {
       diagRows.length ? h('div', {class: 'tbody'}, h('table', {}, h('tr', {}, h('th', {}, 'Backend'), h('th', {}, 'Codec'), h('th', {}, 'Start-Variante'), h('th', {}, ''), h('th', {}, 'ffmpeg-Meldung')), diagRows)) : h('p', {class: 'muted small'}, 'Keine Testergebnisse.')));
 }
 async function refreshInfoUntilDone() {
-  S.info = await api('/api/info'); refreshVideoUI();
+  S.info = normInfo(await api('/api/info')); refreshVideoUI();
   if (!$('#viewSettings').classList.contains('hidden')) renderSettings();
   if (!S.info.hw.done) setTimeout(refreshInfoUntilDone, 1200);
 }

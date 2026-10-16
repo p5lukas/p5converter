@@ -1,9 +1,12 @@
 package hw
 
 import (
+	"encoding/json"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/p5lukas/p5converter/internal/ffmpeg"
 )
 
 func TestQSVVariantsIncludeVaapiChild(t *testing.T) {
@@ -58,5 +61,31 @@ vainfo: Supported profile and entrypoints
 	want := []string{"H264Main (LP)", "H264Main", "HEVCMain (LP)", "HEVCMain10 (LP)"}
 	if !reflect.DeepEqual(v.Encode, want) {
 		t.Errorf("Profile: %v", v.Encode)
+	}
+}
+
+func TestResultNeverHasNullLists(t *testing.T) {
+	b, err := json.Marshal(NewDetector(ffmpeg.Tools{}).Result())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(b), "null") {
+		t.Errorf("vor der ersten Erkennung darf kein null im JSON stehen: %s", b)
+	}
+}
+
+func TestNvencOldDriverIsExplained(t *testing.T) {
+	raw := "[av1_nvenc @ 000001812205ea00] Driver does not support the required nvenc API version. Required: 13.1 Found: 12.0 | [av1_nvenc @ 000001812205ea00] The minimum required Nvidia driver for nvenc is 610.00 or newer | Error while opening encoder"
+	d := failDetail("nvenc", raw)
+	for _, w := range []string{"zu alt", "12.0", "13.1", "610", "aktualisieren"} {
+		if !strings.Contains(d, w) {
+			t.Errorf("Hinweis nennt %q nicht: %s", w, d)
+		}
+	}
+	if d := failDetail("nvenc", "Cannot load nvcuda.dll"); !strings.Contains(d, "Keine NVIDIA") {
+		t.Errorf("ohne Treiber: %s", d)
+	}
+	if d := failDetail("amf", "x"); !strings.HasPrefix(d, "kein Gerät/Treiber nutzbar") {
+		t.Errorf("andere Backends unverändert: %s", d)
 	}
 }

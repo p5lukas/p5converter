@@ -19,6 +19,7 @@ public class W32 {
 $cfg = Join-Path $env:RUNNER_TEMP 'guicfg'
 $exe = Join-Path $Bin 'p5converter.exe'
 $args1 = @('--listen', '127.0.0.1:8790', '--config', $cfg, '--ffmpeg-dir', $Bin)
+$env:P5_TEST_HW_DELAY = '4000'  # Hardware-Erkennung künstlich verzögern: die Oberfläche fragt, bevor sie fertig ist (der Fehler von 0.1.2)
 $p = Start-Process -FilePath $exe -ArgumentList $args1 -PassThru
 $res = [ordered]@{}
 try {
@@ -39,10 +40,18 @@ try {
     if (-not $line) { Start-Sleep 1 }
   }
   $res.oberflaecheVerbunden = [string]$line
-  Start-Sleep 2
+  # Hardware-Erkennung läuft fertig, und in der Oberfläche trat kein Fehler auf (Fehler meldet sie ins Protokoll)
+  $hwDone = $null
+  for ($i = 0; $i -lt 30 -and -not $hwDone; $i++) { $hwDone = Get-Content $log | Where-Object { $_ -match 'Hardware-Erkennung fertig' } | Select-Object -First 1; if (-not $hwDone) { Start-Sleep 1 } }
+  Start-Sleep 3
+  $res.hardwareErkennungFertig = [bool]$hwDone
+  $uiErr = Get-Content $log | Where-Object { $_ -match 'Fehler in der Oberfläche' }
+  $res.oberflaechenFehler = @($uiErr)
   $bmp = New-Object System.Drawing.Bitmap ([System.Windows.Forms.SystemInformation]::PrimaryMonitorSize.Width), ([System.Windows.Forms.SystemInformation]::PrimaryMonitorSize.Height)
   $g = [System.Drawing.Graphics]::FromImage($bmp); $g.CopyFromScreen(0, 0, 0, 0, $bmp.Size); $bmp.Save((Join-Path $Out 'gui.png')); $g.Dispose(); $bmp.Dispose()
   if (-not $line) { throw 'Die Oberfläche hat sich im Fenster nicht gemeldet (Seite nicht geladen?)' }
+  if (@($uiErr).Count -gt 0) { throw ('Fehler in der Oberfläche: ' + ($uiErr -join ' | ')) }
+  if (-not $hwDone) { throw 'Die Hardware-Erkennung wurde nicht fertig' }
   if ($line -notmatch 'Edg/') { throw "Die Oberfläche kam nicht aus einem WebView2-Fenster: $line" }
   # 3) Schließen versteckt nur
   [W32]::PostMessageW($h, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null

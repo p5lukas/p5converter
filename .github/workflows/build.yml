@@ -115,7 +115,14 @@ jobs:
         shell: pwsh
         run: |
           $assets = gh release view latest -R BtbN/FFmpeg-Builds --json assets --jq '.assets[].name'
-          $pick = $assets | Where-Object { $_ -match '^ffmpeg-n[0-9.]+-latest-win64-gpl-[0-9.]+\.zip$' } | Sort-Object { [version](($_ -replace '^ffmpeg-n','') -replace '-latest.*','') } -Descending | Select-Object -First 1
+          # Bevorzugt die ffmpeg-Reihe 6.1 (gleich wie im getesteten Docker-Image, braucht von NVIDIA nur eine ältere NVENC-Schnittstelle
+          # und läuft daher mit mehr Treibern), dann 7.1; nur wenn beide fehlen die neueste.
+          $pick = $null
+          foreach ($v in '6.1', '7.1') {
+            $pick = $assets | Where-Object { $_ -match ('^ffmpeg-n' + [regex]::Escape($v) + '-latest-win64-gpl-' + [regex]::Escape($v) + '\.zip$') } | Select-Object -First 1
+            if ($pick) { break }
+          }
+          if (-not $pick) { $pick = $assets | Where-Object { $_ -match '^ffmpeg-n[0-9.]+-latest-win64-gpl-[0-9.]+\.zip$' } | Sort-Object { [version](($_ -replace '^ffmpeg-n','') -replace '-latest.*','') } -Descending | Select-Object -First 1 }
           if (-not $pick) { $pick = 'ffmpeg-master-latest-win64-gpl.zip' }
           "ffmpeg-Paket: $pick" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
           gh release download latest -R BtbN/FFmpeg-Builds -p $pick -O ffmpeg.zip
