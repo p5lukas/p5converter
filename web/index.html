@@ -4,14 +4,21 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>p5converter</title>
-<link rel="icon" type="image/png" href="/icon.png">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="manifest" href="/manifest.webmanifest">
+<!-- __V__ = Version: neue Icons erscheinen sofort, auch im Tab (Browser merken sich Favicons sehr lange) -->
+<link rel="icon" href="/favicon.ico?v=__V__" sizes="16x16 32x32 48x48">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=__V__">
+<link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png?v=__V__">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=__V__">
+<link rel="manifest" href="/manifest.webmanifest?v=__V__">
 <meta name="theme-color" content="#02100a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="p5converter">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
+<script>
+// Weltfarbe vor dem ersten Zeichnen setzen (sonst blitzt kurz das Standard-Grün auf, bis die Einstellungen geladen sind)
+try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { var r = document.documentElement.style; r.setProperty('--h', t.h); r.setProperty('--sat', t.sat + '%'); r.setProperty('--lit', t.lit + '%'); } } catch (e) {}
+</script>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -23,7 +30,6 @@
   </nav>
   <div class="spacer"></div>
   <span id="ffver" class="muted small hidewide"></span>
-  <button id="newsBtn" class="tb" title="Neuigkeiten"><span data-ic="news"></span><span class="lbl"> Neuigkeiten</span><i id="newsDot" class="dot hidden"></i></button>
   <button id="logbtn" class="tb logbtn" title="Logs" aria-label="Logs"><span data-ic="terminal"></span><span class="lbadge"></span></button>
   <button id="gearBtn" class="tb" title="Einstellungen" aria-label="Einstellungen"><span data-ic="gear"></span></button>
   <button id="logoutBtn" class="tb ghost hidden" title="Abmelden"><span data-ic="logout"></span><span class="lbl"> Abmelden</span></button>
@@ -37,6 +43,7 @@
     <span class="muted small">Voreinstellung:</span>
     <div class="presets" id="aPresets"></div>
     <div class="presets hidden" id="vPresets"></div>
+    <span class="muted small presetnote">Setzt auch Namensmuster, Zusatz und Ersetzungen.</span>
   </div>
 
   <!-- Schritt: Start -->
@@ -112,7 +119,8 @@
           <select id="outStruct"><option value="keep">Ordnerstruktur beibehalten</option><option value="flat">Alles in einen Ordner</option></select>
         </label>
         <label>Wenn Datei existiert
-          <select id="exists"><option value="rename">Umbenennen (2)</option><option value="skip">Überspringen</option><option value="overwrite">Überschreiben</option></select>
+          <select id="exists"><option value="rename">Beide behalten, neue Datei nummerieren</option><option value="skip">Überspringen, vorhandene Datei nicht anfassen</option><option value="overwrite">Überschreiben, vorhandene Datei ersetzen</option></select>
+          <span class="muted small" id="existsHint"></span>
         </label>
       </div>
       <label class="check"><input type="checkbox" id="deleteSource"> Quelldatei nach Erfolg löschen <span class="warn small">(unwiderruflich)</span></label>
@@ -226,7 +234,8 @@
   <section class="stepsec hidden" data-step="tracks" data-world="video">
     <div class="panel" id="trackSettings">
       <h2>Audio und Untertitel</h2>
-      <h3 data-info="vAudioTracks">Audiospuren</h3>
+      <p class="muted small">Standardmäßig bleiben alle Spuren unverändert (Passthrough). Hier legst du Regeln für alle Dateien fest und kannst darunter einzelne Spuren ändern.</p>
+      <h3 data-info="vAudioTracks">Audiospuren: Regeln für alle Dateien</h3>
       <div class="grid2">
         <label>Verarbeitung
           <select id="vAudioMode"><option value="copy">Passthrough (unverändert)</option><option value="encode">Neu kodieren</option></select>
@@ -239,7 +248,7 @@
           <input id="vAudioLangs" placeholder="leer = alle, z. B. ger,eng">
         </label>
       </div>
-      <h3 data-info="vSubTracks">Untertitel</h3>
+      <h3 data-info="vSubTracks">Untertitel: Regeln für alle Dateien</h3>
       <div class="grid2">
         <label>Verarbeitung
           <select id="vSubMode"><option value="copy">Passthrough (alle behalten)</option><option value="none">Alle entfernen</option></select>
@@ -248,7 +257,8 @@
           <input id="vSubLangs" placeholder="leer = alle, z. B. ger,eng">
         </label>
       </div>
-      <p class="muted small">Einzelne Spuren pro Datei entfernen oder Standard-Audiospur ändern: im Schritt „Dateien“ auf „Spuren“ klicken.</p>
+      <h3 data-info="trkTable">Einzelne Spuren</h3>
+      <div id="trackEditor"></div>
     </div>
   </section>
 
@@ -262,6 +272,7 @@
 
   <div class="stepnav hidden" id="stepnav">
     <button id="stepBack" class="ghost">← Zurück</button>
+    <button id="resetAll" class="ghost" title="Alle Eingaben dieser Welt auf den Anfang zurücksetzen"><span data-ic="reset"></span><span class="lbl2"> Zurücksetzen</span></button>
     <span id="startInfo" class="small muted"></span>
     <span class="spacer"></span>
     <button id="savePreset" class="hidden" title="Die aktuellen Einstellungen als Voreinstellung speichern"><span data-ic="floppy"></span><span class="lbl2"> Als Voreinstellung speichern</span></button>
@@ -304,7 +315,7 @@
   <form method="dialog" class="dlg" id="presetForm">
     <h2><span data-ic="floppy"></span> Als Voreinstellung speichern</h2>
     <label>Name<input id="presetName" maxlength="40" placeholder="z. B. Filme klein H.265" autocomplete="off"></label>
-    <label class="check"><input type="checkbox" id="presetSuggest" checked> Als Vorschlag oben im Einstellungs-Panel anzeigen</label>
+    <label class="check"><input type="checkbox" id="presetSuggest" checked> Als Vorschlag oben im Schritt „Video“ bzw. „Einstellungen“ anzeigen</label>
     <p class="muted small" id="presetHint"></p>
     <div class="dlg-f"><button type="button" id="presetCancel" class="ghost">Abbrechen</button><button class="primary" id="presetSave">Speichern</button></div>
   </form>
@@ -328,7 +339,7 @@
     <div id="bDrives" class="small"></div>
     <div id="bList" class="blist"></div>
     <div class="dlg-f">
-      <span id="bCount" class="muted small"></span>
+      <span class="btns"><button type="button" id="bAll" class="small">Alle auswählen</button><button type="button" id="bNone" class="small">Alle abwählen</button><span id="bCount" class="muted small"></span></span>
       <div class="btns">
         <button type="button" id="bAddDir">Diesen Ordner (rekursiv)</button>
         <button type="button" id="bAddSel" class="primary">Auswahl hinzufügen</button>
@@ -338,11 +349,12 @@
   </form>
 </dialog>
 
-<dialog id="tracks">
+<dialog id="resetDlg">
   <form method="dialog" class="dlg">
-    <h2 id="tTitle"></h2>
-    <div id="tBody" class="tbody"></div>
-    <div class="dlg-f"><span class="muted small">Abgewählte Spuren werden entfernt.</span><button class="primary">Fertig</button></div>
+    <h2><span data-ic="reset"></span> Alles zurücksetzen?</h2>
+    <p id="resetText"></p>
+    <p class="muted small">Laufende Aufträge, Einstellungen und Voreinstellungen bleiben unberührt.</p>
+    <div class="dlg-f"><button type="button" id="resetNo" class="ghost">Abbrechen</button><button type="button" id="resetYes" class="primary">Zurücksetzen</button></div>
   </form>
 </dialog>
 
@@ -351,6 +363,7 @@
 <script src="info.js"></script>
 <script src="rename.js"></script>
 <script src="flow.js"></script>
+<script src="tracks.js"></script>
 <script src="logs.js"></script>
 <script src="settings.js"></script>
 <script src="auth.js"></script>

@@ -75,7 +75,18 @@ def badge(kind):
     spark = ''.join(f'<circle cx="{x}" cy="{y}" r="{s}" fill="#ffc83a"/>' for x, y, s in [(cx+58, cy-18, 3.5), (cx+20, cy-66, 3), (cx+66, cy+14, 2.5)])
     return base + f'<g filter="url(#glowo)">{tongues}{head}</g>' + spark
 
-def svg(kind, rounded):
+def body(kind, tab):
+    if tab:
+        # Tab-Symbol: größeres „p5“ ohne Regen, das Abzeichen groß in der Ecke (sonst im Tab nicht lesbar)
+        return (f'<rect x="96" y="56" width="270" height="360" rx="26" fill="#020f08" fill-opacity=".8" stroke="{GREEN}" stroke-width="16" filter="url(#glow)"/>'
+                f'<g fill="{GREEN}" font-family="DejaVu Sans, Verdana, Arial, sans-serif" font-weight="700" filter="url(#glow2)"><text x="226" y="290" font-size="200" text-anchor="middle">p5</text></g>'
+                f'<g transform="translate(372 372) scale(1.3) translate(-380 -380)">{badge(kind)}</g>')
+    return (f'<rect x="132" y="84" width="236" height="318" rx="22" fill="#020f08" fill-opacity=".72" stroke="{GREEN}" stroke-width="10" filter="url(#glow)"/>'
+            f'<g fill="{GREEN}" font-family="DejaVu Sans, Verdana, Arial, sans-serif" font-weight="700" filter="url(#glow2)">'
+            f'<text x="250" y="282" font-size="138" text-anchor="middle">p5</text><rect x="198" y="306" width="104" height="10" rx="2"/></g>'
+            f'{badge(kind)}')
+
+def svg(kind, rounded, tab=False):
     plate = (f'<rect width="512" height="512" rx="112" fill="{PLATE}"/>' if rounded else
              f'<rect width="512" height="512" fill="{BG}"/><rect x="44" y="44" width="424" height="424" rx="96" fill="{PLATE}"/>')
     clip = ('<clipPath id="pl"><rect width="512" height="512" rx="112"/></clipPath>' if rounded else
@@ -94,14 +105,9 @@ def svg(kind, rounded):
 </defs>
 {plate}
 <g clip-path="url(#pl)" font-family="DejaVu Sans Mono, Menlo, Consolas, monospace" font-weight="700" font-size="26">
-{rain(7 if kind == "assets" else 11)}
+{"" if tab else rain(7 if kind == "assets" else 11)}
 </g>
-<rect x="132" y="84" width="236" height="318" rx="22" fill="#020f08" fill-opacity=".72" stroke="{GREEN}" stroke-width="10" filter="url(#glow)"/>
-<g fill="{GREEN}" font-family="DejaVu Sans, Verdana, Arial, sans-serif" font-weight="700" filter="url(#glow2)">
-<text x="250" y="282" font-size="138" text-anchor="middle">p5</text>
-<rect x="198" y="306" width="104" height="10" rx="2"/>
-</g>
-{badge(kind)}
+{body(kind, tab)}
 </svg>
 '''
 
@@ -132,10 +138,12 @@ def main():
     assert kind in ("converter", "assets")
     os.makedirs(out, exist_ok=True)
     rounded, full = os.path.join(out, "icon.svg"), os.path.join(out, "icon-full.svg")
+    tabsvg = os.path.join(out, "icon-tab.svg")
     open(rounded, "w").write(svg(kind, True))
     open(full, "w").write(svg(kind, False))
+    open(tabsvg, "w").write(svg(kind, True, tab=True))
     tmp = tempfile.mkdtemp()
-    render([(rounded, os.path.join(tmp, "round.png")), (full, os.path.join(tmp, "full.png"))], out)
+    render([(rounded, os.path.join(tmp, "round.png")), (full, os.path.join(tmp, "full.png")), (tabsvg, os.path.join(tmp, "tab.png"))], out)
     from PIL import Image
     r = Image.open(os.path.join(tmp, "round.png")).convert("RGBA")
     f = Image.open(os.path.join(tmp, "full.png")).convert("RGB")
@@ -145,6 +153,10 @@ def main():
     save(f, "icon-192.png", 192)
     save(f, "icon-512.png", 512)
     save(f, "apple-touch-icon.png", 180)
+    tab = Image.open(os.path.join(tmp, "tab.png")).convert("RGBA")
+    save(tab, "favicon-32.png", 32)
+    save(tab, "favicon-48.png", 48)
+    tab.resize((256, 256), Image.LANCZOS).save(os.path.join(out, "favicon.ico"), sizes=[(16, 16), (32, 32), (48, 48)])
     print("fertig:", out)
 
 if __name__ == "__main__":

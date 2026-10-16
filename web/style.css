@@ -432,3 +432,68 @@ button.danger{color:var(--bad);border-color:#ff4d5e66}
 @media(max-width:700px){#viewLogs{padding:14px}.logview{height:calc(100vh - 380px)}}
 
 .appicon{display:block;border-radius:22px;margin:0 0 16px;box-shadow:0 0 24px var(--dim)}
+
+/* ===== 0.0.9: Spuren-Editor, Hardware-Kachel, Intel-Status, Zurücksetzen, Ziehen zum Aktualisieren ===== */
+.newsdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--bad);box-shadow:0 0 6px var(--bad);margin-left:5px;vertical-align:middle}
+#existsHint{display:block;margin-top:6px;line-height:1.4}
+#existsHint.warn{color:var(--warn)}
+.presetnote{flex-basis:100%}
+#resetAll .ic{width:1.1em;height:1.1em}
+#resetDlg p{margin:0}
+
+.trkbar{display:flex;justify-content:space-between;align-items:center;gap:10px 14px;flex-wrap:wrap;margin:0 0 12px}
+.trkbar label{display:flex;align-items:center;gap:8px;flex:1;min-width:220px}
+.trkbar select{min-width:0}
+.trkgroup{margin:0 0 18px}
+.trkhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 8px}
+.trkhead h4{margin:0;font-size:13px;color:var(--text)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--panel2)}
+.trktable{min-width:760px}
+.trktable td,.trktable th{vertical-align:middle}
+.trktable tr:last-child td{border-bottom:0}
+.trktable td.c,.trktable th:nth-child(1),.trktable th:nth-child(6),.trktable th:nth-child(7){text-align:center}
+.trktable td.c{width:1%}
+.trktable input:not([type=checkbox]):not([type=radio]),.trktable select{padding:5px 8px;font-size:12px}
+.trktable .trk-lang{width:64px;text-align:center;text-transform:lowercase}
+.trktable .trk-title{min-width:150px}
+.trk.off td:not(:first-child){opacity:.45}
+.trk.edited td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.trk-enc{display:flex;gap:6px;align-items:center;margin-top:6px}
+.trk-enc input{width:78px}
+.trkhint{margin:4px 0 0;line-height:1.5}
+@media(max-width:700px){
+  .trktable{min-width:0}
+  .trktable thead{display:none}
+  .trktable,.trktable tbody{display:block}
+  .trktable tr.trk{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;padding:10px 12px;border-bottom:1px solid var(--line)}
+  .trktable tr.trk:last-child{border-bottom:0}
+  .trktable td{display:block;border:0;padding:0;width:auto!important;text-align:left!important}
+  .trktable td:before{content:attr(data-l);display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:3px}
+  .trktable td[data-l=Behalten],.trktable td[data-l=Forced],.trktable td[data-l=Standard]{display:flex;align-items:center;gap:8px}
+  .trktable td[data-l=Behalten]:before,.trktable td[data-l=Forced]:before,.trktable td[data-l=Standard]:before{margin:0;order:2;font-size:11px}
+  .trktable td[data-l=Spur],.trktable td[data-l=Aktion],.trktable td[data-l=Titel]{grid-column:1/-1}
+  .trktable .trk-lang{width:100%;text-align:left}
+  .trktable .trk-title{min-width:0}
+  .trk.off td:not(:first-child){opacity:.5}
+}
+
+/* Hardware-Kachel */
+.hw.off{opacity:.62;padding:8px 0}
+details.hwoff{margin-top:6px;border-top:1px solid var(--line);padding-top:6px}
+details.hwoff>summary{padding:4px 0}
+details.why{margin-top:2px}
+details.why p{margin:4px 0 2px;line-height:1.45}
+#hwGpus{margin-top:10px;line-height:1.5}
+
+/* Intel: Status statt Prozentzahl */
+.meter.status .t{align-items:center}
+.meter.status .chip{font-size:11px}
+.meter.status .sub{margin-top:5px}
+
+/* Ziehen zum Aktualisieren (Web-App) */
+#ptr{position:fixed;top:-48px;left:0;right:0;height:40px;z-index:80;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--accent);background:hsl(var(--h) var(--sat) 6% / .92);border-bottom:1px solid var(--line);transition:transform .15s;pointer-events:none}
+/* kleine Rückfrage: auch auf dem Handy nur so hoch wie nötig, mittig */
+@media(max-width:700px),(max-height:520px){
+  #resetDlg,#resetDlg .dlg{height:auto}
+  #resetDlg{margin:auto;width:min(94vw,440px);max-width:94vw;border:1px solid var(--accent);border-radius:10px}
+}

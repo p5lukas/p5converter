@@ -1,5 +1,26 @@
 # Änderungen
 
+## 0.0.9 – 2026-10-16
+
+**Neu**
+- **Audio & Untertitel in einem Schritt**: Regeln für alle Dateien (Standard Passthrough) plus **Spurtabelle** je Datei mit Behalten, Aktion (Standard / kopieren / **einzelne Tonspur neu kodieren** mit Codec und kbit/s), **Titel**, **Sprache** (ISO 639-2, wie Plex sie liest), **Forced**, **Standard**; „Alle auswählen/abwählen“, „Auf alle Dateien anwenden“, Warnungen (kein Ton mehr, Forced in MP4). Der Dialog „Spuren“ entfällt, die Dateiliste zeigt nur noch „n Spuren geändert“
+- **Alles zurücksetzen** (je Welt, mit Rückfrage): Dateien, Ziel, Benennung und Einstellungen zurück auf „Remux als MKV“ bzw. „Remux als FLAC“; laufende Aufträge bleiben
+- **Ziehen zum Aktualisieren** in der Home-Bildschirm-Web-App (wie p5assets)
+- **Lesen per VAAPI und NVIDIA nachweisbar**: durchgängige Hardware-Kette (`scale_vaapi`/`scale_cuda`), bei Fehlschlag Ausweichkette (Bilder zurück in den Arbeitsspeicher → CPU); gelingt der erste Weg, zeigt die Warteschlange „Lesen: … ✓“
+- „Alle auswählen/abwählen“ auch im Datei-Browser und bei den Vorschlägen der Voreinstellungen
+- Erklärzeile unter „Wenn Datei existiert“; Überschreiben in Warnfarbe
+
+**Geändert**
+- „Wenn Datei existiert“: verständliche Texte („Beide behalten, neue Datei nummerieren“ …) auch in Zusammenfassung, Hilfe und README
+- Voreinstellungen nur noch im Schritt „Video“ bzw. „Einstellungen“ wählbar; Hinweis, dass sie auch Benennen setzen
+- **Hardware-Kachel** aufgeräumt (Startseite und Einstellungen): eine Zeile je Hardware, Nutzbares zuerst, „Nicht nutzbar“ eingeklappt, Gründe unter „Warum?“, Plattformfremdes ausgeblendet
+- **Intel-Anzeige**: Status „Quick Sync: Leerlauf/aktiv“ statt Prozentzahl, mit Glättung
+- „Neuigkeiten“ nur noch in der Fußzeile (mit rotem Punkt bei Neuem)
+- **Tab-Icon**: versionierte Icon-Adressen (`?v=<Version>`), `/favicon.ico`, eigene 32/48-px-Tab-Icons, Seite und Icons ohne Zwischenspeicher
+
+**Behoben**
+- Farbflackern (kurz Grün) beim Laden: die Weltfarbe wird jetzt vor dem ersten Zeichnen gesetzt
+
 ## 0.0.8 – 2026-10-15
 
 **Geändert**

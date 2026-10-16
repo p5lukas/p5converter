@@ -438,8 +438,8 @@ func TestPageAssetsServed(t *testing.T) {
 	resp, _ := http.Get(ts.URL + "/")
 	var page bytes.Buffer
 	page.ReadFrom(resp.Body)
-	refs := regexp.MustCompile(`(?:src|href)="([a-z0-9-]+\.(?:js|css|png))"`).FindAllStringSubmatch(page.String(), -1)
-	if len(refs) < 8 {
+	refs := regexp.MustCompile(`(?:src|href)="/?([a-z0-9.-]+\.(?:js|css|png|ico))(?:\?v=[^"]*)?"`).FindAllStringSubmatch(page.String(), -1)
+	if len(refs) < 12 {
 		t.Fatalf("zu wenige Verweise gefunden: %d", len(refs))
 	}
 	for _, m := range refs {
@@ -513,5 +513,32 @@ func TestLogAPI(t *testing.T) {
 	req.Header.Set("Content-Type", "text/plain")
 	if resp, _ := http.DefaultClient.Do(req); resp.StatusCode != 415 {
 		t.Errorf("CSRF beim Leeren: %d", resp.StatusCode)
+	}
+}
+
+// icons carry the version (new version = new tab icon at once), the placeholder never reaches the browser,
+// /favicon.ico exists, and the manifest icons are versioned as well
+func TestIconLinksAreVersioned(t *testing.T) {
+	s, ts := newTestServer(t, nil)
+	resp, _ := http.Get(ts.URL + "/")
+	var page bytes.Buffer
+	page.ReadFrom(resp.Body)
+	v := "?v=" + s.Build.Base
+	for _, w := range []string{"/favicon.ico" + v, "/favicon-32.png" + v, "/apple-touch-icon.png" + v, "/manifest.webmanifest" + v} {
+		if !strings.Contains(page.String(), w) {
+			t.Errorf("Seite verweist nicht auf %s", w)
+		}
+	}
+	if strings.Contains(page.String(), "__V__") {
+		t.Error("Platzhalter __V__ steht noch in der Seite")
+	}
+	if r, _ := http.Get(ts.URL + "/favicon.ico"); r.StatusCode != 200 || r.Header.Get("Cache-Control") != "no-cache" {
+		t.Errorf("/favicon.ico: %d %q", r.StatusCode, r.Header.Get("Cache-Control"))
+	}
+	r, _ := http.Get(ts.URL + "/manifest.webmanifest")
+	var m bytes.Buffer
+	m.ReadFrom(r.Body)
+	if !strings.Contains(m.String(), "icon-192.png"+v) {
+		t.Errorf("Manifest-Icons ohne Version: %s", m.String())
 	}
 }

@@ -277,6 +277,9 @@ func (m *Manager) wasCancelled(j *Job) bool {
 
 var jlog = logs.Get("jobs")
 
+// gpuNames: backends whose decoding can be done on the GPU with the full / download / CPU fallback chain.
+var gpuNames = map[string]string{"qsv": "Quick Sync", "vaapi": "VAAPI", "nvenc": "NVIDIA"}
+
 func (m *Manager) fail(j *Job, err error) {
 	m.update(j, func() {
 		j.Status = "error"
@@ -431,10 +434,11 @@ func (m *Manager) run(j *Job) {
 	if j.Kind == "video" {
 		v := j.req.Video
 		if v.HWDecode && v.Backend != "cpu" && v.Codec != "copy" {
-			if v.Backend == "qsv" {
+			if name, ok := gpuNames[v.Backend]; ok {
+				// qsv, vaapi, nvenc: first everything on the GPU, then frames copied back to normal memory, last the CPU reads
 				attempts = []attempt{
-					{true, "full", "Quick Sync lesen (alles auf der Intel-Videoeinheit)"},
-					{true, "download", "Quick Sync lesen (Bilder zurück in den Arbeitsspeicher)"},
+					{true, "full", name + " lesen (alles auf der Hardware)"},
+					{true, "download", name + " lesen (Bilder zurück in den Arbeitsspeicher)"},
 					{false, "", ""},
 				}
 			} else {
@@ -461,6 +465,10 @@ func (m *Manager) run(j *Job) {
 			j.Progress = 0
 		})
 		err = m.exec(ctx, j, args, info.Duration)
+		if err == nil && a.hwdec && j.Kind == "video" && (j.req.Video.Backend == "vaapi" || j.req.Video.Backend == "nvenc") {
+			// these chains only work when the GPU really decodes (scale_vaapi/scale_cuda/hwdownload need GPU frames)
+			m.update(j, func() { j.DecoderConfirmed, j.DecoderName = true, "hwaccel "+j.req.Video.Backend })
+		}
 		if err == nil || m.wasCancelled(j) || i == len(attempts)-1 {
 			break
 		}

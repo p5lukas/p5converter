@@ -25,6 +25,7 @@ const IC = {
   file: '<path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/>',
   sync: '<path d="M20 11a8 8 0 0 0-14-4M4 4v4h4M4 13a8 8 0 0 0 14 4M20 20v-4h-4"/>',
   back: '<path d="M10 6l-6 6 6 6M4 12h16"/>',
+  reset: '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/>',
   rename: '<path d="M4 7h10M4 12h6M4 17h10"/><path d="M15 17l1-4 5-5 3 3-5 5z" transform="translate(-2 1) scale(.9)"/>',
 };
 function ic(name, cls) {
