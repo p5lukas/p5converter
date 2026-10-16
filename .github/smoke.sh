@@ -30,7 +30,9 @@ import json,sys
 d=json.load(sys.stdin)
 assert d["version"].startswith(d["build"]["base"]), d["version"]
 print("Version:", d["version"])'
-curl -fs localhost:8787/api/news | python3 -c 'import json,sys; n=json.load(sys.stdin); assert len(n)>0 and n[0]["version"]'
+curl -fs localhost:8787/api/news | python3 -c 'import json,sys; n=json.load(sys.stdin); assert len(n["all"])>0 and n["all"][0]["version"] and n["version"], n
+assert n["show"] is False, "frische Installation darf keinen Hinweis zeigen"'
+curl -fs -X POST -H "Content-Type: application/json" -d "{\"kind\":\"audio\"}" localhost:8787/api/stats/reset | python3 -c 'import json,sys; assert json.load(sys.stdin)["ok"]'
 curl -fs "localhost:8787/api/logs/read?tail=50" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert any("Erlaubte Ordner" in e["msg"] for e in d["entries"]), d' && echo "Log-API ok"
 docker exec p5smoke test -s /config/logs/p5converter.log && echo "Logdatei in /config ok"
 curl -fs localhost:8787/manifest.webmanifest | python3 -c 'import json,sys; assert json.load(sys.stdin)["display"]=="standalone"'
