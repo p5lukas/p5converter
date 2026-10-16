@@ -65,7 +65,7 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
     </div>
     <div class="startcols">
       <div class="panel" id="savedCard">
-        <h2 data-info="savedInfo">Gewonnener Platz</h2>
+        <div class="panel-h"><h2 data-info="savedInfo">Gewonnener Platz</h2><button id="savedReset" class="small ghost hidden" title="Zählung dieser Welt auf 0 setzen">Zurücksetzen</button></div>
         <div id="savedBody"></div>
       </div>
       <div class="panel hidden" id="hwCard" data-world="video">
@@ -234,30 +234,32 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
   <section class="stepsec hidden" data-step="tracks" data-world="video">
     <div class="panel" id="trackSettings">
       <h2>Audio und Untertitel</h2>
-      <p class="muted small">Standardmäßig bleiben alle Spuren unverändert (Passthrough). Hier legst du Regeln für alle Dateien fest und kannst darunter einzelne Spuren ändern.</p>
-      <h3 data-info="vAudioTracks">Audiospuren: Regeln für alle Dateien</h3>
+      <p class="trkintro">Hier musst du <b>nichts ändern</b>: Standardmäßig bleiben alle Ton- und Untertitelspuren unverändert („Passthrough“) – das ist verlustfrei und am schnellsten. Ändere nur etwas, wenn du Spuren loswerden, umbenennen oder den Ton kleiner machen willst.</p>
+      <h3 data-info="vAudioTracks">Ton: Regeln für alle Dateien</h3>
       <div class="grid2">
-        <label>Verarbeitung
-          <select id="vAudioMode"><option value="copy">Passthrough (unverändert)</option><option value="encode">Neu kodieren</option></select>
+        <label>Was soll mit dem Ton passieren?
+          <select id="vAudioMode"><option value="copy">Unverändert lassen (empfohlen)</option><option value="encode">Kleiner machen (neu kodieren)</option></select>
         </label>
-        <label id="vAudioCodecRow">Codec / Bitrate (Stereo)
-          <div class="row"><select id="vAudioCodec"><option value="aac">AAC</option><option value="opus">Opus</option><option value="ac3">AC-3</option><option value="eac3">E-AC-3</option><option value="flac">FLAC</option></select>
+        <label id="vAudioCodecRow">Format und Bitrate (je Stereo-Paar)
+          <div class="row"><select id="vAudioCodec"><option value="aac">AAC (läuft überall, empfohlen)</option><option value="opus">Opus (sehr klein, modern)</option><option value="ac3">AC-3 (Dolby Digital, für TV/AV-Receiver)</option><option value="eac3">E-AC-3 (Dolby Digital Plus)</option><option value="flac">FLAC (verlustfrei, groß)</option></select>
           <input id="vAudioKbps" type="number" min="32" max="640" value="160" style="width:90px"></div>
         </label>
         <label>Nur diese Sprachen behalten
           <input id="vAudioLangs" placeholder="leer = alle, z. B. ger,eng">
         </label>
       </div>
+      <p class="muted small" id="vAudioHint"></p>
       <h3 data-info="vSubTracks">Untertitel: Regeln für alle Dateien</h3>
       <div class="grid2">
-        <label>Verarbeitung
-          <select id="vSubMode"><option value="copy">Passthrough (alle behalten)</option><option value="none">Alle entfernen</option></select>
+        <label>Was soll mit den Untertiteln passieren?
+          <select id="vSubMode"><option value="copy">Alle behalten (empfohlen)</option><option value="none">Alle entfernen</option></select>
         </label>
         <label>Nur diese Sprachen behalten
           <input id="vSubLangs" placeholder="leer = alle, z. B. ger,eng">
         </label>
       </div>
-      <h3 data-info="trkTable">Einzelne Spuren</h3>
+      <p class="muted small">Sprachcodes: <code>ger</code> = Deutsch, <code>eng</code> = Englisch, <code>fre</code> = Französisch, <code>jpn</code> = Japanisch. Spuren ohne Sprachangabe bleiben immer erhalten.</p>
+      <h3 data-info="trkTable">Spuren dieser Datei</h3>
       <div id="trackEditor"></div>
     </div>
   </section>
@@ -329,6 +331,14 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
   </form>
 </dialog>
 
+<dialog id="newsNotice">
+  <form method="dialog" class="dlg">
+    <h2 id="nnTitle"></h2>
+    <div id="nnBody"></div>
+    <div class="dlg-f"><button type="button" id="nnClose" class="ghost">Schließen</button><button type="button" id="nnAll" class="primary">Alle ansehen</button></div>
+  </form>
+</dialog>
+
 <dialog id="browser">
   <form method="dialog" class="dlg">
     <div class="dlg-h">
@@ -346,6 +356,15 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
         <button type="button" id="bCancel" class="ghost">Abbrechen</button>
       </div>
     </div>
+  </form>
+</dialog>
+
+<dialog id="savedResetDlg">
+  <form method="dialog" class="dlg">
+    <h2><span data-ic="reset"></span> Statistik zurücksetzen?</h2>
+    <p id="savedResetText"></p>
+    <p class="muted small">Das lässt sich nicht rückgängig machen. Aufträge und Dateien bleiben unberührt.</p>
+    <div class="dlg-f"><button type="button" id="savedResetNo" class="ghost">Abbrechen</button><button type="button" id="savedResetYes" class="primary">Zurücksetzen</button></div>
   </form>
 </dialog>
 

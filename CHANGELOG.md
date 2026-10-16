@@ -1,5 +1,21 @@
 # Änderungen
 
+## 0.0.10 – 2026-10-16
+
+**Neu**
+- **Audio & Untertitel verständlich** (Variante C): Der Schritt sagt zuerst, dass nichts geändert werden muss. Jede Spur ist eine Karte mit Klartext („Deutsch · Dolby Digital 5.1 · 6 Kanäle“), Behalten-Häkchen und bei Ton „So lassen (empfohlen) / Kleiner machen (neu kodieren)“; Titel, Sprache (Auswahl mit Namen), Forced und „startet automatisch“ stehen hinter „Erweitert“. **Tipps zu dieser Datei** per Knopfdruck: nur Deutsch und Englisch behalten, Forced-Untertitel ohne Markierung markieren, fehlende Sprache festlegen
+- Beim Kleinermachen sind **Format und Bitrate vorausgefüllt** (AAC 160 kbit/s je Stereo-Paar) und die **Zielbitrate wird angezeigt** (z. B. 5.1 → 480 kbit/s); Warnung bei verlustfreiem Ton (TrueHD, FLAC, DTS-HD)
+- **Gewonnener Platz strikt je Welt**: Audio zeigt nur Audio, Video nur Video; „Zurücksetzen“ (mit Rückfrage) je Welt; „seit“-Datum je Welt (alte Zählung wird übernommen)
+- **Neuigkeiten wie bei p5assets**: nach einem Update einmal pro Version ein kurzer Hinweis („Neu in Version X“ mit den Überschriften, „Alle ansehen“/„Schließen“); der Merker liegt auf dem Server (alle Geräte); bei frischer Installation kein Hinweis; die Liste bleibt in der Fußzeile, der rote Punkt entfällt
+- **GPU-Anleitung** in der Unraid-Vorlage, in der README und unter Einstellungen → Hardware („Wie schalte ich meine GPU frei?“): Intel/AMD brauchen `/dev/dri` (schon eingetragen), NVIDIA zusätzlich `--runtime=nvidia`
+
+**Geändert**
+- Beschriftungen im Schritt „Audio & Untertitel“ in Alltagssprache („Was soll mit dem Ton passieren?“, „Unverändert lassen (empfohlen)“, Codec-Namen mit Erklärung, Sprachcodes-Hinweis)
+- Weitere Sprachcodes werden erkannt (da, no, fi, cs, hu, el, ar, hi)
+
+**Behoben**
+- Info-Text zur Audio-Bitrate nannte für 5.1 fälschlich „2,5×“; tatsächlich Wert × Kanäle ÷ 2 (5.1 = 3×)
+
 ## 0.0.9 – 2026-10-16
 
 **Neu**

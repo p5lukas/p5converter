@@ -92,6 +92,8 @@ var langAlias = map[string]string{
 	"es": "spa", "spa": "spa", "it": "ita", "ita": "ita", "ja": "jpn", "jpn": "jpn", "ru": "rus", "rus": "rus",
 	"pt": "por", "por": "por", "nl": "dut", "nld": "dut", "dut": "dut", "pl": "pol", "pol": "pol", "tr": "tur",
 	"tur": "tur", "zh": "chi", "zho": "chi", "chi": "chi", "ko": "kor", "kor": "kor", "sv": "swe", "swe": "swe",
+	"da": "dan", "dan": "dan", "no": "nor", "nor": "nor", "nb": "nor", "nob": "nor", "fi": "fin", "fin": "fin", "cs": "cze", "ces": "cze", "cze": "cze",
+	"hu": "hun", "hun": "hun", "el": "gre", "ell": "gre", "gre": "gre", "ar": "ara", "ara": "ara", "hi": "hin", "hin": "hin",
 }
 
 func normLang(l string) string {
