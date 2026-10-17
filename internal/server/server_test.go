@@ -657,3 +657,34 @@ func TestShortUA(t *testing.T) {
 		t.Errorf("shortUA: %q", got)
 	}
 }
+
+// Kontrolle nach der Konvertierung: Spuren + Decode-Test bestanden, Quelle wandert in die Schonfrist statt gelöscht zu werden.
+func TestVerifyAndGrace(t *testing.T) {
+	root := t.TempDir()
+	s, ts := newTestServer(t, []string{root})
+	src := filepath.Join(root, "v.mkv")
+	if out, err := exec.Command("ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=320x240:r=25:d=4", "-f", "lavfi", "-i", "sine=f=440:d=4",
+		"-c:v", "libx264", "-preset", "ultrafast", "-c:a", "aac", src).CombinedOutput(); err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	r := post(t, ts, "/api/jobs", map[string]any{"kind": "video", "items": []map[string]string{{"path": src}},
+		"output": map[string]any{"dir": filepath.Join(root, "o"), "structure": "flat", "deleteSource": true, "verifyTracks": true, "verifyDecode": true, "grace": true, "graceDays": 3},
+		"video":  map[string]any{"codec": "copy", "container": "mkv", "audioMode": "copy", "subMode": "copy"}}, nil)
+	if r.StatusCode != 200 {
+		t.Fatalf("submit %d", r.StatusCode)
+	}
+	waitDone(t, s, 1)
+	j := s.Jobs.Snapshot()[0]
+	if j.Status != "done" || j.CheckFailed || len(j.Checks) != 4 {
+		t.Fatalf("status=%s fehler=%q prüfungen=%+v warnungen=%v", j.Status, j.Error, j.Checks, j.Warnings)
+	}
+	if _, err := os.Stat(src); err == nil {
+		t.Error("Quelle liegt noch am alten Ort")
+	}
+	if j.Trashed == "" || filepath.Base(filepath.Dir(j.Trashed)) != "p5converter-gelöscht" {
+		t.Errorf("Quelle nicht in der Schonfrist: %q", j.Trashed)
+	}
+	if _, err := os.Stat(j.Trashed); err != nil {
+		t.Errorf("Quelle in der Schonfrist fehlt: %v", err)
+	}
+}

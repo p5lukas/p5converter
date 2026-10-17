@@ -66,12 +66,12 @@ Jede Einstellung hat einen kleinen **ⓘ**-Punkt mit einfacher Erklärung und Be
 
 ### Audio (wie SoundConverter)
 MP3, Ogg Vorbis, Opus, AAC/M4A, FLAC, WAV · VBR-Qualität oder konstante Bitrate · Samplerate/Kanäle · Tags und Cover bleiben erhalten · Ordner rekursiv hinzufügen ·
-Zielordner mit Struktur oder Namensmuster (`{artist}/{album}/{track} - {title}`) · „Wenn Datei existiert“: beide behalten und die neue nummerieren (`Film (2).mkv`) / überspringen / überschreiben (mit Warnfarbe) · Quelle optional löschen (nur nach Prüfung der Ergebnis-Laufzeit).
+Zielordner mit Struktur oder Namensmuster (`{artist}/{album}/{track} - {title}`) · „Wenn Datei existiert“: beide behalten und die neue nummerieren (`Film (2).mkv`) / überspringen / überschreiben (mit Warnfarbe) · Quelle optional löschen – nur nach bestandener **Kontrolle der neuen Datei** (lesbar und gleich lang; optional Spuren/Größe, kompletter Decode-Test) und wahlweise mit **Schonfrist** (Original wandert für 1–90 Tage in „p5converter-gelöscht“).
 
 ### Video
 * Container **MKV** (Standard) oder MP4, „Nur Remux“ (Video kopieren)
 * Codec **H.264, H.265, AV1, VP9**
-* **Auflösung** (max. Höhe, nie hochskaliert), **CRF**, Geschwindigkeits-Preset, **8/10 Bit** (oder „wie Quelle“)
+* **Auflösung** (max. Höhe, nie hochskaliert), **CRF** (mit automatischem Vorschlag je nach Art des Materials: Anime, Korn, aktueller Film …), Geschwindigkeits-Preset, **8/10 Bit** (oder „wie Quelle“)
 * **Audio & Untertitel in einem Schritt, auch für Einsteiger:** Standard ist **Passthrough** (nichts ändern). Oben Regeln für alle Dateien (Sprachfilter, Kleiner machen mit vorausgefüllter Empfehlung und angezeigter Zielbitrate), darunter je Spur eine **Karte in Klartext** mit Behalten-Häkchen, bei Ton „So lassen / Kleiner machen“ und hinter „Erweitert“ **Titel, Sprache, Forced, Standard**; „Alle auswählen/abwählen“, „Auf alle Dateien anwenden“ und **Tipps** (z. B. nur Deutsch und Englisch behalten, Forced-Untertitel markieren, fehlende Sprache)
 * **Plex:** Sprache wird als dreibuchstabiger Code geschrieben; „Forced“ erkennt Plex nur in **MKV** (bei MP4 kommt eine Warnung) und die Untertitelsprache muss zur Tonspur passen; danach in Plex neu **analysieren**
 * Schriftarten-Anhänge bleiben in MKV erhalten
@@ -119,6 +119,7 @@ Optionale Anmeldung (Hash des Passworts, Sitzungs-Cookie, Bremse bei Fehlversuch
 
 ## Entwicklung
 ```bash
+sh tools/precheck.sh          # Vorprüfung vor jedem Push (gofmt, vet, Windows-Build, JS-Syntax, Versionsstellen, Tests)
 go test ./...                 # benötigt ffmpeg im PATH
 go build -o p5converter . && P5_NO_BROWSER=1 ./p5converter   # http://127.0.0.1:8787
 docker build -f docker/Dockerfile -t p5converter .

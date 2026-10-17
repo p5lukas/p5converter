@@ -27,17 +27,29 @@ type Preset struct {
 	Values  map[string]any `json:"values"`
 }
 
+// Verify: the default of the controls after a conversion (one set per world; the wizard can change it per run).
+type Verify struct {
+	Tracks    bool `json:"tracks"`    // A: tracks complete, size plausible
+	Decode    bool `json:"decode"`    // B: read the whole result once
+	Grace     bool `json:"grace"`     // C: grace period instead of deleting the source at once
+	GraceDays int  `json:"graceDays"` // 1-90
+}
+
+func defaultVerify() Verify { return Verify{Tracks: true, Decode: true, Grace: false, GraceDays: 7} }
+
 type Settings struct {
-	Worlds           map[string]World `json:"worlds"`
-	WorldOrder       []string         `json:"worldOrder"`
-	StartWorld       string           `json:"startWorld"`       // last | audio | video
-	Concurrency      int              `json:"concurrency"`      // parallel video jobs
-	ConcurrencyAudio int              `json:"concurrencyAudio"` // parallel audio jobs
-	DefaultOutDir    string           `json:"defaultOutDir"`
-	ShowNews         bool             `json:"showNews"`
-	PreferredBackend string           `json:"preferredBackend"` // auto | cpu | qsv | nvenc | vaapi | amf
-	HWDecode         bool             `json:"hwDecode"`
-	Presets          []Preset         `json:"presets"`
+	Worlds           map[string]World  `json:"worlds"`
+	WorldOrder       []string          `json:"worldOrder"`
+	StartWorld       string            `json:"startWorld"`       // last | audio | video
+	Concurrency      int               `json:"concurrency"`      // parallel video jobs
+	ConcurrencyAudio int               `json:"concurrencyAudio"` // parallel audio jobs
+	DefaultOutDir    string            `json:"defaultOutDir"`
+	ShowNews         bool              `json:"showNews"`
+	PreferredBackend string            `json:"preferredBackend"` // auto | cpu | qsv | nvenc | vaapi | amf
+	HWDecode         bool              `json:"hwDecode"`
+	Presets          []Preset          `json:"presets"`
+	Verify           map[string]Verify `json:"verify"`
+	NoCRFSuggest     bool              `json:"noCrfSuggest"` // true = no automatic CRF suggestion in the video settings
 }
 
 // Fields a preset may contain, per world (the ids of the UI controls).
@@ -58,6 +70,7 @@ func Defaults() Settings {
 		ShowNews:         true,
 		PreferredBackend: "auto",
 		HWDecode:         true,
+		Verify:           map[string]Verify{"audio": defaultVerify(), "video": defaultVerify()},
 		Presets: []Preset{
 			p("v-remux", "Remux als MKV", "video", map[string]any{"vCodec": "copy", "vContainer": "mkv"}),
 			p("a-flac", "Remux als FLAC", "audio", map[string]any{"aFormat": "flac", "aFlac": 5}),
@@ -192,6 +205,23 @@ func Validate(in Settings) (Settings, error) {
 	if !contains([]string{"auto", "cpu", "qsv", "nvenc", "vaapi", "amf"}, out.PreferredBackend) {
 		out.PreferredBackend = "auto"
 	}
+	// settings files from before 0.1.4 have no "verify": the defaults apply (A and B on)
+	ver := map[string]Verify{}
+	for _, w := range []string{"audio", "video"} {
+		v, ok := out.Verify[w]
+		if !ok {
+			v = defaultVerify()
+		}
+		if v.GraceDays < 1 || v.GraceDays > 90 {
+			if v.GraceDays == 0 {
+				v.GraceDays = 7
+			} else {
+				return Settings{}, errors.New("Schonfrist: 1–90 Tage")
+			}
+		}
+		ver[w] = v
+	}
+	out.Verify = ver
 	if len(out.Presets) > 100 {
 		return Settings{}, errors.New("Höchstens 100 Voreinstellungen")
 	}

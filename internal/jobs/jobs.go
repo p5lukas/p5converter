@@ -37,6 +37,11 @@ type OutputOpts struct {
 	Replace      []rename.Rule `json:"replace"` // search & replace on the file name
 	Exists       string        `json:"exists"`  // skip | overwrite | rename
 	DeleteSource bool          `json:"deleteSource"`
+	// Controls after the conversion (the basic check - readable, same length - always runs):
+	VerifyTracks bool `json:"verifyTracks"` // A: tracks complete, size plausible
+	VerifyDecode bool `json:"verifyDecode"` // B: read the whole result once, report damaged spots
+	Grace        bool `json:"grace"`        // C: do not delete the source at once, move it away for GraceDays
+	GraceDays    int  `json:"graceDays"`
 }
 
 type Request struct {
@@ -69,17 +74,24 @@ type Job struct {
 	DecoderName      string `json:"decoderName,omitempty"`
 	DecoderConfirmed bool   `json:"decoderConfirmed"`
 	// Attempts: short notes about earlier tries that failed before the current one (shown calmly, not as an error).
-	Attempts []string  `json:"attempts,omitempty"`
-	Cmd      string    `json:"cmd"`
-	Error    string    `json:"error,omitempty"`
-	Warnings []string  `json:"warnings,omitempty"`
-	MapLines []string  `json:"mapLines,omitempty"`
-	Log      []string  `json:"log,omitempty"`
-	SizeIn   int64     `json:"sizeIn"`
-	SizeOut  int64     `json:"sizeOut"`
-	Created  time.Time `json:"created"`
-	Started  time.Time `json:"started"`
-	Ended    time.Time `json:"ended"`
+	Attempts []string `json:"attempts,omitempty"`
+	Cmd      string   `json:"cmd"`
+	Error    string   `json:"error,omitempty"`
+	Warnings []string `json:"warnings,omitempty"`
+	MapLines []string `json:"mapLines,omitempty"`
+	Log      []string `json:"log,omitempty"`
+	// Phase: "check" while the result is being verified (the conversion itself is finished).
+	Phase string `json:"phase,omitempty"`
+	// Checks: what the control after the conversion found; CheckFailed = at least one failed (the source is then kept).
+	Checks      []Check `json:"checks,omitempty"`
+	CheckFailed bool    `json:"checkFailed"`
+	// Trashed: where the source waits during its grace period.
+	Trashed string    `json:"trashed,omitempty"`
+	SizeIn  int64     `json:"sizeIn"`
+	SizeOut int64     `json:"sizeOut"`
+	Created time.Time `json:"created"`
+	Started time.Time `json:"started"`
+	Ended   time.Time `json:"ended"`
 
 	item      Item
 	req       *Request
@@ -101,6 +113,8 @@ type Manager struct {
 	OnDone      func(kind string, in, out int64)
 	partialFile string
 	partials    map[string]bool
+	graceFile   string
+	grace       map[string]int64 // source in a trash folder -> unix time after which it is removed
 }
 
 func New(t ffmpeg.Tools, s *hw.Sampler, concurrency int) *Manager {
@@ -178,6 +192,7 @@ func (m *Manager) Snapshot() []Job {
 		c.Log = append([]string(nil), j.Log...)
 		c.MapLines = append([]string(nil), j.MapLines...)
 		c.Warnings = append([]string(nil), j.Warnings...)
+		c.Checks = append([]Check(nil), j.Checks...)
 		if len(c.Log) > 25 && c.Status == "running" {
 			c.Log = c.Log[len(c.Log)-25:]
 		}
@@ -446,6 +461,7 @@ func (m *Manager) run(j *Job) {
 			}
 		}
 	}
+	var usedArgs []string
 	for i, a := range attempts {
 		args, e := buildArgs(a)
 		if e != nil {
@@ -464,6 +480,7 @@ func (m *Manager) run(j *Job) {
 			j.HWDecodeFallback = len(attempts) > 1 && !a.hwdec
 			j.Progress = 0
 		})
+		usedArgs = args
 		err = m.exec(ctx, j, args, info.Duration)
 		if err == nil && a.hwdec && j.Kind == "video" && (j.req.Video.Backend == "vaapi" || j.req.Video.Backend == "nvenc") {
 			// these chains only work when the GPU really decodes (scale_vaapi/scale_cuda/hwdownload need GPU frames)
@@ -499,20 +516,30 @@ func (m *Manager) run(j *Job) {
 	if st, err := os.Stat(out); err == nil {
 		size = st.Size()
 	}
-	if j.req.Output.DeleteSource && filepath.Clean(out) != filepath.Clean(j.item.Path) && size > 0 {
-		// Only delete the source if the result looks complete (duration matches the source).
+	o := j.req.Output
+	if filepath.Clean(out) != filepath.Clean(j.item.Path) && size > 0 {
 		outInfo, perr := m.tools.Probe(context.Background(), out)
-		switch {
-		case perr != nil:
-			m.update(j, func() {
-				j.Warnings = append(j.Warnings, "Quelle NICHT gelöscht: Ergebnis nicht prüfbar ("+perr.Error()+")")
-			})
-		case info.Duration > 0 && absf(outInfo.Duration-info.Duration) > maxf(2, info.Duration*0.02):
-			m.update(j, func() {
-				j.Warnings = append(j.Warnings, fmt.Sprintf("Quelle NICHT gelöscht: Laufzeit weicht ab (%.1fs → %.1fs)", info.Duration, outInfo.Duration))
-			})
-		default:
-			if err := os.Remove(j.item.Path); err != nil {
+		cs := m.verify(ctx, j, info, outInfo, perr, usedArgs, out, j.SizeIn, size)
+		ok := allOK(cs)
+		m.update(j, func() {
+			j.Checks, j.CheckFailed, j.Phase = cs, !ok, ""
+			for _, c := range cs {
+				if !c.OK {
+					j.Warnings = append(j.Warnings, "Prüfung nicht bestanden: "+c.Note+o.keepNote())
+					jlog.Warnf("Auftrag %s: Prüfung nicht bestanden: %s", j.ID, c.Note)
+				}
+			}
+		})
+		if ok && o.DeleteSource {
+			if o.Grace {
+				if dst, err := m.trashSource(j.item.Path, o.GraceDays); err != nil {
+					m.update(j, func() {
+						j.Warnings = append(j.Warnings, "Quelle konnte nicht in die Schonfrist verschoben werden: "+err.Error())
+					})
+				} else {
+					m.update(j, func() { j.Trashed = dst })
+				}
+			} else if err := os.Remove(j.item.Path); err != nil {
 				m.update(j, func() { j.Warnings = append(j.Warnings, "Quelle konnte nicht gelöscht werden: "+err.Error()) })
 			}
 		}
@@ -753,4 +780,12 @@ func isHWDecoder(name string) bool {
 		}
 	}
 	return false
+}
+
+// keepNote tells that the source was left alone because a check failed (only relevant when deleting was wanted).
+func (o OutputOpts) keepNote() string {
+	if o.DeleteSource {
+		return " – Quelle NICHT gelöscht"
+	}
+	return ""
 }

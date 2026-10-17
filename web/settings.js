@@ -207,6 +207,19 @@ function renderSettings() {
 }
 matchMedia('(max-width:700px)').addEventListener('change', () => { if (!$('#viewSettings').classList.contains('hidden')) renderSettings(); });
 
+// Standardauswahl der Kontrolle nach dem Konvertieren, je Welt (im Konverter pro Lauf änderbar)
+function verifyControls(w) {
+  const v = (cfg().verify || {})[w] || {tracks: true, decode: true, grace: false, graceDays: 7};
+  const set = f => saveCfg(x => { x.verify = x.verify || {}; x.verify[w] = {...(x.verify[w] || v)}; f(x.verify[w]); }, false).then(ok => { if (ok) { vfReset(w); toast('Gespeichert ✓', 'ok'); } });
+  const days = h('select', {class: 'inl', onchange: () => set(o => { o.graceDays = +days.value; })}, VF_DAYS.map(n => opt(n, n + (n === 1 ? ' Tag' : ' Tage'))));
+  days.value = String(v.graceDays || 7);
+  return h('div', {class: 'vfset'},
+    check(v.tracks !== false, on => set(o => { o.tracks = on; }), 'Spuren & Größe prüfen (kaum länger)'),
+    check(v.decode !== false, on => set(o => { o.decode = on; }), w === 'audio' ? 'Ergebnis komplett durchlesen (kaum länger)' : 'Ergebnis komplett durchlesen (Decode-Test, bei Video merklich länger)'),
+    h('label', {class: 'check', style: 'margin:0'}, h('input', {type: 'checkbox', checked: !!v.grace, onchange: e => set(o => { o.grace = e.target.checked; })}), 'Schonfrist statt sofort löschen (gilt, wenn „Quelldatei löschen“ an ist)'),
+    h('div', {class: 'vfdays small muted'}, 'Dauer der Schonfrist: ', days));
+}
+
 // --- Allgemein ---
 function pageGeneral() {
   const c = cfg();
@@ -221,6 +234,9 @@ function pageGeneral() {
     row('Parallele Aufträge – ' + W('audio').name, concA, 'conc', 'Wie viele Audio-Dateien gleichzeitig laufen'),
     row('Parallele Aufträge – ' + W('video').name, concV, 'conc', 'Wie viele Videos gleichzeitig laufen (bei CPU-Encoding 1)'),
     row('Standard-Zielordner', h('div', {class: 'row'}, out, pick), 'outDir', 'Wird vorgeschlagen, wenn im Konverter nichts anderes gewählt ist'),
+    row('Kontrolle – ' + W('audio').name, verifyControls('audio'), 'vfInfo', 'Standardauswahl im letzten Schritt des Assistenten'),
+    row('Kontrolle – ' + W('video').name, verifyControls('video'), 'vfInfo', 'Standardauswahl im letzten Schritt des Assistenten'),
+    row('CRF-Vorschlag', check(c.noCrfSuggest !== true, v => saveCfg(x => { x.noCrfSuggest = !v; }).then(() => crfRefresh(false)), 'Im Video-Schritt einen passenden Wert vorschlagen (nach Art des Materials)'), 'vMaterial'),
     row('Neuigkeiten', check(c.showNews, v => saveCfg(x => { x.showNews = v; }), 'Hinweis „Neuigkeiten“ bei neuer Version zeigen')));
 }
 

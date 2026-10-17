@@ -21,8 +21,8 @@ const SWENC = {h264: 'libx264', hevc: 'libx265', av1: 'libsvtav1', vp9: 'libvpx-
 
 // ---------- persisted settings ----------
 const FIELDS = ['outMode', 'outDir', 'outStruct', 'exists', 'aFormat', 'aMode', 'aQuality', 'aBitrate', 'aFlac', 'aWav', 'aRate', 'aCh',
-  'vContainer', 'vCodec', 'vBackend', 'vCrf', 'vPreset', 'vDepth', 'vHeight', 'vAudioMode', 'vAudioCodec', 'vAudioKbps', 'vAudioLangs', 'vSubMode', 'vSubLangs'];
-const CHECKS = ['deleteSource', 'aCover', 'vHwDec'];
+  'vContainer', 'vCodec', 'vBackend', 'vCrf', 'vPreset', 'vDepth', 'vHeight', 'vAudioMode', 'vAudioCodec', 'vAudioKbps', 'vAudioLangs', 'vSubMode', 'vSubLangs', 'vMaterial'];
+const CHECKS = ['aCover', 'vHwDec']; // „Quelldatei löschen“ wird bewusst NICHT gemerkt (verify.js, je Welt, nur für diesen Besuch)
 // Namensmuster, Zusatz und Ersetzungen gehören je Welt (Audio und Video getrennt)
 const NAME_FIELDS = ['pattern', 'suffix', 'renRules'];
 const NAME_EMPTY = {pattern: '', suffix: '', renRules: '[]'};
@@ -78,6 +78,8 @@ function setWorld(w, animate) {
   if (animate && w !== S.world) worldFx(w);
   if (S.nameFor && S.nameFor !== w) stashName(S.nameFor);
   if (S.nameFor !== w) showName(w);
+  if (S.vfFor && S.vfFor !== w) vfStash(S.vfFor);
+  if (S.vfFor !== w) vfShow(w);
   S.world = w;
   $$('#worlds button').forEach(b => b.classList.toggle('on', b.dataset.world === w));
   // Der Farbwechsel passiert mitten im Flug (dunkler Bildschirm), damit nichts flackert
@@ -153,7 +155,7 @@ function refreshVideoUI() {
 
   const r = resolveBackend();
   const hw = !copy && r.id !== 'cpu';
-  ['#vBackendRow', '#vCrfRow', '#vPresetRow', '#vDepthRow', '#vHeightRow', '#vHwDecRow'].forEach(s => $(s).classList.toggle('hidden', copy));
+  ['#vBackendRow', '#vCrfRow', '#vMatRow', '#vCrfAdvice', '#vPresetRow', '#vDepthRow', '#vHeightRow', '#vHwDecRow'].forEach(s => $(s).classList.toggle('hidden', copy));
   $('#vHwDecRow').classList.toggle('hidden', !hw);
   const container = $('#vContainer').value;
   const resolvedEl = $('#vResolved');
@@ -304,11 +306,11 @@ async function start() {
     output: {
       dir: $('#outMode').value === 'custom' ? $('#outDir').value.trim() : '', structure: $('#outStruct').value,
       suffix: $('#suffix').value, pattern: $('#pattern').value.trim(), replace: cleanRules(nameRules()), exists: $('#exists').value,
-      deleteSource: $('#deleteSource').checked,
+      ...vfCollect(),
     },
   };
   if ($('#outMode').value === 'custom' && !req.output.dir) { toast('Bitte einen Zielordner angeben.', 'bad'); return; }
-  if (req.output.deleteSource && !confirm('Quelldateien werden nach erfolgreicher Konvertierung GELÖSCHT. Fortfahren?')) return;
+  if (req.output.deleteSource && !req.output.grace && !confirm('Quelldateien werden nach erfolgreicher Konvertierung GELÖSCHT. Fortfahren?')) return;
   if (kind === 'audio') {
     const f = $('#aFormat').value, vbr = ($('#aMode').value === 'vbr') && (f === 'mp3' || f === 'ogg');
     req.audio = {format: f, mode: vbr ? 'vbr' : 'cbr', quality: +$('#aQuality').value, bitrate: +$('#aBitrate').value, flacLevel: +$('#aFlac').value,
@@ -331,6 +333,7 @@ async function start() {
 // ---------- queue / monitor ----------
 const openDetails = new Set();
 function statusChip(j) {
+  if (j.status === 'running' && j.phase === 'check') return '<span class="chip acc" title="Die neue Datei ist fertig und wird jetzt geprüft.">prüfe Ergebnis …</span>';
   const m = {queued: ['wartet', ''], running: ['läuft', 'acc'], done: ['fertig', 'ok'], error: ['Fehler', 'err'], canceled: ['abgebrochen', 'warn'], skipped: ['übersprungen', 'warn']}[j.status];
   return `<span class="chip ${m[1]}">${m[0]}</span>`;
 }
@@ -372,6 +375,8 @@ function renderQueue() {
     if (j.status === 'done' && j.sizeOut) meta.push(`${fmtSize(j.sizeIn)} → ${fmtSize(j.sizeOut)} (${Math.round(j.sizeOut / j.sizeIn * 100)} %)`);
     if (j.status === 'done') meta.push('Dauer ' + fmtTime((new Date(j.ended) - new Date(j.started)) / 1000));
     if (j.hwDecodeFallback && j.status !== 'error') meta.push('<span class="muted">Lesen per Hardware ging bei dieser Datei nicht – die CPU liest, geschrieben wird trotzdem in Hardware</span>');
+    if (j.status === 'done' && (j.checks || []).length && !j.checkFailed) meta.push('<span class="okc" title="' + esc(j.checks.map(c => c.note).join(' · ')) + '">✓ geprüft: ' + esc(j.checks.map(c => c.note.replace(/ \(.*$/, '')).join(' · ')) + '</span>');
+    if (j.trashed) meta.push('<span class="muted">Original in der Schonfrist: ' + esc(j.trashed) + '</span>');
     (j.warnings || []).forEach(w => meta.push('<span class="warn">' + esc(w) + '</span>'));
     const act = (j.status === 'queued' || j.status === 'running') ? `<button class="small ghost" data-cancel="${j.id}" title="Bricht diesen Auftrag ab und löscht die unfertige Datei. Die Quelldatei bleibt unberührt.">Abbrechen</button>` : '';
     const note = j.status === 'done' && (j.hwDecodeFallback || (j.warnings || []).length);
@@ -650,6 +655,7 @@ function wire() {
   $('#cancelAll').onclick = () => api('/api/jobs/cancel-all', {kind: S.world}).then(poll);
   $('#clearDone').onclick = () => api('/api/jobs/clear', {kind: S.world}).then(poll);
   $('#conc').onchange = () => api('/api/concurrency', {kind: S.world, n: +$('#conc').value});
+  wireVerify(); wireCrf();
   $('#hwRedetect').onclick = async () => { await api('/api/hw/detect', {}); S.info.hw.done = false; S.info.hw.backends = []; renderHwCard(); setTimeout(loadInfo, 800); };
 }
 function outModeUI() {

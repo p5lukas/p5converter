@@ -82,3 +82,30 @@ func TestDuplicateIDsGetNewOnes(t *testing.T) {
 		t.Errorf("IDs: %v %+v", err, out.Presets)
 	}
 }
+
+func TestVerifyDefaultsAndLimits(t *testing.T) {
+	// Einstellungen aus der Zeit vor 0.1.4 haben kein "verify": A und B an, C aus, 7 Tage
+	out, err := Validate(Settings{Worlds: Defaults().Worlds, WorldOrder: []string{"audio", "video"}, StartWorld: "last", PreferredBackend: "auto"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, w := range []string{"audio", "video"} {
+		v := out.Verify[w]
+		if !v.Tracks || !v.Decode || v.Grace || v.GraceDays != 7 {
+			t.Errorf("%s: unerwartete Standardwerte %+v", w, v)
+		}
+	}
+	bad := Defaults()
+	bad.Presets = nil
+	bad.Verify["video"] = Verify{Tracks: true, GraceDays: 200}
+	if _, err := Validate(bad); err == nil {
+		t.Error("200 Tage Schonfrist hätten abgelehnt werden müssen")
+	}
+	ok := Defaults()
+	ok.Presets = nil
+	ok.Verify["audio"] = Verify{Decode: true, Grace: true, GraceDays: 30}
+	got, err := Validate(ok)
+	if err != nil || got.Verify["audio"].GraceDays != 30 || got.Verify["video"].GraceDays != 7 {
+		t.Errorf("Welten müssen getrennt bleiben: %+v %v", got.Verify, err)
+	}
+}

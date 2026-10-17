@@ -69,6 +69,7 @@ func New(build version.Info, t ffmpeg.Tools, roots []string, concurrency int, co
 	}
 	if s.Settings.Persistent() { // unfinished .part files of a crashed run are removed at start
 		s.Jobs.SetPartialLog(filepath.Join(configDir, "partials.json"))
+		s.Jobs.SetGraceLog(filepath.Join(configDir, "grace.json"))
 	}
 	s.enc = t.Encoders()
 	s.ffver = t.Version()

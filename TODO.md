@@ -8,6 +8,7 @@
 > Arbeitsregel (Nutzer): Ob die CI grün und das Image `:latest` gebaut ist, sieht der Nutzer selbst unter GitHub → Actions – nicht von selbst melden.
 > Arbeitsregel (Nutzer): In `p5lukas/p5assets` darf ich **immer lesen**; **ändern nur, wenn der Nutzer es ausdrücklich sagt**.
 > Entscheidung (Nutzer): Erst Unraid/Docker mit „mega Design“, dann Windows-App mit eigener GUI, dann Linux-App (Fedora KDE) mit eigener GUI.
+> Arbeitsregel (Nutzer): Stehen im Internet **Bereiche (Ranges)** für Werte (z. B. CRF 18–22), nehme ich **immer den niedrigeren Wert** (bessere Qualität, sicherer Startwert).
 
 # p5converter – Ideen & Verbesserungen
 
@@ -16,6 +17,8 @@
 - [ ] Optional: Image als multi-arch (amd64/arm64) bauen
 
 ## Vom Nutzer zu prüfen (nicht in der Sandbox möglich)
+- [ ] 0.1.4 Kontrolle nach dem Konvertieren: im letzten Schritt „Ergebnis prüfen & Original“ ansehen (Desktop und iPhone/iPad); eine echte Datei mit A + B + „Quelldatei löschen“ + Schonfrist umwandeln: steht am Auftrag „✓ geprüft“, liegt das Original danach in „p5converter-gelöscht“ (Unraid: /config muss beschreibbar sein)? Wie lange braucht der Decode-Test bei einem echten Film (die Zeitangaben sind Schätzwerte)? Stimmen die Wörter „kaum/etwas/viel länger“?
+- [ ] 0.1.4 CRF-Vorschlag: im Video-Schritt „Art des Materials“ ausprobieren (Anime → 16, Standard H.265 → 20 …); passen die Vorschläge zu deinem Material? (Werte sind Erfahrungswerte aus Foren/Anleitungen, nicht gemessen; bei Hardware-Encodern nur grober Anhaltspunkt)
 - [ ] 0.1.3 Windows: neue `setup.exe` aus `dev-latest` über die alte installieren: erscheint die Hardware-Kachel (Quick Sync nutzbar, NVIDIA mit Klartext-Meldung), kein „Start fehlgeschlagen“, „Beenden“ sofort da? Nach NVIDIA-Treiber-Update: wird NVENC erkannt (Einstellungen → Hardware)?
 - [ ] 0.1.1 Windows: `p5converter-setup.exe` aus `dev-latest` laden, SmartScreen bestätigen, installieren; öffnet das Fenster mit der Oberfläche? Symbol/Titel ok? Tray-Symbol da, Schließen-Kreuz versteckt nur, „Beenden“ fragt bei laufenden Aufträgen? Unter Einstellungen → Hardware: werden Quick Sync/NVENC/AMF erkannt (Diagnose kopieren, falls nicht)? Eine echte Konvertierung mit Hardware; Laufwerke im Datei-Browser; Schließen beendet laufende ffmpeg; Deinstallation über die Windows-Einstellungen
 - [ ] 0.0.10: Schritt „Audio & Untertitel“ auf dem Gerät ansehen (Desktop und iPhone/iPad, hoch und quer): Ist jetzt klar, was „So lassen / Kleiner machen“ bedeutet? Sind „Erweitert“ (Titel, Sprache, Forced, startet automatisch) und die Tipps verständlich? Eine echte Datei mit mehreren Sprachen ausprobieren, auch „Kleiner machen“ (Zielbitrate stimmt mit der Anzeige?) und danach in Plex neu analysieren
@@ -36,6 +39,9 @@
 - [ ] Linux-App (Fedora KDE) mit eigener Oberfläche
 
 ## Erledigt
+- [x] 0.1.4: **Kontrolle vor „Quelldatei löschen“** (Variante A+B+C): immer Lesbarkeit + Laufzeit; A Spuren/Größe, B Decode-Test (beide standardmäßig an, mit Zeitangabe in Worten), C Schonfrist (nur mit „Quelldatei löschen“, sonst ausgegraut); im letzten Schritt wählbar, Standard je Welt in den Einstellungen; Tests (Go: Spurzählung, Größe, Decode-Test findet Schaden, Schonfrist, Server-Ablauf; UI-Prüfung `ui-check-verify.js`)
+- [x] 0.1.4: **Automatischer CRF-Vorschlag** (Variante A, Faustregel-Tabelle, bei Bereichen der niedrigere Wert) mit „Art des Materials“; Recherche: Anime/Zeichentrick eher niedriger CRF
+- [x] 0.1.4: **Fehler vorab finden**: `tools/precheck.sh` (gofmt, vet, Windows-Build, go.mod, JS-Syntax, eingebettete Dateien, Versionsstellen, YAML, Tests) + Regel in `CLAUDE.md`; CI bricht veraltete Läufe eines Pull Requests ab
 - [x] 0.1.3: **Windows: Hardware-Anzeige/Start-Fehler** (null-Listen, Absturz in `loadInfo`), **„Beenden“-Knopf sofort**, **NVENC: ältere ffmpeg-Reihe 6.1 + verständliche Treiber-Meldung** (A + B); Fehler der Oberfläche im Protokoll; Tests (UI-Prüfung `ui-check-hwnull.js`, Go-Tests, GUI-Test mit verzögerter Erkennung)
 - [x] 0.1.2: **Windows: Tray-Symbol**, Schließen versteckt nur das Fenster, „Beenden“ mit Rückfrage bei laufenden Aufträgen; GUI-Test in der CI unter echtem Windows; setup.exe zusätzlich als Anhang an Versions-Vorabversionen vom `dev`
 - [x] 0.1.1: **Windows-App (Variante B) auf `dev`**: eine `p5converter-setup.exe` (Programm + ffmpeg + WebView2-Starter), eigenes App-Fenster mit der Weboberfläche, automatische Hardware-Erkennung, Installation ohne Admin, CI baut/testet unter Windows und veröffentlicht `dev-latest`
