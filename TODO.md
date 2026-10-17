@@ -12,6 +12,7 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
+- [ ] **Kontrolle vor „Quelldatei löschen“ (Variante A+B+C, Nutzer 17.10.)**: heute prüft p5converter nur Lesbarkeit (ffprobe) und Laufzeit (±2 s/2 %). Neu, alles zusammen: (A) Spurprüfung: Anzahl Video-/Audio-/Untertitelspuren im Ergebnis = Auswahl, plus Größen-Plausibilität; (B) Decode-Test: ffmpeg liest das Ergebnis komplett durch (`-f null`, schneller als Echtzeit) und meldet Fehler; (C) Schonfrist: Original wird nicht sofort gelöscht, sondern in einen Ordner „gelöscht“ verschoben und erst nach X Tagen entfernt (einstellbar). Bei jeder nicht bestandenen Prüfung bleibt das Original und es erscheint eine Warnung. Erkenntnisse in Info-Text „Quelldatei löschen“ und README nachziehen
 - [ ] **Windows-App: Folgearbeiten** (erste Version 0.1.1 steht auf `dev`): (1) ~~Tray~~ (erledigt in 0.1.2); (2) **Prüfung durch den Nutzer** auf dem Windows-PC (Fenster, Symbol, Hardware-Erkennung, echte Konvertierung, Deinstallation); (3) Größe der `setup.exe` aus dem CI-Lauf (Zusammenfassung „Größen“) mitteilen; (4) Linux-App danach; (5) Windows erst nach Freigabe nach `main`
 - [ ] Optional: Image als multi-arch (amd64/arm64) bauen
 
