@@ -37,26 +37,20 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     await L.goStep(p, 'summary'); await p.waitForTimeout(500);
     ok(await p.isVisible('#vfCard'), name + ': Prüf-Karte fehlt');
     ok(await p.isChecked('#vfTracks') && await p.isChecked('#vfDecode'), name + ': A und B sollten standardmäßig an sein');
-    ok(await p.isDisabled('#vfGrace'), name + ': Schonfrist sollte ohne „Quelldatei löschen“ ausgegraut sein');
     ok(/kaum länger/.test(await p.textContent('#vfTracksT')), name + ': Zeitangabe A fehlt');
     ok(/länger/.test(await p.textContent('#vfDecodeT')), name + ': Zeitangabe B fehlt');
-    ok(/Nur mit „Quelldatei löschen“/.test(await p.textContent('#vfGraceT')), name + ': Hinweis zur ausgegrauten Schonfrist fehlt');
     await p.screenshot({path: `${L.SHOTS}/p5c-vf-${name}-summary-off.png`, fullPage: true});
     await p.check('#deleteSource'); await p.waitForTimeout(200);
-    ok(!(await p.isDisabled('#vfGrace')), name + ': Schonfrist sollte mit „Quelldatei löschen“ wählbar sein');
+    ok(await p.locator('#vfGrace, #vfDays').count() === 0, name + ': Schonfrist-Bedienelemente sollten entfernt sein');
     ok(await p.isVisible('#vfDelHint'), name + ': Warnhinweis „sofort und endgültig“ fehlt');
-    await p.check('#vfGrace'); await p.selectOption('#vfDays', '14'); await p.waitForTimeout(200);
-    ok(/14 Tagen/.test(await p.textContent('#vfGraceT')), name + ': Tage im Hinweis fehlen');
-    ok(!(await p.isVisible('#vfDelHint')), name + ': Warnhinweis sollte mit Schonfrist weg sein');
     await p.screenshot({path: `${L.SHOTS}/p5c-vf-${name}-summary-on.png`, fullPage: true});
     // ---- Welten getrennt ----
     await L.setWorld(p, 'audio'); await p.click('#startFlow'); await p.waitForTimeout(200); await L.goStep(p, 'summary'); await p.waitForTimeout(300);
     ok(!(await p.isChecked('#deleteSource')), name + ': Audio übernimmt „Quelldatei löschen“ aus Video');
-    ok(await p.isDisabled('#vfGrace'), name + ': Audio übernimmt Schonfrist aus Video');
     ok(/kaum länger/.test(await p.textContent('#vfDecodeT')), name + ': Audio-Zeitangabe für B sollte „kaum länger“ sein');
     await p.uncheck('#vfDecode');
     await L.setWorld(p, 'video'); await p.click('#startFlow'); await p.waitForTimeout(200); await L.goStep(p, 'summary'); await p.waitForTimeout(300);
-    ok(await p.isChecked('#vfDecode') && await p.isChecked('#deleteSource') && await p.isChecked('#vfGrace'), name + ': Video hat seine Auswahl verloren');
+    ok(await p.isChecked('#vfDecode') && await p.isChecked('#deleteSource'), name + ': Video hat seine Auswahl verloren');
     const ov = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     ok(ov <= 0, `${name}: horizontaler Überlauf ${ov}px`);
     // ---- Einstellungen ----

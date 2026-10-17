@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/p5lukas/p5converter/internal/ffmpeg"
 )
@@ -77,41 +76,5 @@ func TestCheckDecodeFindsDamage(t *testing.T) {
 	os.WriteFile(bad, b, 0o644)
 	if c := m.checkDecode(context.Background(), j, bad, 6); c.OK {
 		t.Errorf("beschädigte Datei nicht erkannt")
-	}
-}
-
-// Schonfrist: Quelle wandert in den Papierkorb-Ordner und wird nach Ablauf endgültig entfernt.
-func TestGraceMoveAndClean(t *testing.T) {
-	dir := t.TempDir()
-	src := filepath.Join(dir, "film.mkv")
-	os.WriteFile(src, []byte("x"), 0o644)
-	m := &Manager{}
-	m.SetGraceLog(filepath.Join(t.TempDir(), "grace.json"))
-	dst, err := m.trashSource(src, 7)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Stat(src); err == nil {
-		t.Error("Quelle liegt noch am alten Ort")
-	}
-	if filepath.Base(filepath.Dir(dst)) != TrashDir {
-		t.Errorf("falscher Ordner: %s", dst)
-	}
-	if n := m.CleanGrace(time.Now().Add(6 * 24 * time.Hour)); n != 0 {
-		t.Errorf("zu früh gelöscht")
-	}
-	if n := m.CleanGrace(time.Now().Add(8 * 24 * time.Hour)); n != 1 {
-		t.Errorf("nach Ablauf nicht gelöscht")
-	}
-	if _, err := os.Stat(filepath.Dir(dst)); err == nil {
-		t.Error("leerer Papierkorb-Ordner bleibt liegen")
-	}
-	// gleicher Name zweimal: nummeriert statt überschrieben
-	os.WriteFile(src, []byte("a"), 0o644)
-	d1, _ := m.trashSource(src, 1)
-	os.WriteFile(src, []byte("b"), 0o644)
-	d2, _ := m.trashSource(src, 1)
-	if d1 == d2 {
-		t.Error("zweite Quelle hat die erste überschrieben")
 	}
 }

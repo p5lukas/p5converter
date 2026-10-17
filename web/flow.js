@@ -82,7 +82,7 @@ async function renderSummary() {
   const dir = $('#outMode').value === 'custom' ? $('#outDir').value.trim() : '';
   if (!files.length) warns.push('Es sind noch keine Dateien ausgewählt.');
   if ($('#outMode').value === 'custom' && !dir) warns.push('Es ist kein Zielordner angegeben.');
-  if ($('#deleteSource').checked) warns.push($('#vfGrace').checked ? 'Die Quelldateien werden nach bestandener Prüfung in „p5converter-gelöscht“ verschoben und nach ' + $('#vfDays').value + ' Tag(en) endgültig gelöscht.' : 'Die Quelldateien werden nach bestandener Prüfung sofort und endgültig GELÖSCHT.');
+  if ($('#deleteSource').checked) warns.push('Die Quelldateien werden nach bestandener Prüfung sofort und endgültig GELÖSCHT.');
   if (S.world === 'video' && $('#vCodec').value !== 'copy') {
     const r = resolveBackend(); if (r && r.note) warns.push(r.note);
   }
@@ -173,6 +173,7 @@ function wireFlow() {
   $('#resetYes').onclick = () => { $('#resetDlg').close(); resetWorld(); };
   $('#startFlow').onclick = () => showStep('files');
   $('#startRename').onclick = () => { location.hash = '#rename'; };
+  $('#startHistory').onclick = () => { location.hash = '#history'; };
   $('#stepBack').onclick = () => stepMove(-1);
   $('#stepNext').onclick = () => stepMove(1);
 }

@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -417,18 +418,25 @@ func TestRenameTool(t *testing.T) {
 	if b, _ := os.ReadFile(filepath.Join(dir, "Show S01E02.mkv")); string(b) != "x" {
 		t.Error("vorhandene Datei überschrieben")
 	}
-	// outside the roots and invalid regex
+	// outside the roots; special characters are plain text; too many rules are refused
 	m = read(post(t, ts, "/api/rename", map[string]any{"items": []string{"/etc/hostname"}, "replace": rules}, nil))
 	if m["failed"].(float64) != 1 {
 		t.Errorf("Pfad außerhalb der Roots: %v", m)
 	}
-	if r := post(t, ts, "/api/rename/preview", map[string]any{"items": items, "replace": []map[string]any{{"find": "(", "regex": true}}}, nil); r.StatusCode != 400 {
-		t.Errorf("ungültige Regex: %d", r.StatusCode)
+	if r := post(t, ts, "/api/rename/preview", map[string]any{"items": items, "replace": []map[string]any{{"find": "(", "regex": true}}}, nil); r.StatusCode != 200 {
+		t.Errorf("Klammer (altes Feld regex wird ignoriert) muss normaler Text sein: %d", r.StatusCode)
+	}
+	tooMany := make([]map[string]any, 13)
+	for i := range tooMany {
+		tooMany[i] = map[string]any{"find": "x"}
+	}
+	if r := post(t, ts, "/api/rename/preview", map[string]any{"items": items, "replace": tooMany}, nil); r.StatusCode != 400 {
+		t.Errorf("zu viele Ersetzungen: %d", r.StatusCode)
 	}
 	// converter: output name uses variables and rules (invalid rules are refused on submit)
 	if r := post(t, ts, "/api/jobs", map[string]any{"kind": "audio", "items": []map[string]any{{"path": items[0]}},
-		"output": map[string]any{"replace": []map[string]any{{"find": "(", "regex": true}}}}, nil); r.StatusCode != 400 {
-		t.Errorf("Auftrag mit ungültiger Regex: %d", r.StatusCode)
+		"output": map[string]any{"replace": tooMany}}, nil); r.StatusCode != 400 {
+		t.Errorf("Auftrag mit zu vielen Ersetzungen: %d", r.StatusCode)
 	}
 }
 
@@ -658,8 +666,8 @@ func TestShortUA(t *testing.T) {
 	}
 }
 
-// Kontrolle nach der Konvertierung: Spuren + Decode-Test bestanden, Quelle wandert in die Schonfrist statt gelöscht zu werden.
-func TestVerifyAndGrace(t *testing.T) {
+// Kontrolle nach der Konvertierung: Spuren + Decode-Test bestanden, Quelle wird erst danach gelöscht.
+func TestVerifyThenDelete(t *testing.T) {
 	root := t.TempDir()
 	s, ts := newTestServer(t, []string{root})
 	src := filepath.Join(root, "v.mkv")
@@ -668,7 +676,7 @@ func TestVerifyAndGrace(t *testing.T) {
 		t.Fatalf("%v %s", err, out)
 	}
 	r := post(t, ts, "/api/jobs", map[string]any{"kind": "video", "items": []map[string]string{{"path": src}},
-		"output": map[string]any{"dir": filepath.Join(root, "o"), "structure": "flat", "deleteSource": true, "verifyTracks": true, "verifyDecode": true, "grace": true, "graceDays": 3},
+		"output": map[string]any{"dir": filepath.Join(root, "o"), "structure": "flat", "deleteSource": true, "verifyTracks": true, "verifyDecode": true},
 		"video":  map[string]any{"codec": "copy", "container": "mkv", "audioMode": "copy", "subMode": "copy"}}, nil)
 	if r.StatusCode != 200 {
 		t.Fatalf("submit %d", r.StatusCode)
@@ -679,12 +687,65 @@ func TestVerifyAndGrace(t *testing.T) {
 		t.Fatalf("status=%s fehler=%q prüfungen=%+v warnungen=%v", j.Status, j.Error, j.Checks, j.Warnings)
 	}
 	if _, err := os.Stat(src); err == nil {
-		t.Error("Quelle liegt noch am alten Ort")
+		t.Error("Quelle nach bestandener Prüfung nicht gelöscht")
 	}
-	if j.Trashed == "" || filepath.Base(filepath.Dir(j.Trashed)) != "p5converter-gelöscht" {
-		t.Errorf("Quelle nicht in der Schonfrist: %q", j.Trashed)
+}
+
+// Verlauf: jeder beendete Auftrag landet je Welt im Verlauf, die Liste überlebt „Fertige entfernen“, CSV und Leeren je Welt.
+func TestHistory(t *testing.T) {
+	root := t.TempDir()
+	s, ts := newTestServer(t, []string{root})
+	src := filepath.Join(root, "song.wav")
+	if out, err := exec.Command("ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "sine=f=440:d=1", src).CombinedOutput(); err != nil {
+		t.Fatalf("%v %s", err, out)
 	}
-	if _, err := os.Stat(j.Trashed); err != nil {
-		t.Errorf("Quelle in der Schonfrist fehlt: %v", err)
+	post(t, ts, "/api/jobs", map[string]any{"kind": "audio", "items": []map[string]string{{"path": src}},
+		"output": map[string]any{"dir": filepath.Join(root, "o"), "structure": "flat", "exists": "rename", "verifyTracks": true},
+		"audio":  map[string]any{"format": "mp3", "mode": "vbr", "quality": 4}}, nil)
+	waitDone(t, s, 1)
+	// nicht vorhandene Datei: endet mit Fehler (Eintrag mit Befehl/Log)
+	post(t, ts, "/api/jobs", map[string]any{"kind": "audio", "items": []map[string]string{{"path": filepath.Join(root, "fehlt.wav")}},
+		"output": map[string]any{"dir": filepath.Join(root, "o")}, "audio": map[string]any{"format": "mp3", "mode": "vbr", "quality": 4}}, nil)
+	waitDone(t, s, 2)
+	time.Sleep(300 * time.Millisecond)
+	post(t, ts, "/api/jobs/clear", map[string]any{"kind": "audio"}, nil) // „Fertige entfernen“
+	get := func(path string) map[string]any {
+		resp, err := http.Get(ts.URL + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		var m map[string]any
+		json.NewDecoder(resp.Body).Decode(&m)
+		return m
+	}
+	m := get("/api/history?kind=audio")
+	items, _ := m["items"].([]any)
+	if len(items) != 2 || m["max"].(float64) != 100 {
+		t.Fatalf("erwartet 2 Einträge, max 100: %v", m)
+	}
+	if st := items[0].(map[string]any)["status"]; st != "error" {
+		t.Errorf("neuester Eintrag zuerst (Fehler erwartet): %v", st)
+	}
+	if v := get("/api/history?kind=video")["items"].([]any); len(v) != 0 {
+		t.Errorf("Video-Verlauf muss leer sein (Welten getrennt): %v", v)
+	}
+	resp, _ := http.Get(ts.URL + "/api/history.csv?kind=audio")
+	b, _ := io.ReadAll(resp.Body)
+	if !strings.Contains(resp.Header.Get("Content-Disposition"), "verlauf-audio.csv") || !strings.Contains(string(b), "song.wav") || !strings.Contains(string(b), "Ende;Datei") {
+		t.Errorf("CSV unvollständig: %s", b)
+	}
+	if r := post(t, ts, "/api/history/clear", map[string]any{"kind": "video"}, nil); r.StatusCode != 200 {
+		t.Fatal("clear video")
+	}
+	if len(get("/api/history?kind=audio")["items"].([]any)) != 2 {
+		t.Error("Leeren von Video darf Audio nicht berühren")
+	}
+	post(t, ts, "/api/history/clear", map[string]any{"kind": "audio"}, nil)
+	if len(get("/api/history?kind=audio")["items"].([]any)) != 0 {
+		t.Error("Audio-Verlauf nicht geleert")
+	}
+	if r, _ := http.Get(ts.URL + "/api/history?kind=x"); r.StatusCode != 400 {
+		t.Error("ungültige Welt muss abgelehnt werden")
 	}
 }

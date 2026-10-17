@@ -1,5 +1,14 @@
 # Änderungen
 
+## 0.1.5 – 2026-10-17
+
+**Neu**
+- **Verlauf der Konvertierungen** (Startseite → „Verlauf“, Adresse `#history`): die letzten **100** beendeten Aufträge je Welt (Audio und Video getrennt), gespeichert in `/config` (`history.json`), bleibt nach „Fertige entfernen“ und nach einem Neustart erhalten. Je Eintrag: Datum, Dateiname, Ergebnis (fertig, Fehler, abgebrochen, übersprungen), Größe vorher/nachher, Dauer; aufklappbar mit Quelle, Ziel, Encoder, Prüfergebnis, Warnungen und bei Fehlern ffmpeg-Befehl und Log. Suche, Filter nach Ergebnis und Zeitraum, **CSV-Export** (für Excel), „Verlauf leeren“ (mit Rückfrage, nur die gewählte Welt). Ohne beschreibbares `/config` bleibt der Verlauf nur im Arbeitsspeicher (Hinweis auf der Seite)
+
+**Geändert**
+- **Schonfrist („Papierkorb“) für Quelldateien wieder entfernt** (aus 0.1.4): „Quelldatei löschen“ löscht nach bestandener Prüfung sofort und endgültig. Die Prüfungen A (Spuren & Größe) und B (Decode-Test) bleiben
+- **Ersetzen (Benennen und Umbenennen): „Regex“ und „Aa“ entfernt**: gesucht wird genau der eingegebene Text (Sonderzeichen wie `[` oder `(` sind normale Zeichen), Groß-/Kleinschreibung ist egal. Gespeicherte Regeln mit den alten Feldern werden weiter geladen, die Felder werden ignoriert
+
 ## 0.1.4 – 2026-10-17
 
 **Neu**

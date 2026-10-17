@@ -310,7 +310,7 @@ async function start() {
     },
   };
   if ($('#outMode').value === 'custom' && !req.output.dir) { toast('Bitte einen Zielordner angeben.', 'bad'); return; }
-  if (req.output.deleteSource && !req.output.grace && !confirm('Quelldateien werden nach erfolgreicher Konvertierung GELÖSCHT. Fortfahren?')) return;
+  if (req.output.deleteSource && !confirm('Quelldateien werden nach erfolgreicher Konvertierung GELÖSCHT. Fortfahren?')) return;
   if (kind === 'audio') {
     const f = $('#aFormat').value, vbr = ($('#aMode').value === 'vbr') && (f === 'mp3' || f === 'ogg');
     req.audio = {format: f, mode: vbr ? 'vbr' : 'cbr', quality: +$('#aQuality').value, bitrate: +$('#aBitrate').value, flacLevel: +$('#aFlac').value,
@@ -376,7 +376,6 @@ function renderQueue() {
     if (j.status === 'done') meta.push('Dauer ' + fmtTime((new Date(j.ended) - new Date(j.started)) / 1000));
     if (j.hwDecodeFallback && j.status !== 'error') meta.push('<span class="muted">Lesen per Hardware ging bei dieser Datei nicht – die CPU liest, geschrieben wird trotzdem in Hardware</span>');
     if (j.status === 'done' && (j.checks || []).length && !j.checkFailed) meta.push('<span class="okc" title="' + esc(j.checks.map(c => c.note).join(' · ')) + '">✓ geprüft: ' + esc(j.checks.map(c => c.note.replace(/ \(.*$/, '')).join(' · ')) + '</span>');
-    if (j.trashed) meta.push('<span class="muted">Original in der Schonfrist: ' + esc(j.trashed) + '</span>');
     (j.warnings || []).forEach(w => meta.push('<span class="warn">' + esc(w) + '</span>'));
     const act = (j.status === 'queued' || j.status === 'running') ? `<button class="small ghost" data-cancel="${j.id}" title="Bricht diesen Auftrag ab und löscht die unfertige Datei. Die Quelldatei bleibt unberührt.">Abbrechen</button>` : '';
     const note = j.status === 'done' && (j.hwDecodeFallback || (j.warnings || []).length);

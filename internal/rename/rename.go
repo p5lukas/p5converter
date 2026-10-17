@@ -18,12 +18,11 @@ const (
 	maxRuleLen = 200
 )
 
-// Rule is one search & replace step applied to the file name (without folder and extension).
+// Rule is one search & replace step applied to the file name (without folder and extension):
+// plain text, upper/lower case is ignored. (Older settings may still carry "regex"/"case" fields; they are ignored.)
 type Rule struct {
-	Find  string `json:"find"`
-	With  string `json:"with"`
-	Regex bool   `json:"regex"` // Find is a regular expression ($1 … in With)
-	Case  bool   `json:"case"`  // case sensitive
+	Find string `json:"find"`
+	With string `json:"with"`
 }
 
 var invalidChars = strings.NewReplacer("/", "_", "\\", "_", ":", "_", "*", "_", "?", "_", "\"", "_", "<", "_", ">", "_", "|", "_")
@@ -35,11 +34,8 @@ func Safe(s string) string {
 }
 
 type compiled struct {
-	re   *regexp.Regexp
+	re   *regexp.Regexp // case-insensitive literal match of Find
 	with string
-	lit  bool
-	find string
-	fold bool
 }
 
 func compile(rules []Rule) ([]compiled, error) {
@@ -54,24 +50,7 @@ func compile(rules []Rule) ([]compiled, error) {
 		if len(r.Find) > maxRuleLen || len(r.With) > maxRuleLen {
 			return nil, fmt.Errorf("Ersetzung %d ist zu lang", i+1)
 		}
-		c := compiled{with: r.With, find: r.Find, fold: !r.Case}
-		if r.Regex {
-			expr := r.Find
-			if !r.Case {
-				expr = "(?i)" + expr
-			}
-			re, err := regexp.Compile(expr)
-			if err != nil {
-				return nil, fmt.Errorf("Ersetzung %d: ungültiger regulärer Ausdruck (%v)", i+1, err)
-			}
-			c.re = re
-		} else {
-			c.lit = true
-			if !r.Case {
-				c.re = regexp.MustCompile("(?i)" + regexp.QuoteMeta(r.Find))
-			}
-		}
-		out = append(out, c)
+		out = append(out, compiled{re: regexp.MustCompile("(?i)" + regexp.QuoteMeta(r.Find)), with: r.With})
 	}
 	return out, nil
 }
@@ -86,14 +65,7 @@ func Apply(name string, rules []Rule) (string, error) {
 		return name, err
 	}
 	for _, c := range cs {
-		switch {
-		case c.lit && c.re == nil:
-			name = strings.ReplaceAll(name, c.find, c.with)
-		case c.lit:
-			name = c.re.ReplaceAllLiteralString(name, c.with)
-		default:
-			name = c.re.ReplaceAllString(name, c.with)
-		}
+		name = c.re.ReplaceAllLiteralString(name, c.with)
 	}
 	return name, nil
 }

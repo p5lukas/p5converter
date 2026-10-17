@@ -40,8 +40,6 @@ type OutputOpts struct {
 	// Controls after the conversion (the basic check - readable, same length - always runs):
 	VerifyTracks bool `json:"verifyTracks"` // A: tracks complete, size plausible
 	VerifyDecode bool `json:"verifyDecode"` // B: read the whole result once, report damaged spots
-	Grace        bool `json:"grace"`        // C: do not delete the source at once, move it away for GraceDays
-	GraceDays    int  `json:"graceDays"`
 }
 
 type Request struct {
@@ -83,15 +81,13 @@ type Job struct {
 	// Phase: "check" while the result is being verified (the conversion itself is finished).
 	Phase string `json:"phase,omitempty"`
 	// Checks: what the control after the conversion found; CheckFailed = at least one failed (the source is then kept).
-	Checks      []Check `json:"checks,omitempty"`
-	CheckFailed bool    `json:"checkFailed"`
-	// Trashed: where the source waits during its grace period.
-	Trashed string    `json:"trashed,omitempty"`
-	SizeIn  int64     `json:"sizeIn"`
-	SizeOut int64     `json:"sizeOut"`
-	Created time.Time `json:"created"`
-	Started time.Time `json:"started"`
-	Ended   time.Time `json:"ended"`
+	Checks      []Check   `json:"checks,omitempty"`
+	CheckFailed bool      `json:"checkFailed"`
+	SizeIn      int64     `json:"sizeIn"`
+	SizeOut     int64     `json:"sizeOut"`
+	Created     time.Time `json:"created"`
+	Started     time.Time `json:"started"`
+	Ended       time.Time `json:"ended"`
 
 	item      Item
 	req       *Request
@@ -110,11 +106,11 @@ type Manager struct {
 	running     map[string]int
 	reserved    map[string]string // output path -> job id (queued/running jobs)
 	// OnDone is called after every successful conversion (kind, bytes in, bytes out).
-	OnDone      func(kind string, in, out int64)
+	OnDone func(kind string, in, out int64)
+	// OnFinish is called once for every job that reached an end state (done, error, canceled, skipped) – used for the history.
+	OnFinish    func(Job)
 	partialFile string
 	partials    map[string]bool
-	graceFile   string
-	grace       map[string]int64 // source in a trash folder -> unix time after which it is removed
 }
 
 func New(t ffmpeg.Tools, s *hw.Sampler, concurrency int) *Manager {
@@ -227,6 +223,7 @@ func (m *Manager) cancelLocked(j *Job) {
 	case "queued":
 		j.Status = "canceled"
 		j.Ended = time.Now()
+		go m.finish(j) // runs after the caller released the lock
 	case "running":
 		j.cancelled = true
 		if j.cancel != nil {
@@ -302,6 +299,21 @@ func (m *Manager) fail(j *Job, err error) {
 		j.Ended = time.Now()
 	})
 	jlog.Errorf("Auftrag %s fehlgeschlagen: %s – %v", j.ID, filepath.Base(j.item.Path), err)
+	m.finish(j)
+}
+
+// finish reports a job that reached an end state (copy, so the receiver may keep it).
+func (m *Manager) finish(j *Job) {
+	if m.OnFinish == nil {
+		return
+	}
+	m.mu.Lock()
+	c := *j
+	c.Log = append([]string(nil), j.Log...)
+	c.Warnings = append([]string(nil), j.Warnings...)
+	c.Checks = append([]Check(nil), j.Checks...)
+	m.mu.Unlock()
+	m.OnFinish(c)
 }
 
 func outputPath(j *Job, info *ffmpeg.Info) string {
@@ -404,6 +416,7 @@ func (m *Manager) run(j *Job) {
 			j.Error = "Zieldatei existiert bereits"
 		})
 		jlog.Warnf("Auftrag %s übersprungen: Zieldatei existiert bereits (%s)", j.ID, out)
+		m.finish(j)
 		return
 	}
 	defer m.release(out)
@@ -502,6 +515,7 @@ func (m *Manager) run(j *Job) {
 		if m.wasCancelled(j) {
 			m.update(j, func() { j.Status = "canceled"; j.Ended = time.Now(); j.Error = "" })
 			jlog.Infof("Auftrag %s abgebrochen, unfertige Datei gelöscht (%s)", j.ID, filepath.Base(j.item.Path))
+			m.finish(j)
 			return
 		}
 		m.fail(j, err)
@@ -531,15 +545,7 @@ func (m *Manager) run(j *Job) {
 			}
 		})
 		if ok && o.DeleteSource {
-			if o.Grace {
-				if dst, err := m.trashSource(j.item.Path, o.GraceDays); err != nil {
-					m.update(j, func() {
-						j.Warnings = append(j.Warnings, "Quelle konnte nicht in die Schonfrist verschoben werden: "+err.Error())
-					})
-				} else {
-					m.update(j, func() { j.Trashed = dst })
-				}
-			} else if err := os.Remove(j.item.Path); err != nil {
+			if err := os.Remove(j.item.Path); err != nil {
 				m.update(j, func() { j.Warnings = append(j.Warnings, "Quelle konnte nicht gelöscht werden: "+err.Error()) })
 			}
 		}
@@ -560,6 +566,7 @@ func (m *Manager) run(j *Job) {
 	if m.OnDone != nil {
 		m.OnDone(j.Kind, sizeIn, size)
 	}
+	m.finish(j)
 }
 
 func (m *Manager) exec(ctx context.Context, j *Job, args []string, duration float64) error {

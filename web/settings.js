@@ -165,7 +165,9 @@ function showView(v) {
   $('#viewSettings').classList.toggle('hidden', v !== 'settings');
   $('#viewRename').classList.toggle('hidden', v !== 'rename');
   $('#viewLogs').classList.toggle('hidden', v !== 'logs');
+  $('#viewHistory').classList.toggle('hidden', v !== 'history');
   if (v !== 'logs') stopLogs();
+  if (v !== 'history') stopHistory();
   document.body.classList.toggle('inSettings', v === 'settings');
   window.scrollTo(0, 0);
 }
@@ -173,6 +175,7 @@ function route() {
   const m = /^#settings(?:\/(\w+))?$/.exec(location.hash);
   if (location.hash === '#rename') { showView('rename'); renderRenamePage(); }
   else if (location.hash === '#logs') { showView('logs'); logsPage(); }
+  else if (location.hash === '#history') { showView('history'); historyPage(); }
   else if (m) { S.setPage = m[1] || ''; showView('settings'); renderSettings(); }
   else showView('main');
 }
@@ -209,15 +212,11 @@ matchMedia('(max-width:700px)').addEventListener('change', () => { if (!$('#view
 
 // Standardauswahl der Kontrolle nach dem Konvertieren, je Welt (im Konverter pro Lauf änderbar)
 function verifyControls(w) {
-  const v = (cfg().verify || {})[w] || {tracks: true, decode: true, grace: false, graceDays: 7};
+  const v = (cfg().verify || {})[w] || {tracks: true, decode: true};
   const set = f => saveCfg(x => { x.verify = x.verify || {}; x.verify[w] = {...(x.verify[w] || v)}; f(x.verify[w]); }, false).then(ok => { if (ok) { vfReset(w); toast('Gespeichert ✓', 'ok'); } });
-  const days = h('select', {class: 'inl', onchange: () => set(o => { o.graceDays = +days.value; })}, VF_DAYS.map(n => opt(n, n + (n === 1 ? ' Tag' : ' Tage'))));
-  days.value = String(v.graceDays || 7);
   return h('div', {class: 'vfset'},
     check(v.tracks !== false, on => set(o => { o.tracks = on; }), 'Spuren & Größe prüfen (kaum länger)'),
-    check(v.decode !== false, on => set(o => { o.decode = on; }), w === 'audio' ? 'Ergebnis komplett durchlesen (kaum länger)' : 'Ergebnis komplett durchlesen (Decode-Test, bei Video merklich länger)'),
-    h('label', {class: 'check', style: 'margin:0'}, h('input', {type: 'checkbox', checked: !!v.grace, onchange: e => set(o => { o.grace = e.target.checked; })}), 'Schonfrist statt sofort löschen (gilt, wenn „Quelldatei löschen“ an ist)'),
-    h('div', {class: 'vfdays small muted'}, 'Dauer der Schonfrist: ', days));
+    check(v.decode !== false, on => set(o => { o.decode = on; }), w === 'audio' ? 'Ergebnis komplett durchlesen (kaum länger)' : 'Ergebnis komplett durchlesen (Decode-Test, bei Video merklich länger)'));
 }
 
 // --- Allgemein ---

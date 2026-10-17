@@ -18,20 +18,18 @@ const INFO = {
     <p><code>{res}</code>, <code>{codec}</code> und <code>{bit}</code> zeigen den <b>Zielwert</b> deiner Einstellungen (z. B. 720p, x265, 10bit); bei „Remux/kopieren“ den Wert der Quelle. Fehlt ein Tag, steht „Unbekannt“ (beim Titel der Dateiname).</p>`},
   renReplace: {t: 'Suchen und Ersetzen', b: `<p>Ändert Teile des Dateinamens, nachdem das Muster angewendet wurde – wie in einem Texteditor. Mehrere Ersetzungen laufen von oben nach unten.</p>
     <p class="ex">Suchen <code>WEBDL</code>, Ersetzen durch <code>WEB</code> → aus <code>Film [WEBDL-1080p]</code> wird <code>Film [WEB-1080p]</code>. „Ersetzen durch“ leer = Text löschen.</p>
-    <ul><li><b>Aa</b>: Groß-/Kleinschreibung beachten (sonst egal).</li>
-    <li><b>Regex</b> (für Fortgeschrittene): Suchtext ist ein regulärer Ausdruck, <code>$1</code> steht für die erste Klammer. Beispiel: <code>\[(\w+)-(\d+p)\]</code> → <code>$2 $1</code>.</li></ul>
+    <p>Es wird genau der Text gesucht, den du eingibst (Sonderzeichen wie <code>[</code> oder <code>(</code> sind ganz normale Zeichen). Groß- und Kleinschreibung ist egal.</p>
     <p>Die Vorschau zeigt sofort das Ergebnis; Endung und Ordner bleiben unberührt.</p>`},
   exists: {t: 'Wenn Datei existiert', b: `<p>Was passieren soll, wenn es die Zieldatei schon gibt.</p>
     <ul><li><b>Beide behalten, neue Datei nummerieren:</b> Die vorhandene Datei bleibt, die neue bekommt eine Nummer, z. B. <code>Film (2).mkv</code>. Nichts geht verloren – die sicherste Wahl.</li>
     <li><b>Überspringen, vorhandene Datei nicht anfassen:</b> Die Datei wird nicht erneut umgewandelt. Gut, wenn du einen Ordner nach einem Abbruch noch einmal startest.</li>
     <li><b>Überschreiben, vorhandene Datei ersetzen:</b> Die alte Zieldatei wird durch die neue ersetzt. Das lässt sich nicht rückgängig machen.</li></ul>`},
-  deleteSource: {t: 'Quelldatei löschen', b: `<p>Löscht das Original, <b>nachdem</b> die neue Datei fertig ist <b>und die Prüfung bestanden hat</b>. Ohne Schonfrist ist das <b>endgültig</b> (kein Papierkorb).</p>
+  deleteSource: {t: 'Quelldatei löschen', b: `<p>Löscht das Original, <b>nachdem</b> die neue Datei fertig ist <b>und die Prüfung bestanden hat</b>. Das ist <b>endgültig</b> (kein Papierkorb).</p>
     <p>Fällt die Prüfung durch, bleibt das Original liegen und am Auftrag steht eine Warnung.</p>
-    <p>Empfehlung für Anfänger: aus lassen oder mit Schonfrist, erst Ergebnis ansehen/anhören, dann selbst aufräumen.</p>`},
+    <p>Empfehlung für Anfänger: aus lassen, erst Ergebnis ansehen/anhören, dann selbst aufräumen.</p>`},
   vfInfo: {t: 'Ergebnis prüfen & Original', b: `<p>Jede neue Datei wird immer geprüft: lässt sie sich lesen und ist sie (fast) genauso lang wie das Original?</p>
     <ul><li><b>Spuren &amp; Größe:</b> Sind alle gewählten Video-, Audio- und Untertitelspuren drin? Ist die Datei nicht absurd klein? Kostet fast keine Zeit.</li>
-    <li><b>Komplett durchlesen (Decode-Test):</b> ffmpeg liest die ganze neue Datei einmal durch, ohne etwas zu speichern, und meldet beschädigte Stellen. Das geht schneller als abspielen, dauert bei langen Videos aber merklich (grob 5–10 Minuten für einen 2-Stunden-Film in 1080p, bei 4K mehr).</li>
-    <li><b>Schonfrist:</b> Das Original wird nicht sofort gelöscht, sondern in den Ordner „p5converter-gelöscht“ neben der Quelle verschoben und erst nach der gewählten Zeit endgültig entfernt. Der Platz wird erst dann frei. Braucht den Ordner /config (Unraid).</li></ul>
+    <li><b>Komplett durchlesen (Decode-Test):</b> ffmpeg liest die ganze neue Datei einmal durch, ohne etwas zu speichern, und meldet beschädigte Stellen. Das geht schneller als abspielen, dauert bei langen Videos aber merklich (grob 5–10 Minuten für einen 2-Stunden-Film in 1080p, bei 4K mehr).</li></ul>
     <p>Fällt eine Prüfung durch, bleibt das Original unangetastet und der Auftrag zeigt eine Warnung. Die Zeitangaben sind Schätzwerte.</p>
     <p class="ex">Die Standardauswahl legst du in Einstellungen → Allgemein fest, getrennt für Audio und Video.</p>`},
   vMaterial: {t: 'Art des Materials & CRF-Vorschlag', b: `<p>Je nach Material braucht dieselbe Qualität einen anderen CRF. Das Programm schlägt einen <b>Startwert</b> vor und füllt den Regler damit vor. Du kannst ihn jederzeit ändern.</p>
