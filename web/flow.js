@@ -38,7 +38,8 @@ function showStep(id, keepScroll) {
   if (!stepIds().includes(id)) id = 'start';
   S.step = id;
   applySteps();
-  if (id === 'summary') renderSummary();
+  if (id === 'summary') { vfUI(); renderSummary(); }
+  if (id === 'video') crfRefresh(false);
   if (id === 'files') renderFiles();
   if (id === 'name') syncNameUI();
   if (id === 'tracks') trkRender();
@@ -81,7 +82,7 @@ async function renderSummary() {
   const dir = $('#outMode').value === 'custom' ? $('#outDir').value.trim() : '';
   if (!files.length) warns.push('Es sind noch keine Dateien ausgewählt.');
   if ($('#outMode').value === 'custom' && !dir) warns.push('Es ist kein Zielordner angegeben.');
-  if ($('#deleteSource').checked) warns.push('Die Quelldateien werden nach erfolgreicher Konvertierung GELÖSCHT.');
+  if ($('#deleteSource').checked) warns.push($('#vfGrace').checked ? 'Die Quelldateien werden nach bestandener Prüfung in „p5converter-gelöscht“ verschoben und nach ' + $('#vfDays').value + ' Tag(en) endgültig gelöscht.' : 'Die Quelldateien werden nach bestandener Prüfung sofort und endgültig GELÖSCHT.');
   if (S.world === 'video' && $('#vCodec').value !== 'copy') {
     const r = resolveBackend(); if (r && r.note) warns.push(r.note);
   }
@@ -145,10 +146,11 @@ function captureDefaults() {
 }
 function resetWorld() {
   const w = S.world, d = S.defaults, over = RESET_OVERRIDES[w];
-  [...PRESET_FIELDS[w], ...DEST_FIELDS, 'deleteSource'].filter(k => !NAME_FIELDS.includes(k)).forEach(k => setField(k, k in over ? over[k] : d[k]));
+  [...PRESET_FIELDS[w], ...DEST_FIELDS].filter(k => !NAME_FIELDS.includes(k)).forEach(k => setField(k, k in over ? over[k] : d[k]));
   setField('vHwDec', cfg().hwDecode !== false);
   setField('outDir', cfg().defaultOutDir || ''); setField('outMode', cfg().defaultOutDir ? 'custom' : 'same');
-  S.name[w] = {...NAME_EMPTY}; showName(w);
+  S.name[w] = {...NAME_EMPTY}; showName(w); vfReset(w);
+  if (w === 'video') { setField('vMaterial', 'standard'); S.crfManual = false; }
   S.files[w].length = 0;
   refreshAudioUI(); refreshVideoUI(); outModeUI(); syncNameUI(); renderFiles(); renderHero(); saveSettings();
   showStep('start');

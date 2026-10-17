@@ -20,6 +20,7 @@ Gleiche Zusammenarbeit wie im Schwesterprojekt **p5assets** (Vorbild: `TODO.md` 
 Immer **alle Ansichten** kontrollieren: Desktop, iPhone/iPad im Browser (Safari) und iPhone/iPad als Web-App (Home-Bildschirm), Hoch- und Querformat. Die Sandbox hat nur Chromium (kein Safari/echtes iOS): geprüft wird mit Geräte-Emulation (iPhone ≈ 390×844, iPad ≈ 820×1180, Touch, `hover: none`) und Screenshots. Was sich so nicht prüfen lässt (Safe-Areas/Statusleiste in der Web-App, Pull-to-Refresh, iOS-Eigenheiten, **GPU-Encoding auf echter Hardware**), wird im Bericht ausdrücklich als „nicht geprüft“ genannt und vom Nutzer auf dem Gerät getestet.
 
 ## Qualität
+- **Vor jedem Push `sh tools/precheck.sh`** (gofmt, `go vet`, Windows-Build `GOOS=windows CGO_ENABLED=0`, go.mod-Prüfung, JS-Syntax, eingebettete Dateien, Versionsstellen, `go test -race`); erst pushen, wenn sie besteht. Die CI soll nichts mehr finden, was lokal prüfbar war.
 - `go vet ./... && go test -race ./...` (benötigt ffmpeg); CI-Smoke-Test des Docker-Images (`.github/smoke.sh`) muss grün sein.
 - Nichts als „fertig“ melden, was nicht ausgeführt wurde; ungetestete Pfade benennen.
 

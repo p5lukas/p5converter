@@ -123,7 +123,6 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
           <span class="muted small" id="existsHint"></span>
         </label>
       </div>
-      <label class="check"><input type="checkbox" id="deleteSource"> Quelldatei nach Erfolg löschen <span class="warn small">(unwiderruflich)</span></label>
     </div>
   </section>
 
@@ -215,6 +214,14 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
           <input type="range" id="vCrf" min="10" max="40" value="22">
           <span class="muted small" id="vCrfHint"></span>
         </label>
+        <label id="vMatRow">Art des Materials
+          <select id="vMaterial">
+            <option value="standard">Standard (Film/Serie)</option><option value="modern">Aktueller Film (Blockbuster)</option>
+            <option value="grain">Altes Material / mit Filmkorn</option><option value="anime">Anime</option>
+            <option value="cartoon">Zeichentrick</option><option value="home">Heimvideo / Handyvideo</option>
+          </select>
+        </label>
+        <div id="vCrfAdvice" class="crfadvice"><span class="small" id="vCrfWhy"></span> <button type="button" id="vCrfSet" class="small hidden"></button></div>
         <label id="vPresetRow">Geschwindigkeit
           <select id="vPreset"><option value="slow">Langsam (beste Kompression)</option><option value="medium" selected>Mittel</option><option value="fast">Schnell</option><option value="veryfast">Sehr schnell</option></select>
         </label>
@@ -269,6 +276,22 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
     <div class="panel" id="summaryCard">
       <h2>Zusammenfassung</h2>
       <div id="summaryBody"></div>
+    </div>
+    <div class="panel" id="vfCard">
+      <h2 data-info="vfInfo">Ergebnis prüfen &amp; Original</h2>
+      <p class="muted small">Nach dem Umwandeln wird die neue Datei immer auf Lesbarkeit und Laufzeit geprüft. Hier kannst du mehr dazunehmen (Standard: in Einstellungen → Allgemein).</p>
+      <label class="check"><input type="checkbox" id="vfTracks"><span>Spuren &amp; Größe prüfen</span></label>
+      <div class="vfhint" id="vfTracksT"></div>
+      <label class="check"><input type="checkbox" id="vfDecode"><span>Ergebnis komplett durchlesen (Decode-Test)</span></label>
+      <div class="vfhint" id="vfDecodeT"></div>
+      <label class="check"><input type="checkbox" id="deleteSource"><span>Quelldatei nach bestandener Prüfung löschen</span></label>
+      <div class="vfhint warn">Unwiderruflich, außer mit Schonfrist.</div>
+      <div id="vfGraceRow" class="vfgrace">
+        <label class="check"><input type="checkbox" id="vfGrace"><span>Schonfrist: Original erst nach
+          <select id="vfDays" class="inl"><option value="1">1 Tag</option><option value="3">3 Tagen</option><option value="7" selected>7 Tagen</option><option value="14">14 Tagen</option><option value="30">30 Tagen</option><option value="60">60 Tagen</option><option value="90">90 Tagen</option></select> löschen</span></label>
+        <div class="vfhint" id="vfGraceT"></div>
+      </div>
+      <div id="vfDelHint" class="warn small hidden">Ohne Schonfrist wird das Original sofort und endgültig gelöscht, sobald die Prüfung bestanden ist.</div>
     </div>
   </section>
 
@@ -383,6 +406,8 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
 <script src="rename.js"></script>
 <script src="flow.js"></script>
 <script src="tracks.js"></script>
+<script src="verify.js"></script>
+<script src="crf.js"></script>
 <script src="logs.js"></script>
 <script src="settings.js"></script>
 <script src="auth.js"></script>

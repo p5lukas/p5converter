@@ -25,8 +25,21 @@ const INFO = {
     <ul><li><b>Beide behalten, neue Datei nummerieren:</b> Die vorhandene Datei bleibt, die neue bekommt eine Nummer, z. B. <code>Film (2).mkv</code>. Nichts geht verloren – die sicherste Wahl.</li>
     <li><b>Überspringen, vorhandene Datei nicht anfassen:</b> Die Datei wird nicht erneut umgewandelt. Gut, wenn du einen Ordner nach einem Abbruch noch einmal startest.</li>
     <li><b>Überschreiben, vorhandene Datei ersetzen:</b> Die alte Zieldatei wird durch die neue ersetzt. Das lässt sich nicht rückgängig machen.</li></ul>`},
-  deleteSource: {t: 'Quelldatei löschen', b: `<p>Löscht das Original, <b>nachdem</b> die neue Datei erfolgreich fertig ist. Das ist <b>endgültig</b> (kein Papierkorb).</p>
-    <p>Empfehlung für Anfänger: aus lassen, erst Ergebnis ansehen/anhören, dann selbst aufräumen.</p>`},
+  deleteSource: {t: 'Quelldatei löschen', b: `<p>Löscht das Original, <b>nachdem</b> die neue Datei fertig ist <b>und die Prüfung bestanden hat</b>. Ohne Schonfrist ist das <b>endgültig</b> (kein Papierkorb).</p>
+    <p>Fällt die Prüfung durch, bleibt das Original liegen und am Auftrag steht eine Warnung.</p>
+    <p>Empfehlung für Anfänger: aus lassen oder mit Schonfrist, erst Ergebnis ansehen/anhören, dann selbst aufräumen.</p>`},
+  vfInfo: {t: 'Ergebnis prüfen & Original', b: `<p>Jede neue Datei wird immer geprüft: lässt sie sich lesen und ist sie (fast) genauso lang wie das Original?</p>
+    <ul><li><b>Spuren &amp; Größe:</b> Sind alle gewählten Video-, Audio- und Untertitelspuren drin? Ist die Datei nicht absurd klein? Kostet fast keine Zeit.</li>
+    <li><b>Komplett durchlesen (Decode-Test):</b> ffmpeg liest die ganze neue Datei einmal durch, ohne etwas zu speichern, und meldet beschädigte Stellen. Das geht schneller als abspielen, dauert bei langen Videos aber merklich (grob 5–10 Minuten für einen 2-Stunden-Film in 1080p, bei 4K mehr).</li>
+    <li><b>Schonfrist:</b> Das Original wird nicht sofort gelöscht, sondern in den Ordner „p5converter-gelöscht“ neben der Quelle verschoben und erst nach der gewählten Zeit endgültig entfernt. Der Platz wird erst dann frei. Braucht den Ordner /config (Unraid).</li></ul>
+    <p>Fällt eine Prüfung durch, bleibt das Original unangetastet und der Auftrag zeigt eine Warnung. Die Zeitangaben sind Schätzwerte.</p>
+    <p class="ex">Die Standardauswahl legst du in Einstellungen → Allgemein fest, getrennt für Audio und Video.</p>`},
+  vMaterial: {t: 'Art des Materials & CRF-Vorschlag', b: `<p>Je nach Material braucht dieselbe Qualität einen anderen CRF. Das Programm schlägt einen <b>Startwert</b> vor und füllt den Regler damit vor. Du kannst ihn jederzeit ändern.</p>
+    <ul><li><b>Anime / Zeichentrick:</b> eher <b>niedriger</b> (x265 etwa 16), weil Blöcke und Streifen auf glatten Flächen sofort auffallen.</li>
+    <li><b>Altes Material mit Filmkorn:</b> etwas niedriger (x265 etwa 18), damit das Korn nicht verschmiert.</li>
+    <li><b>Standard / aktueller Film:</b> x265 etwa 20, H.264 etwa 18, AV1 etwa 24.</li>
+    <li><b>720p oder kleiner:</b> zusätzlich ein Punkt niedriger.</li></ul>
+    <p class="ex">Die Werte stammen aus Erfahrungsberichten und Anleitungen (bei Bereichen gilt der niedrigere Wert), nicht aus einer Messung an deiner Datei. Bei Hardware-Encodern nur grober Anhaltspunkt. Abschaltbar unter Einstellungen → Allgemein.</p>`},
 
   aFormat: {t: 'Audio-Format', b: `<ul><li><b>MP3:</b> läuft überall (Auto, Handy, alte Geräte). Sicherste Wahl.</li>
     <li><b>Opus:</b> bei kleiner Bitrate die beste Qualität, ideal für Sprache/Podcasts. Nicht jedes ältere Gerät kann es.</li>

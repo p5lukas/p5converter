@@ -500,3 +500,20 @@ details.why p{margin:4px 0 2px;line-height:1.45}
 #nnTitle .ic{margin-right:4px}
 #savedResetDlg p,#newsNotice p{margin:0 0 8px}
 details.gpuhelp{margin-top:14px}details.gpuhelp p{margin:6px 0;line-height:1.5}
+
+/* Kontrolle nach dem Konvertieren (Zusammenfassung) und CRF-Empfehlung */
+#vfCard{margin-top:14px}
+#vfCard label.check{align-items:flex-start}
+#vfCard label.check input[type=checkbox]{margin-top:3px;flex:none}
+.vfhint{margin:2px 0 0 28px;font-size:12px;color:var(--muted)}
+.vfhint.warn{color:var(--warn)}
+#vfCard .vftime{color:var(--text)}
+.vfgrace{margin-top:4px}
+.vfgrace.off{opacity:.55}
+select.inl{display:inline-block;width:auto;min-width:8.5em;margin:0 4px;padding:3px 8px;min-height:0}
+.vfset{display:grid;gap:8px}
+.vfdays{margin-left:28px}
+#vfDelHint{margin-top:10px}
+.crfadvice{grid-column:1/-1;margin-top:-4px;color:var(--muted)}
+.crfadvice button{margin-left:6px}
+.job-m .okc{color:var(--good)}

@@ -1,5 +1,22 @@
 # Änderungen
 
+## 0.1.4 – 2026-10-17
+
+**Neu**
+- **Kontrolle der fertigen Datei, bevor das Original gelöscht wird** (Zusammenfassung → „Ergebnis prüfen & Original“, je Welt getrennt, Standardauswahl in Einstellungen → Allgemein):
+  - Immer: die neue Datei muss lesbar sein und (fast) die gleiche Laufzeit haben (wie bisher, jetzt auch ohne „Quelldatei löschen“)
+  - **A – Spuren & Größe** (standardmäßig an): alle gewählten Video-/Audio-/Untertitelspuren sind im Ergebnis, die Datei ist nicht absurd klein
+  - **B – Decode-Test** (standardmäßig an): ffmpeg liest das ganze Ergebnis einmal durch und meldet beschädigte Stellen; die Warteschlange zeigt dabei „prüfe Ergebnis …“
+  - **C – Schonfrist** (nur mit „Quelldatei löschen“, sonst ausgegraut): das Original wird nicht sofort gelöscht, sondern in den Ordner „p5converter-gelöscht“ neben der Quelle verschoben und nach 1–90 Tagen (einstellbar, Standard 7) endgültig entfernt (stündlich geprüft, auch nach einem Neustart)
+  - Neben jeder Kontrolle steht in Worten, wie viel länger es dauert („kaum länger“, „etwas länger“, „viel länger“, Schätzwerte)
+  - Fällt eine Prüfung durch, bleibt das Original liegen und der Auftrag zeigt eine Warnung; bestandene Prüfungen stehen als „✓ geprüft“ am Auftrag
+- **Automatischer CRF-Vorschlag** im Video-Schritt: Auswahl „Art des Materials“ (Standard, aktueller Film, altes Material mit Korn, Anime, Zeichentrick, Heimvideo); der Regler wird mit einem Startwert vorausgefüllt, mit kurzer Begründung und „Empfehlung setzen“. Werte aus Anleitungen und Foren (bei Bereichen der niedrigere Wert): x265 20, x264 18, AV1 24; Anime/Zeichentrick −4, Material mit Korn −2, 720p und kleiner −1. Abschaltbar in Einstellungen → Allgemein
+- `tools/precheck.sh`: Vorprüfung vor jedem Push (gofmt, vet, Windows-Build, go.mod, JS-Syntax, eingebettete Dateien, Versionsstellen, YAML, Tests)
+
+**Geändert**
+- „Quelldatei löschen“ steht jetzt im letzten Schritt (Zusammenfassung) und wird bewusst **nicht mehr gemerkt**: bei jedem Besuch aus, je Welt getrennt
+- CI: ein neuer Push auf denselben Pull Request bricht den veralteten Lauf ab
+
 ## 0.1.3 – 2026-10-16
 
 **Behoben (Windows-App, nur `dev`)**
