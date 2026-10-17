@@ -3,14 +3,10 @@ package jobs
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/p5lukas/p5converter/internal/ffmpeg"
 	"github.com/p5lukas/p5converter/internal/proc"
@@ -22,9 +18,6 @@ type Check struct {
 	OK   bool   `json:"ok"`
 	Note string `json:"note"`
 }
-
-// TrashDir is the folder (next to the source file) that holds sources during the grace period.
-const TrashDir = "p5converter-gelöscht"
 
 // expectedCounts counts the streams per type that the ffmpeg arguments map into the output
 // (explicit "-map 0:N"; optional maps like attachments "0:t?" are not counted).
@@ -178,115 +171,4 @@ func allOK(cs []Check) bool {
 		}
 	}
 	return true
-}
-
-// ---- grace period: the source is moved into TrashDir and removed for good after N days ----
-
-func clampDays(d int) int {
-	if d < 1 {
-		return 7
-	}
-	if d > 90 {
-		return 90
-	}
-	return d
-}
-
-// trashSource moves src into <its folder>/TrashDir and remembers when to remove it.
-func (m *Manager) trashSource(src string, days int) (string, error) {
-	m.mu.Lock()
-	tracked := m.graceFile != ""
-	m.mu.Unlock()
-	if !tracked {
-		return "", fmt.Errorf("ohne beschreibbaren Konfigurationsordner (/config) kann die Schonfrist nicht verwaltet werden")
-	}
-	dir := filepath.Join(filepath.Dir(src), TrashDir)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return "", err
-	}
-	dst := filepath.Join(dir, filepath.Base(src))
-	ext := filepath.Ext(dst)
-	base := strings.TrimSuffix(dst, ext)
-	for i := 2; ; i++ {
-		if _, err := os.Stat(dst); os.IsNotExist(err) {
-			break
-		}
-		dst = fmt.Sprintf("%s (%d)%s", base, i, ext)
-	}
-	if err := os.Rename(src, dst); err != nil {
-		return "", err
-	}
-	m.mu.Lock()
-	if m.graceFile != "" {
-		if m.grace == nil {
-			m.grace = map[string]int64{}
-		}
-		m.grace[dst] = time.Now().Add(time.Duration(clampDays(days)) * 24 * time.Hour).Unix()
-		m.saveGraceLocked()
-	}
-	m.mu.Unlock()
-	return dst, nil
-}
-
-// SetGraceLog enables the grace period bookkeeping in file (usually /config/grace.json), reads what is
-// pending from earlier runs and starts a background cleanup (now and then hourly).
-func (m *Manager) SetGraceLog(file string) {
-	m.mu.Lock()
-	m.graceFile = file
-	m.grace = map[string]int64{}
-	if file != "" {
-		if b, err := os.ReadFile(file); err == nil {
-			json.Unmarshal(b, &m.grace)
-		}
-	}
-	m.mu.Unlock()
-	if file == "" {
-		return
-	}
-	m.CleanGrace(time.Now())
-	go func() {
-		for {
-			time.Sleep(time.Hour)
-			m.CleanGrace(time.Now())
-		}
-	}()
-}
-
-// CleanGrace removes the sources whose grace period is over. Returns how many were removed.
-func (m *Manager) CleanGrace(now time.Time) (removed int) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	for p, until := range m.grace {
-		if until > now.Unix() {
-			continue
-		}
-		if err := os.Remove(p); err == nil || os.IsNotExist(err) {
-			if err == nil {
-				removed++
-				jlog.Infof("Schonfrist vorbei, Quelldatei endgültig gelöscht: %s", p)
-			}
-			os.Remove(filepath.Dir(p)) // only succeeds when the trash folder is empty
-			delete(m.grace, p)
-		}
-	}
-	m.saveGraceLocked()
-	return removed
-}
-
-// GracePending: number of sources currently waiting in a trash folder.
-func (m *Manager) GracePending() int {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return len(m.grace)
-}
-
-func (m *Manager) saveGraceLocked() {
-	if m.graceFile == "" {
-		return
-	}
-	b, _ := json.Marshal(m.grace)
-	tmp := m.graceFile + ".tmp"
-	if os.WriteFile(tmp, b, 0o644) == nil {
-		os.Rename(tmp, m.graceFile)
-	}
 }

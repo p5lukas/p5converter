@@ -29,13 +29,11 @@ type Preset struct {
 
 // Verify: the default of the controls after a conversion (one set per world; the wizard can change it per run).
 type Verify struct {
-	Tracks    bool `json:"tracks"`    // A: tracks complete, size plausible
-	Decode    bool `json:"decode"`    // B: read the whole result once
-	Grace     bool `json:"grace"`     // C: grace period instead of deleting the source at once
-	GraceDays int  `json:"graceDays"` // 1-90
+	Tracks bool `json:"tracks"` // A: tracks complete, size plausible
+	Decode bool `json:"decode"` // B: read the whole result once
 }
 
-func defaultVerify() Verify { return Verify{Tracks: true, Decode: true, Grace: false, GraceDays: 7} }
+func defaultVerify() Verify { return Verify{Tracks: true, Decode: true} }
 
 type Settings struct {
 	Worlds           map[string]World  `json:"worlds"`
@@ -205,19 +203,12 @@ func Validate(in Settings) (Settings, error) {
 	if !contains([]string{"auto", "cpu", "qsv", "nvenc", "vaapi", "amf"}, out.PreferredBackend) {
 		out.PreferredBackend = "auto"
 	}
-	// settings files from before 0.1.4 have no "verify": the defaults apply (A and B on)
+	// settings files from before 0.1.4 have no "verify": the defaults apply (A and B on); old fields (graceDays …) are ignored
 	ver := map[string]Verify{}
 	for _, w := range []string{"audio", "video"} {
 		v, ok := out.Verify[w]
 		if !ok {
 			v = defaultVerify()
-		}
-		if v.GraceDays < 1 || v.GraceDays > 90 {
-			if v.GraceDays == 0 {
-				v.GraceDays = 7
-			} else {
-				return Settings{}, errors.New("Schonfrist: 1–90 Tage")
-			}
 		}
 		ver[w] = v
 	}

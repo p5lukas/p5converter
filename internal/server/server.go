@@ -24,6 +24,7 @@ import (
 	"github.com/p5lukas/p5converter/internal/build"
 	"github.com/p5lukas/p5converter/internal/config"
 	"github.com/p5lukas/p5converter/internal/ffmpeg"
+	"github.com/p5lukas/p5converter/internal/history"
 	"github.com/p5lukas/p5converter/internal/hw"
 	"github.com/p5lukas/p5converter/internal/jobs"
 	"github.com/p5lukas/p5converter/internal/logs"
@@ -39,6 +40,7 @@ type Server struct {
 	Det         *hw.Detector
 	Sampler     *hw.Sampler
 	Stats       *stats.Store
+	History     *history.Store
 	news        *newsStore
 	newsEntries []newsEntry
 	Jobs        *jobs.Manager
@@ -58,6 +60,8 @@ func New(build version.Info, t ffmpeg.Tools, roots []string, concurrency int, co
 	s.Jobs = jobs.New(t, s.Sampler, concurrency)
 	s.Stats = stats.Open(statsDir(s.Settings, configDir))
 	s.Jobs.OnDone = s.Stats.Add
+	s.History = history.Open(configDir, s.Settings.Persistent())
+	s.Jobs.OnFinish = func(j jobs.Job) { s.History.Add(historyEntry(j)) }
 	json.Unmarshal(newsJSON, &s.newsEntries)
 	s.news = openNews(configDir, s.Settings.Persistent(), s.newsEntries, build.Base)
 	cfg := s.Settings.Get()
@@ -69,7 +73,6 @@ func New(build version.Info, t ffmpeg.Tools, roots []string, concurrency int, co
 	}
 	if s.Settings.Persistent() { // unfinished .part files of a crashed run are removed at start
 		s.Jobs.SetPartialLog(filepath.Join(configDir, "partials.json"))
-		s.Jobs.SetGraceLog(filepath.Join(configDir, "grace.json"))
 	}
 	s.enc = t.Encoders()
 	s.ffver = t.Version()
@@ -129,6 +132,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/news", s.newsGet)
 	mux.HandleFunc("POST /api/news/seen", s.newsSeen)
 	mux.HandleFunc("POST /api/stats/reset", s.statsReset)
+	mux.HandleFunc("GET /api/history", s.historyList)
+	mux.HandleFunc("GET /api/history.csv", s.historyCSV)
+	mux.HandleFunc("POST /api/history/clear", s.historyClear)
 	mux.HandleFunc("GET /api/info", s.info)
 	mux.HandleFunc("POST /api/hw/detect", func(w http.ResponseWriter, r *http.Request) {
 		go s.Det.Detect()

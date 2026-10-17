@@ -18,9 +18,10 @@ func TestApplyRules(t *testing.T) {
 		want  string
 	}{
 		{"literal ci", []Rule{{Find: "webdl", With: "WEB"}}, "Show [WEB-1080p] Boogey"},
-		{"literal case", []Rule{{Find: "webdl", With: "WEB", Case: true}}, "Show [WEBDL-1080p] Boogey"},
+		{"upper/lower case is ignored", []Rule{{Find: "BOOGEY", With: "x"}}, "Show [WEBDL-1080p] x"},
+		{"special characters are plain text", []Rule{{Find: "[WEBDL-1080p]", With: "(x)"}, {Find: "(", With: "<"}}, "Show <x) Boogey"},
+		{"dollar sign stays", []Rule{{Find: "Show", With: "$1"}}, "$1 [WEBDL-1080p] Boogey"},
 		{"chain", []Rule{{Find: "[WEBDL-1080p] ", With: ""}, {Find: "Boogey", With: "x"}}, "Show x"},
-		{"regex groups", []Rule{{Find: `\[(\w+)-(\d+p)\]`, With: "$2 $1", Regex: true}}, "Show 1080p WEBDL Boogey"},
 		{"empty ignored", []Rule{{Find: "", With: "x"}}, "Show [WEBDL-1080p] Boogey"},
 	}
 	for _, c := range cases {
@@ -29,8 +30,8 @@ func TestApplyRules(t *testing.T) {
 			t.Errorf("%s: %q %v (want %q)", c.name, got, err, c.want)
 		}
 	}
-	if Validate([]Rule{{Find: "(", Regex: true}}) == nil {
-		t.Error("ungültige Regex muss abgelehnt werden")
+	if Validate([]Rule{{Find: "("}}) != nil {
+		t.Error("Klammer ist normaler Text und darf nicht abgelehnt werden")
 	}
 	if Validate(make([]Rule, MaxRules+1)) == nil {
 		t.Error("zu viele Regeln müssen abgelehnt werden")

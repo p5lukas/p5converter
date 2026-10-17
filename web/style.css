@@ -322,7 +322,7 @@ button.small .ic,.blist .ic{width:1.3em;height:1.3em}
 .varchips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0 2px}
 .chipbtn{padding:2px 8px;font-size:12px;font-family:ui-monospace,Menlo,Consolas,monospace;min-height:0}
 .rulerows{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
-.rulerow{display:grid;grid-template-columns:1fr 1fr auto auto auto;gap:8px;align-items:center}
+.rulerow{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center}
 .rulerow .check{margin:0;white-space:nowrap}
 .namepreview{margin-top:12px}
 .rnrows{display:flex;flex-direction:column;gap:4px;max-height:420px;overflow:auto}
@@ -508,12 +508,21 @@ details.gpuhelp{margin-top:14px}details.gpuhelp p{margin:6px 0;line-height:1.5}
 .vfhint{margin:2px 0 0 28px;font-size:12px;color:var(--muted)}
 .vfhint.warn{color:var(--warn)}
 #vfCard .vftime{color:var(--text)}
-.vfgrace{margin-top:4px}
-.vfgrace.off{opacity:.55}
 select.inl{display:inline-block;width:auto;min-width:8.5em;margin:0 4px;padding:3px 8px;min-height:0}
 .vfset{display:grid;gap:8px}
-.vfdays{margin-left:28px}
 #vfDelHint{margin-top:10px}
 .crfadvice{grid-column:1/-1;margin-top:-4px;color:var(--muted)}
 .crfadvice button{margin-left:6px}
 .job-m .okc{color:var(--good)}
+
+/* Verlauf */
+.histlist{display:flex;flex-direction:column}
+.histentry{border-top:1px solid var(--line);padding:10px 16px}
+.histentry:first-child{border-top:0}
+.histentry>summary{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;cursor:pointer;list-style:none}
+.histentry>summary::-webkit-details-marker{display:none}
+.histentry .hname{font-weight:700;overflow-wrap:anywhere;flex:1 1 220px;min-width:0}
+.histentry .hmeta{flex:1 1 100%}
+.histentry .hdet{margin:10px 0 2px;display:flex;flex-direction:column;gap:4px;overflow-wrap:anywhere}
+.histentry .hdet .okc{color:var(--good)}
+.histentry pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:260px;overflow:auto}

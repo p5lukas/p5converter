@@ -66,7 +66,7 @@ Jede Einstellung hat einen kleinen **ⓘ**-Punkt mit einfacher Erklärung und Be
 
 ### Audio (wie SoundConverter)
 MP3, Ogg Vorbis, Opus, AAC/M4A, FLAC, WAV · VBR-Qualität oder konstante Bitrate · Samplerate/Kanäle · Tags und Cover bleiben erhalten · Ordner rekursiv hinzufügen ·
-Zielordner mit Struktur oder Namensmuster (`{artist}/{album}/{track} - {title}`) · „Wenn Datei existiert“: beide behalten und die neue nummerieren (`Film (2).mkv`) / überspringen / überschreiben (mit Warnfarbe) · Quelle optional löschen – nur nach bestandener **Kontrolle der neuen Datei** (lesbar und gleich lang; optional Spuren/Größe, kompletter Decode-Test) und wahlweise mit **Schonfrist** (Original wandert für 1–90 Tage in „p5converter-gelöscht“).
+Zielordner mit Struktur oder Namensmuster (`{artist}/{album}/{track} - {title}`) · „Wenn Datei existiert“: beide behalten und die neue nummerieren (`Film (2).mkv`) / überspringen / überschreiben (mit Warnfarbe) · Quelle optional löschen – nur nach bestandener **Kontrolle der neuen Datei** (lesbar und gleich lang; optional Spuren/Größe, kompletter Decode-Test).
 
 ### Video
 * Container **MKV** (Standard) oder MP4, „Nur Remux“ (Video kopieren)
@@ -91,13 +91,16 @@ Zielordner mit Struktur oder Namensmuster (`{artist}/{album}/{track} - {title}`)
 * **Startseite:** Statistik, Auslastung, Hardware, **gewonnener Platz** (je Welt eigene Zählung, mit „Zurücksetzen“) und Warteschlange, dazu „Konvertierung starten“ und „Umbenennen starten“
 * **Konvertieren:** Dateien → Ziel → Benennen → Einstellungen (Video: Video, dann Audio & Untertitel · Audio: Format) → **Zusammenfassung** → Start (Voreinstellungen gibt es nur im Schritt „Video“ bzw. „Einstellungen“; „Zurücksetzen“ stellt die gewählte Welt auf „Remux“ zurück); oben als Reiter anklickbar, unten Zurück/Weiter; danach zurück zur Startseite mit der laufenden Warteschlange
 
+### Verlauf
+* **Startseite → Verlauf:** die letzten **100** beendeten Aufträge je Welt (Audio und Video getrennt, gespeichert in `/config`, bleibt nach „Fertige entfernen“ und Neustart): Ergebnis, Größe vorher/nachher, Dauer, Prüfergebnis, bei Fehlern ffmpeg-Befehl und Log · Suche, Filter nach Ergebnis und Zeitraum · **CSV-Export** · „Verlauf leeren“ (nur die gewählte Welt)
+
 ### Warteschlange
 * **Je Welt eine eigene Warteschlange** (Audio/Video) mit eigener Anzahl paralleler Aufträge; Farben: grün = geklappt, gelb = Hinweis/Ausweichweg, rot = Fehler; „Schreiben“/„Lesen“ mit Haken, wenn ffmpeg die Hardware bestätigt hat
 * **Abbrechen räumt auf**: unfertige Datei und vom Auftrag neu angelegte leere Ordner werden gelöscht; Reste eines Absturzes beim nächsten Start; die Quelldatei bleibt unberührt
 * **Auslastung** von CPU und Grafik/Videoeinheit live (auch im Leerlauf)
 
 ### Umbenennen
-* **Namensmuster** mit Variablen (`{title}`, `{year}`, `{res}`, `{codec}`, `{bit}`, `{container}`, `{date}`, `{filename}`; Audio: `{artist}`, `{album}`, `{track}` …) und **Suchen & Ersetzen** (mehrere Regeln, optional Regex/Groß-/Kleinschreibung) im Bereich „Ziel“, mit Live-Vorschau; beides lässt sich in Voreinstellungen speichern
+* **Namensmuster** mit Variablen (`{title}`, `{year}`, `{res}`, `{codec}`, `{bit}`, `{container}`, `{date}`, `{filename}`; Audio: `{artist}`, `{album}`, `{track}` …) und **Suchen & Ersetzen** (mehrere Regeln, einfacher Text, Groß-/Kleinschreibung egal) im Bereich „Ziel“, mit Live-Vorschau; beides lässt sich in Voreinstellungen speichern
 * **Seite „Umbenennen“** (Kopfzeile): Dateien ohne Konvertierung umbenennen, mit Vorschau; es wird nie überschrieben oder verschoben
 
 ### Hardware-Encoding

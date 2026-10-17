@@ -20,7 +20,7 @@ function varChips(mount, input, vars, onChange) {
     }}, '{' + k + '}')));
 }
 
-// Liste der Ersetzungen: get() liefert das Array [{find, with, regex, case}], set(arr) speichert es.
+// Liste der Ersetzungen: get() liefert das Array [{find, with}], set(arr) speichert es.
 // Jede Änderung liest die Liste frisch über get() (keine alten Kopien) – so tauchen gelöschte Zeilen nie wieder auf.
 // Rückgabe: Funktion, die eine leere Ersetzung anhängt.
 function ruleEditor(mount, get, set, onChange) {
@@ -29,13 +29,11 @@ function ruleEditor(mount, get, set, onChange) {
     fill(mount, get().map((r, i) => h('div', {class: 'rulerow'},
       h('input', {value: r.find || '', placeholder: 'Suchen', 'aria-label': 'Suchen', autocomplete: 'off', spellcheck: 'false', oninput: e => edit(i, x => { x.find = e.target.value; })}),
       h('input', {value: r.with || '', placeholder: 'Ersetzen durch', 'aria-label': 'Ersetzen durch', autocomplete: 'off', spellcheck: 'false', oninput: e => edit(i, x => { x.with = e.target.value; })}),
-      h('label', {class: 'check', title: 'Suchtext ist ein regulärer Ausdruck ($1 … in „Ersetzen durch“)'}, h('input', {type: 'checkbox', checked: !!r.regex, onchange: e => edit(i, x => { x.regex = e.target.checked; })}), 'Regex'),
-      h('label', {class: 'check', title: 'Groß-/Kleinschreibung beachten'}, h('input', {type: 'checkbox', checked: !!r.case, onchange: e => edit(i, x => { x.case = e.target.checked; })}), 'Aa'),
       h('button', {type: 'button', class: 'small ghost', title: 'Entfernen', onclick: () => { const cur = get(); cur.splice(i, 1); set(cur); render(); onChange(); }}, '✕'))));
   };
   render();
   return () => {
-    const cur = get(); cur.push({find: '', with: '', regex: false, case: false}); set(cur); render(); onChange();
+    const cur = get(); cur.push({find: '', with: ''}); set(cur); render(); onChange();
     const last = mount.querySelector('.rulerow:last-child input'); if (last) last.focus();
   };
 }

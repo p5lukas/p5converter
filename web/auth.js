@@ -33,7 +33,7 @@ function showLogin(note) {
   S.view = 'login';
   clearInterval(S.pollTimer);
   document.body.classList.add('loginmode');
-  ['#viewMain', '#viewSettings', '#viewRename', '#viewLogs'].forEach(s => $(s).classList.add('hidden'));
+  ['#viewMain', '#viewSettings', '#viewRename', '#viewLogs', '#viewHistory'].forEach(s => $(s).classList.add('hidden'));
   $('#foot').replaceChildren();
   // zuletzt benutzte Farbe (der Server liefert vor der Anmeldung keine Einstellungen)
   try {
