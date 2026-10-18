@@ -89,4 +89,36 @@ t('Zusammenfassung zählt Wirkung', () => {
   const p = P([A(1, 'ger', 'dts', 6), A(2, 'fre', 'ac3', 6), A(3, 'ger', 'ac3', 2)], {}, {audioRules: [{codec: 'dts', action: 'encode', to: 'ac3'}], prefs: {audioKeep: ['ger'], audioDefault: ['ger']}});
   assert.deepStrictEqual(TP.summarize(p), {dropLang: 1, dropRule: 0, dropOwn: 0, encode: 1, defaults: 1});
 });
+const SF = (i, lang, frames, extra) => S(i, lang, 'subrip', {frames, bytes: frames * 40, ...extra});
+t('Forced erraten: kleine Spur derselben Sprache (unter 20 %)', () => {
+  const g = TP.forcedGuess({streams: [SF(3, 'ger', 1200), SF(4, 'ger', 38), SF(5, 'eng', 1100)]});
+  assert.deepStrictEqual(Object.keys(g), ['4']); assert.deepStrictEqual(g[4], {n: 38, of: 1200, unit: 'Zeilen'});
+});
+t('Forced erraten: nichts bei ähnlicher Größe, kleiner Hauptspur, fehlenden Zahlen oder schon gesetztem Forced', () => {
+  assert.deepStrictEqual(TP.forcedGuess({streams: [SF(3, 'ger', 1200), SF(4, 'ger', 900)]}), {});
+  assert.deepStrictEqual(TP.forcedGuess({streams: [SF(3, 'ger', 60), SF(4, 'ger', 5)]}), {});
+  assert.deepStrictEqual(TP.forcedGuess({streams: [S(3, 'ger'), S(4, 'ger')]}), {});
+  assert.deepStrictEqual(TP.forcedGuess({streams: [SF(3, 'ger', 1200), SF(4, 'ger', 38, {forced: true})]}), {});
+  assert.deepStrictEqual(TP.forcedGuess({streams: [SF(3, 'und', 1200), SF(4, 'und', 38)]}), {});
+  assert.deepStrictEqual(TP.forcedGuess({streams: [SF(3, 'ger', 1200)]}), {});
+});
+t('Forced erraten: ohne Zeilenzahl zählen die Bytes (nur mit Mindestgröße)', () => {
+  const b = (i, bytes) => S(i, 'ger', 'subrip', {bytes});
+  assert.deepStrictEqual(Object.keys(TP.forcedGuess({streams: [b(3, 80000), b(4, 3000)]})), ['4']);
+  assert.deepStrictEqual(TP.forcedGuess({streams: [b(3, 8000), b(4, 300)]}), {});
+});
+t('Wunsch „Deutsch (Forced)“ wählt den erratenen Forced-Untertitel vor', () => {
+  const p = P([SF(3, 'ger', 1200, {default: true}), SF(4, 'ger', 38)], {}, {prefs: {subDefault: [{lang: 'ger', forced: true}, {lang: 'ger', forced: false}]}});
+  assert.strictEqual(p.edits[4].forced, true); assert.strictEqual(p.edits[4].default, true); assert.strictEqual(p.edits[3].default, false);
+  assert.ok(p.tracks[1].why.some(w => w.includes('38 statt 1200')));
+});
+t('ohne Forced-Wunsch bleibt der erratene Untertitel unverändert (nur Hinweis)', () => {
+  const p = P([SF(3, 'ger', 1200), SF(4, 'ger', 38)], {}, {prefs: {subDefault: [{lang: 'ger', forced: false}]}});
+  assert.strictEqual(p.edits[4], undefined); assert.ok(p.tracks[1].guess);
+  assert.strictEqual(p.edits[3].default, true);
+});
+t('eigene Entscheidung gegen Forced gewinnt', () => {
+  const p = P([SF(3, 'ger', 1200), SF(4, 'ger', 38)], {4: {forced: false}}, {prefs: {subDefault: [{lang: 'ger', forced: true}]}});
+  assert.strictEqual(p.tracks[1].guess, null); assert.strictEqual(p.edits[4].forced, false);
+});
 console.log('trkplan: ' + n + ' Tests ok');

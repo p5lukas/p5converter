@@ -121,13 +121,13 @@ func (s *Server) allowed(p string) bool {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	sub, _ := fs.Sub(web.FS, ".")
-	static := http.FileServerFS(sub)
+	static, err := staticHandler(sub)
+	if err != nil {
+		panic(err) // embedded files are always readable
+	}
 	mux.HandleFunc("GET /{$}", s.indexPage)
 	mux.HandleFunc("GET /index.html", s.indexPage)
-	mux.Handle("GET /", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "no-cache") // always revalidate (ETag): new versions show up immediately
-		static.ServeHTTP(w, r)
-	}))
+	mux.Handle("GET /", static)
 	mux.HandleFunc("GET /manifest.webmanifest", s.manifest)
 	mux.HandleFunc("GET /api/news", s.newsGet)
 	mux.HandleFunc("POST /api/news/seen", s.newsSeen)
@@ -527,7 +527,7 @@ func (s *Server) state(w http.ResponseWriter, r *http.Request) {
 	// einmal protokollieren, womit die Oberfläche läuft (zeigt z. B. „Edg/…“ = WebView2-Fenster der Windows-App)
 	s.uiOnce.Do(func() { logs.Get("app").Infof("Oberfläche verbunden (%s)", shortUA(r.UserAgent())) })
 	writeJSON(w, map[string]any{
-		"jobs": s.Jobs.Snapshot(), "stats": s.Sampler.Latest(), "concurrency": s.concurrencies(), "saved": s.Stats.Get(),
+		"jobs": s.Jobs.Snapshot(), "finished": s.Jobs.Finished(), "stats": s.Sampler.Latest(), "concurrency": s.concurrencies(), "saved": s.Stats.Get(),
 	})
 }
 

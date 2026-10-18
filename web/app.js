@@ -312,6 +312,7 @@ function langs(s) { return s.split(',').map(x => x.trim()).filter(Boolean); }
 async function start() {
   const kind = S.world, files = S.files[kind];
   if (!files.length) { toast('Bitte zuerst Dateien hinzufügen.', 'bad'); return; }
+  if (kind === 'video') await trkProbeAll(files); // höchstens 6 Dateien gleichzeitig lesen (nicht alle auf einmal)
   const req = {
     kind,
     items: await Promise.all(files.map(async f => ({path: f.path, rel: f.rel, overrides: kind === 'video' ? await trackOverridesFor(f) : {}}))),
@@ -515,13 +516,15 @@ function renderWorldBadges() {
 }
 let polling = false;
 async function poll() {
-  if (polling || S.stopped) return; polling = true;
+  if (polling || S.stopped) return;
+  if (document.hidden && (S.hiddenTick = (S.hiddenTick || 0) + 1) % 5) return; // Reiter im Hintergrund: nur alle 5 Sekunden
+  polling = true;
   try {
     const d = await api('/api/state');
     S.jobs = d.jobs; S.stats = d.stats; S.conc = d.concurrency;
     const savedChanged = JSON.stringify(S.saved) !== JSON.stringify(d.saved); S.saved = d.saved; if (savedChanged) renderSaved();
     renderConc(); renderWorldBadges();
-    const fin = S.jobs.filter(j => !(j.status === 'queued' || j.status === 'running')).length;
+    const fin = d.finished !== undefined ? d.finished : S.jobs.filter(j => !(j.status === 'queued' || j.status === 'running')).length;
     renderQueue(); renderMonitor(); renderHero(); renderHistBadge();
     if (S.histFin !== undefined && fin !== S.histFin && typeof S.histReload === 'function') S.histReload(); // ein Auftrag ist beendet: Verlauf sofort neu laden
     S.histFin = fin;
@@ -730,6 +733,7 @@ async function startApp() {
   if (cfg().showNews !== false) loadNews();
   if (!S.cfg.persistent) toast('Einstellungen werden nicht dauerhaft gespeichert (Pfad /config fehlt).', 'bad');
   poll(); S.pollTimer = setInterval(poll, 1000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
   checkAlerts(); S.alertTimer = setInterval(() => checkAlerts(), 30000);
   route();
 }

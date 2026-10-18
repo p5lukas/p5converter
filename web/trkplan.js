@@ -55,12 +55,31 @@ const TP = (() => {
     return {drop, guard: false};
   }
 
+  /* Forced-Untertitel nach Größe erraten: Ist eine Untertitelspur in derselben Sprache viel kleiner als die größte (unter 20 %, die große hat
+     mindestens 100 Zeilen bzw. 20 KB), ist sie sehr wahrscheinlich „Forced“ (nur fremdsprachige Stellen). Nur wenn die Datei Zählwerte hat
+     (MKV-Tags von mkvmerge); sonst bleibt es leer. Ergebnis: {Spurindex: {n, of, unit}} – nur Vorschlag, nie still gesetzt. */
+  function forcedGuess(info) {
+    const out = {}, subs = (info.streams || []).filter(s => s.type === 'subtitle' && !s.attachedPic && !s.forced && !noLang(s.lang));
+    const byLang = {};
+    subs.forEach(s => (byLang[normLang(s.lang)] = byLang[normLang(s.lang)] || []).push(s));
+    Object.values(byLang).forEach(list => {
+      if (list.length < 2) return;
+      const useFrames = list.every(s => s.frames > 0), useBytes = list.every(s => s.bytes > 0);
+      if (!useFrames && !useBytes) return;
+      const val = s => useFrames ? s.frames : s.bytes, big = list.reduce((a, b) => val(b) > val(a) ? b : a);
+      if (val(big) < (useFrames ? 100 : 20000)) return;
+      list.forEach(s => { if (s !== big && val(s) < val(big) * 0.2) out[s.index] = {n: val(s), of: val(big), unit: useFrames ? 'Zeilen' : 'Bytes'}; });
+    });
+    return out;
+  }
+
   /* cfg: {audioRules, subRules, audioMode:'copy'|'encode', audioCodec, audioKbps, subMode:'copy'|'none', usePrefs, prefs:{audioKeep, subKeep, audioDefault, subDefault:[{lang, forced}]}}
      Ergebnis: {tracks:[{s, index, type, kept, action, codec, kbps, def, forced, lang, edit, why:[…]}], edits, guard:{audio, sub}} */
   function plan(info, manual, cfg) {
     manual = manual || {};
     const prefs = (cfg.usePrefs && cfg.prefs) || {};
     const streams = (info.streams || []).filter(s => !s.attachedPic && (s.type === 'audio' || s.type === 'subtitle'));
+    const guess = forcedGuess(info);
     const aud = streams.filter(s => s.type === 'audio'), sub = streams.filter(s => s.type === 'subtitle');
     const la = langDrops(aud, prefs.audioKeep), ls = langDrops(sub, prefs.subKeep);
     const res = streams.map(s => {
@@ -86,7 +105,8 @@ const TP = (() => {
       if (!own && auto.action) { edit.action = auto.action; if (auto.codec) edit.codec = auto.codec; if (auto.kbps) edit.kbps = auto.kbps; }
       Object.keys(edit).forEach(k => { if (edit[k] === undefined || edit[k] === null) delete edit[k]; });
       return {s, index: s.index, type: s.type, kept, action: action || (isA && cfg.audioMode === 'encode' ? 'encode' : 'copy'), codec, kbps, own,
-        forced: m.forced !== undefined ? !!m.forced : !!s.forced, def: m.default !== undefined ? !!m.default : !!s.default, lang: m.lang !== undefined ? m.lang : s.lang, edit, why};
+        forced: m.forced !== undefined ? !!m.forced : !!s.forced, def: m.default !== undefined ? !!m.default : !!s.default, lang: m.lang !== undefined ? m.lang : s.lang, edit, why,
+        guess: m.forced === undefined && !s.forced && guess[s.index] ? guess[s.index] : null};
     });
 
     // Standard-Spur nach Rangliste (nur wenn der Nutzer bei dieser Art keine Standard-Spur selbst gesetzt hat)
@@ -105,8 +125,12 @@ const TP = (() => {
     if ((prefs.subDefault || []).length && !hasManualDef(sub)) {
       const keptS = res.filter(r => r.type === 'subtitle' && r.kept);
       for (const e of prefs.subDefault) {
-        const t = keptS.find(r => normLang(r.s.lang) === normLang(e.lang) && !!r.forced === !!e.forced);
-        if (t) { setDef(t, keptS); break; }
+        // ein erratener Forced-Untertitel zählt als „Forced“, wenn der Wunsch Forced verlangt (Vorauswahl, im Plan sichtbar)
+        const t = keptS.find(r => normLang(r.s.lang) === normLang(e.lang) && !!(r.forced || r.guess) === !!e.forced);
+        if (t) {
+          if (t.guess && !t.forced) { t.edit.forced = true; t.forced = true; t.why.push(`Wahrscheinlich Forced (${t.guess.n} statt ${t.guess.of} ${t.guess.unit})`); t.guess = null; }
+          setDef(t, keptS); break;
+        }
       }
     }
     const edits = {};
@@ -132,6 +156,6 @@ const TP = (() => {
     return {audio: a, sub: u, key: a.join(',') + '|' + u.join(',')};
   }
 
-  return {normLang, noLang, REC_KBPS, RULE_CODECS, RULE_TARGETS, SUB_KINDS, codecKey, subKind, audioRuleMatches, subRuleMatches, describeAudioRule, describeSubRule, plan, summarize, signature, langDrops};
+  return {normLang, noLang, REC_KBPS, RULE_CODECS, RULE_TARGETS, SUB_KINDS, codecKey, subKind, audioRuleMatches, subRuleMatches, describeAudioRule, describeSubRule, plan, summarize, signature, langDrops, forcedGuess};
 })();
 if (typeof module !== 'undefined') module.exports = TP;

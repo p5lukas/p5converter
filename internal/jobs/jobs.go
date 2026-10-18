@@ -111,7 +111,11 @@ type Manager struct {
 	OnFinish    func(Job)
 	partialFile string
 	partials    map[string]bool
+	finished    int // jobs that reached an end state since start (also those already pruned)
 }
+
+// maxKept bounds the finished jobs kept in memory (the history holds the details).
+const maxKept = 500
 
 func New(t ffmpeg.Tools, s *hw.Sampler, concurrency int) *Manager {
 	m := &Manager{tools: t, sampler: s, reserved: map[string]string{},
@@ -179,11 +183,50 @@ func (m *Manager) Submit(req *Request) []string {
 	return ids
 }
 
+// Finished returns how many jobs reached an end state since start (changes whenever one ends).
+func (m *Manager) Finished() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.finished
+}
+
+// prune drops the oldest finished jobs beyond maxKept (caller holds m.mu).
+func (m *Manager) prune() {
+	done := 0
+	for _, j := range m.jobs {
+		if j.Status != "queued" && j.Status != "running" {
+			done++
+		}
+	}
+	if done <= maxKept {
+		return
+	}
+	drop := done - maxKept
+	keep := m.jobs[:0:0]
+	for _, j := range m.jobs {
+		if drop > 0 && j.Status != "queued" && j.Status != "running" {
+			drop--
+			continue
+		}
+		keep = append(keep, j)
+	}
+	m.jobs = keep
+}
+
+// Snapshot lists all jobs. Finished jobs come without command/log/map lines (the history keeps those).
 func (m *Manager) Snapshot() []Job {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	out := make([]Job, len(m.jobs))
 	for i, j := range m.jobs {
+		if j.Status != "queued" && j.Status != "running" {
+			c := *j
+			c.Log, c.MapLines, c.Cmd = nil, nil, ""
+			c.Warnings = append([]string(nil), j.Warnings...)
+			c.Checks = append([]Check(nil), j.Checks...)
+			out[i] = c
+			continue
+		}
 		c := *j
 		c.Log = append([]string(nil), j.Log...)
 		c.MapLines = append([]string(nil), j.MapLines...)
@@ -304,10 +347,13 @@ func (m *Manager) fail(j *Job, err error) {
 
 // finish reports a job that reached an end state (copy, so the receiver may keep it).
 func (m *Manager) finish(j *Job) {
+	m.mu.Lock()
+	m.finished++
+	m.prune()
 	if m.OnFinish == nil {
+		m.mu.Unlock()
 		return
 	}
-	m.mu.Lock()
 	c := *j
 	c.Log = append([]string(nil), j.Log...)
 	c.Warnings = append([]string(nil), j.Warnings...)

@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -747,5 +748,51 @@ func TestHistory(t *testing.T) {
 	}
 	if r, _ := http.Get(ts.URL + "/api/history?kind=x"); r.StatusCode != 400 {
 		t.Error("ungültige Welt muss abgelehnt werden")
+	}
+}
+
+func TestStaticETagAndGzip(t *testing.T) {
+	s, _ := newTestServer(t, nil)
+	h := s.Handler()
+	get := func(path string, hdr map[string]string) *httptest.ResponseRecorder {
+		r := httptest.NewRequest("GET", path, nil)
+		for k, v := range hdr {
+			r.Header.Set(k, v)
+		}
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		return w
+	}
+	w := get("/app.js", nil)
+	if w.Code != 200 || w.Header().Get("ETag") == "" || !strings.Contains(w.Header().Get("Content-Type"), "javascript") {
+		t.Fatalf("app.js: %d %v", w.Code, w.Header())
+	}
+	if w.Header().Get("Content-Encoding") != "" {
+		t.Error("ohne Accept-Encoding darf nicht komprimiert werden")
+	}
+	plain := w.Body.Len()
+	if w2 := get("/app.js", map[string]string{"If-None-Match": w.Header().Get("ETag")}); w2.Code != 304 || w2.Body.Len() != 0 {
+		t.Errorf("erwartet 304, erhalten %d", w2.Code)
+	}
+	gz := get("/app.js", map[string]string{"Accept-Encoding": "gzip"})
+	if gz.Header().Get("Content-Encoding") != "gzip" || gz.Body.Len() >= plain {
+		t.Errorf("gzip fehlt oder nicht kleiner: %d vs %d", gz.Body.Len(), plain)
+	}
+	zr, err := gzip.NewReader(gz.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	un, _ := io.ReadAll(zr)
+	if !bytes.Equal(un, w.Body.Bytes()) {
+		t.Error("entpackter Inhalt weicht ab")
+	}
+	if p := get("/icon-192.png", map[string]string{"Accept-Encoding": "gzip"}); p.Code != 200 || p.Header().Get("Content-Encoding") != "" || p.Header().Get("Content-Type") != "image/png" {
+		t.Errorf("PNG: %d %v", p.Code, p.Header())
+	}
+	if get("/gibt-es-nicht.js", nil).Code != 404 {
+		t.Error("unbekannte Datei muss 404 liefern")
+	}
+	if get("/index.html", nil).Code != 200 || get("/", nil).Code != 200 {
+		t.Error("Startseite")
 	}
 }

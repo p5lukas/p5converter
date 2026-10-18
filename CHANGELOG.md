@@ -1,5 +1,22 @@
 # Änderungen
 
+## 0.2.0 – 2026-10-18
+
+**Neu**
+- **Forced-Untertitel nach Größe erkennen:** Ist ein Untertitel in derselben Sprache viel kleiner als die vollständige Spur (unter 20 %, z. B. „38 statt 1.240 Zeilen“), schlägt das Programm „Als Forced markieren“ vor (Hinweis mit Begründung und Schild „Forced?“). Gelesen werden die Größenangaben, die mkvmerge in MKV-Dateien ablegt; fehlen sie, bleibt es beim Hinweis nach dem Titel. Es wird **nie still gesetzt**; nur wenn in den Sprach-Wünschen „Deutsch (Forced)“ als Standard-Untertitel steht, ist der erkannte Untertitel gleich vorausgewählt (in der Vorschau „Was passiert“ sichtbar, änderbar)
+- README: Hinweis auf [ULDAS](https://github.com/netplexflix/ULDAS) für Spuren ohne Sprachangabe
+
+**Schneller**
+- **Weboberfläche:** Dateien kommen mit ETag (unveränderte nur noch als „304“) und gzip (Skripte und Styles etwa 65 % kleiner)
+- **`/api/state` (jede Sekunde abgefragt):** beendete Aufträge tragen kein Log/Befehl mehr (steht im Verlauf), höchstens 500 beendete Aufträge im Speicher; ein Zähler „beendet“ löst das Neuladen des Verlaufs aus. Bei großen Staffeln bleibt die Oberfläche flüssig
+- Beim Start werden die Dateien höchstens 6 gleichzeitig gelesen (statt alle auf einmal); ein Reiter im Hintergrund fragt nur alle 5 Sekunden ab
+
+**Design**
+- Kopfzeile am Handy kompakter (etwa 15 px niedriger)
+
+**Tests**
+- Neu: Go-Tests für Auftragsliste (Strippen, Begrenzen, Zähler), ETag/gzip, Größenangaben der Untertitel; 6 weitere Fälle in `test-trkplan.js` (Forced erraten, Vorauswahl, eigene Entscheidung gewinnt)
+
 ## 0.1.7 – 2026-10-18
 
 **Geändert: Startseite aufgeräumt**

@@ -17,6 +17,7 @@
 - [ ] Optional: Image als multi-arch (amd64/arm64) bauen
 
 ## Vom Nutzer zu prüfen (nicht in der Sandbox möglich)
+- [ ] 0.2.0 Forced: Staffel mit mkvmerge-Untertiteln laden (Deutsch voll + Deutsch klein): erscheint „Forced?“ bzw. der Hinweis mit „nur N statt M Zeilen“, und ist mit dem Wunsch „Deutsch (Forced)“ der kleine Untertitel vorausgewählt und im Ergebnis (Plex neu analysieren) als Forced erkannt? Wirkt die Oberfläche bei einer großen Staffel flüssiger? Neue Windows-`.exe` (Aktionen-Lauf von `main`) ausprobieren
 - [ ] 0.1.7 Startseite: Kopfzeile (Konvertieren, Umbenennen, Verlauf mit Zähler) auf Desktop, iPhone/iPad (Handy: eigene Zeile unter den Welten) und als Web-App ansehen; startet „Datei X von Y“ bei einer Staffel richtig, zeigt der aktuelle Auftrag die grünen Haken bei Hardware-Encoding, bleibt die Warteschlange im Verlauf übersichtlich (laufende oben, beendete darunter)? Gefällt dir „Gerade nichts los“ statt des Kreises?
 - [ ] 0.1.6 Audio & Untertitel: eine ganze Staffel laden: sind die Gruppen richtig (gleiche Sprachen zusammen, Ausnahmen markiert)? Tabelle und Einzelansicht ansehen; Regel „DTS → AC-3“ anlegen (Vorschlag oder von Hand) und eine Datei umwandeln: stimmen Ton (nur DTS umgewandelt), Sprachen und Standard-Spur im Ergebnis (in Plex neu analysieren)? Einstellungen → Audio & Untertitel: Sprach-Wünsche als Rangliste (Deutsch, sonst Englisch; Untertitel „Deutsch Forced“ als Standard) – setzt das Programm sie bei deinen Dateien richtig? Regeln als Voreinstellung speichern und laden. Ist der Schritt jetzt übersichtlicher? Was fehlt noch?
 - [ ] 0.1.6 Encoder: „Bevorzugter Encoder“ = Quick Sync (Einstellungen → Hardware): steht im Video-Schritt „Automatisch (bevorzugt: Intel Quick Sync)“ und bei „Wird verwendet“ `hevc_qsv` + „Intel Quick Sync“? Nach „Zurücksetzen“ ebenfalls?
@@ -40,10 +41,13 @@
 - [x] Unraid: leere optionale Pfade (Audio/Video) und neuer Pfad `/config` (Rechte) ausprobieren (Nutzer: passt)
 
 ## Später
+- [ ] **Geparkt (Nutzer 18.10.: Werkzeug nicht überladen): Eigenschaften direkt ändern wie jmkvpropedit** – Schnellmodus „Nur Kennzeichen ändern“ mit `mkvpropedit` (Titel/Sprache/Forced/Standard einer MKV in Sekunden, ohne neu zu schreiben, verändert die Originaldatei, braucht mkvtoolnix im Image und im Installer). Wird nicht gebaut, solange das Neuschreiben mit ffmpeg ausreicht; wieder aufgreifen, wenn reine Kennzeichen-Korrekturen großer Dateien häufig werden
+- [ ] **Geparkt: Sprache von Text-Untertiteln und SDH per Wortlisten erkennen (Teil der ULDAS-Idee)** – nicht jetzt; vorerst nur Forced nach Größe (siehe oben). Ton-Sprache (Whisper) wird nicht eingebaut
 - [ ] Windows-App mit eigener Oberfläche (zuerst nur auf `dev`)
 - [ ] Linux-App (Fedora KDE) mit eigener Oberfläche
 
 ## Erledigt
+- [x] 0.2.0: **Forced-Untertitel nach Größe erkennen** (nur Vorschlag, bei Wunsch „Deutsch (Forced)“ vorausgewählt), README-Hinweis auf ULDAS, **schneller** (ETag/gzip, schlanker `/api/state`, begrenzte Probes, ruhiger Poll im Hintergrund), Kopfzeile am Handy kompakter; Tests (Go, `test-trkplan.js`)
 - [x] 0.1.7: **Startseite aufgeräumt**: Aktionen in der Kopfzeile, Schritte erst im Assistenten, gleich große Kacheln, Warteschlange im Verlauf, oben der aktuelle Auftrag („Datei X von Y“) bzw. „Gerade nichts los“; Zähler am Verlauf-Knopf; Test `ui-check-home.js`
 - [x] 0.1.6: **Audio & Untertitel neu**: Gruppen nach Sprachen (B) mit Umschalter auf Tabelle (C) und Einzelansicht; **Regeln nach Format** (erste passende gewinnt, Wirkung vor dem Start, als Voreinstellung speicherbar, Regel-Vorschläge); **Sprach-Wünsche** als Rangliste in den Einstellungen (behalten, Standard-Ton, Standard-Untertitel); „Nur diese Sprachen behalten“ entfällt; Beschriftung „Forced (erzwungene Untertitel)“; Tests (`test-trkplan.js`, `ui-check-trkgroups.js`, Go-Config)
 - [x] 0.1.6: **Bevorzugter Encoder** wirkt bei „Automatisch“ (Variante B); „Wird verwendet“ mit Hardware-Namen

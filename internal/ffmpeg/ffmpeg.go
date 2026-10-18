@@ -103,6 +103,10 @@ type Stream struct {
 	Default     bool   `json:"default,omitempty"`
 	Forced      bool   `json:"forced,omitempty"`
 	AttachedPic bool   `json:"attachedPic,omitempty"`
+	// Frames/Bytes: size of the track from the MKV statistics tags (NUMBER_OF_FRAMES/NUMBER_OF_BYTES; 0 = unknown).
+	// For subtitles frames = number of lines; used to guess forced subtitles by their size.
+	Frames int64 `json:"frames,omitempty"`
+	Bytes  int64 `json:"bytes,omitempty"`
 }
 
 type Info struct {
@@ -175,6 +179,9 @@ func (t Tools) Probe(ctx context.Context, path string) (*Info, error) {
 			Width: s.Width, Height: s.Height, PixFmt: s.PixFmt, BitRate: atoi(s.BitRate),
 			SampleRate: int(atoi(s.SampleRate)), Default: s.Disposition["default"] == 1, Forced: s.Disposition["forced"] == 1,
 			AttachedPic: s.Disposition["attached_pic"] == 1}
+		if st.Type == "subtitle" {
+			st.Frames, st.Bytes = statTag(tags, "number_of_frames"), statTag(tags, "number_of_bytes")
+		}
 		if st.Type == "video" {
 			st.BitDepth = bitDepth(s.PixFmt, int(atoi(s.BitsPerRaw)))
 		}
@@ -190,6 +197,21 @@ func (t Tools) Probe(ctx context.Context, path string) (*Info, error) {
 	}
 	info.TagsInStream = len(r.Format.Tags) == 0 && len(info.Tags) > 0
 	return info, nil
+}
+
+// statTag reads an MKV statistics tag; mkvmerge writes it with the language appended (NUMBER_OF_FRAMES-eng).
+func statTag(tags map[string]string, name string) int64 {
+	if v, ok := tags[name]; ok {
+		n, _ := strconv.ParseInt(strings.TrimSpace(v), 10, 64)
+		return n
+	}
+	for k, v := range tags {
+		if strings.HasPrefix(k, name+"-") {
+			n, _ := strconv.ParseInt(strings.TrimSpace(v), 10, 64)
+			return n
+		}
+	}
+	return 0
 }
 
 func bitDepth(pixFmt string, raw int) int {

@@ -120,6 +120,7 @@ function trkBadges(r, e) {
   if (!r.kept) b.push(h('span', {class: 'chip warn', title: why}, r.own ? 'wird entfernt' : (why ? 'wird entfernt (' + why.replace(/^Regel: /, '') + ')' : 'wird entfernt')));
   if (r.kept && r.def) b.push(h('span', {class: 'chip acc', title: 'Diese Spur startet der Player automatisch'}, 'Standard'));
   if (r.kept && r.forced && r.type === 'subtitle') b.push(h('span', {class: 'chip acc', title: 'Erzwungene Untertitel: werden nur bei fremdsprachigen Stellen gezeigt'}, 'Forced'));
+  if (r.kept && r.type === 'subtitle' && r.guess) b.push(h('span', {class: 'chip', title: `Nur ${r.guess.n} statt ${r.guess.of} ${r.guess.unit}: wahrscheinlich Forced`}, 'Forced?'));
   if (r.kept && r.action === 'encode' && r.type === 'audio') b.push(h('span', {class: 'chip ok', title: why}, r.own ? 'wird kleiner gemacht' : 'wird umgewandelt' + (r.codec ? ' (' + r.codec.toUpperCase() + ')' : '')));
   if (Object.keys(e).some(k => !['action', 'codec', 'kbps'].includes(k))) b.push(h('span', {class: 'chip'}, 'geändert'));
   return b;
@@ -214,6 +215,12 @@ function trkHints(f, info, plan) {
     if (r && r.kept && /forced|erzwungen|narrative|nur fremd/i.test(t) && !r.forced) {
       out.push({text: `Der Untertitel „${t}“ (Spur ${s.index}) sieht wie ein Forced-Untertitel (erzwungene Untertitel) aus, ist aber nicht so markiert. Plex zeigt ihn dann nicht von selbst bei fremdsprachigen Stellen (nur in MKV).`,
         btn: 'Als Forced markieren', fn: () => { trkSet(f, s.index, {forced: true}); trkRender(); }});
+    }
+  });
+  plan.tracks.forEach(r => {
+    if (r.kept && r.type === 'subtitle' && r.guess) {
+      out.push({text: `Der Untertitel ${langName(r.s.lang)} (Spur ${r.index}) hat nur ${r.guess.n} statt ${r.guess.of} ${r.guess.unit} wie die vollständige Spur und ist deshalb wahrscheinlich ein Forced-Untertitel (erzwungene Untertitel, nur bei fremdsprachigen Stellen). Er ist nicht so markiert.`,
+        btn: 'Als Forced markieren', fn: () => { trkSet(f, r.index, {forced: true}); trkRender(); }});
     }
   });
   plan.tracks.forEach(r => {
