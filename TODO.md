@@ -17,6 +17,8 @@
 - [ ] Optional: Image als multi-arch (amd64/arm64) bauen
 
 ## Vom Nutzer zu prüfen (nicht in der Sandbox möglich)
+- [ ] 0.1.6 Audio & Untertitel: eine ganze Staffel laden: sind die Gruppen richtig (gleiche Sprachen zusammen, Ausnahmen markiert)? Tabelle und Einzelansicht ansehen; Regel „DTS → AC-3“ anlegen (Vorschlag oder von Hand) und eine Datei umwandeln: stimmen Ton (nur DTS umgewandelt), Sprachen und Standard-Spur im Ergebnis (in Plex neu analysieren)? Einstellungen → Audio & Untertitel: Sprach-Wünsche als Rangliste (Deutsch, sonst Englisch; Untertitel „Deutsch Forced“ als Standard) – setzt das Programm sie bei deinen Dateien richtig? Regeln als Voreinstellung speichern und laden. Ist der Schritt jetzt übersichtlicher? Was fehlt noch?
+- [ ] 0.1.6 Encoder: „Bevorzugter Encoder“ = Quick Sync (Einstellungen → Hardware): steht im Video-Schritt „Automatisch (bevorzugt: Intel Quick Sync)“ und bei „Wird verwendet“ `hevc_qsv` + „Intel Quick Sync“? Nach „Zurücksetzen“ ebenfalls?
 - [ ] 0.1.5 Verlauf: Startseite → „Verlauf“ ansehen (Desktop und iPhone/iPad): erscheinen fertige, fehlgeschlagene und abgebrochene Aufträge je Welt? Bleibt der Verlauf nach „Fertige entfernen“ und nach einem Neustart des Containers (Unraid: /config muss beschreibbar sein)? Suche, Filter, Details, CSV-Export (öffnet sich in Excel mit Umlauten?), „Verlauf leeren“
 - [ ] 0.1.5 Benennen/Umbenennen: Ersetzungsregeln ohne „Regex“ und „Aa“ ansehen; funktionieren deine bisherigen Ersetzungen weiter?
 - [ ] 0.1.4 Kontrolle nach dem Konvertieren: im letzten Schritt „Ergebnis prüfen & Original“ ansehen (Desktop und iPhone/iPad); eine echte Datei mit A + B + „Quelldatei löschen“ umwandeln: steht am Auftrag „✓ geprüft“, ist das Original danach weg (Schonfrist gibt es seit 0.1.5 nicht mehr)? Wie lange braucht der Decode-Test bei einem echten Film (die Zeitangaben sind Schätzwerte)? Stimmen die Wörter „kaum/etwas/viel länger“?
@@ -41,6 +43,8 @@
 - [ ] Linux-App (Fedora KDE) mit eigener Oberfläche
 
 ## Erledigt
+- [x] 0.1.6: **Audio & Untertitel neu**: Gruppen nach Sprachen (B) mit Umschalter auf Tabelle (C) und Einzelansicht; **Regeln nach Format** (erste passende gewinnt, Wirkung vor dem Start, als Voreinstellung speicherbar, Regel-Vorschläge); **Sprach-Wünsche** als Rangliste in den Einstellungen (behalten, Standard-Ton, Standard-Untertitel); „Nur diese Sprachen behalten“ entfällt; Beschriftung „Forced (erzwungene Untertitel)“; Tests (`test-trkplan.js`, `ui-check-trkgroups.js`, Go-Config)
+- [x] 0.1.6: **Bevorzugter Encoder** wirkt bei „Automatisch“ (Variante B); „Wird verwendet“ mit Hardware-Namen
 - [x] 0.1.5: **Verlauf der Konvertierungen** (Variante B): letzte 100 Einträge je Welt, `history.json` in /config, Suche, Filter, Details, CSV, Leeren je Welt; Tests (Go: Speicher, 100er-Grenze, Welten getrennt, Neustart, API, CSV; UI-Prüfung `ui-check-history.js`)
 - [x] 0.1.5: **Schonfrist/„Papierkorb“ wieder entfernt** (war nie genutzt, keine Übergangslösung)
 - [x] 0.1.5: **Ersetzen ohne „Regex“ und „Aa“** (reiner Text, Groß-/Kleinschreibung egal; alte Felder werden ignoriert)

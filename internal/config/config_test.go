@@ -115,3 +115,30 @@ func TestOldGraceFieldsIgnored(t *testing.T) {
 		t.Errorf("%+v", s.Verify)
 	}
 }
+
+func TestTrackPrefsCleanedAndLimited(t *testing.T) {
+	in := Defaults()
+	in.Presets = nil
+	in.TrackPrefs = TrackPrefs{AudioKeep: []string{"GER", " eng ", "ger"}, AudioDefault: []string{"ger", "eng"}, SubDefault: []SubPref{{"ger", true}, {"GER", true}, {"ger", false}}}
+	out, err := Validate(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tp := out.TrackPrefs
+	if len(tp.AudioKeep) != 2 || tp.AudioKeep[0] != "ger" || tp.AudioKeep[1] != "eng" || len(tp.SubDefault) != 2 || tp.SubKeep == nil {
+		t.Errorf("Wünsche nicht bereinigt: %+v", tp)
+	}
+	bad := Defaults()
+	bad.Presets = nil
+	bad.TrackPrefs.AudioKeep = []string{"deutsch1"}
+	if _, err := Validate(bad); err == nil {
+		t.Error("ungültiger Sprachcode muss abgelehnt werden")
+	}
+	// das Vorkommen in Voreinstellungen: Codec-Regeln sind ein erlaubtes Feld
+	p := Defaults()
+	p.Presets = []Preset{{ID: "x", Name: "R", World: "video", Values: map[string]any{"vTrkRules": `{"audio":[]}`, "bogus": "x"}}}
+	got, err := Validate(p)
+	if err != nil || got.Presets[0].Values["vTrkRules"] == nil || got.Presets[0].Values["bogus"] != nil {
+		t.Errorf("vTrkRules muss in Voreinstellungen erlaubt sein: %+v %v", got.Presets, err)
+	}
+}

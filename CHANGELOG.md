@@ -1,5 +1,21 @@
 # Änderungen
 
+## 0.1.6 – 2026-10-18
+
+**Neu: „Audio & Untertitel“ neu gebaut (Videowelt)**
+- **Gruppen statt Einzeldateien:** alle Dateien werden nach ihren **Sprachen** zusammengefasst (z. B. „22 Folgen: Deutsch, Englisch, Untertitel Deutsch/Englisch“ und „2 Folgen: nur Englisch“). Je Gruppe stehen die Sprachen als Haken (gilt für die ganze Gruppe), eine Vorschau „Was passiert“ (Beispiel-Datei) und die Dateiliste. Abweichende Gruppen sind markiert. Oben steht die Gesamtwirkung („12 Spuren entfernt, 5 umgewandelt …“)
+- **Umschalter Gruppen / Tabelle / Einzelne Dateien:** die **Tabelle** zeigt alle Dateien als Zeilen und alle Sprachen als Spalten mit Haken (Spaltenhaken gilt für alle Dateien); „Einzelne Dateien“ sind die bisherigen Spurkarten
+- **Regeln nach Format** (Ton und Untertitel): z. B. „nur DTS → umwandeln in AC-3 192 kbit/s je Stereo-Paar, alles andere unverändert“, auch nach Kanälen (Surround/Stereo), „entfernen“ und für Untertitel „Bild-Untertitel (PGS/VobSub) entfernen“. Die erste passende Regel gewinnt, eigene Änderungen gehen vor. Das Programm **schlägt Regeln vor**, wenn es passende Spuren findet (DTS, TrueHD, Bild-Untertitel). Die Regeln sind als **Voreinstellung speicherbar**
+- **Sprach-Wünsche** (Einstellungen → Audio & Untertitel): Rangliste wie bei p5assets (Ziehgriff, ▲ ▼, ✕, „Sprache hinzufügen“) für: Ton behalten, Standard-Ton („Deutsch, sonst Englisch“), Untertitel behalten, Standard-Untertitel (z. B. „Deutsch (Forced)“ zuerst). Das Programm setzt das im Schritt automatisch (abschaltbar, jede Spur änderbar); die Tipps berücksichtigen es. Hat eine Datei keine der gewünschten Sprachen, wird nichts entfernt (Hinweis)
+- „Nur diese Sprachen behalten“ am Anfang des Schritts entfällt (steckt in den Sprach-Wünschen); die Wirkung steht auch in der Zusammenfassung
+- Beschriftung: „Forced (erzwungene Untertitel)“ statt „Nur bei fremdsprachigen Stellen zeigen (Forced)“
+
+**Behoben**
+- **Bevorzugter Encoder** (Einstellungen → Hardware) wirkte nur beim allerersten Besuch: „Automatisch“ nimmt jetzt den bevorzugten Encoder, wenn er für den Codec nutzbar ist (Auswahl heißt dann „Automatisch (bevorzugt: Intel Quick Sync)“); eine bewusst gewählte Hardware im Assistenten gilt immer. Auch „Zurücksetzen“ stellt nicht mehr auf „schnellste verfügbare“ zurück
+- „Wird verwendet“ zeigt den Encoder zusammen mit dem Hardware-Namen (z. B. `hevc_qsv` · Intel Quick Sync)
+
+**Intern**
+- `web/trkplan.js`: die Berechnung (Regeln, Wünsche, Standard-Spur, Gruppen) ist reine Logik und wird mit `tools/test-trkplan.js` getestet (auch in der CI); neue UI-Prüfung `tools/ui-check-trkgroups.js`
 ## 0.1.5 – 2026-10-17
 
 **Neu**
