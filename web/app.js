@@ -89,7 +89,7 @@ function setWorld(w, animate) {
   refreshVideoUI();
   renderStartInfo();
   syncNameUI();
-  renderConc(); renderQueue(); renderHero(); renderWorldBadges(); renderSaved();
+  renderConc(); renderQueue(); renderHero(); renderHistBadge(); renderWorldBadges(); renderSaved();
   S.step = 'start'; applySteps();
   saveSettings();
 }
@@ -375,9 +375,10 @@ function decoderBadge(j) {
   return `<span class="chip ${j.hwDecodeFallback ? 'warn' : ''}" title="Die Quelldatei wird auf der CPU gelesen${j.hwDecodeFallback ? ' (Hardware ging bei dieser Datei nicht)' : ' (so eingestellt)'}. Das Ergebnis ist gleich gut, nur die CPU hat mehr zu tun.">Lesen: CPU</span>`;
 }
 function renderQueue() {
-  const q = $('#queue'), mine = S.jobs.filter(j => j.kind === S.world);
+  // die Warteschlange zeigt nur laufende und wartende Aufträge; beendete stehen darunter im Verlauf
+  const q = $('#queue'), mine = S.jobs.filter(j => j.kind === S.world && (j.status === 'queued' || j.status === 'running'));
   $('#queueWorld').textContent = '· ' + W(S.world).name;
-  if (!mine.length) { q.innerHTML = '<div class="empty" style="margin-top:8px">Keine Aufträge in ' + esc(W(S.world).name) + '.</div>'; return; }
+  if (!mine.length) { q.innerHTML = '<div class="empty" style="margin-top:8px">Keine laufenden oder wartenden Aufträge in ' + esc(W(S.world).name) + '. Beendete Aufträge stehen unten im Verlauf.</div>'; return; }
   q.innerHTML = mine.slice().reverse().map(j => {
     const meta = [];
     if (j.status === 'running') {
@@ -457,20 +458,49 @@ function renderMonitor() {
   }
   [...box.children].forEach(c => { if (!keep.includes(c.dataset.m)) c.remove(); });
 }
-function renderHero() {
-  const c = {queued: 0, running: 0, done: 0, error: 0, other: 0};
-  let prog = 0;
-  const mine = S.jobs.filter(j => j.kind === S.world);
+// Aufträge einer Welt, die zum aktuellen Durchlauf gehören: alle, deren Zeitraum (angelegt → beendet) sich mit den noch aktiven überlappt.
+// So zählt „Datei 4 von 13“ nur den laufenden Durchlauf, auch nach dem Neuladen der Seite (die Zeiten kommen vom Server).
+function currentBatch(world) {
+  const mine = S.jobs.filter(j => j.kind === world).slice().sort((a, b) => new Date(a.created) - new Date(b.created));
+  const now = Date.now(), end = j => (j.status === 'queued' || j.status === 'running') ? now : new Date(j.ended).getTime() || now;
+  let comps = [], cur = null;
   mine.forEach(j => {
-    if (j.status in c) c[j.status]++; else c.other++;
-    prog += j.status === 'running' ? j.progress : (j.status === 'queued' ? 0 : 100);
+    const s = new Date(j.created).getTime(), e = end(j);
+    if (cur && s <= cur.end + 1500) { cur.jobs.push(j); cur.end = Math.max(cur.end, e); } else { cur = {jobs: [j], end: e}; comps.push(cur); }
   });
-  const total = mine.length, pct = total ? Math.round(prog / total) : 0;
-  $('#stFiles').textContent = S.files[S.world].length;
-  $('#stQueued').textContent = c.queued; $('#stRun').textContent = c.running;
-  $('#stDone').textContent = c.done; $('#stErr').textContent = c.error;
-  $('#ring').style.setProperty('--p', pct);
-  $('#ringTxt').textContent = total ? pct + '%' : '–';
+  const active = comps.find(c => c.jobs.some(j => j.status === 'queued' || j.status === 'running'));
+  return active ? active.jobs : [];
+}
+// Kopfbereich der Startseite: der aktuelle Auftrag („Datei 4 von 13“, Fortschritt, Hardware mit Haken) oder „Gerade nichts los“
+function renderHero() {
+  const box = $('#jobNow'); if (!box) return;
+  const batch = currentBatch(S.world), total = batch.length;
+  const running = batch.filter(j => j.status === 'running').sort((a, b) => new Date(a.started) - new Date(b.started));
+  const cur = running[0] || batch.find(j => j.status === 'queued');
+  if (!cur) {
+    box.className = 'jobnow idle';
+    box.innerHTML = '<div class="jn-title">Gerade nichts los</div><div class="muted small">Mit „Konvertieren“ oben startest du einen neuen Auftrag. Laufende Aufträge erscheinen hier; beendete stehen im Verlauf.</div>';
+    return;
+  }
+  const finished = batch.filter(j => !(j.status === 'queued' || j.status === 'running')).length;
+  const pos = Math.min(total, finished + 1);
+  const overall = Math.round(batch.reduce((a, j) => a + (j.status === 'running' ? j.progress : j.status === 'queued' ? 0 : 100), 0) / total);
+  const meta = [];
+  if (cur.status === 'running') { if (cur.speed) meta.push('Speed ' + esc(cur.speed)); if (cur.fps) meta.push(cur.fps.toFixed(0) + ' fps'); if (cur.eta) meta.push('noch ' + fmtTime(cur.eta)); }
+  box.className = 'jobnow';
+  box.innerHTML = `<div class="jn-title">Datei ${pos} von ${total}${running.length > 1 ? ` <span class="muted small">(${running.length} laufen parallel)</span>` : ''}</div>
+    <div class="jn-name" title="${esc(cur.input)}">${esc(cur.name)}</div>
+    <div class="bar"><i style="width:${cur.progress.toFixed(1)}%"></i></div>
+    <div class="job-m"><span>${cur.progress.toFixed(1)} %</span>${meta.map(m => `<span>${m}</span>`).join('')}</div>
+    <div class="jn-chips">${statusChip(cur)}${encoderBadge(cur)}${decoderBadge(cur)}</div>
+    ${total > 1 ? `<div class="jn-all"><span class="muted small">Gesamt ${overall} %</span><div class="bar thin"><i style="width:${overall}%"></i></div></div>` : ''}`;
+}
+// Zähler am Verlauf-Knopf: laufende und wartende Aufträge der gewählten Welt
+function renderHistBadge() {
+  const n = S.jobs.filter(j => j.kind === S.world && (j.status === 'running' || j.status === 'queued')).length;
+  const el = $('#histBadge'); if (!el) return;
+  el.textContent = n || ''; el.classList.toggle('hidden', !n);
+  $('#startHistory').title = n ? `Verlauf und Warteschlange (${n} ${n === 1 ? 'Auftrag läuft oder wartet' : 'Aufträge laufen oder warten'})` : 'Verlauf und Warteschlange';
 }
 // „Parallel“ gilt für die gerade gewählte Welt; an den Welt-Knöpfen zeigt ein Zähler, wo etwas läuft oder wartet
 function renderConc() {
@@ -491,7 +521,10 @@ async function poll() {
     S.jobs = d.jobs; S.stats = d.stats; S.conc = d.concurrency;
     const savedChanged = JSON.stringify(S.saved) !== JSON.stringify(d.saved); S.saved = d.saved; if (savedChanged) renderSaved();
     renderConc(); renderWorldBadges();
-    renderQueue(); renderMonitor(); renderHero();
+    const fin = S.jobs.filter(j => !(j.status === 'queued' || j.status === 'running')).length;
+    renderQueue(); renderMonitor(); renderHero(); renderHistBadge();
+    if (S.histFin !== undefined && fin !== S.histFin && typeof S.histReload === 'function') S.histReload(); // ein Auftrag ist beendet: Verlauf sofort neu laden
+    S.histFin = fin;
   } catch (e) {} finally { polling = false; }
 }
 
@@ -665,7 +698,7 @@ function wire() {
     S.stopped = true;
   };
   $('#cancelAll').onclick = () => api('/api/jobs/cancel-all', {kind: S.world}).then(poll);
-  $('#clearDone').onclick = () => api('/api/jobs/clear', {kind: S.world}).then(poll);
+  $('#histBack').onclick = () => { location.hash = ''; };
   $('#conc').onchange = () => api('/api/concurrency', {kind: S.world, n: +$('#conc').value});
   wireVerify(); wireCrf();
   $('#hwRedetect').onclick = async () => { await api('/api/hw/detect', {}); S.info.hw.done = false; S.info.hw.backends = []; renderHwCard(); setTimeout(loadInfo, 800); };

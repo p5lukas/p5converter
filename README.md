@@ -88,13 +88,14 @@ Zielordner mit Struktur oder Namensmuster (`{artist}/{album}/{track} - {title}`)
 * **Terminal-Symbol** in der Kopfzeile: Log-Seite mit Suche, Stufenfilter, Live-Ansicht, Download und „Leeren“; Zähler für neue Warnungen/Fehler. Datei: `/config/logs/p5converter.log` (rotierend). Passwörter, Cookies und Tokens werden nie geschrieben.
 
 ### Ablauf in Schritten
-* **Startseite:** Statistik, Auslastung, Hardware, **gewonnener Platz** (je Welt eigene Zählung, mit „Zurücksetzen“) und Warteschlange, dazu „Konvertierung starten“ und „Umbenennen starten“
+* **Kopfzeile:** „Konvertieren“, „Umbenennen“ und „Verlauf“ (mit Zähler für laufende und wartende Aufträge) sind in jeder Ansicht erreichbar
+* **Startseite:** oben der **aktuelle Auftrag** („Datei 4 von 13“ mit Fortschritt, Geschwindigkeit und Hardware mit grünen Haken) oder „Gerade nichts los“, daneben die Live-Auslastung; darunter gleich große Kacheln **Gewonnener Platz** (je Welt eigene Zählung, mit „Zurücksetzen“) und **Hardware**. Die Schritt-Reiter erscheinen erst, wenn man den Assistenten startet
 * **Konvertieren:** Dateien → Ziel → Benennen → Einstellungen (Video: Video, dann Audio & Untertitel · Audio: Format) → **Zusammenfassung** → Start (Voreinstellungen gibt es nur im Schritt „Video“ bzw. „Einstellungen“; „Zurücksetzen“ stellt die gewählte Welt auf „Remux“ zurück); oben als Reiter anklickbar, unten Zurück/Weiter; danach zurück zur Startseite mit der laufenden Warteschlange
 
 ### Verlauf
-* **Startseite → Verlauf:** die letzten **100** beendeten Aufträge je Welt (Audio und Video getrennt, gespeichert in `/config`, bleibt nach „Fertige entfernen“ und Neustart): Ergebnis, Größe vorher/nachher, Dauer, Prüfergebnis, bei Fehlern ffmpeg-Befehl und Log · Suche, Filter nach Ergebnis und Zeitraum · **CSV-Export** · „Verlauf leeren“ (nur die gewählte Welt)
+* **Kopfzeile → Verlauf:** oben die Warteschlange (laufende und wartende Aufträge, „Parallel“, „Alle abbrechen“), darunter die letzten **100** beendeten Aufträge je Welt (Audio und Video getrennt, gespeichert in `/config`, bleibt nach „Fertige entfernen“ und Neustart): Ergebnis, Größe vorher/nachher, Dauer, Prüfergebnis, bei Fehlern ffmpeg-Befehl und Log · Suche, Filter nach Ergebnis und Zeitraum · **CSV-Export** · „Verlauf leeren“ (nur die gewählte Welt)
 
-### Warteschlange
+### Warteschlange (auf der Seite „Verlauf“)
 * **Je Welt eine eigene Warteschlange** (Audio/Video) mit eigener Anzahl paralleler Aufträge; Farben: grün = geklappt, gelb = Hinweis/Ausweichweg, rot = Fehler; „Schreiben“/„Lesen“ mit Haken, wenn ffmpeg die Hardware bestätigt hat
 * **Abbrechen räumt auf**: unfertige Datei und vom Auftrag neu angelegte leere Ordner werden gelöscht; Reste eines Absturzes beim nächsten Start; die Quelldatei bleibt unberührt
 * **Auslastung** von CPU und Grafik/Videoeinheit live (auch im Leerlauf)
