@@ -1,11 +1,47 @@
-<p align="center"><img src="web/icon-512.png" alt="p5converter" width="160"></p>
+<div align="center">
+
+<img src="web/icon-512.png" alt="p5converter" width="128">
 
 # p5converter
 
-Audio- und Video-Konverter mit Web-Oberfläche für **Unraid / Docker** – ein SoundConverter-Klon mit zusätzlicher Video-Welt.
-Ein einzelnes Go-Programm (nur Standardbibliothek) steuert **ffmpeg** an; das Docker-Image bringt alles mit (ffmpeg mit x264/x265/SVT-AV1, Intel-/AMD-Treiber für Quick Sync/VAAPI).
+**Audio und Video konvertieren – mit Hardware-Beschleunigung, Kontrolle nach dem Umwandeln und Web-Oberfläche im Matrix-Look.**
 
-> **Status: v0.0.x Vorabversion** (aktuell 0.0.8, siehe `CHANGELOG.md`). Windows- und Linux-Desktop-App (mit eigener Oberfläche) folgen später.
+Ein einzelnes Go-Programm steuert **ffmpeg** an. Läuft als Docker-Container auf **Unraid**, als **Windows-App** (Vorabversion) – und später als Linux-App.
+Ein SoundConverter-Klon mit zusätzlicher Video-Welt, gebaut für ganze Serien-Staffeln und Plex.
+
+![Docker](https://img.shields.io/badge/Docker-ghcr.io%2Fp5lukas%2Fp5converter-00ff5a?logo=docker&logoColor=white&labelColor=0a1a0f)
+![Unraid](https://img.shields.io/badge/Unraid-Template-00ff5a?labelColor=0a1a0f)
+![Windows](https://img.shields.io/badge/Windows-Vorabversion-ffcc00?labelColor=0a1a0f)
+![Version](https://img.shields.io/badge/Version-0.2.0-00ff5a?labelColor=0a1a0f)
+![Lizenz](https://img.shields.io/badge/Lizenz-MIT-00ff5a?labelColor=0a1a0f)
+
+<img src="docs/images/start.png" alt="Startseite mit laufendem Auftrag" width="900">
+
+<sub>Alle Dateinamen in den Bildern sind Testdateien.</sub>
+
+</div>
+
+> *English in short:* p5converter is a self-hosted web UI (single Go binary + ffmpeg) to convert audio and video. It supports
+> Intel Quick Sync, NVIDIA NVENC, AMD AMF and VAAPI, per-track audio/subtitle rules for whole seasons (e.g. DTS → AC-3, keep only German/English,
+> forced-subtitle detection), automatic CRF suggestions, a post-conversion check (tracks, length, full decode) before originals are touched, a
+> conversion history, renaming, and a Windows app. Docker image: `ghcr.io/p5lukas/p5converter:latest` (stable) or `:dev`, default port 8787.
+
+## Auf einen Blick
+* **Audio und Video getrennt** („Welten“ mit eigener Farbe), Voreinstellungen, Umbenennen mit Live-Vorschau
+* **Hardware-Encoding** (Quick Sync, NVENC, AMF, VAAPI) mit sichtbarer Bestätigung, ob Schreiben und Lesen wirklich auf der Hardware laufen
+* **Audio & Untertitel für ganze Staffeln:** Gruppen nach Sprachen, Regeln nach Format, Sprach-Wünsche, Forced-Erkennung
+* **Kontrolle nach dem Konvertieren:** Spuren, Laufzeit, Größe und auf Wunsch ein kompletter Decode-Test, bevor ein Original gelöscht wird
+* **Verlauf** der letzten 100 Aufträge je Welt (mit CSV-Export), **gewonnener Platz**, Live-Auslastung
+* **Handy und Tablet:** als Web-App auf dem Home-Bildschirm nutzbar
+
+<table>
+<tr>
+<td width="50%"><img src="docs/images/spuren.png" alt="Audio und Untertitel: Gruppen"><br><sub>Audio &amp; Untertitel: eine Staffel in Gruppen, Regel-Vorschläge</sub></td>
+<td width="50%"><img src="docs/images/verlauf.png" alt="Verlauf und Warteschlange"><br><sub>Warteschlange und Verlauf</sub></td>
+</tr>
+</table>
+
+<p align="center"><img src="docs/images/mobil.png" alt="Mobile Ansicht" width="280"><br><sub>Mobil / iPhone</sub></p>
 
 ## App-Icon
 Gleicher Aufbau wie bei **p5assets** (Matrix-Regen, Poster-Rahmen, „p5“); das Abzeichen unten rechts unterscheidet die Apps: bei p5converter **silberne Audio-CD + blaue Blu-ray** (Audio und Video), bei p5assets ein oranger Komet. Dateien: `web/icon*.png`, `web/apple-touch-icon.png` (iPhone/iPad-Web-App), `unraid/icon.png`; Quelle und Erzeugung: `tools/icons/` (`make_icons.py converter <Ordner>`).
