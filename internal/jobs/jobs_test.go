@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -254,5 +255,36 @@ func TestOnDoneReportsSizes(t *testing.T) {
 		}
 	case <-time.After(10 * time.Second):
 		t.Fatal("OnDone wurde nicht aufgerufen")
+	}
+}
+
+func TestSnapshotStripsFinishedAndPrunes(t *testing.T) {
+	m := &Manager{reserved: map[string]string{}, concurrency: map[string]int{}, running: map[string]int{}}
+	for i := 0; i < maxKept+20; i++ {
+		m.jobs = append(m.jobs, &Job{ID: fmt.Sprint("j", i), Status: "done", Cmd: "ffmpeg", Log: []string{"a"}, MapLines: []string{"b"}})
+	}
+	m.jobs = append(m.jobs, &Job{ID: "run", Status: "running", Cmd: "ffmpeg", Log: []string{"a"}}, &Job{ID: "q", Status: "queued"})
+	m.finish(m.jobs[0])
+	s := m.Snapshot()
+	if len(s) != maxKept+2 {
+		t.Fatalf("erwartet %d Aufträge, %d erhalten", maxKept+2, len(s))
+	}
+	if s[0].ID != "j20" {
+		t.Errorf("die ältesten beendeten müssen entfallen, erster ist %s", s[0].ID)
+	}
+	for _, j := range s {
+		switch j.Status {
+		case "done":
+			if j.Cmd != "" || len(j.Log) != 0 || len(j.MapLines) != 0 {
+				t.Fatalf("beendeter Auftrag %s trägt noch Log/Befehl", j.ID)
+			}
+		case "running":
+			if j.Cmd == "" || len(j.Log) != 1 {
+				t.Fatalf("laufender Auftrag verliert Log/Befehl")
+			}
+		}
+	}
+	if m.Finished() != 1 {
+		t.Errorf("Finished()=%d", m.Finished())
 	}
 }
