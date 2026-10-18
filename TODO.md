@@ -13,6 +13,7 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
+- [ ] **Startseite aufräumen (Nutzer 18.10.)**: (1) „Konvertierung starten“, „Umbenennen starten“ und „Verlauf“ wandern in die **Kopfzeile**; (2) die Schritt-Reiter („Start“ und 1–6) sind auf der Startseite **ausgeblendet** und erscheinen erst, wenn man den Assistenten startet; (3) die Kacheln **Hardware** und **Gewonnener Platz** werden **gleich groß**; (4) die **Warteschlange** zieht in den **Verlauf** um (Seite „Verlauf“ zeigt oben die laufenden und wartenden Aufträge mit Abbrechen usw., darunter die beendeten) und ist nicht mehr auf der Startseite; (5) im Kopfbereich der Startseite (dort, wo der Kreis mit den Zahlen und die Live-Auslastung sind) steht stattdessen der **aktuelle Auftrag**: z. B. „Datei 4 von 13“ mit Fortschrittsbalken und der aktuellen Hardware-Nutzung (Schreiben/Lesen mit den grünen Haken). Offen: Verhalten ohne laufenden Auftrag (Kreis mit Zähler wie heute?), mehrere parallele Aufträge, Darstellung am Handy (Kopfzeile ist schmal), Zähler-Schild am Verlauf-Knopf für Laufende/Wartende, alle Ansichten (Desktop, iPhone/iPad hoch/quer, Web-App)
 - [ ] **Windows-App: Folgearbeiten** (erste Version 0.1.1 steht auf `dev`): (1) ~~Tray~~ (erledigt in 0.1.2); (2) **Prüfung durch den Nutzer** auf dem Windows-PC (Fenster, Symbol, Hardware-Erkennung, echte Konvertierung, Deinstallation); (3) Größe der `setup.exe` aus dem CI-Lauf (Zusammenfassung „Größen“) mitteilen; (4) Linux-App danach; (5) Windows erst nach Freigabe nach `main`
 - [ ] Optional: Image als multi-arch (amd64/arm64) bauen
 
