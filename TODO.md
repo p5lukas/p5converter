@@ -13,6 +13,7 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
+- [ ] **Encoder/Hardware im Video-Schritt steht immer auf „Automatisch“, obwohl Quick Sync eingestellt ist (Nutzer 18.10., wahrscheinlich Fehler)**: Ursache (gelesen in `web/app.js` `applyDefaultsFromCfg` und `web/flow.js` `resetWorld`): der „Bevorzugte Encoder“ aus Einstellungen → Hardware wird nur übernommen, wenn im Browser noch keine eigene Wahl gespeichert ist; die Oberfläche speichert aber schon beim ersten Besuch „Automatisch“, danach greift die Einstellung nie wieder. „Zurücksetzen“ setzt ebenfalls auf „Automatisch“. Außerdem wirkt eine Voreinstellung mit Quick Sync nur nach Klick auf ihren Knopf. Varianten: A) der bevorzugte Encoder gilt immer beim Start und beim Zurücksetzen (eigene Wahl im Assistenten gilt nur bis zum Neuladen); B) er gilt, solange im Assistenten „Automatisch“ steht (eine bewusst gewählte andere Hardware bleibt gemerkt) – Empfehlung; C) wie B, dazu Hinweis „vorgewählt aus den Einstellungen“ neben der Auswahl. Dazu prüfen, welcher Weg gemeint ist (Einstellungen → Hardware oder eine Voreinstellung) und Test mit gesetztem bevorzugtem Encoder
 - [ ] **Windows-App: Folgearbeiten** (erste Version 0.1.1 steht auf `dev`): (1) ~~Tray~~ (erledigt in 0.1.2); (2) **Prüfung durch den Nutzer** auf dem Windows-PC (Fenster, Symbol, Hardware-Erkennung, echte Konvertierung, Deinstallation); (3) Größe der `setup.exe` aus dem CI-Lauf (Zusammenfassung „Größen“) mitteilen; (4) Linux-App danach; (5) Windows erst nach Freigabe nach `main`
 - [ ] Optional: Image als multi-arch (amd64/arm64) bauen
 
