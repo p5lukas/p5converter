@@ -1,5 +1,14 @@
 # Änderungen
 
+## 0.1.7 – 2026-10-18
+
+**Geändert: Startseite aufgeräumt**
+- **Kopfzeile:** „Konvertieren“, „Umbenennen“ und „Verlauf“ sitzen jetzt dort und gelten in jeder Ansicht (am Handy als eigene Zeile unter den Welten); am Verlauf-Knopf zeigt ein Zähler die laufenden und wartenden Aufträge
+- **Start und Schritte 1–6 sind auf der Startseite ausgeblendet** und erscheinen erst, wenn man den Assistenten startet
+- **Oben auf der Startseite statt des Kreises mit den Zahlen: der aktuelle Auftrag** („Datei 4 von 13“, Dateiname, Fortschrittsbalken, Speed/fps/Restzeit, Schreiben/Lesen mit den grünen Haken, bei mehr als einem Auftrag zusätzlich „Gesamt“); bei parallelen Aufträgen nur die gerade aktuelle Datei. Ohne Auftrag steht dort „Gerade nichts los“; die Live-Auslastung bleibt daneben
+- **Hardware** und **Gewonnener Platz** sind gleich groß
+- **Die Warteschlange ist in den Verlauf umgezogen** (Seite „Verlauf“: oben laufende und wartende Aufträge mit „Parallel“ und „Alle abbrechen“, darunter die beendeten). Beendete Aufträge verlassen die Warteschlange sofort und stehen im Verlauf; „Fertige entfernen“ entfällt. Der Verlauf zeigt jetzt auch die Bestätigung (✓) für Hardware-Schreiben und -Lesen
+
 ## 0.1.6 – 2026-10-18
 
 **Neu: „Audio & Untertitel“ neu gebaut (Videowelt)**

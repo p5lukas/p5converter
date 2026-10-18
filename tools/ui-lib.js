@@ -10,7 +10,11 @@ exports.url = process.env.P5_URL || 'http://127.0.0.1:8787';
 exports.SHOTS = process.env.SHOTS || '/tmp/shots';
 exports.INDIR = process.env.INDIR || '/tmp/media';
 // Reiter des Ablaufs anklicken (Start, files, dest, name, video/audio, tracks, summary)
-exports.goStep = async (p, id) => { await p.click(`[data-step-btn=${id}]`); await p.waitForTimeout(250); };
+// (die Reiter sind auf der Startseite ausgeblendet: zuerst den Assistenten starten)
+exports.goStep = async (p, id) => {
+  if (!(await p.isVisible('#steps'))) { if (id === 'start') return; await p.click('#startFlow'); await p.waitForTimeout(250); }
+  await p.click(`[data-step-btn=${id}]`); await p.waitForTimeout(250);
+};
 exports.setWorld = async (p, w) => { await p.click(`[data-world=${w}]`); await p.waitForTimeout(1300); };
 // Datei im Server-Browser auswählen (im Schritt „Dateien“)
 exports.addFile = async (p, name, btn = '#addFiles', add = '#bAddSel') => {

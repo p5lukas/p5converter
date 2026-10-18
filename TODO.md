@@ -17,6 +17,7 @@
 - [ ] Optional: Image als multi-arch (amd64/arm64) bauen
 
 ## Vom Nutzer zu prüfen (nicht in der Sandbox möglich)
+- [ ] 0.1.7 Startseite: Kopfzeile (Konvertieren, Umbenennen, Verlauf mit Zähler) auf Desktop, iPhone/iPad (Handy: eigene Zeile unter den Welten) und als Web-App ansehen; startet „Datei X von Y“ bei einer Staffel richtig, zeigt der aktuelle Auftrag die grünen Haken bei Hardware-Encoding, bleibt die Warteschlange im Verlauf übersichtlich (laufende oben, beendete darunter)? Gefällt dir „Gerade nichts los“ statt des Kreises?
 - [ ] 0.1.6 Audio & Untertitel: eine ganze Staffel laden: sind die Gruppen richtig (gleiche Sprachen zusammen, Ausnahmen markiert)? Tabelle und Einzelansicht ansehen; Regel „DTS → AC-3“ anlegen (Vorschlag oder von Hand) und eine Datei umwandeln: stimmen Ton (nur DTS umgewandelt), Sprachen und Standard-Spur im Ergebnis (in Plex neu analysieren)? Einstellungen → Audio & Untertitel: Sprach-Wünsche als Rangliste (Deutsch, sonst Englisch; Untertitel „Deutsch Forced“ als Standard) – setzt das Programm sie bei deinen Dateien richtig? Regeln als Voreinstellung speichern und laden. Ist der Schritt jetzt übersichtlicher? Was fehlt noch?
 - [ ] 0.1.6 Encoder: „Bevorzugter Encoder“ = Quick Sync (Einstellungen → Hardware): steht im Video-Schritt „Automatisch (bevorzugt: Intel Quick Sync)“ und bei „Wird verwendet“ `hevc_qsv` + „Intel Quick Sync“? Nach „Zurücksetzen“ ebenfalls?
 - [ ] 0.1.5 Verlauf: Startseite → „Verlauf“ ansehen (Desktop und iPhone/iPad): erscheinen fertige, fehlgeschlagene und abgebrochene Aufträge je Welt? Bleibt der Verlauf nach „Fertige entfernen“ und nach einem Neustart des Containers (Unraid: /config muss beschreibbar sein)? Suche, Filter, Details, CSV-Export (öffnet sich in Excel mit Umlauten?), „Verlauf leeren“
@@ -43,6 +44,7 @@
 - [ ] Linux-App (Fedora KDE) mit eigener Oberfläche
 
 ## Erledigt
+- [x] 0.1.7: **Startseite aufgeräumt**: Aktionen in der Kopfzeile, Schritte erst im Assistenten, gleich große Kacheln, Warteschlange im Verlauf, oben der aktuelle Auftrag („Datei X von Y“) bzw. „Gerade nichts los“; Zähler am Verlauf-Knopf; Test `ui-check-home.js`
 - [x] 0.1.6: **Audio & Untertitel neu**: Gruppen nach Sprachen (B) mit Umschalter auf Tabelle (C) und Einzelansicht; **Regeln nach Format** (erste passende gewinnt, Wirkung vor dem Start, als Voreinstellung speicherbar, Regel-Vorschläge); **Sprach-Wünsche** als Rangliste in den Einstellungen (behalten, Standard-Ton, Standard-Untertitel); „Nur diese Sprachen behalten“ entfällt; Beschriftung „Forced (erzwungene Untertitel)“; Tests (`test-trkplan.js`, `ui-check-trkgroups.js`, Go-Config)
 - [x] 0.1.6: **Bevorzugter Encoder** wirkt bei „Automatisch“ (Variante B); „Wird verwendet“ mit Hardware-Namen
 - [x] 0.1.5: **Verlauf der Konvertierungen** (Variante B): letzte 100 Einträge je Welt, `history.json` in /config, Suche, Filter, Details, CSV, Leeren je Welt; Tests (Go: Speicher, 100er-Grenze, Welten getrennt, Neustart, API, CSV; UI-Prüfung `ui-check-history.js`)

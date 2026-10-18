@@ -26,6 +26,7 @@ function applySteps() {
   $('#aPresets').classList.toggle('hidden', S.world !== 'audio');
   $('#vPresets').classList.toggle('hidden', S.world !== 'video');
   $('#stepnav').classList.toggle('hidden', S.step === 'start');
+  $('#steps').classList.toggle('hidden', S.step === 'start'); // Start und die Schritte erscheinen erst, wenn man den Assistenten startet
   $('#stepNext').classList.toggle('hidden', S.step === 'summary');
   $('#start').classList.toggle('hidden', S.step !== 'summary');
   $('#savePreset').classList.toggle('hidden', S.step !== 'summary');
@@ -174,7 +175,8 @@ function wireFlow() {
   $('#resetAll').onclick = openReset;
   $('#resetNo').onclick = () => $('#resetDlg').close();
   $('#resetYes').onclick = () => { $('#resetDlg').close(); resetWorld(); };
-  $('#startFlow').onclick = () => showStep('files');
+  // die drei Knöpfe sitzen in der Kopfzeile und gelten in jeder Ansicht: zuerst zur Hauptansicht; ein schon geöffneter Assistent bleibt, wo er war
+  $('#startFlow').onclick = () => { if (location.hash) location.hash = ''; showStep(S.step === 'start' ? 'files' : S.step); };
   $('#startRename').onclick = () => { location.hash = '#rename'; };
   $('#startHistory').onclick = () => { location.hash = '#history'; };
   $('#stepBack').onclick = () => stepMove(-1);

@@ -45,7 +45,7 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     await p.goto(BASE); await p.waitForTimeout(1200);
     await p.click('[data-world=video]'); await p.waitForTimeout(1800);
     // Voreinstellung speichern
-    await p.click('[data-step-btn=video]'); await p.waitForTimeout(250);
+    await p.click('#startFlow'); await p.waitForTimeout(300); await p.click('[data-step-btn=video]'); await p.waitForTimeout(250);
     await p.selectOption('#vCodec', 'hevc'); await p.selectOption('#vDepth', '10'); await p.fill('#vCrf', '19');
     await p.evaluate(() => { const e = document.querySelector('#vCrf'); e.value = 19; e.dispatchEvent(new Event('input', {bubbles: true})); });
     await p.click('[data-step-btn=summary]'); await p.waitForTimeout(250);

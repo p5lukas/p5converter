@@ -4,20 +4,20 @@
    Nutzt h(), fill(), icon(), api(), toast(), debounce(), fmtSize(), fmtTime(), W(), S aus den anderen Dateien. */
 
 let histTimer = null;
-function stopHistory() { clearInterval(histTimer); histTimer = null; }
+function stopHistory() { clearInterval(histTimer); histTimer = null; if (typeof S !== 'undefined') S.histReload = null; }
 
 const HIST_STATUS = {done: ['fertig', 'ok'], error: ['Fehler', 'err'], canceled: ['abgebrochen', 'warn'], skipped: ['übersprungen', 'warn']};
 const HIST_RANGE = [['all', 'Alle', 0], ['today', 'Heute', -1], ['7', 'Letzte 7 Tage', 7], ['30', 'Letzte 30 Tage', 30]];
 const fmtDateTime = d => { const x = new Date(d); return x.toLocaleDateString('de-DE') + ' ' + x.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'}); };
 
 async function historyPage() {
-  const root = $('#viewHistory');
+  const root = $('#historyBody');
   stopHistory();
   const st = {world: S.world, items: [], max: 100, persistent: true, q: '', status: 'all', range: 'all', open: new Set()};
   const list = h('div', {class: 'histlist'}), count = h('span', {class: 'muted small'}), chips = h('div', {class: 'lvlchips'}),
     q = h('input', {type: 'search', placeholder: 'Dateiname, Ordner, Meldung …', autocomplete: 'off'}),
     range = h('select', {onchange: () => { st.range = range.value; render(); }}, HIST_RANGE.map(r => h('option', {value: r[0]}, r[1]))),
-    note = h('div'), head = h('h1');
+    note = h('div');
 
   const visible = () => {
     const now = new Date(), start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -40,7 +40,8 @@ async function historyPage() {
       h('div', {class: 'hdet small'},
         h('div', {}, h('span', {class: 'muted'}, 'Quelle: '), e.input),
         e.output ? h('div', {}, h('span', {class: 'muted'}, 'Ziel: '), e.output) : null,
-        e.encoder ? h('div', {}, h('span', {class: 'muted'}, 'Encoder: '), e.encoder + (e.backend ? ' (' + e.backend + ')' : '') + (e.decoder ? ' · Lesen: ' + e.decoder : '')) : null,
+        e.encoder ? h('div', {}, h('span', {class: 'muted'}, 'Schreiben: '), (BACKEND_NAMES[e.backend] ? BACKEND_NAMES[e.backend] + ' · ' : '') + e.encoder + (e.encoderOk ? ' ✓' : ''),
+          e.decoder ? [h('span', {class: 'muted'}, '  ·  Lesen: '), e.decoder === 'hardware' ? 'Hardware' + (e.decoderOk ? ' ✓' : '') : 'CPU'] : null) : null,
         checks,
         (e.warnings || []).map(w => h('div', {class: 'warn'}, w)),
         e.error ? h('div', {style: 'color:var(--bad)'}, e.error) : null,
@@ -55,7 +56,7 @@ async function historyPage() {
     fill(chips, h('button', {type: 'button', class: 'lvl-chip all' + (st.status === 'all' ? ' on' : ''), onclick: () => { st.status = 'all'; render(); }}, 'Alle', h('small', {}, st.items.length)),
       Object.entries(HIST_STATUS).map(([k, [lbl]]) => h('button', {type: 'button', class: 'lvl-chip' + (st.status === k ? ' on' : ''), onclick: () => { st.status = k; render(); }}, lbl, h('small', {}, n(k)))));
     fill(note, st.persistent ? null : h('div', {class: 'banner warn'}, icon('warn'), ' Ohne beschreibbaren Ordner /config bleibt der Verlauf nur im Arbeitsspeicher und ist nach einem Neustart weg.'));
-    head.textContent = 'Verlauf · ' + W(st.world).name;
+    $('#histTitle').textContent = 'Verlauf · ' + W(st.world).name;
   }
   async function load() {
     if (location.hash !== '#history') return stopHistory();
@@ -68,7 +69,6 @@ async function historyPage() {
   q.oninput = debounce(() => { st.q = q.value; render(); }, 150);
 
   fill(root,
-    h('div', {class: 'sethead'}, h('button', {class: 'ghost', onclick: () => { location.hash = ''; }}, icon('back'), ' Zur Startseite'), head),
     note,
     h('div', {class: 'logcard'},
       h('div', {class: 'row wrap', style: 'align-items:flex-end'},
@@ -85,6 +85,7 @@ async function historyPage() {
     h('div', {class: 'logcard', style: 'padding:0;margin-top:18px'},
       h('div', {class: 'row loghead'}, h('b', {}, 'Konvertierungen'), h('div', {class: 'spacer'}), count),
       list));
+  S.histReload = load;
   await load();
   histTimer = setInterval(() => { if (S.world !== st.world) { st.world = S.world; st.open.clear(); } load(); }, 3000);
 }

@@ -46,7 +46,7 @@ const OUT = process.env.OUTDIR || '/tmp/out';
     ok(/Spuren vollständig/.test(t), name + ': Prüfergebnis fehlt in den Details');
     await p.screenshot({path: `${L.SHOTS}/p5c-hist-${name}-open.png`, fullPage: true});
     // Zeitraum „Heute“ zeigt die neuen Einträge
-    await p.selectOption('#viewHistory select', 'today'); await p.waitForTimeout(200);
+    await p.selectOption('#historyBody select', 'today'); await p.waitForTimeout(200);
     ok(await p.locator('.histentry').count() >= 2, name + ': Zeitraum „Heute“ blendet neue Einträge aus');
     // CSV-Link
     await p.locator('a.btnlink:has-text("CSV")').evaluate(a => a.dispatchEvent(new MouseEvent('click', {bubbles: true})));

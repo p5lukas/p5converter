@@ -20,25 +20,28 @@ type Check struct {
 
 // Entry is one finished job (status: done, error, canceled, skipped).
 type Entry struct {
-	ID       string    `json:"id"`
-	Kind     string    `json:"kind"` // audio | video
-	Name     string    `json:"name"`
-	Input    string    `json:"input"`
-	Output   string    `json:"output"`
-	Status   string    `json:"status"`
-	Ended    time.Time `json:"ended"`
-	Seconds  int       `json:"seconds"` // running time
-	SizeIn   int64     `json:"sizeIn"`
-	SizeOut  int64     `json:"sizeOut"`
-	Backend  string    `json:"backend,omitempty"`
-	Encoder  string    `json:"encoder,omitempty"`
-	Decoder  string    `json:"decoder,omitempty"`
-	Error    string    `json:"error,omitempty"`
-	Warnings []string  `json:"warnings,omitempty"`
-	Checks   []Check   `json:"checks,omitempty"`
-	CheckBad bool      `json:"checkFailed,omitempty"`
-	Cmd      string    `json:"cmd,omitempty"` // only kept for errors
-	Log      []string  `json:"log,omitempty"` // only kept for errors (last lines)
+	ID      string    `json:"id"`
+	Kind    string    `json:"kind"` // audio | video
+	Name    string    `json:"name"`
+	Input   string    `json:"input"`
+	Output  string    `json:"output"`
+	Status  string    `json:"status"`
+	Ended   time.Time `json:"ended"`
+	Seconds int       `json:"seconds"` // running time
+	SizeIn  int64     `json:"sizeIn"`
+	SizeOut int64     `json:"sizeOut"`
+	Backend string    `json:"backend,omitempty"`
+	Encoder string    `json:"encoder,omitempty"`
+	Decoder string    `json:"decoder,omitempty"`
+	// EncoderOK/DecoderOK: ffmpeg itself confirmed the hardware encoder/decoder (the green check marks)
+	EncoderOK bool     `json:"encoderOk,omitempty"`
+	DecoderOK bool     `json:"decoderOk,omitempty"`
+	Error     string   `json:"error,omitempty"`
+	Warnings  []string `json:"warnings,omitempty"`
+	Checks    []Check  `json:"checks,omitempty"`
+	CheckBad  bool     `json:"checkFailed,omitempty"`
+	Cmd       string   `json:"cmd,omitempty"` // only kept for errors
+	Log       []string `json:"log,omitempty"` // only kept for errors (last lines)
 }
 
 type Store struct {
