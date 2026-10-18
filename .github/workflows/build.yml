@@ -32,6 +32,8 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: go vet ./...
       - run: go test -race ./...
+      - name: Logik von Audio und Untertitel (Node)
+        run: node tools/test-trkplan.js
 
   docker:
     needs: test

@@ -24,6 +24,9 @@ grep -q 'golang.org/x/sys v0.33.0' go.mod || bad "go.mod: golang.org/x/sys v0.33
 step "JavaScript-Syntax (node --check)"
 for f in web/*.js tools/*.js; do node --check "$f" || bad "Syntax $f"; done
 
+step "Logik von Audio & Untertitel (web/trkplan.js, Node-Test)"
+node tools/test-trkplan.js || bad "tools/test-trkplan.js"
+
 step "web/embed.go: jede Datei aus index.html ist eingebettet und vorhanden"
 for f in $(grep -o 'src="[a-z0-9.-]*\.js"' web/index.html | sed 's/src="//;s/"//'); do
   [ -f "web/$f" ] || bad "web/$f fehlt"

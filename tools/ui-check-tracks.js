@@ -37,7 +37,7 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
     eq(name, 'Voreinstellungen im Schritt Video an', await p.isVisible('#presetBar'), true);
     await L.goStep(p, 'tracks');
     eq(name, 'Voreinstellungen im Schritt Spuren aus', await p.isVisible('#presetBar'), false);
-    await p.waitForSelector('#trackEditor .trkcard');
+    await p.waitForSelector('.trkviews'); await p.click('.trkviews button:has-text("Einzelne Dateien")'); await p.waitForSelector('#trackEditor .trkcard');
     eq(name, 'Karten (2 Ton + 2 Untertitel)', await p.locator('#trackEditor .trkcard').count(), 4);
     if (await ov() > 0) errs.push(`${name}: Überlauf im Spuren-Schritt: ${await ov()}px`);
     await p.screenshot({ path: `${L.SHOTS}/t-${name}-2-tracks.png`, fullPage: true });
@@ -82,7 +82,7 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
       }
     }
     // Assistent: Datei mit mehreren Sprachen und einem Forced-Untertitel ohne Markierung
-    await L.goStep(p, 'files'); await p.click('#clearFiles'); await L.addFile(p, 'hint.mkv'); await L.goStep(p, 'tracks'); await p.waitForSelector('#trackEditor .trkcard');
+    await L.goStep(p, 'files'); await p.click('#clearFiles'); await L.addFile(p, 'hint.mkv'); await L.goStep(p, 'tracks'); await p.waitForSelector('.trkviews'); await p.click('.trkviews button:has-text("Einzelne Dateien")'); await p.waitForSelector('#trackEditor .trkcard');
     const hintTxt = await p.textContent('#trackEditor .trkhints');
     if (!/Nur Deutsch und Englisch behalten/.test(hintTxt) || !/Als Forced markieren/.test(hintTxt)) errs.push(name + ': Assistent-Hinweise fehlen: ' + hintTxt);
     await p.screenshot({ path: `${L.SHOTS}/t-${name}-3b-hints.png`, fullPage: true });

@@ -93,6 +93,7 @@ async function renderSummary() {
   const nameParts = [pat ? 'Muster ' + pat : 'Originalname', suf ? 'Zusatz „' + suf + '“' : null, rules.length ? rules.length + (rules.length === 1 ? ' Ersetzung' : ' Ersetzungen') : null].filter(Boolean);
   const settings = describePreset({world: S.world, values: collectPresetValues(S.world)});
   const sp = h('span', {class: 'muted small'}, '');
+  let effect = null;
   const rows = [
     sumRow('Dateien', 'files', h('div', {}, files.length + (files.length === 1 ? ' Datei' : ' Dateien') + (files.length ? ' · ' + fmtSize(tot) : '')), files.length ? h('div', {class: 'muted small'}, names.join(' · ') + (files.length > 4 ? ' · … und ' + (files.length - 4) + ' weitere' : '')) : null),
     sumRow('Ziel', 'dest', h('div', {}, dir ? 'Ordner ' + dir : 'Neben der Quelldatei'), h('div', {class: 'muted small'}, existsTxt)),
@@ -102,14 +103,16 @@ async function renderSummary() {
   ];
   if (S.world === 'video') {
     const am = $('#vAudioMode').value === 'copy' ? 'Audiospuren unverändert' : 'Audio neu kodiert (' + $('#vAudioCodec').value.toUpperCase() + ' ' + $('#vAudioKbps').value + ' kbit/s)';
-    const al = $('#vAudioLangs').value.trim(), sl = $('#vSubLangs').value.trim();
     const sm = $('#vSubMode').value === 'none' ? 'Untertitel entfernt' : 'Untertitel unverändert';
-    const ed = trkEditedFiles();
-    rows.push(sumRow('Audio & Untertitel', 'tracks', h('div', {}, am + (al ? ' · nur ' + al : '')), h('div', {}, sm + (sl && $('#vSubMode').value !== 'none' ? ' · nur ' + sl : '')),
-      ed ? h('div', {class: 'muted small'}, 'Einzelne Spuren geändert bei ' + ed + (ed === 1 ? ' Datei' : ' Dateien')) : null));
+    const ed = trkEditedFiles(), tr = trkRules(), nr = tr.audio.length + tr.sub.length;
+    // Wirkung aller Regeln, Wünsche und eigenen Änderungen (liest bei Bedarf die Spuren aller Dateien)
+    effect = h('div', {class: 'muted small'}, files.length ? 'Wirkung wird berechnet …' : '');
+    rows.push(sumRow('Audio & Untertitel', 'tracks', h('div', {}, am + ' · ' + sm), effect,
+      nr || ed || (tr.usePrefs && trkHasPrefs()) ? h('div', {class: 'muted small'}, [nr ? nr + (nr === 1 ? ' Regel' : ' Regeln') : null, tr.usePrefs && trkHasPrefs() ? 'Sprach-Wünsche angewendet' : null, ed ? 'Einzelne Spuren geändert bei ' + ed + (ed === 1 ? ' Datei' : ' Dateien') : null].filter(Boolean).join(' · ')) : null));
   }
   fill($('#summaryBody'), warns.length ? h('div', {class: 'banner warn'}, warns.map(w => h('div', {}, icon('warn'), ' ' + w))) : null, rows);
   $('#start').disabled = !files.length || ($('#outMode').value === 'custom' && !dir);
+  if (effect && files.length) trkSummaryLines().then(l => { effect.textContent = l.join(' · '); }).catch(() => { effect.textContent = ''; });
   // Beispiel für den neuen Namen der ersten Datei
   if (files.length) {
     try {
@@ -137,7 +140,7 @@ function existsUI() {
 const DEST_FIELDS = ['outMode', 'outDir', 'outStruct', 'exists'];
 // Anfangswerte = die im HTML eingestellten; die Grundeinstellung ist „Remux“ (nichts wird umgewandelt)
 const RESET_OVERRIDES = {
-  video: {vContainer: 'mkv', vCodec: 'copy', vAudioMode: 'copy', vAudioLangs: '', vSubMode: 'copy', vSubLangs: ''},
+  video: {vContainer: 'mkv', vCodec: 'copy', vAudioMode: 'copy', vSubMode: 'copy', vTrkRules: ''},
   audio: {aFormat: 'flac'},
 };
 function captureDefaults() {

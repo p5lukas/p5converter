@@ -21,7 +21,7 @@ const SWENC = {h264: 'libx264', hevc: 'libx265', av1: 'libsvtav1', vp9: 'libvpx-
 
 // ---------- persisted settings ----------
 const FIELDS = ['outMode', 'outDir', 'outStruct', 'exists', 'aFormat', 'aMode', 'aQuality', 'aBitrate', 'aFlac', 'aWav', 'aRate', 'aCh',
-  'vContainer', 'vCodec', 'vBackend', 'vCrf', 'vPreset', 'vDepth', 'vHeight', 'vAudioMode', 'vAudioCodec', 'vAudioKbps', 'vAudioLangs', 'vSubMode', 'vSubLangs', 'vMaterial'];
+  'vContainer', 'vCodec', 'vBackend', 'vCrf', 'vPreset', 'vDepth', 'vHeight', 'vAudioMode', 'vAudioCodec', 'vAudioKbps', 'vSubMode', 'vTrkRules', 'vMaterial'];
 const CHECKS = ['aCover', 'vHwDec']; // „Quelldatei löschen“ wird bewusst NICHT gemerkt (verify.js, je Welt, nur für diesen Besuch)
 // Namensmuster, Zusatz und Ersetzungen gehören je Welt (Audio und Video getrennt)
 const NAME_FIELDS = ['pattern', 'suffix', 'renRules'];
@@ -131,10 +131,21 @@ function backendCaps(id) { return (hwResult().backends || []).find(b => b.id ===
 function workingBackends(codec) {
   return BACKEND_ORDER.filter(id => { const b = backendCaps(id); return b && b.codecs && b.codecs[codec]; });
 }
+// „Automatisch“ nimmt den bevorzugten Encoder aus Einstellungen → Hardware, wenn er für diesen Codec nutzbar ist, sonst den schnellsten
+// verfügbaren (eine bewusst gewählte Hardware im Assistenten gilt immer)
+function preferredFor(codec) {
+  const p = cfg().preferredBackend;
+  if (!p || p === 'auto') return null;
+  if (p === 'cpu') return 'cpu';
+  const b = backendCaps(p);
+  return b && b.codecs && b.codecs[codec] ? p : null;
+}
 function resolveBackend() {
   const codec = $('#vCodec').value, sel = $('#vBackend').value;
   if (codec === 'copy') return {id: 'copy'};
   if (sel !== 'auto') return {id: sel};
+  const p = preferredFor(codec);
+  if (p) return {id: p, auto: true, pref: true};
   const w = workingBackends(codec);
   return {id: w[0] || 'cpu', auto: true};
 }
@@ -142,7 +153,8 @@ function refreshVideoUI() {
   const codec = $('#vCodec').value, copy = codec === 'copy';
   // backend options
   const cur = $('#vBackend').value || 'auto';
-  const opts = ['<option value="auto">Automatisch (schnellste verfügbare)</option>'];
+  const prefId = preferredFor(codec);
+  const opts = ['<option value="auto">' + (prefId ? 'Automatisch (bevorzugt: ' + esc(BACKEND_FULL[prefId] || prefId) + ')' : 'Automatisch (schnellste verfügbare)') + '</option>'];
   BACKEND_ORDER.forEach(id => {
     const b = backendCaps(id);
     if (!b) return;
@@ -162,7 +174,7 @@ function refreshVideoUI() {
   if (copy) resolvedEl.innerHTML = '<span class="chip acc">Video wird kopiert</span>';
   else {
     const enc = encoderName(r.id, codec);
-    resolvedEl.innerHTML = `<b>${esc(enc)}</b> ${r.id === 'cpu' ? '<span class="chip">CPU</span>' : '<span class="chip ok">Hardware</span>'}` +
+    resolvedEl.innerHTML = `<b>${esc(enc)}</b> ${r.id === 'cpu' ? '<span class="chip">CPU</span>' : '<span class="chip ok">' + esc(BACKEND_FULL[r.id] || 'Hardware') + '</span>'}` + (r.pref ? ' <span class="muted small">(bevorzugt laut Einstellungen)</span>' : '') +
       (!hwResult().done ? ' <span class="muted small">Hardware-Erkennung läuft …</span>' : '');
   }
   const crf = $('#vCrf');
@@ -302,7 +314,7 @@ async function start() {
   if (!files.length) { toast('Bitte zuerst Dateien hinzufügen.', 'bad'); return; }
   const req = {
     kind,
-    items: files.map(f => ({path: f.path, rel: f.rel, overrides: kind === 'video' ? trackOverrides(f) : {}})),
+    items: await Promise.all(files.map(async f => ({path: f.path, rel: f.rel, overrides: kind === 'video' ? await trackOverridesFor(f) : {}}))),
     output: {
       dir: $('#outMode').value === 'custom' ? $('#outDir').value.trim() : '', structure: $('#outStruct').value,
       suffix: $('#suffix').value, pattern: $('#pattern').value.trim(), replace: cleanRules(nameRules()), exists: $('#exists').value,
@@ -320,8 +332,8 @@ async function start() {
     req.video = {container: $('#vContainer').value, codec: $('#vCodec').value, backend: r.id === 'copy' ? 'cpu' : r.id, crf: +$('#vCrf').value,
       preset: $('#vPreset').value, bitDepth: +$('#vDepth').value, height: +$('#vHeight').value, hwDecode: $('#vHwDec').checked,
       av1Aom: S.info && !S.info.encoders.libsvtav1 && S.info.encoders['libaom-av1'],
-      audioMode: $('#vAudioMode').value, audioCodec: $('#vAudioCodec').value, audioKbps: +$('#vAudioKbps').value, audioLangs: langs($('#vAudioLangs').value),
-      subMode: $('#vSubMode').value, subLangs: langs($('#vSubLangs').value)};
+      audioMode: $('#vAudioMode').value, audioCodec: $('#vAudioCodec').value, audioKbps: +$('#vAudioKbps').value, audioLangs: [],
+      subMode: $('#vSubMode').value, subLangs: []};
   }
   try {
     const r = await api('/api/jobs', req);
@@ -337,7 +349,8 @@ function statusChip(j) {
   const m = {queued: ['wartet', ''], running: ['läuft', 'acc'], done: ['fertig', 'ok'], error: ['Fehler', 'err'], canceled: ['abgebrochen', 'warn'], skipped: ['übersprungen', 'warn']}[j.status];
   return `<span class="chip ${m[1]}">${m[0]}</span>`;
 }
-const BACKEND_NAMES = {qsv: 'Quick Sync', nvenc: 'NVIDIA NVENC', vaapi: 'VAAPI', amf: 'AMD AMF', cpu: 'CPU'};
+const BACKEND_NAMES = {qsv: 'Intel Quick Sync', nvenc: 'NVIDIA NVENC', vaapi: 'VAAPI', amf: 'AMD AMF', cpu: 'CPU'};
+const BACKEND_FULL = BACKEND_NAMES;
 // „Schreiben“ = Encoder, „Lesen“ = Decoder: zwei getrennte Angaben mit gleicher Logik –
 // grün + Haken = ffmpeg hat es bestätigt, gelb = nicht bestätigt bzw. Ausweichweg, grau = so eingestellt/noch offen
 function encoderBadge(j) {
@@ -667,7 +680,6 @@ function applyDefaultsFromCfg() {
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem('p5c') || '{}'); } catch (e) {}
   refreshVideoUI();
-  if (c.preferredBackend && c.preferredBackend !== 'auto' && saved.vBackend === undefined) setField('vBackend', c.preferredBackend);
   if (saved.vHwDec === undefined) $('#vHwDec').checked = c.hwDecode !== false;
   if (c.defaultOutDir && saved.outDir === undefined) { $('#outDir').value = c.defaultOutDir; $('#outMode').value = 'custom'; }
   else if (!$('#outDir').value && S.info.roots && S.info.roots.length > 1) $('#outDir').value = S.info.roots[S.info.roots.length - 1];

@@ -242,32 +242,22 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
   <section class="stepsec hidden" data-step="tracks" data-world="video">
     <div class="panel" id="trackSettings">
       <h2>Audio und Untertitel</h2>
-      <p class="trkintro">Hier musst du <b>nichts ändern</b>: Standardmäßig bleiben alle Ton- und Untertitelspuren unverändert („Passthrough“) – das ist verlustfrei und am schnellsten. Ändere nur etwas, wenn du Spuren loswerden, umbenennen oder den Ton kleiner machen willst.</p>
-      <h3 data-info="vAudioTracks">Ton: Regeln für alle Dateien</h3>
-      <div class="grid2">
-        <label>Was soll mit dem Ton passieren?
+      <p class="trkintro">Hier musst du <b>nichts ändern</b>: Standardmäßig bleiben alle Ton- und Untertitelspuren unverändert („Passthrough“) – das ist verlustfrei und am schnellsten. Das Programm macht Vorschläge (Sprachen, Standard-Spur, Formate); jeden Vorschlag kannst du abwählen.</p>
+      <div id="trkTop"></div>
+      <input type="hidden" id="vTrkRules">
+      <div id="trkHold" class="hidden">
+        <label id="vAudioModeRow">Alle übrigen Tonspuren
           <select id="vAudioMode"><option value="copy">Unverändert lassen (empfohlen)</option><option value="encode">Kleiner machen (neu kodieren)</option></select>
         </label>
         <label id="vAudioCodecRow">Format und Bitrate (je Stereo-Paar)
           <div class="row"><select id="vAudioCodec"><option value="aac">AAC (läuft überall, empfohlen)</option><option value="opus">Opus (sehr klein, modern)</option><option value="ac3">AC-3 (Dolby Digital, für TV/AV-Receiver)</option><option value="eac3">E-AC-3 (Dolby Digital Plus)</option><option value="flac">FLAC (verlustfrei, groß)</option></select>
           <input id="vAudioKbps" type="number" min="32" max="640" value="160" style="width:90px"></div>
         </label>
-        <label>Nur diese Sprachen behalten
-          <input id="vAudioLangs" placeholder="leer = alle, z. B. ger,eng">
-        </label>
-      </div>
-      <p class="muted small" id="vAudioHint"></p>
-      <h3 data-info="vSubTracks">Untertitel: Regeln für alle Dateien</h3>
-      <div class="grid2">
-        <label>Was soll mit den Untertiteln passieren?
+        <p class="muted small" id="vAudioHint"></p>
+        <label id="vSubModeRow">Alle übrigen Untertitel
           <select id="vSubMode"><option value="copy">Alle behalten (empfohlen)</option><option value="none">Alle entfernen</option></select>
         </label>
-        <label>Nur diese Sprachen behalten
-          <input id="vSubLangs" placeholder="leer = alle, z. B. ger,eng">
-        </label>
       </div>
-      <p class="muted small">Sprachcodes: <code>ger</code> = Deutsch, <code>eng</code> = Englisch, <code>fre</code> = Französisch, <code>jpn</code> = Japanisch. Spuren ohne Sprachangabe bleiben immer erhalten.</p>
-      <h3 data-info="trkTable">Spuren dieser Datei</h3>
       <div id="trackEditor"></div>
     </div>
   </section>
@@ -402,6 +392,7 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
 <script src="info.js"></script>
 <script src="rename.js"></script>
 <script src="flow.js"></script>
+<script src="trkplan.js"></script>
 <script src="tracks.js"></script>
 <script src="verify.js"></script>
 <script src="crf.js"></script>
