@@ -13,6 +13,7 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
+- [ ] **Qualität statt CRF-Zahl: Easy-Modus (Nutzer 19.10.)**: Die gleiche Zahl bedeutet bei QSV (`global_quality`/ICQ), NVENC (`-cq`) und CPU (x265 CRF) nicht dasselbe (Nutzer-Test: gleiche Datei, QSV deutlich kleiner als NVENC). **Entschieden: Variante B** – Stufen als Easy-Modus („Sehr gut“, „Gut (empfohlen)“, „Normal“, „Klein“; p5converter rechnet je Encoder und Codec intern um) **und** umschaltbar auf „Erweitert“ mit dem Regler und der echten Zahl, beschriftet mit dem Namen des Encoders (CPU „CRF“, NVENC „CQ“, QSV „ICQ“); überall sonst „Qualität“. Beim Encoder-Wechsel bleibt die Stufe, die Zahl passt sich an. Dazu: Zuordnungstabelle Stufe → Zahl je Encoder (CPU, QSV, NVENC, VAAPI, AMF) und Codec (H.264, H.265, AV1), bei Bereichen den niedrigeren Wert; der automatische CRF-Vorschlag nach Material wirkt auf die Stufe; Hinweis „Zahlen sind zwischen Encodern nicht vergleichbar“. Test: gleiche Datei mit QSV und NVENC je Stufe vergleichen (Größe, Standbilder), Tabelle danach nachstellen (nur auf echter Hardware prüfbar, Nutzer)
 - [ ] **Windows-App: Folgearbeiten** (erste Version 0.1.1 steht auf `dev`): (1) ~~Tray~~ (erledigt in 0.1.2); (2) **Prüfung durch den Nutzer** auf dem Windows-PC (Fenster, Symbol, Hardware-Erkennung, echte Konvertierung, Deinstallation); (3) Größe der `setup.exe` aus dem CI-Lauf (Zusammenfassung „Größen“) mitteilen; (4) Linux-App danach; (5) Windows erst nach Freigabe nach `main`
 - [ ] Optional: Image als multi-arch (amd64/arm64) bauen
 
