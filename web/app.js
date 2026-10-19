@@ -21,7 +21,7 @@ const SWENC = {h264: 'libx264', hevc: 'libx265', av1: 'libsvtav1', vp9: 'libvpx-
 
 // ---------- persisted settings ----------
 const FIELDS = ['outMode', 'outDir', 'outStruct', 'exists', 'aFormat', 'aMode', 'aQuality', 'aBitrate', 'aFlac', 'aWav', 'aRate', 'aCh',
-  'vContainer', 'vCodec', 'vBackend', 'vCrf', 'vPreset', 'vDepth', 'vHeight', 'vAudioMode', 'vAudioCodec', 'vAudioKbps', 'vSubMode', 'vTrkRules', 'vMaterial'];
+  'vContainer', 'vCodec', 'vBackend', 'vCrf', 'vQuality', 'vPreset', 'vDepth', 'vHeight', 'vAudioMode', 'vAudioCodec', 'vAudioKbps', 'vSubMode', 'vTrkRules', 'vMaterial'];
 const CHECKS = ['aCover', 'vHwDec']; // „Quelldatei löschen“ wird bewusst NICHT gemerkt (verify.js, je Welt, nur für diesen Besuch)
 // Namensmuster, Zusatz und Ersetzungen gehören je Welt (Audio und Video getrennt)
 const NAME_FIELDS = ['pattern', 'suffix', 'renRules'];
@@ -177,10 +177,8 @@ function refreshVideoUI() {
     resolvedEl.innerHTML = `<b>${esc(enc)}</b> ${r.id === 'cpu' ? '<span class="chip">CPU</span>' : '<span class="chip ok">' + esc(BACKEND_FULL[r.id] || 'Hardware') + '</span>'}` + (r.pref ? ' <span class="muted small">(bevorzugt laut Einstellungen)</span>' : '') +
       (!hwResult().done ? ' <span class="muted small">Hardware-Erkennung läuft …</span>' : '');
   }
-  const crf = $('#vCrf');
-  $('#vCrfOut').textContent = crf.value;
-  $('#vCrfHint').textContent = r.id === 'cpu' || copy ? 'Niedriger = bessere Qualität / größere Datei. Typisch: x264 18–23, x265 20–26, AV1 24–32.'
-    : 'Hardware-Qualitätswert (ICQ/CQ/QP) – nicht 1:1 mit CRF vergleichbar, ca. 20–28 üblich.';
+  qApply(); // Qualitätsstufe → Zahl (Encoder, Codec, Material oder Höhe haben sich vielleicht geändert)
+  $('#vCrfHint').textContent = r.id === 'cpu' || copy ? 'Niedriger = bessere Qualität / größere Datei.' : 'Niedriger = bessere Qualität / größere Datei. Die Zahl gilt nur für diesen Encoder.';
   // 10 bit availability
   const depth = $('#vDepth');
   let tenOK = true;
@@ -193,8 +191,8 @@ function refreshVideoUI() {
   $('#vAudioCodecRow').classList.toggle('hidden', $('#vAudioMode').value !== 'encode');
   $('#vAudioHint').classList.toggle('hidden', $('#vAudioMode').value !== 'encode');
   trkRuleHint();
-  if (S.step === 'tracks') trkRender();
-  if (container === 'mp4' && !copy) { /* mp4 shows subtitles warning in job */ }
+  crfRefresh();
+  if (typeof CV !== 'undefined' && CV.tab === 'tracks' && $('#detailsDlg').open) trkRender();
   renderHwCard();
 }
 function encoderName(backend, codec) {
@@ -234,7 +232,7 @@ function renderHwCard() {
 }
 
 // ---------- files ----------
-function renderFiles() {
+function renderFileList() {
   const list = S.files[S.world];
   const el = $('#fileList');
   if (!list.length) el.innerHTML = `<div class="empty">Noch keine Dateien.<br>„+ Dateien“ oder „+ Ordner“ wählen.</div>`;
@@ -243,12 +241,11 @@ function renderFiles() {
     ${S.world === 'video' && trkCount(f) ? `<button class="small ghost" data-tr="${i}" title="Für diese Datei sind einzelne Spuren geändert. Klicken zum Ansehen.">${trkCount(f)} ${trkCount(f) === 1 ? 'Spur' : 'Spuren'} geändert</button>` : ''}
     <button class="small ghost rm" data-rm="${i}">✕</button></div>`).join('');
   $$('#fileList [data-rm]').forEach(b => b.onclick = () => { list.splice(+b.dataset.rm, 1); renderFiles(); });
-  $$('#fileList [data-tr]').forEach(b => b.onclick = () => { TRK.cur = +b.dataset.tr; showStep('tracks'); });
-  const tot = list.reduce((a, f) => a + (f.size || 0), 0);
-  renderStartInfo();
-  renderSteps();
-  refreshNamePreview();
-  $('#fileSummary').textContent = list.length ? `${list.length} Datei(en), ${fmtSize(tot)}` : '';
+  $$('#fileList [data-tr]').forEach(b => b.onclick = () => { TRK.cur = +b.dataset.tr; TRK.view = 'single'; openSheet('tracks'); });
+}
+function renderFiles() {
+  renderFileList(); renderStartInfo(); refreshNamePreview();
+  if (typeof cvRender === 'function') cvRender();
 }
 function addScanned(files) {
   const list = S.files[S.world];
@@ -323,6 +320,8 @@ async function start() {
     },
   };
   if ($('#outMode').value === 'custom' && !req.output.dir) { toast('Bitte einen Zielordner angeben.', 'bad'); return; }
+  const unchecked = typeof cvUnreviewed === 'function' ? cvUnreviewed() : 0;
+  if (unchecked && !confirm(unchecked === 1 ? 'Eine Gruppe von Dateien wurde noch nicht kontrolliert. Trotzdem starten?' : unchecked + ' Gruppen von Dateien wurden noch nicht kontrolliert. Trotzdem starten?')) return;
   if (req.output.deleteSource && !confirm('Quelldateien werden nach erfolgreicher Konvertierung GELÖSCHT. Fortfahren?')) return;
   if (kind === 'audio') {
     const f = $('#aFormat').value, vbr = ($('#aMode').value === 'vbr') && (f === 'mp3' || f === 'ogg');
@@ -669,7 +668,7 @@ function wire() {
   $('#presetCancel').onclick = () => $('#presetDlg').close();
   $('#presetForm').addEventListener('submit', e => { e.preventDefault(); savePresetFromDialog(); });
   window.addEventListener('hashchange', route);
-  [...FIELDS, ...CHECKS].forEach(f => $('#' + f).addEventListener('input', () => { refreshAudioUI(); refreshVideoUI(); saveSettings(); refreshNamePreview(); }));
+  [...FIELDS, ...CHECKS].forEach(f => $('#' + f).addEventListener('input', () => { refreshAudioUI(); refreshVideoUI(); saveSettings(); refreshNamePreview(); if (typeof cvRender === 'function') cvRender(); }));
   $('#outMode').addEventListener('input', outModeUI);
   $('#addFiles').onclick = async () => {
     const r = await openBrowser('files', S.lastDir); if (!r) return;
@@ -703,7 +702,7 @@ function wire() {
   $('#cancelAll').onclick = () => api('/api/jobs/cancel-all', {kind: S.world}).then(poll);
   $('#histBack').onclick = () => { location.hash = ''; };
   $('#conc').onchange = () => api('/api/concurrency', {kind: S.world, n: +$('#conc').value});
-  wireVerify(); wireCrf();
+  wireVerify(); wireCrf(); wireConvert();
   $('#hwRedetect').onclick = async () => { await api('/api/hw/detect', {}); S.info.hw.done = false; S.info.hw.backends = []; renderHwCard(); setTimeout(loadInfo, 800); };
 }
 function outModeUI() {
@@ -715,6 +714,7 @@ function applyDefaultsFromCfg() {
   const c = cfg();
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem('p5c') || '{}'); } catch (e) {}
+  if (saved.vQuality === undefined && saved.vCrf !== undefined) qSync(); // alter Stand ohne Stufe: Stufe aus der gespeicherten Zahl ableiten
   refreshVideoUI();
   if (saved.vHwDec === undefined) $('#vHwDec').checked = c.hwDecode !== false;
   if (c.defaultOutDir && saved.outDir === undefined) { $('#outDir').value = c.defaultOutDir; $('#outMode').value = 'custom'; }
@@ -747,7 +747,7 @@ async function startApp() {
   document.body.appendChild(bar);
   let y0 = null, dist = 0;
   const THRESHOLD = 90, GO = THRESHOLD / 2 + 10;
-  const blocked = t => !!(t.closest && t.closest('dialog, textarea, input, select, .tablewrap, .blist, .steps, pre, details[open] > pre')) || document.querySelector('dialog[open]');
+  const blocked = t => !!(t.closest && t.closest('dialog, textarea, input, select, .tablewrap, .blist, .cvpop, pre, details[open] > pre')) || document.querySelector('dialog[open]');
   addEventListener('touchstart', e => { y0 = (window.scrollY <= 0 && e.touches.length === 1 && !blocked(e.target)) ? e.touches[0].clientY : null; dist = 0; }, {passive: true});
   addEventListener('touchmove', e => {
     if (y0 == null) return;

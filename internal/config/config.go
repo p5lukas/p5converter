@@ -69,7 +69,7 @@ type Settings struct {
 // Fields a preset may contain, per world (the ids of the UI controls).
 var presetFields = map[string][]string{
 	"audio": {"aFormat", "aMode", "aQuality", "aBitrate", "aFlac", "aWav", "aRate", "aCh", "aCover", "pattern", "suffix", "renRules"},
-	"video": {"vContainer", "vCodec", "vBackend", "vCrf", "vPreset", "vDepth", "vHeight", "vHwDec",
+	"video": {"vContainer", "vCodec", "vBackend", "vCrf", "vQuality", "vPreset", "vDepth", "vHeight", "vHwDec",
 		"vAudioMode", "vAudioCodec", "vAudioKbps", "vAudioLangs", "vSubMode", "vSubLangs", "vTrkRules", "pattern", "suffix", "renRules"},
 }
 

@@ -121,4 +121,50 @@ t('eigene Entscheidung gegen Forced gewinnt', () => {
   const p = P([SF(3, 'ger', 1200), SF(4, 'ger', 38)], {4: {forced: false}}, {prefs: {subDefault: [{lang: 'ger', forced: true}]}});
   assert.strictEqual(p.tracks[1].guess, null); assert.strictEqual(p.edits[4].forced, false);
 });
+const V = (h, codec) => ({index: 0, type: 'video', codec: codec || 'h264', height: h || 1080});
+t('Rahmendaten: gleiche Spuren in gleicher Reihenfolge = gleicher Schlüssel', () => {
+  const a = TP.frameKey({streams: [V(), A(1, 'ger', 'dts', 6), A(2, 'eng', 'ac3', 6), S(3, 'ger')]});
+  const b = TP.frameKey({streams: [V(), A(5, 'de', 'dts', 6), A(6, 'eng', 'ac3', 6), S(7, 'ger')]});
+  assert.strictEqual(a, b);
+});
+t('Rahmendaten: andere Reihenfolge, Format, Kanäle, Auflösung oder Forced = andere Gruppe', () => {
+  const base = [V(), A(1, 'ger', 'dts', 6), A(2, 'eng', 'ac3', 6), S(3, 'ger')], k = TP.frameKey({streams: base});
+  assert.notStrictEqual(k, TP.frameKey({streams: [V(), A(1, 'eng', 'ac3', 6), A(2, 'ger', 'dts', 6), S(3, 'ger')]}));
+  assert.notStrictEqual(k, TP.frameKey({streams: [V(), A(1, 'ger', 'ac3', 6), A(2, 'eng', 'ac3', 6), S(3, 'ger')]}));
+  assert.notStrictEqual(k, TP.frameKey({streams: [V(), A(1, 'ger', 'dts', 2), A(2, 'eng', 'ac3', 6), S(3, 'ger')]}));
+  assert.notStrictEqual(k, TP.frameKey({streams: [V(720), A(1, 'ger', 'dts', 6), A(2, 'eng', 'ac3', 6), S(3, 'ger')]}));
+  assert.notStrictEqual(k, TP.frameKey({streams: [V(), A(1, 'ger', 'dts', 6), A(2, 'eng', 'ac3', 6), S(3, 'ger', 'subrip', {forced: true})]}));
+});
+t('Rahmendaten: Titel, Standard-Kennzeichen und Spurnummern spielen keine Rolle', () => {
+  const a = TP.frameKey({streams: [V(), A(1, 'ger', 'ac3', 6, {title: 'x', default: true}), S(2, 'ger')]});
+  const b = TP.frameKey({streams: [V(), A(3, 'ger', 'ac3', 6), S(9, 'ger', 'subrip', {title: 'y'})]});
+  assert.strictEqual(a, b);
+});
+t('Übernahme: Entscheidung einer kontrollierten Datei gilt für passende Spuren einer anderen', () => {
+  const src = {streams: [V(), A(1, 'ger', 'dts', 6), A(2, 'eng', 'ac3', 6), S(3, 'fre')]};
+  const dst = {streams: [V(), A(1, 'eng', 'ac3', 6), A(2, 'ger', 'dts', 6), S(3, 'fre'), S(4, 'ger')]};
+  const out = TP.transferEdits(src, {1: {action: 'encode', codec: 'ac3'}, 3: {action: 'drop'}}, dst);
+  assert.deepStrictEqual(out, {2: {action: 'encode', codec: 'ac3'}, 3: {action: 'drop'}});
+});
+t('Übernahme: keine passende Spur → nichts wird übertragen; zwei gleiche Spuren werden der Reihe nach zugeordnet', () => {
+  const src = {streams: [A(1, 'ger', 'ac3', 6), A(2, 'ger', 'ac3', 6)]};
+  assert.deepStrictEqual(TP.transferEdits(src, {1: {action: 'drop'}}, {streams: [A(1, 'eng', 'ac3', 6)]}), {});
+  assert.deepStrictEqual(TP.transferEdits(src, {2: {action: 'drop'}}, {streams: [A(7, 'ger', 'ac3', 6), A(8, 'ger', 'ac3', 6)]}), {8: {action: 'drop'}});
+});
+t('Ordnungszahl der Spur je Art', () => {
+  const i = {streams: [V(), A(1, 'ger', 'ac3', 2), S(2, 'ger'), A(3, 'eng', 'ac3', 2)]};
+  assert.deepStrictEqual(TP.ordinal(i, 3), {type: 'audio', n: 1});
+  const j = {streams: [V(), A(5, 'x', 'ac3', 2), A(6, 'y', 'ac3', 2)]};
+  assert.strictEqual(TP.atOrdinal(j, {type: 'audio', n: 1}).index, 6);
+  assert.strictEqual(TP.atOrdinal(j, {type: 'subtitle', n: 0}), null);
+});
+t('Gründe für ✦: Regel, Sprach-Wunsch, Standard, Forced', () => {
+  const p = P([SF(3, 'ger', 1200, {default: true}), SF(4, 'ger', 38), A(1, 'ger', 'dts', 6), A(2, 'fre', 'ac3', 6)], {}, {audioRules: [{codec: 'dts', action: 'encode', to: 'ac3'}],
+    prefs: {audioKeep: ['ger'], subDefault: [{lang: 'ger', forced: true}]}});
+  const kinds = r => TP.autoReasons(r).map(x => x.kind);
+  assert.deepStrictEqual(kinds(p.tracks.find(r => r.index === 1)), ['rule']);
+  assert.deepStrictEqual(kinds(p.tracks.find(r => r.index === 2)), ['lang']);
+  assert.deepStrictEqual(kinds(p.tracks.find(r => r.index === 4)).sort(), ['default', 'forced']);
+  assert.deepStrictEqual(kinds(p.tracks.find(r => r.index === 3)), []);
+});
 console.log('trkplan: ' + n + ' Tests ok');

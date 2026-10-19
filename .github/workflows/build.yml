@@ -34,6 +34,8 @@ jobs:
       - run: go test -race ./...
       - name: Logik von Audio und Untertitel (Node)
         run: node tools/test-trkplan.js
+      - name: Qualitätsstufen (Node-Test)
+        run: node tools/test-quality.js
 
   docker:
     needs: test

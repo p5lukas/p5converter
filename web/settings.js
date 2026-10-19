@@ -56,7 +56,7 @@ function applyCfg() {
 // ---------- Voreinstellungen ----------
 const PRESET_FIELDS = {
   audio: ['aFormat', 'aMode', 'aQuality', 'aBitrate', 'aFlac', 'aWav', 'aRate', 'aCh', 'aCover', 'pattern', 'suffix', 'renRules'],
-  video: ['vContainer', 'vCodec', 'vBackend', 'vCrf', 'vPreset', 'vDepth', 'vHeight', 'vHwDec', 'vAudioMode', 'vAudioCodec', 'vAudioKbps', 'vSubMode', 'vTrkRules', 'pattern', 'suffix', 'renRules'],
+  video: ['vContainer', 'vCodec', 'vBackend', 'vCrf', 'vQuality', 'vPreset', 'vDepth', 'vHeight', 'vHwDec', 'vAudioMode', 'vAudioCodec', 'vAudioKbps', 'vSubMode', 'vTrkRules', 'pattern', 'suffix', 'renRules'],
 };
 // diese Felder hängen von anderen ab (Optionen werden erst nach dem ersten Durchgang neu aufgebaut)
 const LATE_FIELDS = ['vBackend', 'aMode', 'aQuality', 'aBitrate'];
@@ -77,7 +77,9 @@ function applyPreset(p) {
   Object.entries(v).filter(([k]) => !LATE_FIELDS.includes(k)).forEach(([k, x]) => setField(k, x));
   refreshAudioUI(); refreshVideoUI();
   Object.entries(v).filter(([k]) => LATE_FIELDS.includes(k)).forEach(([k, x]) => setField(k, x));
+  if (p.world === 'video') qAfterPreset(v);
   refreshAudioUI(); refreshVideoUI(); syncNameUI(); saveSettings();
+  if (typeof cvRender === 'function') cvRender();
 }
 function renderPresetChips() {
   [['audio', '#aPresets'], ['video', '#vPresets']].forEach(([world, sel]) => {
@@ -137,7 +139,7 @@ function editPreset(id) {
   setWorld(p.world, false);
   applyPreset(p);
   renderEditBanner();
-  showStep(p.world === 'video' ? 'video' : 'audio');
+  showStep('convert');
 }
 function renderEditBanner() {
   const b = $('#editBanner'), p = S.editPreset && cfg().presets.find(x => x.id === S.editPreset);
@@ -175,12 +177,13 @@ function showView(v) {
   window.scrollTo(0, 0);
 }
 function route() {
+  if ($('#detailsDlg') && $('#detailsDlg').open) $('#detailsDlg').close(); // das Fenster „Details“ bleibt nicht über einer anderen Seite stehen
   const m = /^#settings(?:\/(\w+))?$/.exec(location.hash);
   if (location.hash === '#rename') { showView('rename'); renderRenamePage(); }
   else if (location.hash === '#logs') { showView('logs'); logsPage(); }
   else if (location.hash === '#history') { showView('history'); historyPage(); }
   else if (m) { S.setPage = m[1] || ''; showView('settings'); renderSettings(); }
-  else showView('main');
+  else { showView('main'); if (S.step === 'convert' && typeof cvRender === 'function') cvRender(); }
 }
 
 function row(label, control, infoKey, hint) {
@@ -236,9 +239,9 @@ function pageGeneral() {
     row('Parallele Aufträge – ' + W('audio').name, concA, 'conc', 'Wie viele Audio-Dateien gleichzeitig laufen'),
     row('Parallele Aufträge – ' + W('video').name, concV, 'conc', 'Wie viele Videos gleichzeitig laufen (bei CPU-Encoding 1)'),
     row('Standard-Zielordner', h('div', {class: 'row'}, out, pick), 'outDir', 'Wird vorgeschlagen, wenn im Konverter nichts anderes gewählt ist'),
-    row('Kontrolle – ' + W('audio').name, verifyControls('audio'), 'vfInfo', 'Standardauswahl im letzten Schritt des Assistenten'),
-    row('Kontrolle – ' + W('video').name, verifyControls('video'), 'vfInfo', 'Standardauswahl im letzten Schritt des Assistenten'),
-    row('CRF-Vorschlag', check(c.noCrfSuggest !== true, v => saveCfg(x => { x.noCrfSuggest = !v; }).then(() => crfRefresh(false)), 'Im Video-Schritt einen passenden Wert vorschlagen (nach Art des Materials)'), 'vMaterial'),
+    row('Kontrolle – ' + W('audio').name, verifyControls('audio'), 'vfInfo', 'Standardauswahl für „danach geprüft“ beim Konvertieren'),
+    row('Kontrolle – ' + W('video').name, verifyControls('video'), 'vfInfo', 'Standardauswahl für „danach geprüft“ beim Konvertieren'),
+    row('Qualität nach Material', check(c.noCrfSuggest !== true, v => saveCfg(x => { x.noCrfSuggest = !v; }).then(() => { S.qSig = null; refreshVideoUI(); }), 'Die Qualitätsstufe nach der Art des Materials anpassen (Anime, Korn …)'), 'vMaterial'),
     row('Neuigkeiten', check(c.showNews, v => saveCfg(x => { x.showNews = v; }), 'Hinweis „Neuigkeiten“ bei neuer Version zeigen')));
 }
 
@@ -290,7 +293,7 @@ function pagePresets() {
         h('button', {class: 'small danger', title: 'Löschen', onclick: () => { if (confirm('Voreinstellung „' + p.name + '“ löschen?')) saveCfg(x => { x.presets = x.presets.filter(q => q.id !== p.id); }); }}, icon('trash'))));
   }) : h('div', {class: 'empty'}, 'Keine Voreinstellungen in dieser Welt.');
   return h('div', {}, h('h2', {}, 'Voreinstellungen', infoBtn('setPresets')),
-    h('p', {class: 'muted'}, 'Voreinstellungen füllen alle Einstellungen einer Welt mit einem Klick. Die mit „Vorschlag“ erscheinen im Konverter oben im Schritt „Video“ bzw. „Einstellungen“.'),
+    h('p', {class: 'muted'}, 'Voreinstellungen füllen alle Einstellungen einer Welt mit einem Klick. Die mit „Vorschlag“ erscheinen im Konverter oben als Knöpfe.'),
     tabs, mine.length > 1 ? h('div', {class: 'btns', style: 'margin-bottom:10px'}, h('span', {class: 'muted small'}, 'Vorschläge:'),
       h('button', {class: 'small', onclick: () => saveCfg(x => x.presets.forEach(q => { if (q.world === tab) q.suggest = true; }), false)}, 'Alle auswählen'),
       h('button', {class: 'small', onclick: () => saveCfg(x => x.presets.forEach(q => { if (q.world === tab) q.suggest = false; }), false)}, 'Alle abwählen')) : null,
@@ -350,7 +353,7 @@ function pageTracks() {
   const subName = x => langName(x.lang) + (x.forced ? ' (Forced)' : '') + ' (' + x.lang + ')';
   const section = (title, hint, body) => h('div', {class: 'prefsec'}, h('h3', {}, title), h('p', {class: 'muted small'}, hint), body);
   return h('div', {}, h('h2', {}, 'Audio & Untertitel', infoBtn('trkPrefs')),
-    h('p', {class: 'muted'}, 'Gilt für die Videowelt. Im Schritt „Audio & Untertitel“ schlägt das Programm damit automatisch vor, was entfernt wird und welche Spur Standard ist. Jeden Vorschlag kannst du dort ändern oder abwählen.'),
+    h('p', {class: 'muted'}, 'Gilt für die Videowelt. In der Tabelle „Vorher → Nachher“ wendet das Programm das automatisch an (mit Funkel-Zeichen markiert): was entfernt wird und welche Spur Standard ist. Jeden Vorschlag kannst du dort ändern oder mit „rückgängig“ zurücknehmen.'),
     section('Ton: Sprachen behalten', 'Spuren in anderen Sprachen werden entfernt. Leer = alle behalten. Spuren ohne Sprachangabe bleiben immer. Hat eine Datei keine dieser Sprachen, wird nichts entfernt.',
       rankList(p.audioKeep.slice(), nameOf, v => save('audioKeep', v), 'plain', 'Sprache hinzufügen')),
     section('Ton: Standard-Spur', 'Diese Tonspur startet automatisch. Reihenfolge = Priorität: die erste Sprache, die in der Datei vorkommt, gewinnt (z. B. Deutsch, sonst Englisch). Kommentar-Spuren werden übersprungen.',

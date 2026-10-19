@@ -17,7 +17,7 @@ const OUT = (process.env.OUTDIR || '/tmp/out') + '/home';
     await L.setWorld(p, 'video'); await p.waitForTimeout(800);
     await post('/api/jobs/cancel-all', {kind: 'video'}); await p.waitForTimeout(1500);
     // ---- ruhige Startseite ----
-    ok(!(await p.isVisible('#steps')), name + ': Schritt-Reiter auf der Startseite sichtbar');
+    ok(!(await p.isVisible('#convertView')) && !(await p.isVisible('#stepnav')), name + ': Konvertieren-Ansicht auf der Startseite sichtbar');
     ok(await p.locator('#ring').count() === 0, name + ': der Kreis ist noch da');
     ok(/Gerade nichts los/.test(await p.textContent('#jobNow')), name + ': „Gerade nichts los“ fehlt');
     ok(await p.locator('#monitor .meter').count() >= 1, name + ': Auslastung fehlt');
@@ -53,9 +53,9 @@ const OUT = (process.env.OUTDIR || '/tmp/out') + '/home';
     // ---- Knöpfe der Kopfzeile aus anderen Ansichten ----
     await p.evaluate(() => { location.hash = '#settings'; }); await p.waitForTimeout(500);
     await p.click('#startFlow'); await p.waitForTimeout(600);
-    ok(await p.isVisible('#steps') && await p.locator('.stepsec[data-step=files]').isVisible(), name + ': „Konvertieren“ aus den Einstellungen öffnet den Assistenten nicht');
+    ok(await p.isVisible('#convertView'), name + ': „Konvertieren“ aus den Einstellungen öffnet die Ansicht nicht');
     await L.goStep(p, 'start');
-    ok(!(await p.isVisible('#steps')), name + ': Schritt-Reiter nach „Start“ nicht ausgeblendet');
+    ok(!(await p.isVisible('#convertView')), name + ': Konvertieren-Ansicht nach „Start“ nicht ausgeblendet');
     await ctx.close();
   }
   await b.close();

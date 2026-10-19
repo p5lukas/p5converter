@@ -1,5 +1,29 @@
 # Änderungen
 
+## 0.3.0 – 2026-10-19
+
+**Neu: eine Ansicht statt sechs Schritte („Konvertieren“)**
+- **Oben die Dateien, darunter ein Satz zum Antippen, darunter die Tabelle „Vorher → Nachher“.** Links steht, wie die Datei jetzt ist (Video, Container, Bitrate, jede Tonspur, jeder Untertitel, Dateiname), rechts, was nach dem Umwandeln herauskommt; jede Zeile lässt sich direkt ändern (Auswahl, Standard, Forced, „⋯“ für Titel, Sprache, Format und Bitrate). Geändertes ist farbig, entfernte Spuren sind durchgestrichen
+- **Der Satz** („Die Dateien werden mit [Hardware] umgewandelt, gespeichert [neben der Quelle] und danach geprüft: [Spuren und Decode-Test]“) öffnet bei Antippen kleine Fenster für Hardware, Ziel (inkl. „Wenn Datei existiert“) und Prüfen; am Handy erscheinen sie als Blatt unten
+- **Gruppen nach Rahmendaten:** Dateien mit gleichem Aufbau (Video, Spuren, Sprachen, Formate, Kanäle) bilden eine Gruppe, eine Entscheidung gilt für alle. Abweichende Dateien bilden eine **eigene Gruppe, die kontrolliert werden muss** („noch nicht kontrolliert“, Knopf „✓ Gruppe ist kontrolliert“, Rückfrage beim Start). Ist eine Gruppe kontrolliert, **übernimmt das Programm ihre Entscheidungen bei gleichen Spuren** der anderen Gruppen (als „Übernommen“ markiert)
+- **Funkel-Markierung nur für Automatisches** (Regeln, Sprach-Wünsche, Forced-Erkennung, Übernahme): mit Begründung und „rückgängig“ bzw. „Als Forced markieren“ bei reinen Vorschlägen; Standardvorschläge leuchten nicht
+- **Details** (Knopf unten): Ziel & Name, Video (bzw. Audio-Einstellungen), Audio & Untertitel (Regeln, Sprach-Wünsche, Einzelspuren), Prüfen & Original – die früheren Schritte als Reiter eines seitlichen Blattes. Voreinstellungen stehen oben, „Als Voreinstellung speichern“ und „Zurücksetzen“ in der Startleiste, die zusammenfasst, was passiert
+- Audio-Welt: dieselbe Ansicht mit den Zeilen Format, Qualität/Bitrate, Samplerate, Kanäle, Cover, Dateiname
+
+**Neu: Qualität in Stufen statt einer CRF-Zahl**
+- **Sehr gut / Gut (empfohlen) / Normal / Klein**; das Programm rechnet je Encoder (CPU, Intel Quick Sync, NVIDIA, VAAPI, AMD) und Codec in die passende Zahl um, denn dieselbe Zahl bedeutet bei CRF, CQ, ICQ und QP nicht dasselbe (Quick Sync liegt bei gleicher Zahl deutlich kleiner als NVENC). Die Stufe bleibt beim Encoder-Wechsel, die Zahl passt sich an
+- **Erweitert** zeigt den Regler mit der echten Zahl und dem Namen (CRF, CQ, ICQ, QP); bewegt man ihn, steht „Eigener Wert“. Art des Materials (Anime −4, Korn −2) und 720p oder kleiner (−1) verschieben alle Stufen. Bei Bereichen aus Anleitungen gilt der niedrigere Wert. **Die Zahlen sind Startwerte, nicht auf echter Hardware gemessen**
+- Voreinstellungen speichern die Stufe (`vQuality`); ältere Voreinstellungen und gespeicherte Werte werden zur passenden Stufe
+
+**Geändert**
+- Die Schritt-Reiter und „Zurück/Weiter“ entfallen; die Konvertieren-Ansicht ist über die Kopfzeile erreichbar. Das Fenster „Details“ schließt, wenn man zu einer anderen Seite (z. B. Einstellungen) wechselt
+- Handy: Kopfzeile scrollt in der Konvertieren-Ansicht mit weg, Startleiste kompakter („Starten“, Symbole)
+- Suchfelder (Verlauf, Logs) sind im Theme gestaltet
+
+**Intern**
+- Neu: `web/convert.js` (Ansicht), `web/quality.js` (Stufen, mit Node getestet: `tools/test-quality.js`, auch in CI und `precheck.sh`); `web/trkplan.js` um Rahmendaten-Schlüssel, Übernahme und Gründe für die Markierung erweitert (31 Tests)
+- Neue UI-Prüfung `tools/ui-check-convert.js` (Gruppen, Kontrolle, Übernahme, Markierung, echter Lauf); `ui-check`, `-forced`, `-verify`, `-home`, `-tracks`, `-settings`, `-world`, `-encoder` an die neue Ansicht angepasst; 60 Dateien: Tabelle nach etwa 1,3 s, Änderungen unter 100 ms
+
 ## 0.2.0 – 2026-10-18
 
 **Neu**
