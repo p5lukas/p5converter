@@ -17,6 +17,7 @@
 - [ ] Optional: Image als multi-arch (amd64/arm64) bauen
 
 ## Vom Nutzer zu prüfen (nicht in der Sandbox möglich)
+- [ ] 0.3.1 Datei-Browser: „+ Dateien“ öffnen, im Suchfeld tippen (filtert den Ordner), „Auch in Unterordnern“ ankreuzen (findet auch tiefer liegende Dateien, auch mit Umlauten wie „muller“/„mueller"); bei „+ Ordner“ nur Ordner; Einstellungen → Allgemein → „Namen der Quellordner“: Namen vergeben, erscheinen sie im Browser statt `/video1` (mit dem Pfad klein daneben)? Passt die Bedienung auf iPhone/iPad?
 - [ ] 0.3.0 Konvertieren (eine Ansicht): auf Desktop, iPhone/iPad und als Web-App ansehen: Ist die Tabelle „Vorher → Nachher“ verständlich und übersichtlich? Staffel mit abweichender Datei laden: Gruppen, „Gruppe ist kontrolliert“, Übernahme (Übernommen-Markierung) und Rückfrage beim Start; Regel DTS → AC-3 über den Vorschlag; Funkel-Markierung nur bei Automatischem; „rückgängig“; Sätze/kleine Fenster (Hardware, Ziel, Prüfen) am Handy als Blatt; Details (Ziel & Name, Video, Spuren, Prüfen); Voreinstellung speichern und laden; Audio-Welt
 - [ ] 0.3.0 Qualität in Stufen: dieselbe Datei mit Quick Sync und NVENC in Stufe „Gut“ (und „Normal“) umwandeln: Größe und Bild (Standbilder, dunkle Szenen, Korn) vergleichen. Passen die Zahlen? Falls nicht, nenne mir Encoder, Codec und welche Stufe zu groß/klein oder zu weich ist; ich stelle die Tabelle in `web/quality.js` nach (die Werte sind Startwerte, nicht auf Hardware gemessen)
 - [ ] 0.2.0 Forced: Staffel mit mkvmerge-Untertiteln laden (Deutsch voll + Deutsch klein): erscheint „Forced?“ bzw. der Hinweis mit „nur N statt M Zeilen“, und ist mit dem Wunsch „Deutsch (Forced)“ der kleine Untertitel vorausgewählt und im Ergebnis (Plex neu analysieren) als Forced erkannt? Wirkt die Oberfläche bei einer großen Staffel flüssiger? Neue Windows-`.exe` (Aktionen-Lauf von `main`) ausprobieren
@@ -49,6 +50,7 @@
 - [ ] Linux-App (Fedora KDE) mit eigener Oberfläche
 
 ## Erledigt
+- [x] 0.3.1: **Suche im Datei-Browser** (Filter im Ordner, „Auch in Unterordnern“ über `/api/fs/search`, Umlaute egal, Treffer direkt auswählbar) und **Anzeigenamen für Quellordner** (Einstellungen, Browser, Zielordner im Satz); „hoch“ aus einem Quellordner führt zur Liste; Tests (Go, `ui-check-browser.js`)
 - [x] 0.3.0: **Eine Ansicht statt sechs Schritte** (Variante D): Satz zum Antippen + Tabelle „Vorher → Nachher“, Gruppen nach Rahmendaten mit Kontrolle und Übernahme, Funkel-Markierung nur für Automatisches (mit „rückgängig“), Details als seitliches Blatt, Startleiste mit Zusammenfassung; Audio-Welt gleich; Tests (`ui-check-convert.js`, `test-trkplan.js`)
 - [x] 0.3.0: **Qualität in Stufen** (Variante B): Sehr gut/Gut/Normal/Klein je Encoder und Codec umgerechnet, „Erweitert“ mit Regler und Namen der Zahl (CRF/CQ/ICQ/QP), Material und kleine Auflösung verschieben die Stufen; Tests (`test-quality.js`)
 - [x] 0.2.0: **Forced-Untertitel nach Größe erkennen** (nur Vorschlag, bei Wunsch „Deutsch (Forced)“ vorausgewählt), README-Hinweis auf ULDAS, **schneller** (ETag/gzip, schlanker `/api/state`, begrenzte Probes, ruhiger Poll im Hintergrund), Kopfzeile am Handy kompakter; Tests (Go, `test-trkplan.js`)

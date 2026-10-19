@@ -1,5 +1,21 @@
 # Änderungen
 
+## 0.3.1 – 2026-10-19
+
+**Neu: Suche im Datei-Browser** („+ Dateien“, „+ Ordner“, Zielordner)
+- **Suchfeld** im Fenster: ohne Haken filtert es beim Tippen die Einträge des aktuellen Ordners („3 von 12“); „Alle auswählen“ gilt dann nur für die Treffer
+- **„Auch in Unterordnern“:** sucht ab 2 Zeichen im ganzen Ordner darunter (in der Liste der Quellordner in allen), zeigt den Pfad der Treffer, Dateien lassen sich direkt abhaken und hinzufügen, ein Ordner öffnet sich per Klick. Beim Wählen von Ordnern werden nur Ordner gefunden. Höchstens 300 Treffer, versteckte Ordner werden übersprungen
+- Groß/Klein ist egal, **Umlaute dürfen so oder so getippt werden** („muller“ und „mueller“ finden „Müller“)
+
+**Neu: Anzeigenamen für Quellordner** (Einstellungen → Allgemein → „Namen der Quellordner“)
+- Statt `/video1` steht im Datei-Browser z. B. **„Filme 4K“** (der echte Pfad bleibt als kleiner Zusatz und im Pfadfeld); „Angezeigt als: …“ zeigt den Namen auch in Unterordnern, der Satz „gespeichert …“ nutzt ihn für den Zielordner. Das Template muss dafür nicht geändert werden
+
+**Geändert**
+- Im Datei-Browser führt „hoch“ in einem Quellordner jetzt zur Liste aller Quellordner (vorher war der Knopf dort gesperrt)
+
+**Intern**
+- Neu: `/api/fs/search` (`internal/server/fssearch.go`, mit Tests), `rootNames` in den Einstellungen (mit Test); neue UI-Prüfung `tools/ui-check-browser.js`
+
 ## 0.3.0 – 2026-10-19
 
 **Neu: eine Ansicht statt sechs Schritte („Konvertieren“)**

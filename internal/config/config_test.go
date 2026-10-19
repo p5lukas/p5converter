@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -140,5 +141,23 @@ func TestTrackPrefsCleanedAndLimited(t *testing.T) {
 	got, err := Validate(p)
 	if err != nil || got.Presets[0].Values["vTrkRules"] == nil || got.Presets[0].Values["bogus"] != nil {
 		t.Errorf("vTrkRules muss in Voreinstellungen erlaubt sein: %+v %v", got.Presets, err)
+	}
+}
+
+func TestRootNames(t *testing.T) {
+	dir := t.TempDir()
+	st := Open(dir)
+	s := st.Get()
+	s.RootNames = map[string]string{"/video1": "  Filme 4K ", "/video2": "", "": "x", "/audio1": "Musik"}
+	if _, err := st.Put(s); err != nil {
+		t.Fatal(err)
+	}
+	got := Open(dir).Get().RootNames
+	if len(got) != 2 || got["/video1"] != "Filme 4K" || got["/audio1"] != "Musik" {
+		t.Errorf("Anzeigenamen: %v", got)
+	}
+	s.RootNames = map[string]string{"/video1": strings.Repeat("x", 41)}
+	if _, err := st.Put(s); err == nil {
+		t.Error("zu langer Name wurde akzeptiert")
 	}
 }

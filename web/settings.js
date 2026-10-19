@@ -226,6 +226,16 @@ function verifyControls(w) {
 }
 
 // --- Allgemein ---
+// Anzeigenamen für die Quellordner (Wurzeln aus P5_ROOTS bzw. den Pfaden im Template); der echte Pfad bleibt unverändert
+function rootNamesRow() {
+  const roots = (S.info && S.info.roots) || [], names = cfg().rootNames || {};
+  if (!roots.length) return row('Quellordner', h('span', {class: 'muted'}, 'Keine Ordner eingeschränkt: Das Programm zeigt den ganzen Rechner, Anzeigenamen sind nicht nötig.'), null, 'Namen im Datei-Browser');
+  return row('Namen der Quellordner', h('div', {class: 'rootnames'}, roots.map(r => {
+    const inp = h('input', {value: names[r] || '', maxlength: 40, placeholder: 'z. B. Filme 4K', 'aria-label': 'Anzeigename für ' + r,
+      onchange: () => saveCfg(x => { x.rootNames = x.rootNames || {}; const v = inp.value.trim(); if (v) x.rootNames[r] = v; else delete x.rootNames[r]; })});
+    return h('label', {class: 'rootname'}, h('code', {}, r), inp);
+  })), null, 'Im Datei-Browser statt des Ordnerpfads angezeigt (leer = Pfad)');
+}
 function pageGeneral() {
   const c = cfg();
   const start = h('select', {onchange: () => saveCfg(x => { x.startWorld = start.value; })}, opt('last', 'Zuletzt benutzte Welt'), opt('audio', W('audio').name), opt('video', W('video').name));
@@ -239,6 +249,7 @@ function pageGeneral() {
     row('Parallele Aufträge – ' + W('audio').name, concA, 'conc', 'Wie viele Audio-Dateien gleichzeitig laufen'),
     row('Parallele Aufträge – ' + W('video').name, concV, 'conc', 'Wie viele Videos gleichzeitig laufen (bei CPU-Encoding 1)'),
     row('Standard-Zielordner', h('div', {class: 'row'}, out, pick), 'outDir', 'Wird vorgeschlagen, wenn im Konverter nichts anderes gewählt ist'),
+    rootNamesRow(),
     row('Kontrolle – ' + W('audio').name, verifyControls('audio'), 'vfInfo', 'Standardauswahl für „danach geprüft“ beim Konvertieren'),
     row('Kontrolle – ' + W('video').name, verifyControls('video'), 'vfInfo', 'Standardauswahl für „danach geprüft“ beim Konvertieren'),
     row('Qualität nach Material', check(c.noCrfSuggest !== true, v => saveCfg(x => { x.noCrfSuggest = !v; }).then(() => { S.qSig = null; refreshVideoUI(); }), 'Die Qualitätsstufe nach der Art des Materials anpassen (Anime, Korn …)'), 'vMaterial'),
