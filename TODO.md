@@ -2,7 +2,7 @@
 > Arbeitsregel (Nutzer): Bei jedem „leg los“ einen kleinen Versionssprung machen (Patch, z. B. 0.0.1 → 0.0.2), neuen Abschnitt oben in `CHANGELOG.md` anlegen (Datum, Neu/Geändert/Behoben), alles testen und auf Feature-Branch (und später `dev`) pushen. Tag und Release nur auf ausdrücklichen Wunsch (Tags kann ich nicht pushen).
 > Arbeitsregel (Nutzer): Bei „leg los“ nach grüner CI **nach `dev` mergen** (Pull Request, Squash; Image `:dev`, dort testet der Nutzer zuerst). **Nach `main` nur, wenn der Nutzer es sagt** („passt so, nach main“; Pull Request `dev` → `main`, Merge-Commit). Wie bei p5assets.
 > Tags/Releases (Nutzer): nur bei Sprüngen der mittleren Stelle (0.1.0 → 0.2.0 → …), nicht bei Patch-Versionen; je ein Pre-Release von `main` (`vX.Y.Z`) und von `dev` (`vX.Y.Z-dev`).
-> Entscheidung (Nutzer): Die **Windows-App entsteht erstmal nur auf `dev`**.
+> Entscheidung (Nutzer 19.10.): Die **Windows-`setup.exe` hängt bei jedem 0.x-Release an `vX.Y.Z` (main) und `vX.Y.Z-dev` (dev)**; `dev-latest` bleibt der laufende dev-Stand.
 > Prüfregel (Nutzer): Bei jeder UI-Änderung immer **alle Ansichten** kontrollieren: Desktop, iPhone/iPad im Browser (Safari) und iPhone/iPad als Web-App (Home-Bildschirm), Hoch- und Querformat. Sandbox hat nur Chromium: Geräte-Emulation + Screenshots; Nicht-Prüfbares im Bericht als „nicht geprüft“ nennen.
 > Entscheidung (Nutzer): Die Test-Last-Regel von p5assets („Testumgebung doppelt so groß wie die echte Welt“) gilt hier **nicht**.
 > Arbeitsregel (Nutzer): Ob die CI grün und das Image `:latest` gebaut ist, sieht der Nutzer selbst unter GitHub → Actions – nicht von selbst melden.
