@@ -1,5 +1,5 @@
 'use strict';
-/* Kontrolle nach dem Konvertieren (letzter Schritt „Zusammenfassung“): Spuren prüfen (A), Decode-Test (B), Quelldatei löschen.
+/* Kontrolle nach dem Konvertieren (Satz „danach geprüft“ und Details → Prüfen): Spuren prüfen (A), Decode-Test (B), Quelldatei löschen.
    Je Welt getrennt; die Anfangswerte kommen aus Einstellungen → Allgemein. Nutzt S, $, h(), cfg(), W() aus app.js/settings.js. */
 
 // S.vf (je Welt: {tracks, decode, del}) entsteht in wireVerify()
@@ -46,6 +46,6 @@ function vfCollect() {
 
 function wireVerify() {
   S.vf = {};
-  ['vfTracks', 'vfDecode', 'deleteSource'].forEach(id => $('#' + id).addEventListener('input', () => { vfStash(S.vfFor); vfUI(); if (S.step === 'summary') renderSummary(); }));
+  ['vfTracks', 'vfDecode', 'deleteSource'].forEach(id => $('#' + id).addEventListener('input', () => { vfStash(S.vfFor); vfUI(); }));
   $('#vCodec').addEventListener('input', vfUI);
 }

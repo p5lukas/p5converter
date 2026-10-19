@@ -9,13 +9,19 @@ exports.views = [
 exports.url = process.env.P5_URL || 'http://127.0.0.1:8787';
 exports.SHOTS = process.env.SHOTS || '/tmp/shots';
 exports.INDIR = process.env.INDIR || '/tmp/media';
-// Reiter des Ablaufs anklicken (Start, files, dest, name, video/audio, tracks, summary)
-// (die Reiter sind auf der Startseite ausgeblendet: zuerst den Assistenten starten)
+// Ansichten ansteuern. Seit 0.3.0 gibt es keine Schritte mehr, sondern eine Ansicht „Konvertieren“ plus das Fenster „Details“ mit den
+// früheren Schritten als Reiter. Die alten Namen bleiben: files/summary = Hauptansicht, dest/name/video/audio/tracks = Reiter in „Details“.
+const DTAB = {dest: 'dest', name: 'dest', video: 'video', audio: 'video', tracks: 'tracks', verify: 'verify'};
 exports.goStep = async (p, id) => {
-  if (!(await p.isVisible('#steps'))) { if (id === 'start') return; await p.click('#startFlow'); await p.waitForTimeout(250); }
-  await p.click(`[data-step-btn=${id}]`); await p.waitForTimeout(250);
+  if (id === 'start') { if (await p.isVisible('#detailsDlg')) await p.click('#detailsClose'); if (await p.isVisible('#convertView')) await p.click('#cvHome'); await p.waitForTimeout(200); return; }
+  if (!(await p.isVisible('#convertView'))) { await p.click('#startFlow'); await p.waitForTimeout(300); }
+  const open = await p.isVisible('#detailsDlg');
+  if (id in DTAB) {
+    if (!open) { await p.click('#detailsBtn'); await p.waitForTimeout(250); }
+    await p.click(`[data-dtab=${DTAB[id]}]`); await p.waitForTimeout(300);
+  } else if (open) { await p.click('#detailsClose'); await p.waitForTimeout(250); }
 };
-exports.setWorld = async (p, w) => { await p.click(`[data-world=${w}]`); await p.waitForTimeout(1300); };
+exports.setWorld = async (p, w) => { if (await p.isVisible('#detailsDlg')) { await p.click('#detailsClose'); await p.waitForTimeout(200); } await p.click(`[data-world=${w}]`); await p.waitForTimeout(1300); };
 // Datei im Server-Browser auswählen (im Schritt „Dateien“)
 exports.addFile = async (p, name, btn = '#addFiles', add = '#bAddSel') => {
   await p.click(btn); await p.waitForTimeout(300);

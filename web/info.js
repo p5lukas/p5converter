@@ -32,12 +32,12 @@ const INFO = {
     <li><b>Komplett durchlesen (Decode-Test):</b> ffmpeg liest die ganze neue Datei einmal durch, ohne etwas zu speichern, und meldet beschädigte Stellen. Das geht schneller als abspielen, dauert bei langen Videos aber merklich (grob 5–10 Minuten für einen 2-Stunden-Film in 1080p, bei 4K mehr).</li></ul>
     <p>Fällt eine Prüfung durch, bleibt das Original unangetastet und der Auftrag zeigt eine Warnung. Die Zeitangaben sind Schätzwerte.</p>
     <p class="ex">Die Standardauswahl legst du in Einstellungen → Allgemein fest, getrennt für Audio und Video.</p>`},
-  vMaterial: {t: 'Art des Materials & CRF-Vorschlag', b: `<p>Je nach Material braucht dieselbe Qualität einen anderen CRF. Das Programm schlägt einen <b>Startwert</b> vor und füllt den Regler damit vor. Du kannst ihn jederzeit ändern.</p>
-    <ul><li><b>Anime / Zeichentrick:</b> eher <b>niedriger</b> (x265 etwa 16), weil Blöcke und Streifen auf glatten Flächen sofort auffallen.</li>
-    <li><b>Altes Material mit Filmkorn:</b> etwas niedriger (x265 etwa 18), damit das Korn nicht verschmiert.</li>
-    <li><b>Standard / aktueller Film:</b> x265 etwa 20, H.264 etwa 18, AV1 etwa 24.</li>
-    <li><b>720p oder kleiner:</b> zusätzlich ein Punkt niedriger.</li></ul>
-    <p class="ex">Die Werte stammen aus Erfahrungsberichten und Anleitungen (bei Bereichen gilt der niedrigere Wert), nicht aus einer Messung an deiner Datei. Bei Hardware-Encodern nur grober Anhaltspunkt. Abschaltbar unter Einstellungen → Allgemein.</p>`},
+  vMaterial: {t: 'Qualität in Stufen & Art des Materials', b: `<p>Statt einer Zahl wählst du eine Stufe: <b>Sehr gut</b>, <b>Gut</b> (empfohlen), <b>Normal</b> oder <b>Klein</b>. Das Programm rechnet sie je Encoder und Codec in die richtige Zahl um, denn dieselbe Zahl bedeutet bei der CPU (CRF), NVIDIA (CQ), Intel Quick Sync (ICQ) und AMD/VAAPI (QP) nicht dasselbe. Die Zahl siehst du unter „Erweitert“.</p>
+    <p>Die <b>Art des Materials</b> verschiebt alle Stufen:</p>
+    <ul><li><b>Anime / Zeichentrick:</b> etwas niedrigere Zahl (−4), weil Blöcke und Streifen auf glatten Flächen sofort auffallen.</li>
+    <li><b>Altes Material mit Filmkorn:</b> −2, damit das Korn nicht verschmiert.</li>
+    <li><b>720p oder kleiner:</b> zusätzlich −1.</li></ul>
+    <p class="ex">Die Zahlen sind Startwerte aus Erfahrungsberichten und Anleitungen (bei Bereichen gilt der niedrigere Wert), nicht auf deiner Hardware gemessen. Passt eine Stufe bei deinem Encoder nicht, nimm die nächste oder stelle unter „Erweitert“ die Zahl selbst ein. Abschaltbar (Material) unter Einstellungen → Allgemein.</p>`},
 
   aFormat: {t: 'Audio-Format', b: `<ul><li><b>MP3:</b> läuft überall (Auto, Handy, alte Geräte). Sicherste Wahl.</li>
     <li><b>Opus:</b> bei kleiner Bitrate die beste Qualität, ideal für Sprache/Podcasts. Nicht jedes ältere Gerät kann es.</li>
@@ -120,7 +120,7 @@ const INFO = {
   trkViews: {t: 'Gruppen, Tabelle, Einzelne Dateien', b: `<ul><li><b>Gruppen:</b> Dateien mit denselben Sprachen sind zusammengefasst (z. B. eine ganze Staffel). Ein Haken bei einer Sprache gilt für die ganze Gruppe. Abweichende Dateien stehen in eigenen, markierten Gruppen. Jede Gruppe zeigt, was passieren wird.</li>
     <li><b>Tabelle:</b> Alle Dateien als Zeilen, alle Sprachen als Spalten, mit Häkchen. Der Haken in der Spaltenüberschrift gilt für alle Dateien.</li>
     <li><b>Einzelne Dateien:</b> jede Spur einer Datei als Karte mit allen Einstellungen (Titel, Sprache, Forced, Standard, Format).</li></ul>`},
-  trkPrefs: {t: 'Sprach-Wünsche', b: `<p>Hier legst du einmal fest, welche Sprachen du haben willst. Im Schritt „Audio &amp; Untertitel“ wird das dann bei jeder Datei automatisch vorgeschlagen – und die Tipps berücksichtigen es.</p>
+  trkPrefs: {t: 'Sprach-Wünsche', b: `<p>Hier legst du einmal fest, welche Sprachen du haben willst. In der Tabelle „Vorher → Nachher“ wird das dann bei jeder Datei automatisch angewendet (mit dem Funkel-Zeichen markiert) – und die Tipps berücksichtigen es.</p>
     <ul><li><b>Behalten:</b> andere Sprachen werden entfernt (leer = nichts entfernen). Hat eine Datei keine deiner Sprachen, bleibt sie unverändert.</li>
     <li><b>Standard:</b> eine Rangliste. Die erste Sprache, die in der Datei vorkommt, wird zur Spur, die der Player automatisch startet (z. B. Deutsch, sonst Englisch).</li>
     <li><b>Forced:</b> „Deutsch (Forced)“ heißt: der erzwungene Untertitel, der nur bei fremdsprachigen Stellen erscheint.</li></ul>

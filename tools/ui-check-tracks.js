@@ -24,7 +24,6 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
     eq(name, 'Gründe eingeklappt', await p.locator('#hwList details[open]').count(), 0);
     await p.screenshot({ path: `${L.SHOTS}/t-${name}-0-start.png`, fullPage: true });
     await p.click('#startFlow'); await p.waitForTimeout(300);
-    eq(name, 'Voreinstellungen im Schritt Dateien aus', await p.isVisible('#presetBar'), false);
     await L.addFile(p, 'multi.mkv'); await L.addFile(p, 'multi2.mkv');
     await L.goStep(p, 'dest');
     await p.selectOption('#exists', 'overwrite'); await p.waitForTimeout(100);
@@ -32,11 +31,8 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
     await p.screenshot({ path: `${L.SHOTS}/t-${name}-1-dest.png` });
     await p.selectOption('#exists', 'rename');
     await L.goStep(p, 'name');
-    eq(name, 'Voreinstellungen im Schritt Benennen aus', await p.isVisible('#presetBar'), false);
     await L.goStep(p, 'video');
-    eq(name, 'Voreinstellungen im Schritt Video an', await p.isVisible('#presetBar'), true);
     await L.goStep(p, 'tracks');
-    eq(name, 'Voreinstellungen im Schritt Spuren aus', await p.isVisible('#presetBar'), false);
     await p.waitForSelector('.trkviews'); await p.click('.trkviews button:has-text("Einzelne Dateien")'); await p.waitForSelector('#trackEditor .trkcard');
     eq(name, 'Karten (2 Ton + 2 Untertitel)', await p.locator('#trackEditor .trkcard').count(), 4);
     if (await ov() > 0) errs.push(`${name}: Überlauf im Spuren-Schritt: ${await ov()}px`);
@@ -64,7 +60,8 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
     eq(name, 'Änderungen auf 2. Datei übertragen', await p.locator('#trackEditor .trkcard.edited').count() >= 3, true);
     // Zusammenfassung nennt die Änderung
     await L.goStep(p, 'summary');
-    if (!/Einzelne Spuren geändert bei 2 Dateien/.test(await p.textContent('#summaryBody'))) errs.push(name + ': Zusammenfassung ohne Spur-Hinweis');
+    await p.waitForTimeout(600); await p.click('#cvFileDetails summary'); await p.waitForTimeout(200);
+    eq(name, 'beide Dateien melden geänderte Spuren', await p.locator('#fileList [data-tr]').count(), 2);
     // nur Desktop: wirklich konvertieren und das Ergebnis prüfen
     if (name === 'desktop') {
       await L.goStep(p, 'dest'); await p.selectOption('#outMode', 'custom'); await p.fill('#outDir', OUTDIR + '/tracks');

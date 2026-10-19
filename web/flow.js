@@ -1,53 +1,37 @@
 'use strict';
-/* Ablauf in Schritten (je Welt) mit Startseite, Reitern, „Zurück/Weiter“ und Zusammenfassung.
+/* Startseite und Konvertieren-Ansicht (je Welt), gewonnener Platz, „Wenn Datei existiert“, Zurücksetzen.
    Nutzt S, $, $$, h(), fill(), W(), api(), toast() usw. aus app.js/settings.js (nur zur Laufzeit). */
 
 const STEPS = {
-  video: [['start', 'Start'], ['files', 'Dateien'], ['dest', 'Ziel'], ['name', 'Benennen'], ['video', 'Video'], ['tracks', 'Audio & Untertitel'], ['summary', 'Zusammenfassung']],
-  audio: [['start', 'Start'], ['files', 'Dateien'], ['dest', 'Ziel'], ['name', 'Benennen'], ['audio', 'Einstellungen'], ['summary', 'Zusammenfassung']],
+  video: [['start', 'Start'], ['convert', 'Konvertieren']],
+  audio: [['start', 'Start'], ['convert', 'Konvertieren']],
 };
 const stepIds = () => STEPS[S.world].map(s => s[0]);
+// Die frühere Schritt-Folge (Dateien, Ziel, Benennen, Video, Spuren, Zusammenfassung) ist jetzt eine Ansicht („convert“); alte Namen führen dorthin
+const OLD_STEPS = {files: null, summary: null, dest: 'dest', name: 'dest', video: 'video', audio: 'video', tracks: 'tracks'};
 
-function renderSteps() {
-  const ids = stepIds(), cur = ids.indexOf(S.step), n = S.files[S.world].length;
-  fill($('#steps'), STEPS[S.world].map(([id, label], i) => h('button', {type: 'button', 'data-step-btn': id, class: 'stepbtn' + (id === S.step ? ' on' : '') + (i < cur ? ' past' : ''),
-    title: label, 'aria-current': id === S.step ? 'step' : null, onclick: () => showStep(id)},
-    h('i', {}, id === 'start' ? icon('planet') : String(i)), h('span', {}, label), id === 'files' && n ? h('em', {}, n) : null)));
-  const on = $('#steps .stepbtn.on'); if (on && on.scrollIntoView) on.scrollIntoView({inline: 'center', block: 'nearest'});
-}
-
-// zeigt nur den gewählten Schritt; Reiter, Zurück/Weiter und Voreinstellungsleiste passen sich an
+// zeigt die Startseite oder die Konvertieren-Ansicht; Voreinstellungsleiste und Startleiste passen sich an
 function applySteps() {
-  const ids = stepIds(), i = ids.indexOf(S.step);
-  $$('.stepsec').forEach(sec => sec.classList.toggle('hidden', !(sec.dataset.step === S.step && (!sec.dataset.world || sec.dataset.world === S.world))));
+  $$('.stepsec').forEach(sec => sec.classList.toggle('hidden', sec.dataset.step !== S.step));
   $('#hwCard').classList.toggle('hidden', S.world !== 'video');
-  // Voreinstellungen gibt es nur dort, wo auch die Einstellungen sind (Video bzw. Einstellungen), nicht in jedem Schritt
-  $('#presetBar').classList.toggle('hidden', !(S.step === 'video' || S.step === 'audio'));
   $('#aPresets').classList.toggle('hidden', S.world !== 'audio');
   $('#vPresets').classList.toggle('hidden', S.world !== 'video');
   $('#stepnav').classList.toggle('hidden', S.step === 'start');
-  $('#steps').classList.toggle('hidden', S.step === 'start'); // Start und die Schritte erscheinen erst, wenn man den Assistenten startet
-  $('#stepNext').classList.toggle('hidden', S.step === 'summary');
-  $('#start').classList.toggle('hidden', S.step !== 'summary');
-  $('#savePreset').classList.toggle('hidden', S.step !== 'summary');
-  $('#stepBack').textContent = i <= 1 ? '← Startseite' : '← Zurück';
   document.body.dataset.step = S.step;
-  renderSteps();
+  if (typeof cvWorldVis === 'function') cvWorldVis();
 }
 
 function showStep(id, keepScroll) {
+  let tab = null;
+  if (id in OLD_STEPS) { tab = OLD_STEPS[id]; id = 'convert'; }
   if (!stepIds().includes(id)) id = 'start';
   S.step = id;
   applySteps();
-  if (id === 'summary') { vfUI(); renderSummary(); }
-  if (id === 'video') crfRefresh(false);
-  if (id === 'files') renderFiles();
-  if (id === 'name') syncNameUI();
-  if (id === 'tracks') trkRender();
+  if (id === 'convert') cvRender();
   existsUI();
   if (!keepScroll) window.scrollTo(0, 0);
+  if (tab) openSheet(tab);
 }
-const stepMove = d => { const ids = stepIds(), i = ids.indexOf(S.step) + d; showStep(i < 0 ? 'start' : ids[Math.min(i, ids.length - 1)]); };
 
 // ---------- Startseite: gewonnener Platz ----------
 // Gewonnener Platz: strikt je Welt – Audio zeigt nur Audio, Video nur Video (eigene Zählung, eigenes Zurücksetzen)
@@ -74,57 +58,6 @@ async function doSavedReset() {
   catch (e) { toast(e.message, 'bad'); }
 }
 
-// ---------- Zusammenfassung ----------
-function sumRow(label, step, ...content) {
-  return h('div', {class: 'sumrow'}, h('div', {class: 'suml'}, h('b', {}, label), h('button', {type: 'button', class: 'small ghost', onclick: () => showStep(step)}, 'Ändern')), h('div', {class: 'sumc'}, content));
-}
-async function renderSummary() {
-  const files = S.files[S.world], tot = files.reduce((a, f) => a + (f.size || 0), 0), warns = [];
-  const dir = $('#outMode').value === 'custom' ? $('#outDir').value.trim() : '';
-  if (!files.length) warns.push('Es sind noch keine Dateien ausgewählt.');
-  if ($('#outMode').value === 'custom' && !dir) warns.push('Es ist kein Zielordner angegeben.');
-  if ($('#deleteSource').checked) warns.push('Die Quelldateien werden nach bestandener Prüfung sofort und endgültig GELÖSCHT.');
-  if (S.world === 'video' && $('#vCodec').value !== 'copy') {
-    const r = resolveBackend(); if (r && r.note) warns.push(r.note);
-  }
-  const names = files.slice(0, 4).map(f => f.rel || f.path.split(/[\\/]/).pop());
-  const existsTxt = {rename: 'Gibt es die Zieldatei schon: beide behalten, die neue wird nummeriert', skip: 'Gibt es die Zieldatei schon: überspringen, die vorhandene bleibt unberührt', overwrite: 'Gibt es die Zieldatei schon: überschreiben, die vorhandene wird ersetzt'}[$('#exists').value];
-  if ($('#exists').value === 'overwrite') warns.push('Vorhandene Zieldateien werden überschrieben.');
-  const pat = $('#pattern').value.trim(), rules = cleanRules(nameRules()), suf = $('#suffix').value;
-  const nameParts = [pat ? 'Muster ' + pat : 'Originalname', suf ? 'Zusatz „' + suf + '“' : null, rules.length ? rules.length + (rules.length === 1 ? ' Ersetzung' : ' Ersetzungen') : null].filter(Boolean);
-  const settings = describePreset({world: S.world, values: collectPresetValues(S.world)});
-  const sp = h('span', {class: 'muted small'}, '');
-  let effect = null;
-  const rows = [
-    sumRow('Dateien', 'files', h('div', {}, files.length + (files.length === 1 ? ' Datei' : ' Dateien') + (files.length ? ' · ' + fmtSize(tot) : '')), files.length ? h('div', {class: 'muted small'}, names.join(' · ') + (files.length > 4 ? ' · … und ' + (files.length - 4) + ' weitere' : '')) : null),
-    sumRow('Ziel', 'dest', h('div', {}, dir ? 'Ordner ' + dir : 'Neben der Quelldatei'), h('div', {class: 'muted small'}, existsTxt)),
-    sumRow('Benennen', 'name', h('div', {}, nameParts.join(' · ')), sp),
-    sumRow(S.world === 'video' ? 'Video' : 'Einstellungen', S.world === 'video' ? 'video' : 'audio', h('div', {}, settings),
-      S.world === 'video' && $('#vCodec').value !== 'copy' ? h('div', {class: 'muted small'}, 'Encoder: ' + $('#vResolved').textContent.replace(/\s+/g, ' ').trim()) : null),
-  ];
-  if (S.world === 'video') {
-    const am = $('#vAudioMode').value === 'copy' ? 'Audiospuren unverändert' : 'Audio neu kodiert (' + $('#vAudioCodec').value.toUpperCase() + ' ' + $('#vAudioKbps').value + ' kbit/s)';
-    const sm = $('#vSubMode').value === 'none' ? 'Untertitel entfernt' : 'Untertitel unverändert';
-    const ed = trkEditedFiles(), tr = trkRules(), nr = tr.audio.length + tr.sub.length;
-    // Wirkung aller Regeln, Wünsche und eigenen Änderungen (liest bei Bedarf die Spuren aller Dateien)
-    effect = h('div', {class: 'muted small'}, files.length ? 'Wirkung wird berechnet …' : '');
-    rows.push(sumRow('Audio & Untertitel', 'tracks', h('div', {}, am + ' · ' + sm), effect,
-      nr || ed || (tr.usePrefs && trkHasPrefs()) ? h('div', {class: 'muted small'}, [nr ? nr + (nr === 1 ? ' Regel' : ' Regeln') : null, tr.usePrefs && trkHasPrefs() ? 'Sprach-Wünsche angewendet' : null, ed ? 'Einzelne Spuren geändert bei ' + ed + (ed === 1 ? ' Datei' : ' Dateien') : null].filter(Boolean).join(' · ')) : null));
-  }
-  fill($('#summaryBody'), warns.length ? h('div', {class: 'banner warn'}, warns.map(w => h('div', {}, icon('warn'), ' ' + w))) : null, rows);
-  $('#start').disabled = !files.length || ($('#outMode').value === 'custom' && !dir);
-  if (effect && files.length) trkSummaryLines().then(l => { effect.textContent = l.join(' · '); }).catch(() => { effect.textContent = ''; });
-  // Beispiel für den neuen Namen der ersten Datei
-  if (files.length) {
-    try {
-      const r = await api('/api/rename/preview', {items: [files[0].path], pattern: pat, replace: rules, suffix: suf, ext: outExt(), mode: 'convert',
-        target: S.world === 'video' ? {codec: $('#vCodec').value, height: +$('#vHeight').value, bitDepth: +$('#vDepth').value, container: $('#vContainer').value} : {container: outExt()}});
-      const x = r.items[0];
-      if (x) sp.textContent = 'Beispiel: ' + x.old + ' → ' + (x.error ? x.error : x.new);
-    } catch (e) { /* nur ein Beispiel */ }
-  }
-}
-
 // ---------- „Wenn Datei existiert“: erklärender Satz unter der Auswahl ----------
 const EXISTS_HINT = {
   rename: 'Vorhandene Datei bleibt, die neue bekommt eine Nummer, z. B. „Film (2).mkv“.',
@@ -141,7 +74,7 @@ function existsUI() {
 const DEST_FIELDS = ['outMode', 'outDir', 'outStruct', 'exists'];
 // Anfangswerte = die im HTML eingestellten; die Grundeinstellung ist „Remux“ (nichts wird umgewandelt)
 const RESET_OVERRIDES = {
-  video: {vContainer: 'mkv', vCodec: 'copy', vAudioMode: 'copy', vSubMode: 'copy', vTrkRules: ''},
+  video: {vContainer: 'mkv', vCodec: 'copy', vAudioMode: 'copy', vSubMode: 'copy', vTrkRules: '', vQuality: 'good'},
   audio: {aFormat: 'flac'},
 };
 function captureDefaults() {
@@ -154,7 +87,7 @@ function resetWorld() {
   setField('vHwDec', cfg().hwDecode !== false);
   setField('outDir', cfg().defaultOutDir || ''); setField('outMode', cfg().defaultOutDir ? 'custom' : 'same');
   S.name[w] = {...NAME_EMPTY}; showName(w); vfReset(w);
-  if (w === 'video') { setField('vMaterial', 'standard'); S.crfManual = false; }
+  if (w === 'video') { setField('vMaterial', 'standard'); S.qSig = null; CV.reviewed.clear(); CV.inh = {}; CV.gsel = {}; CV.open.clear(); CV.unfold.clear(); }
   S.files[w].length = 0;
   refreshAudioUI(); refreshVideoUI(); outModeUI(); syncNameUI(); renderFiles(); renderHero(); saveSettings();
   showStep('start');
@@ -176,9 +109,8 @@ function wireFlow() {
   $('#resetNo').onclick = () => $('#resetDlg').close();
   $('#resetYes').onclick = () => { $('#resetDlg').close(); resetWorld(); };
   // die drei Knöpfe sitzen in der Kopfzeile und gelten in jeder Ansicht: zuerst zur Hauptansicht; ein schon geöffneter Assistent bleibt, wo er war
-  $('#startFlow').onclick = () => { if (location.hash) location.hash = ''; showStep(S.step === 'start' ? 'files' : S.step); };
+  $('#startFlow').onclick = () => { if (location.hash) location.hash = ''; showStep(S.step === 'start' ? 'convert' : S.step); };
+  $('#cvHome').onclick = () => showStep('start');
   $('#startRename').onclick = () => { location.hash = '#rename'; };
   $('#startHistory').onclick = () => { location.hash = '#history'; };
-  $('#stepBack').onclick = () => stepMove(-1);
-  $('#stepNext').onclick = () => stepMove(1);
 }

@@ -156,6 +156,51 @@ const TP = (() => {
     return {audio: a, sub: u, key: a.join(',') + '|' + u.join(',')};
   }
 
-  return {normLang, noLang, REC_KBPS, RULE_CODECS, RULE_TARGETS, SUB_KINDS, codecKey, subKind, audioRuleMatches, subRuleMatches, describeAudioRule, describeSubRule, plan, summarize, signature, langDrops, forcedGuess};
+
+  /* ---------- Gruppen nach Rahmendaten und Übernahme von Entscheidungen ---------- */
+  // Rahmendaten einer Datei: Video (Codec, Höhe) und alle Ton-/Untertitelspuren der Reihe nach (Art, Sprache, Format, Kanäle, Forced).
+  // Dateien mit gleichem Schlüssel sind eine Gruppe: eine Entscheidung gilt für alle (die n-te Tonspur ist überall die n-te Tonspur).
+  function frameKey(info) {
+    const st = (info.streams || []).filter(s => !s.attachedPic);
+    const v = st.find(s => s.type === 'video');
+    const rest = st.filter(s => s.type === 'audio' || s.type === 'subtitle').map(s => `${s.type[0]}:${noLang(s.lang) ? 'und' : normLang(s.lang)}:${s.type === 'audio' ? codecKey(s) : s.codec}:${s.type === 'audio' ? (s.channels || 0) : ''}${s.type === 'subtitle' && s.forced ? ':f' : ''}`);
+    return (v ? `v:${v.codec}:${v.height || 0}` : 'v:-') + '|' + rest.join('|');
+  }
+  // Spur einer anderen Datei, die dieser entspricht (gleiche Art/Sprache/Format/Kanäle, n-te davon)
+  const trackKey = s => `${s.type}:${noLang(s.lang) ? 'und' : normLang(s.lang)}:${s.type === 'audio' ? codecKey(s) : s.codec}:${s.type === 'audio' ? (s.channels || 0) : ''}`;
+  function sameTrack(srcInfo, srcStream, dstInfo) {
+    const list = i => (i.streams || []).filter(x => !x.attachedPic && (x.type === 'audio' || x.type === 'subtitle'));
+    const key = trackKey(srcStream), n = list(srcInfo).filter(x => trackKey(x) === key).findIndex(x => x.index === srcStream.index);
+    if (n < 0) return null;
+    return list(dstInfo).filter(x => trackKey(x) === key)[n] || null;
+  }
+  // Änderungen {Spurindex: {…}} einer kontrollierten Datei auf eine andere Datei übertragen: nur auf passende Spuren
+  function transferEdits(srcInfo, srcEdits, dstInfo) {
+    const out = {};
+    Object.entries(srcEdits || {}).forEach(([k, e]) => {
+      const s = (srcInfo.streams || []).find(x => x.index === +k); if (!s) return;
+      const t = sameTrack(srcInfo, s, dstInfo); if (t) out[t.index] = {...e};
+    });
+    return out;
+  }
+  // Spur Nr. n (nach Art) in einer anderen Datei derselben Gruppe
+  function ordinal(info, index) {
+    const s = (info.streams || []).find(x => x.index === index); if (!s) return null;
+    return {type: s.type, n: (info.streams || []).filter(x => !x.attachedPic && x.type === s.type).findIndex(x => x.index === index)};
+  }
+  function atOrdinal(info, o) { return o ? (info.streams || []).filter(x => !x.attachedPic && x.type === o.type)[o.n] || null : null; }
+  // Wodurch hat das Programm eine Spur automatisch verändert? (für die Markierung ✦ mit Begründung)
+  function autoReasons(r) {
+    const out = [];
+    (r.why || []).forEach(w => {
+      if (w.startsWith('Regel:')) out.push({kind: 'rule', text: w});
+      else if (w.startsWith('Sprache nicht')) out.push({kind: 'lang', text: w});
+      else if (w.startsWith('Standard nach')) out.push({kind: 'default', text: w});
+      else if (w.startsWith('Wahrscheinlich Forced')) out.push({kind: 'forced', text: w});
+    });
+    return out;
+  }
+
+  return {frameKey, trackKey, sameTrack, transferEdits, ordinal, atOrdinal, autoReasons, normLang, noLang, REC_KBPS, RULE_CODECS, RULE_TARGETS, SUB_KINDS, codecKey, subKind, audioRuleMatches, subRuleMatches, describeAudioRule, describeSubRule, plan, summarize, signature, langDrops, forcedGuess};
 })();
 if (typeof module !== 'undefined') module.exports = TP;

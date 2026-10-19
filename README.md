@@ -23,7 +23,7 @@ Ein SoundConverter-Klon mit zusätzlicher Video-Welt, gebaut für ganze Serien-S
 
 > *English in short:* p5converter is a self-hosted web UI (single Go binary + ffmpeg) to convert audio and video. It supports
 > Intel Quick Sync, NVIDIA NVENC, AMD AMF and VAAPI, per-track audio/subtitle rules for whole seasons (e.g. DTS → AC-3, keep only German/English,
-> forced-subtitle detection), automatic CRF suggestions, a post-conversion check (tracks, length, full decode) before originals are touched, a
+> forced-subtitle detection), quality in four steps (translated per encoder, with the real number under "Erweitert"), one before/after table instead of wizard steps, a post-conversion check (tracks, length, full decode) before originals are touched, a
 > conversion history, renaming, and a Windows app. Docker image: `ghcr.io/p5lukas/p5converter:latest` (stable) or `:dev`, default port 8787.
 
 ## Auf einen Blick
@@ -34,14 +34,15 @@ Ein SoundConverter-Klon mit zusätzlicher Video-Welt, gebaut für ganze Serien-S
 * **Verlauf** der letzten 100 Aufträge je Welt (mit CSV-Export), **gewonnener Platz**, Live-Auslastung
 * **Handy und Tablet:** als Web-App auf dem Home-Bildschirm nutzbar
 
+<p align="center"><img src="docs/images/konvertieren.png" alt="Konvertieren: Satz und Tabelle Vorher → Nachher" width="820"><br><sub>Konvertieren in einer Ansicht: Satz zum Antippen, Tabelle „Vorher → Nachher“, Gruppen, Funkel-Markierung für Automatisches</sub></p>
+
 <table>
 <tr>
-<td width="50%"><img src="docs/images/spuren.png" alt="Audio und Untertitel: Gruppen"><br><sub>Audio &amp; Untertitel: eine Staffel in Gruppen, Regel-Vorschläge</sub></td>
 <td width="50%"><img src="docs/images/verlauf.png" alt="Verlauf und Warteschlange"><br><sub>Warteschlange und Verlauf</sub></td>
+<td width="50%"><img src="docs/images/mobil.png" alt="Mobile Ansicht" width="260"><br><sub>Mobil / iPhone</sub></td>
 </tr>
 </table>
 
-<p align="center"><img src="docs/images/mobil.png" alt="Mobile Ansicht" width="280"><br><sub>Mobil / iPhone</sub></p>
 
 ## App-Icon
 Gleicher Aufbau wie bei **p5assets** (Matrix-Regen, Poster-Rahmen, „p5“); das Abzeichen unten rechts unterscheidet die Apps: bei p5converter **silberne Audio-CD + blaue Blu-ray** (Audio und Video), bei p5assets ein oranger Komet. Dateien: `web/icon*.png`, `web/apple-touch-icon.png` (iPhone/iPad-Web-App), `unraid/icon.png`; Quelle und Erzeugung: `tools/icons/` (`make_icons.py converter <Ordner>`).
@@ -107,8 +108,8 @@ Zielordner mit Struktur oder Namensmuster (`{artist}/{album}/{track} - {title}`)
 ### Video
 * Container **MKV** (Standard) oder MP4, „Nur Remux“ (Video kopieren)
 * Codec **H.264, H.265, AV1, VP9**
-* **Auflösung** (max. Höhe, nie hochskaliert), **CRF** (mit automatischem Vorschlag je nach Art des Materials: Anime, Korn, aktueller Film …), Geschwindigkeits-Preset, **8/10 Bit** (oder „wie Quelle“)
-* **Audio & Untertitel in einem Schritt, auch für Einsteiger und für ganze Serien:** Standard ist **Passthrough** (nichts ändern). Das Programm macht Vorschläge, jeder lässt sich abwählen. **Drei Ansichten:** **Gruppen** (Dateien mit gleichen Sprachen zusammengefasst, Haken je Sprache gilt für die ganze Gruppe, Vorschau „Was passiert“, abweichende Dateien markiert), **Tabelle** (Dateien × Sprachen mit Haken) und **Einzelne Dateien** (Spurkarten in Klartext mit „Erweitert“: Titel, Sprache, **Forced (erzwungene Untertitel)**, Standard, Format). **Regeln nach Format** (z. B. nur DTS in AC-3 umwandeln, Bild-Untertitel entfernen; erste passende Regel gewinnt; als Voreinstellung speicherbar; mit Regel-Vorschlägen) und **Sprach-Wünsche** in den Einstellungen als Rangliste (Ton/Untertitel behalten, Standard-Ton, Standard-Untertitel z. B. „Deutsch Forced“). Die Wirkung steht vor dem Start in der Zusammenfassung
+* **Auflösung** (max. Höhe, nie hochskaliert), **Qualität in vier Stufen** (Sehr gut, Gut, Normal, Klein; je Encoder in die passende Zahl umgerechnet, mit Anpassung an die Art des Materials: Anime, Korn …; „Erweitert“ zeigt CRF/CQ/ICQ/QP), Geschwindigkeits-Preset, **8/10 Bit** (oder „wie Quelle“)
+* **Audio & Untertitel direkt in der Tabelle, auch für Einsteiger und für ganze Serien:** Standard ist **Passthrough** (nichts ändern). Das Programm macht Vorschläge, jeder lässt sich abwählen. **Drei Ansichten:** **Gruppen** (Dateien mit gleichen Sprachen zusammengefasst, Haken je Sprache gilt für die ganze Gruppe, Vorschau „Was passiert“, abweichende Dateien markiert), **Tabelle** (Dateien × Sprachen mit Haken) und **Einzelne Dateien** (Spurkarten in Klartext mit „Erweitert“: Titel, Sprache, **Forced (erzwungene Untertitel)**, Standard, Format). **Regeln nach Format** (z. B. nur DTS in AC-3 umwandeln, Bild-Untertitel entfernen; erste passende Regel gewinnt; als Voreinstellung speicherbar; mit Regel-Vorschlägen) und **Sprach-Wünsche** in den Einstellungen als Rangliste (Ton/Untertitel behalten, Standard-Ton, Standard-Untertitel z. B. „Deutsch Forced“). Die Wirkung steht vor dem Start in der Zusammenfassung
 * **Forced erkennen:** Ist ein Untertitel viel kleiner als die vollständige Spur derselben Sprache (unter 20 %), schlägt das Programm „Als Forced markieren“ vor (nie ungefragt; mit dem Wunsch „Deutsch (Forced)“ ist er vorausgewählt). Dafür braucht die MKV die Größenangaben, die mkvmerge ablegt
 * **Spuren ohne Sprachangabe:** Das Programm liest nur, was in der Datei steht. Fehlt bei Ton oder Untertitel die Sprache, kann sie ein Werkzeug wie [ULDAS](https://github.com/netplexflix/ULDAS) vorher automatisch ergänzen (erkennt Sprache per Whisper, auch Forced und SDH); p5converter übernimmt dann die erkannten Sprachen. Es wird kein Code daraus verwendet
 * **Plex:** Sprache wird als dreibuchstabiger Code geschrieben; „Forced“ erkennt Plex nur in **MKV** (bei MP4 kommt eine Warnung) und die Untertitelsprache muss zur Tonspur passen; danach in Plex neu **analysieren**
@@ -125,10 +126,10 @@ Zielordner mit Struktur oder Namensmuster (`{artist}/{album}/{track} - {title}`)
 ### Logs
 * **Terminal-Symbol** in der Kopfzeile: Log-Seite mit Suche, Stufenfilter, Live-Ansicht, Download und „Leeren“; Zähler für neue Warnungen/Fehler. Datei: `/config/logs/p5converter.log` (rotierend). Passwörter, Cookies und Tokens werden nie geschrieben.
 
-### Ablauf in Schritten
+### Konvertieren in einer Ansicht
 * **Kopfzeile:** „Konvertieren“, „Umbenennen“ und „Verlauf“ (mit Zähler für laufende und wartende Aufträge) sind in jeder Ansicht erreichbar
-* **Startseite:** oben der **aktuelle Auftrag** („Datei 4 von 13“ mit Fortschritt, Geschwindigkeit und Hardware mit grünen Haken) oder „Gerade nichts los“, daneben die Live-Auslastung; darunter gleich große Kacheln **Gewonnener Platz** (je Welt eigene Zählung, mit „Zurücksetzen“) und **Hardware**. Die Schritt-Reiter erscheinen erst, wenn man den Assistenten startet
-* **Konvertieren:** Dateien → Ziel → Benennen → Einstellungen (Video: Video, dann Audio & Untertitel · Audio: Format) → **Zusammenfassung** → Start (Voreinstellungen gibt es nur im Schritt „Video“ bzw. „Einstellungen“; „Zurücksetzen“ stellt die gewählte Welt auf „Remux“ zurück); oben als Reiter anklickbar, unten Zurück/Weiter; danach zurück zur Startseite mit der laufenden Warteschlange
+* **Startseite:** oben der **aktuelle Auftrag** („Datei 4 von 13“ mit Fortschritt, Geschwindigkeit und Hardware mit grünen Haken) oder „Gerade nichts los“, daneben die Live-Auslastung; darunter gleich große Kacheln **Gewonnener Platz** (je Welt eigene Zählung, mit „Zurücksetzen“) und **Hardware**.
+* **Konvertieren:** oben die **Dateien**, darunter ein **Satz zum Antippen** (Hardware, Ziel, „danach geprüft“; am Handy als Blatt unten) und die Tabelle **„Vorher → Nachher“**: links die Quelle, rechts das Ergebnis, Zeile für Zeile (Video, Container, Qualität, jede Tonspur, jeder Untertitel, Dateiname), jede Zeile direkt änderbar. Dateien mit gleichem Aufbau sind eine **Gruppe**; abweichende Gruppen müssen kontrolliert werden, danach übernimmt das Programm deine Entscheidungen bei gleichen Spuren. Das **Funkel-Zeichen** steht nur bei Automatischem (Regeln, Sprach-Wünsche, Forced-Erkennung, Übernahme) – mit Begründung und „rückgängig“. Unten die Startleiste (Zusammenfassung, **Details**, „Als Voreinstellung speichern“, „Zurücksetzen“, Start); **Details** enthält Ziel & Name, Video, Audio & Untertitel (Regeln, Einzelspuren), Prüfen & Original. Danach zurück zur Startseite mit der laufenden Warteschlange
 
 ### Verlauf
 * **Kopfzeile → Verlauf:** oben die Warteschlange (laufende und wartende Aufträge, „Parallel“, „Alle abbrechen“), darunter die letzten **100** beendeten Aufträge je Welt (Audio und Video getrennt, gespeichert in `/config`, bleibt nach „Fertige entfernen“ und Neustart): Ergebnis, Größe vorher/nachher, Dauer, Prüfergebnis, bei Fehlern ffmpeg-Befehl und Log · Suche, Filter nach Ergebnis und Zeitraum · **CSV-Export** · „Verlauf leeren“ (nur die gewählte Welt)
@@ -150,7 +151,7 @@ Zielordner mit Struktur oder Namensmuster (`{artist}/{album}/{track} - {title}`)
 * **Quick Sync auch auf älteren Intel-Chips** (Gen 8–11, z. B. i9-9900): das Image enthält die Media-SDK-Runtime *und* oneVPL (Gen 12+); die Erkennung probiert mehrere Startvarianten
 * **Diagnose** unter Einstellungen → Hardware (Ergebnis jedes Tests, `vainfo`, GPUs) mit „Diagnose kopieren“
 
-> Der Qualitätswert bei Hardware-Encodern (ICQ/CQ/QP) ist nicht 1:1 mit x264/x265-CRF vergleichbar; 20–28 sind üblich.
+> Die Qualitätszahl (CRF bei der CPU, CQ bei NVIDIA, ICQ bei Quick Sync, QP bei VAAPI/AMD) ist zwischen den Encodern nicht vergleichbar; deshalb rechnet das Programm die vier Stufen je Encoder um. Die Stufen sind Startwerte und noch **nicht auf echter Hardware gemessen** – bitte Größe und Bild vergleichen und die Zahl unter „Erweitert“ nachstellen.
 
 ## Qualitätssicherung
 Die CI führt Unit- und Integrationstests mit echtem ffmpeg aus (alle Software-Encoder, Audioformate, Spuren/Untertitel, Parallel-Kollisionen, Abbruch, Sicherheitsprüfungen) und startet das gebaute Docker-Image zu einem **Smoke-Test mit echten Konvertierungen**, bevor es veröffentlicht wird.
