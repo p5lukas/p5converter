@@ -14,6 +14,7 @@
 
 ## Offen
 - [ ] **Suche im Datei-Browser (Nutzer 19.10.)**: Beim Hinzufügen von Dateien und Ordnern („+ Dateien“, „+ Ordner“, auch Zielordner) im Dateibaum eine **Suche** einbauen (Suchfeld im Fenster, filtert die Einträge des aktuellen Ordners beim Tippen; offen: nur dieser Ordner oder auch Unterordner). Varianten und Umfang beim „Leg los“ mit dem Nutzer klären, falls nötig
+- [ ] **Anzeigenamen für Quellordner (Nutzer 19.10.)**: Die Wurzelordner (`/audio1`, `/video1` … aus `P5_ROOTS`) erscheinen im Datei-Browser unter ihrem Container-Pfad. Idee: in den Einstellungen je Wurzelordner einen **Anzeigenamen** vergeben („/video1“ → „Filme 4K“), unabhängig vom Container-Pfad und vom Template. Im Browser (Dateien, Ordner, Zielordner) und im Satz/Tabelle zeigen; der echte Pfad bleibt als Tooltip/Zusatz. Nicht eingehängte Slots bleiben ausgeblendet. Umsetzung und Speicherort (`/config`, je Welt oder global) beim „Leg los" klären
 - [ ] **Windows-App: Folgearbeiten** (erste Version 0.1.1 steht auf `dev`): (1) ~~Tray~~ (erledigt in 0.1.2); (2) **Prüfung durch den Nutzer** auf dem Windows-PC (Fenster, Symbol, Hardware-Erkennung, echte Konvertierung, Deinstallation); (3) Größe der `setup.exe` aus dem CI-Lauf (Zusammenfassung „Größen“) mitteilen; (4) Linux-App danach; (5) Windows erst nach Freigabe nach `main`
 - [ ] Optional: Image als multi-arch (amd64/arm64) bauen
 
