@@ -18,7 +18,7 @@ func TestDefaultsPersistAndReload(t *testing.T) {
 		t.Fatalf("Standardwerte: %+v", s)
 	}
 	s.Worlds["audio"] = World{Name: "Musik", Hue: 205}
-	s.Presets = append(s.Presets, Preset{Name: "Meins", World: "video", Suggest: true, Values: map[string]any{"vCodec": "hevc", "vCrf": 19.0, "evil": "x"}})
+	s.Presets = append(s.Presets, Preset{Name: "Meins", World: "video", Suggest: true, Values: map[string]any{"vCodec": "hevc", "vCrf": 19.0, "vQuality": "good", "evil": "x"}})
 	if _, err := st.Put(s); err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +28,7 @@ func TestDefaultsPersistAndReload(t *testing.T) {
 		t.Errorf("nicht gespeichert: %+v", got.Worlds)
 	}
 	last := got.Presets[len(got.Presets)-1]
-	if last.Name != "Meins" || last.ID == "" || last.Values["vCrf"] != 19.0 {
+	if last.Name != "Meins" || last.ID == "" || last.Values["vCrf"] != 19.0 || last.Values["vQuality"] != "good" {
 		t.Errorf("Preset: %+v", last)
 	}
 	if _, bad := last.Values["evil"]; bad {

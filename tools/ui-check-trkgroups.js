@@ -33,7 +33,7 @@ const probe = f => JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-print_fo
     ok(/Regeln nach Format/.test(await p.textContent('#trackSettings')), name + ': Regeln-Bereich fehlt');
     await p.screenshot({path: `${L.SHOTS}/p5c-grp-${name}-1.png`, fullPage: true});
     // Vorschlag „DTS → AC-3“ übernehmen
-    await p.click('button:has-text("Regel anlegen: DTS")'); await p.waitForTimeout(600);
+    await p.click('#trackEditor button:has-text("Regel anlegen: DTS")'); await p.waitForTimeout(600);
     ok(/→ AC-3/.test(await p.textContent('.trkgrp')), name + ': Wirkung „→ AC-3“ nicht sichtbar');
     ok(/1 aktiv/.test(await p.textContent('.trkrules summary')), name + ': Regelzähler fehlt');
     ok(await p.locator('.trkrule').count() === 1, name + ': Regelzeile fehlt');
@@ -79,7 +79,7 @@ const probe = f => JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-print_fo
     ok(ov2 <= 0, `${name}/Einstellungen: horizontaler Überlauf ${ov2}px`);
     // zurück zum Konverter: Dateien sind noch da
     await p.evaluate(() => { location.hash = ''; }); await p.waitForTimeout(600);
-    await p.click('[data-step-btn=tracks]'); await p.waitForTimeout(1500);
+    await L.goStep(p, 'tracks'); await p.waitForTimeout(1500);
     await p.click('.trkviews button:has-text("Gruppen")'); await p.waitForTimeout(800);
     ok(/Meine Sprach-Wünsche anwenden/.test(await p.textContent('#trackSettings')), name + ': Wunsch-Zeile fehlt');
     const g1 = await p.locator('.trkgrp').first().textContent();
@@ -92,7 +92,7 @@ const probe = f => JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-print_fo
     await p.locator('.trkpref input[type=checkbox]').check(); await p.waitForTimeout(600);
     // ---- Zusammenfassung: Wirkung ----
     await L.goStep(p, 'summary'); await p.waitForTimeout(2000);
-    const sumTxt = (await p.textContent('#summaryBody')).replace(/\s+/g, ' ');
+    const sumTxt = (await p.textContent('#startInfo')).replace(/\s+/g, ' ');
     ok(/Spuren (wegen deiner Sprach-Liste entfernt|von dir abgewählt)/.test(sumTxt) && /Tonspuren umgewandelt/.test(sumTxt), name + ': Wirkung in der Zusammenfassung fehlt: ' + sumTxt.slice(-260));
     await p.screenshot({path: `${L.SHOTS}/p5c-grp-${name}-7-summary.png`, fullPage: true});
     // ---- echter Lauf (nur Desktop): Ergebnis prüfen ----

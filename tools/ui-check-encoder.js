@@ -22,7 +22,7 @@ const ok = (c, m) => { if (!c) fails.push(m); };
       ok(/libx265/.test(res) && /CPU/.test(res), `${name}/${pref}: „Wird verwendet“ zeigt nicht libx265 + CPU: ${res}`);
       ok(/bevorzugt laut Einstellungen/.test(res) === expectNote, `${name}/${pref}: Hinweis „bevorzugt laut Einstellungen“ falsch: ${res}`);
       // Zurücksetzen ändert daran nichts
-      await p.click('#resetAll'); await p.click('#resetYes'); await p.waitForTimeout(400);
+      await L.goStep(p, 'files'); await p.click('#resetAll'); await p.click('#resetYes'); await p.waitForTimeout(400);
       await p.click('#startFlow'); await L.goStep(p, 'video'); await p.selectOption('#vCodec', 'hevc'); await p.waitForTimeout(300);
       ok(expectLabel.test(await p.locator('#vBackend option[value=auto]').textContent()), `${name}/${pref}: nach „Zurücksetzen“ stimmt die Auswahl nicht mehr`);
       if (pref === 'cpu') await p.screenshot({path: `${L.SHOTS}/p5c-enc-${name}.png`, fullPage: true});

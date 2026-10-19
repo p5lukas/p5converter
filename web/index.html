@@ -42,14 +42,7 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
 </div></header>
 
 <main id="viewMain">
-  <nav class="steps" id="steps" aria-label="Ablauf"></nav>
   <div id="editBanner" class="editbanner hidden"></div>
-  <div class="presetbar hidden" id="presetBar">
-    <span class="muted small">Voreinstellung:</span>
-    <div class="presets" id="aPresets"></div>
-    <div class="presets hidden" id="vPresets"></div>
-    <span class="muted small presetnote">Setzt auch Namensmuster, Zusatz und Ersetzungen.</span>
-  </div>
 
   <!-- Schritt: Start -->
   <section class="stepsec" data-step="start">
@@ -70,9 +63,17 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
     </div>
   </section>
 
-  <!-- Schritt: Dateien -->
-  <section class="stepsec hidden" data-step="files">
-    <div class="panel">
+  <!-- Konvertieren: eine Ansicht (Dateien, Satz, Tabelle „Vorher → Nachher“, Startleiste) -->
+  <section class="stepsec hidden" data-step="convert" id="convertView">
+    <div class="cvtop">
+      <button id="cvHome" class="ghost" type="button"><span data-ic="back"></span> Startseite</button>
+      <div class="presetbar" id="presetBar">
+        <span class="muted small">Voreinstellung:</span>
+        <div class="presets" id="aPresets"></div>
+        <div class="presets hidden" id="vPresets"></div>
+      </div>
+    </div>
+    <div class="panel cvfiles" id="cvFiles">
       <div class="panel-h"><h2>Dateien</h2>
         <div class="btns">
           <button id="addFiles">+ Dateien</button>
@@ -80,196 +81,20 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
           <button id="clearFiles" class="ghost">Leeren</button>
         </div>
       </div>
-      <div id="fileList" class="files"></div>
-      <div id="fileSummary" class="muted small"></div>
+      <div id="fileSummary" class="cvfsum"></div>
+      <details id="cvFileDetails" class="cvfd"><summary>Liste der Dateien</summary><div id="fileList" class="files"></div></details>
     </div>
-
-  </section>
-
-  <!-- Schritt: Ziel -->
-  <section class="stepsec hidden" data-step="dest">
-    <div class="panel" id="destCard">
-      <h2>Ziel</h2>
-      <div class="grid2">
-        <label>Speicherort
-          <select id="outMode"><option value="same">Neben der Quelldatei</option><option value="custom">Eigener Ordner…</option></select>
-        </label>
-        <label id="outDirRow" class="hidden">Ordner
-          <div class="row"><input id="outDir" placeholder="/output"><button id="pickOut" class="small">…</button></div>
-        </label>
-        <label id="structRow" class="hidden">Struktur
-          <select id="outStruct"><option value="keep">Ordnerstruktur beibehalten</option><option value="flat">Alles in einen Ordner</option></select>
-        </label>
-        <label>Wenn Datei existiert
-          <select id="exists"><option value="rename">Beide behalten, neue Datei nummerieren</option><option value="skip">Überspringen, vorhandene Datei nicht anfassen</option><option value="overwrite">Überschreiben, vorhandene Datei ersetzen</option></select>
-          <span class="muted small" id="existsHint"></span>
-        </label>
-      </div>
-    </div>
-  </section>
-
-  <!-- Schritt: Benennen -->
-  <section class="stepsec hidden" data-step="name">
-    <div class="panel">
-      <h2>Benennen</h2>
-      <div class="grid2">
-        <label>Dateiname-Zusatz
-          <input id="suffix" placeholder="z. B. _x265">
-        </label>
-      </div>
-      <div class="namebox" id="nameBox">
-        <h3 data-info="pattern">Dateiname</h3>
-        <label id="patternRow">Namensmuster (optional)
-          <input id="pattern" placeholder="{title} ({year}) [{res}][{codec}]" autocomplete="off" spellcheck="false">
-        </label>
-        <div class="varchips" id="varChips"></div>
-        <h3 data-info="renReplace">Suchen und Ersetzen</h3>
-        <input type="hidden" id="renRules" value="[]">
-        <div id="ruleRows" class="rulerows"></div>
-        <button type="button" class="small" id="addRule">+ Ersetzung</button>
-        <div class="namepreview" id="namePreview"></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Schritt: Audio-Einstellungen (Audiowelt) -->
-  <section class="stepsec hidden" data-step="audio" data-world="audio">
-    <div class="panel" id="audioSettings">
-      <h2>Audio-Einstellungen</h2>
-      <div class="grid2">
-        <label>Format
-          <select id="aFormat">
-            <option value="mp3">MP3</option><option value="ogg">Ogg Vorbis</option><option value="opus">Opus</option>
-            <option value="m4a">AAC (M4A)</option><option value="flac">FLAC (verlustfrei)</option><option value="wav">WAV (unkomprimiert)</option>
-          </select>
-        </label>
-        <label id="aModeRow">Qualitätsmodus
-          <select id="aMode"><option value="vbr">Variable Bitrate (Qualität)</option><option value="cbr">Konstante Bitrate</option></select>
-        </label>
-        <label id="aQualityRow">Qualität <output id="aQualityOut"></output>
-          <input type="range" id="aQuality" min="0" max="9" value="2">
-        </label>
-        <label id="aBitrateRow">Bitrate
-          <select id="aBitrate"></select>
-        </label>
-        <label id="aFlacRow">Kompression <output id="aFlacOut"></output>
-          <input type="range" id="aFlac" min="0" max="8" value="5">
-        </label>
-        <label id="aWavRow">Bit-Tiefe
-          <select id="aWav"><option value="16">16 Bit</option><option value="24">24 Bit</option><option value="32">32 Bit</option></select>
-        </label>
-        <label>Samplerate
-          <select id="aRate"><option value="0">Wie Quelle</option><option value="44100">44,1 kHz</option><option value="48000">48 kHz</option><option value="96000">96 kHz</option></select>
-        </label>
-        <label>Kanäle
-          <select id="aCh"><option value="0">Wie Quelle</option><option value="1">Mono</option><option value="2">Stereo</option></select>
-        </label>
-      </div>
-      <label class="check"><input type="checkbox" id="aCover" checked> Cover-Bild übernehmen (MP3, M4A, FLAC)</label>
-      <p class="muted small">Tags (Titel, Interpret, Album …) werden immer übernommen.</p>
-    </div>
-
-  </section>
-
-  <!-- Schritt: Video-Einstellungen (Videowelt) -->
-  <section class="stepsec hidden" data-step="video" data-world="video">
-    <div class="panel" id="videoSettings">
-      <h2>Video-Einstellungen</h2>
-      <div class="grid2">
-        <label>Container
-          <select id="vContainer"><option value="mkv">MKV (Matroska)</option><option value="mp4">MP4</option></select>
-        </label>
-        <label>Video-Codec
-          <select id="vCodec">
-            <option value="copy">Kopieren (kein Re-Encode)</option>
-            <option value="h264">H.264 (x264)</option><option value="hevc">H.265 / HEVC (x265)</option>
-            <option value="av1">AV1</option><option value="vp9">VP9</option>
-          </select>
-        </label>
-        <label id="vBackendRow">Encoder / Hardware
-          <select id="vBackend"></select>
-        </label>
-        <label id="vResolvedRow"><span class="muted">Wird verwendet</span>
-          <div id="vResolved" class="resolved"></div>
-        </label>
-        <label id="vCrfRow"><span>Qualität (CRF) <output id="vCrfOut"></output></span>
-          <input type="range" id="vCrf" min="10" max="40" value="22">
-          <span class="muted small" id="vCrfHint"></span>
-        </label>
-        <label id="vMatRow">Art des Materials
-          <select id="vMaterial">
-            <option value="standard">Standard (Film/Serie)</option><option value="modern">Aktueller Film (Blockbuster)</option>
-            <option value="grain">Altes Material / mit Filmkorn</option><option value="anime">Anime</option>
-            <option value="cartoon">Zeichentrick</option><option value="home">Heimvideo / Handyvideo</option>
-          </select>
-        </label>
-        <div id="vCrfAdvice" class="crfadvice"><span class="small" id="vCrfWhy"></span> <button type="button" id="vCrfSet" class="small hidden"></button></div>
-        <label id="vPresetRow">Geschwindigkeit
-          <select id="vPreset"><option value="slow">Langsam (beste Kompression)</option><option value="medium" selected>Mittel</option><option value="fast">Schnell</option><option value="veryfast">Sehr schnell</option></select>
-        </label>
-        <label id="vDepthRow">Bit-Tiefe
-          <select id="vDepth"><option value="0">Wie Quelle</option><option value="8">8 Bit</option><option value="10">10 Bit</option></select>
-        </label>
-        <label id="vHeightRow">Auflösung (max. Höhe)
-          <select id="vHeight"><option value="0">Original</option><option value="2160">2160p (4K)</option><option value="1440">1440p</option><option value="1080">1080p</option><option value="720">720p</option><option value="576">576p</option><option value="480">480p</option></select>
-        </label>
-      </div>
-      <label class="check" id="vHwDecRow"><input type="checkbox" id="vHwDec" checked> Hardware-Decoding nutzen (fällt bei Fehler automatisch zurück)</label>
-
-    </div>
-  </section>
-
-  <!-- Schritt: Audio & Untertitel (Videowelt) -->
-  <section class="stepsec hidden" data-step="tracks" data-world="video">
-    <div class="panel" id="trackSettings">
-      <h2>Audio und Untertitel</h2>
-      <p class="trkintro">Hier musst du <b>nichts ändern</b>: Standardmäßig bleiben alle Ton- und Untertitelspuren unverändert („Passthrough“) – das ist verlustfrei und am schnellsten. Das Programm macht Vorschläge (Sprachen, Standard-Spur, Formate); jeden Vorschlag kannst du abwählen.</p>
-      <div id="trkTop"></div>
-      <input type="hidden" id="vTrkRules">
-      <div id="trkHold" class="hidden">
-        <label id="vAudioModeRow">Alle übrigen Tonspuren
-          <select id="vAudioMode"><option value="copy">Unverändert lassen (empfohlen)</option><option value="encode">Kleiner machen (neu kodieren)</option></select>
-        </label>
-        <label id="vAudioCodecRow">Format und Bitrate (je Stereo-Paar)
-          <div class="row"><select id="vAudioCodec"><option value="aac">AAC (läuft überall, empfohlen)</option><option value="opus">Opus (sehr klein, modern)</option><option value="ac3">AC-3 (Dolby Digital, für TV/AV-Receiver)</option><option value="eac3">E-AC-3 (Dolby Digital Plus)</option><option value="flac">FLAC (verlustfrei, groß)</option></select>
-          <input id="vAudioKbps" type="number" min="32" max="640" value="160" style="width:90px"></div>
-        </label>
-        <p class="muted small" id="vAudioHint"></p>
-        <label id="vSubModeRow">Alle übrigen Untertitel
-          <select id="vSubMode"><option value="copy">Alle behalten (empfohlen)</option><option value="none">Alle entfernen</option></select>
-        </label>
-      </div>
-      <div id="trackEditor"></div>
-    </div>
-  </section>
-
-  <!-- Schritt: Zusammenfassung -->
-  <section class="stepsec hidden" data-step="summary">
-    <div class="panel" id="summaryCard">
-      <h2>Zusammenfassung</h2>
-      <div id="summaryBody"></div>
-    </div>
-    <div class="panel" id="vfCard">
-      <h2 data-info="vfInfo">Ergebnis prüfen &amp; Original</h2>
-      <p class="muted small">Nach dem Umwandeln wird die neue Datei immer auf Lesbarkeit und Laufzeit geprüft. Hier kannst du mehr dazunehmen (Standard: in Einstellungen → Allgemein).</p>
-      <label class="check"><input type="checkbox" id="vfTracks"><span>Spuren &amp; Größe prüfen</span></label>
-      <div class="vfhint" id="vfTracksT"></div>
-      <label class="check"><input type="checkbox" id="vfDecode"><span>Ergebnis komplett durchlesen (Decode-Test)</span></label>
-      <div class="vfhint" id="vfDecodeT"></div>
-      <label class="check"><input type="checkbox" id="deleteSource"><span>Quelldatei nach bestandener Prüfung löschen</span></label>
-      <div class="vfhint warn">Unwiderruflich: kein Papierkorb.</div>
-      <div id="vfDelHint" class="warn small hidden">Das Original wird sofort und endgültig gelöscht, sobald alle gewählten Prüfungen bestanden sind.</div>
-    </div>
+    <div class="panel cvsentence" id="cvSentence"></div>
+    <div class="panel cvtable" id="cvTable"></div>
   </section>
 
   <div class="stepnav hidden" id="stepnav">
-    <button id="stepBack" class="ghost">← Zurück</button>
     <button id="resetAll" class="ghost" title="Alle Eingaben dieser Welt auf den Anfang zurücksetzen"><span data-ic="reset"></span><span class="lbl2"> Zurücksetzen</span></button>
     <span id="startInfo" class="small muted"></span>
     <span class="spacer"></span>
-    <button id="savePreset" class="hidden" title="Die aktuellen Einstellungen als Voreinstellung speichern"><span data-ic="floppy"></span><span class="lbl2"> Als Voreinstellung speichern</span></button>
-    <button id="stepNext" class="primary">Weiter →</button>
-    <button id="start" class="primary big hidden"><span data-ic="play"></span> Konvertierung starten</button>
+    <button id="detailsBtn" title="Weitere Einstellungen: Ziel, Namen, Video, Spuren, Prüfen"><span data-ic="gear"></span><span class="lbl3"> Details</span></button>
+    <button id="savePreset" title="Die aktuellen Einstellungen als Voreinstellung speichern"><span data-ic="floppy"></span><span class="lbl2"> Voreinstellung speichern</span></button>
+    <button id="start" class="primary big"><span data-ic="play"></span><span class="lbl4"> Konvertierung starten</span><span class="lbl5"> Starten</span></button>
   </div>
 </main>
 
@@ -316,11 +141,184 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
 <footer id="foot"></footer>
 <div id="toasts"></div>
 
+
+<dialog id="detailsDlg" class="sheet">
+  <div class="dlg">
+    <div class="dlg-h dh"><h2><span data-ic="gear"></span> Details</h2><button type="button" id="detailsClose" class="primary small">Fertig</button></div>
+    <nav class="dtabs" id="detailsTabs">
+      <button type="button" data-dtab="dest">Ziel &amp; Name</button>
+      <button type="button" data-dtab="video" id="dtabVideo">Video</button>
+      <button type="button" data-dtab="tracks" data-world="video">Audio &amp; Untertitel</button>
+      <button type="button" data-dtab="verify">Prüfen &amp; Original</button>
+    </nav>
+    <div class="dbody" id="detailsBody">
+      <section class="dsec" data-dsec="dest">
+    <div class="panel" id="destCard">
+      <h2>Ziel</h2>
+      <div class="grid2">
+        <label>Speicherort
+          <select id="outMode"><option value="same">Neben der Quelldatei</option><option value="custom">Eigener Ordner…</option></select>
+        </label>
+        <label id="outDirRow" class="hidden">Ordner
+          <div class="row"><input id="outDir" placeholder="/output"><button id="pickOut" class="small">…</button></div>
+        </label>
+        <label id="structRow" class="hidden">Struktur
+          <select id="outStruct"><option value="keep">Ordnerstruktur beibehalten</option><option value="flat">Alles in einen Ordner</option></select>
+        </label>
+        <label>Wenn Datei existiert
+          <select id="exists"><option value="rename">Beide behalten, neue Datei nummerieren</option><option value="skip">Überspringen, vorhandene Datei nicht anfassen</option><option value="overwrite">Überschreiben, vorhandene Datei ersetzen</option></select>
+          <span class="muted small" id="existsHint"></span>
+        </label>
+      </div>
+    </div>
+<div style="height:14px"></div>
+    <div class="panel">
+      <h2>Benennen</h2>
+      <div class="grid2">
+        <label>Dateiname-Zusatz
+          <input id="suffix" placeholder="z. B. _x265">
+        </label>
+      </div>
+      <div class="namebox" id="nameBox">
+        <h3 data-info="pattern">Dateiname</h3>
+        <label id="patternRow">Namensmuster (optional)
+          <input id="pattern" placeholder="{title} ({year}) [{res}][{codec}]" autocomplete="off" spellcheck="false">
+        </label>
+        <div class="varchips" id="varChips"></div>
+        <h3 data-info="renReplace">Suchen und Ersetzen</h3>
+        <input type="hidden" id="renRules" value="[]">
+        <div id="ruleRows" class="rulerows"></div>
+        <button type="button" class="small" id="addRule">+ Ersetzung</button>
+        <div class="namepreview" id="namePreview"></div>
+      </div>
+    </div>
+      </section>
+      <section class="dsec" data-dsec="video">
+    <div class="panel" id="audioSettings" data-world="audio">
+      <h2>Audio-Einstellungen</h2>
+      <div class="grid2">
+        <label>Format
+          <select id="aFormat">
+            <option value="mp3">MP3</option><option value="ogg">Ogg Vorbis</option><option value="opus">Opus</option>
+            <option value="m4a">AAC (M4A)</option><option value="flac">FLAC (verlustfrei)</option><option value="wav">WAV (unkomprimiert)</option>
+          </select>
+        </label>
+        <label id="aModeRow">Qualitätsmodus
+          <select id="aMode"><option value="vbr">Variable Bitrate (Qualität)</option><option value="cbr">Konstante Bitrate</option></select>
+        </label>
+        <label id="aQualityRow">Qualität <output id="aQualityOut"></output>
+          <input type="range" id="aQuality" min="0" max="9" value="2">
+        </label>
+        <label id="aBitrateRow">Bitrate
+          <select id="aBitrate"></select>
+        </label>
+        <label id="aFlacRow">Kompression <output id="aFlacOut"></output>
+          <input type="range" id="aFlac" min="0" max="8" value="5">
+        </label>
+        <label id="aWavRow">Bit-Tiefe
+          <select id="aWav"><option value="16">16 Bit</option><option value="24">24 Bit</option><option value="32">32 Bit</option></select>
+        </label>
+        <label>Samplerate
+          <select id="aRate"><option value="0">Wie Quelle</option><option value="44100">44,1 kHz</option><option value="48000">48 kHz</option><option value="96000">96 kHz</option></select>
+        </label>
+        <label>Kanäle
+          <select id="aCh"><option value="0">Wie Quelle</option><option value="1">Mono</option><option value="2">Stereo</option></select>
+        </label>
+      </div>
+      <label class="check"><input type="checkbox" id="aCover" checked> Cover-Bild übernehmen (MP3, M4A, FLAC)</label>
+      <p class="muted small">Tags (Titel, Interpret, Album …) werden immer übernommen.</p>
+    </div>
+    <div class="panel" id="videoSettings" data-world="video">
+      <h2>Video-Einstellungen</h2>
+      <div class="grid2">
+        <label>Container
+          <select id="vContainer"><option value="mkv">MKV (Matroska)</option><option value="mp4">MP4</option></select>
+        </label>
+        <label>Video-Codec
+          <select id="vCodec">
+            <option value="copy">Kopieren (kein Re-Encode)</option>
+            <option value="h264">H.264 (x264)</option><option value="hevc">H.265 / HEVC (x265)</option>
+            <option value="av1">AV1</option><option value="vp9">VP9</option>
+          </select>
+        </label>
+        <label id="vBackendRow">Encoder / Hardware
+          <select id="vBackend"></select>
+        </label>
+        <label id="vResolvedRow"><span class="muted">Wird verwendet</span>
+          <div id="vResolved" class="resolved"></div>
+        </label>
+        <div id="vQualityRow" class="qrow"><span class="lt">Qualität</span><div id="vQualityMount"></div></div>
+        <input type="hidden" id="vQuality" value="good">
+        <label id="vCrfRow"><span id="vCrfLabel">Qualität (CRF) <output id="vCrfOut"></output></span>
+          <input type="range" id="vCrf" min="10" max="40" value="22">
+          <span class="muted small" id="vCrfHint"></span>
+        </label>
+        <label id="vMatRow">Art des Materials
+          <select id="vMaterial">
+            <option value="standard">Standard (Film/Serie)</option><option value="modern">Aktueller Film (Blockbuster)</option>
+            <option value="grain">Altes Material / mit Filmkorn</option><option value="anime">Anime</option>
+            <option value="cartoon">Zeichentrick</option><option value="home">Heimvideo / Handyvideo</option>
+          </select>
+        </label>
+        <div id="vCrfAdvice" class="crfadvice"><span class="small" id="vCrfWhy"></span></div>
+        <label id="vPresetRow">Geschwindigkeit
+          <select id="vPreset"><option value="slow">Langsam (beste Kompression)</option><option value="medium" selected>Mittel</option><option value="fast">Schnell</option><option value="veryfast">Sehr schnell</option></select>
+        </label>
+        <label id="vDepthRow">Bit-Tiefe
+          <select id="vDepth"><option value="0">Wie Quelle</option><option value="8">8 Bit</option><option value="10">10 Bit</option></select>
+        </label>
+        <label id="vHeightRow">Auflösung (max. Höhe)
+          <select id="vHeight"><option value="0">Original</option><option value="2160">2160p (4K)</option><option value="1440">1440p</option><option value="1080">1080p</option><option value="720">720p</option><option value="576">576p</option><option value="480">480p</option></select>
+        </label>
+      </div>
+      <label class="check" id="vHwDecRow"><input type="checkbox" id="vHwDec" checked> Hardware-Decoding nutzen (fällt bei Fehler automatisch zurück)</label>
+
+    </div>
+      </section>
+      <section class="dsec" data-dsec="tracks" data-world="video">
+    <div class="panel" id="trackSettings">
+      <h2>Audio und Untertitel</h2>
+      <p class="trkintro">Hier musst du <b>nichts ändern</b>: Standardmäßig bleiben alle Ton- und Untertitelspuren unverändert („Passthrough“) – das ist verlustfrei und am schnellsten. Das Programm macht Vorschläge (Sprachen, Standard-Spur, Formate); jeden Vorschlag kannst du abwählen.</p>
+      <div id="trkTop"></div>
+      <input type="hidden" id="vTrkRules">
+      <div id="trkHold" class="hidden">
+        <label id="vAudioModeRow">Alle übrigen Tonspuren
+          <select id="vAudioMode"><option value="copy">Unverändert lassen (empfohlen)</option><option value="encode">Kleiner machen (neu kodieren)</option></select>
+        </label>
+        <label id="vAudioCodecRow">Format und Bitrate (je Stereo-Paar)
+          <div class="row"><select id="vAudioCodec"><option value="aac">AAC (läuft überall, empfohlen)</option><option value="opus">Opus (sehr klein, modern)</option><option value="ac3">AC-3 (Dolby Digital, für TV/AV-Receiver)</option><option value="eac3">E-AC-3 (Dolby Digital Plus)</option><option value="flac">FLAC (verlustfrei, groß)</option></select>
+          <input id="vAudioKbps" type="number" min="32" max="640" value="160" style="width:90px"></div>
+        </label>
+        <p class="muted small" id="vAudioHint"></p>
+        <label id="vSubModeRow">Alle übrigen Untertitel
+          <select id="vSubMode"><option value="copy">Alle behalten (empfohlen)</option><option value="none">Alle entfernen</option></select>
+        </label>
+      </div>
+      <div id="trackEditor"></div>
+    </div>
+      </section>
+      <section class="dsec" data-dsec="verify">
+    <div class="panel" id="vfCard">
+      <h2 data-info="vfInfo">Ergebnis prüfen &amp; Original</h2>
+      <p class="muted small">Nach dem Umwandeln wird die neue Datei immer auf Lesbarkeit und Laufzeit geprüft. Hier kannst du mehr dazunehmen (Standard: in Einstellungen → Allgemein).</p>
+      <label class="check"><input type="checkbox" id="vfTracks"><span>Spuren &amp; Größe prüfen</span></label>
+      <div class="vfhint" id="vfTracksT"></div>
+      <label class="check"><input type="checkbox" id="vfDecode"><span>Ergebnis komplett durchlesen (Decode-Test)</span></label>
+      <div class="vfhint" id="vfDecodeT"></div>
+      <label class="check"><input type="checkbox" id="deleteSource"><span>Quelldatei nach bestandener Prüfung löschen</span></label>
+      <div class="vfhint warn">Unwiderruflich: kein Papierkorb.</div>
+      <div id="vfDelHint" class="warn small hidden">Das Original wird sofort und endgültig gelöscht, sobald alle gewählten Prüfungen bestanden sind.</div>
+    </div>
+      </section>
+    </div>
+  </div>
+</dialog>
+
 <dialog id="presetDlg">
   <form method="dialog" class="dlg" id="presetForm">
     <h2><span data-ic="floppy"></span> Als Voreinstellung speichern</h2>
     <label>Name<input id="presetName" maxlength="40" placeholder="z. B. Filme klein H.265" autocomplete="off"></label>
-    <label class="check"><input type="checkbox" id="presetSuggest" checked> Als Vorschlag oben im Schritt „Video“ bzw. „Einstellungen“ anzeigen</label>
+    <label class="check"><input type="checkbox" id="presetSuggest" checked> Als Vorschlag oben im Konverter anzeigen</label>
     <p class="muted small" id="presetHint"></p>
     <div class="dlg-f"><button type="button" id="presetCancel" class="ghost">Abbrechen</button><button class="primary" id="presetSave">Speichern</button></div>
   </form>
@@ -388,7 +386,9 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
 <script src="trkplan.js"></script>
 <script src="tracks.js"></script>
 <script src="verify.js"></script>
+<script src="quality.js"></script>
 <script src="crf.js"></script>
+<script src="convert.js"></script>
 <script src="logs.js"></script>
 <script src="history.js"></script>
 <script src="settings.js"></script>

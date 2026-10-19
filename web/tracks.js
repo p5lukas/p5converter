@@ -1,12 +1,12 @@
 'use strict';
-/* Schritt „Audio & Untertitel“ (Videowelt). Alles bleibt unverändert (Passthrough), solange man nichts festlegt.
+/* Details → „Audio & Untertitel“ (Videowelt; die Tabelle in der Konvertieren-Ansicht arbeitet mit denselben Daten). Alles bleibt unverändert (Passthrough), solange man nichts festlegt.
    Drei Ansichten: „Gruppen“ (Dateien mit gleichen Sprachen zusammengefasst, eine Entscheidung je Gruppe), „Tabelle“ (alle Dateien × Sprachen mit Häkchen)
    und „Einzelne Dateien“ (Spurkarten mit Erweitert). Darüber: Regeln nach Codec (z. B. nur DTS umwandeln) und die Sprach-Wünsche aus den Einstellungen.
    Berechnet wird alles in web/trkplan.js (reine Logik, mit Node getestet). Eigene Änderungen je Datei: f.tracks = {streamIndex: {…}} (gehen vor),
    zum Server geht pro Datei overrides.tracks (internal/build/video.go: TrackEdit).
    Nutzt S, $, h(), fill(), api(), icon() usw. aus app.js/settings.js (nur zur Laufzeit). */
 
-const TRK = {probe: {}, cur: 0, busy: false, open: new Set(), view: 'groups', probing: 0, probeDone: 0, openGroups: new Set()};
+const TRK = {probe: {}, bad: new Set(), cur: 0, busy: false, open: new Set(), view: 'groups', probing: 0, probeDone: 0, openGroups: new Set()};
 const {normLang, noLang, REC_KBPS} = TP;
 
 // Sprachen: Code (ISO 639-2, wie Plex sie liest) → Name; die häufigsten stehen zuerst
@@ -301,7 +301,7 @@ function trkAnalyze(files) {
 async function trkLoadAll(files) {
   TRK.probing = files.length; TRK.probeDone = 0;
   await trkProbeAll(files, (d) => { TRK.probeDone = d; trkProgress(); });
-  for (const f of files) { try { const v = await trkProbe(f); const p = TRK.probe[f.path]; if (p) p.__v = v; } catch (e) { /* nicht lesbar */ } }
+  for (const f of files) { try { const v = await trkProbe(f); const p = TRK.probe[f.path]; if (p) p.__v = v; TRK.bad.delete(f.path); } catch (e) { TRK.bad.add(f.path); /* nicht lesbar */ } }
   TRK.probing = 0;
 }
 function trkProgress() {
@@ -476,16 +476,17 @@ function trkPrefLine() {
 let trkRenderId = 0;
 async function trkRender() {
   const box = $('#trackEditor'); if (!box) return;
+  if (typeof cvRender === 'function') cvRender(); // die Tabelle in der Konvertieren-Ansicht folgt jeder Änderung
   const my = ++trkRenderId;
   if (!TRK.viewInit) { TRK.viewInit = true; const v = lsGet('p5trkview'); if (['groups', 'matrix', 'single'].includes(v)) TRK.view = v; }
   const files = S.files.video;
   fill($('#trkTop'), trkPrefLine(), trkRulesEditor());
   trkRuleHint();
-  if (!files.length) { fill(box, h('div', {class: 'empty'}, 'Noch keine Dateien. Füge zuerst im Schritt „Dateien“ Videos hinzu – danach siehst du hier die Spuren jeder Datei.')); return; }
+  if (!files.length) { fill(box, h('div', {class: 'empty'}, 'Noch keine Dateien. Füge zuerst im Konverter Videos hinzu – danach siehst du hier die Spuren jeder Datei.')); return; }
   const views = [['groups', 'Gruppen'], ['matrix', 'Tabelle'], ['single', 'Einzelne Dateien']];
   const sw = h('div', {class: 'trkviews', role: 'tablist'}, views.map(([id, t]) => h('button', {type: 'button', role: 'tab', 'aria-selected': TRK.view === id ? 'true' : 'false', class: TRK.view === id ? 'on' : '',
     onclick: () => { TRK.view = id; lsSet('p5trkview', id); trkRender(); }}, t)), infoBtn('trkViews'));
-  if (TRK.view !== 'single' && files.some(f => !(TRK.probe[f.path] && TRK.probe[f.path].__v))) {
+  if (TRK.view !== 'single' && files.some(f => !(TRK.probe[f.path] && TRK.probe[f.path].__v) && !TRK.bad.has(f.path))) {
     fill(box, sw, h('div', {class: 'empty', id: 'trkProgress'}, 'Lese die Spuren aller Dateien …'));
     await trkLoadAll(files);
     if (my !== trkRenderId) return;
@@ -499,7 +500,7 @@ async function trkRender() {
 async function trkSummaryLines() {
   const files = S.files.video;
   if (!files.length) return [];
-  if (files.some(f => !(TRK.probe[f.path] && TRK.probe[f.path].__v))) await trkLoadAll(files);
+  if (files.some(f => !(TRK.probe[f.path] && TRK.probe[f.path].__v) && !TRK.bad.has(f.path))) await trkLoadAll(files);
   const all = trkAnalyze(files);
   return [trkSumText(trkSum(all), all)];
 }
