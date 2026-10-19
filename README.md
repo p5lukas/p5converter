@@ -46,13 +46,13 @@ Ein SoundConverter-Klon mit zusätzlicher Video-Welt, gebaut für ganze Serien-S
 ## App-Icon
 Gleicher Aufbau wie bei **p5assets** (Matrix-Regen, Poster-Rahmen, „p5“); das Abzeichen unten rechts unterscheidet die Apps: bei p5converter **silberne Audio-CD + blaue Blu-ray** (Audio und Video), bei p5assets ein oranger Komet. Dateien: `web/icon*.png`, `web/apple-touch-icon.png` (iPhone/iPad-Web-App), `unraid/icon.png`; Quelle und Erzeugung: `tools/icons/` (`make_icons.py converter <Ordner>`).
 
-## Windows (Test auf `dev`)
-**Eine Datei:** `p5converter-setup.exe` aus der Vorabversion [`dev-latest`](https://github.com/p5lukas/p5converter/releases/tag/dev-latest) laden und starten. Windows meldet beim ersten Start einmal „Unbekannter Herausgeber“ (die Datei ist nicht mit einem Zertifikat signiert): **Weitere Informationen → Trotzdem ausführen**. Danach durchklicken – fertig. Der Installer richtet sich nur für dein Konto ein (keine Administrator-Abfrage), enthält Programm und ffmpeg und legt ein Startmenü-Symbol an (Desktop-Symbol und Autostart optional).
+## Windows (Vorabversion)
+**Eine Datei:** `p5converter-setup.exe` aus der [neuesten Vorabversion](https://github.com/p5lukas/p5converter/releases) (`v0.2.0` usw.; der laufende Entwicklungsstand liegt in [`dev-latest`](https://github.com/p5lukas/p5converter/releases/tag/dev-latest)) laden und starten. Windows meldet beim ersten Start einmal „Unbekannter Herausgeber“ (die Datei ist nicht mit einem Zertifikat signiert): **Weitere Informationen → Trotzdem ausführen**. Danach durchklicken – fertig. Der Installer richtet sich nur für dein Konto ein (keine Administrator-Abfrage), enthält Programm und ffmpeg und legt ein Startmenü-Symbol an (Desktop-Symbol und Autostart optional).
 * Die Oberfläche öffnet in einem **eigenen Fenster** (Microsoft Edge WebView2, in Windows 11 und aktuellem Windows 10 schon vorhanden; sonst richtet der Installer es ein) und sieht genauso aus wie im Browser.
 * **Hardware wird automatisch erkannt:** Intel Quick Sync, NVIDIA NVENC und AMD AMF (jeweils mit aktuellem Grafiktreiber), sonst rechnet die CPU. Ist ein NVIDIA-Treiber zu alt für NVENC, steht unter Einstellungen → Hardware → „Warum?“ in Klartext, welche Version fehlt – dann den Treiber aktualisieren.
 * Einstellungen und Logs liegen in `%APPDATA%\p5converter`.
 * **Symbol im Infobereich (Tray):** Das Schließen-Kreuz versteckt nur das Fenster, p5converter und laufende Aufträge laufen weiter. Klick auf das Symbol (oder ein zweiter Start) zeigt das Fenster wieder; **Beenden** über das Symbol oder den Knopf „Beenden“ in der Oberfläche.
-* Die Datei liegt immer in der laufenden Vorabversion `dev-latest` (nicht in `v0.1.0-dev`, das sind die Docker-Stände); bei einer neuen Versions-Vorabversion vom Branch `dev` hängt sie zusätzlich dort als Anhang.
+* Die Datei hängt an jeder Versions-Vorabversion (`vX.Y.Z` von `main`, `vX.Y.Z-dev` von `dev`); in `dev-latest` liegt immer der aktuelle Stand von `dev`.
 
 ## Kanäle: `:latest` und `:dev`
 | Image | Branch | Wofür |

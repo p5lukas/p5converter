@@ -6,7 +6,7 @@ Gleiche Zusammenarbeit wie im Schwesterprojekt **p5assets** (Vorbild: `TODO.md` 
 - **„Todo: …“** vom Nutzer = nur notieren: Eintrag in `TODO.md` + eigener Commit `TODO: <kurzer Text>`. **Nichts umsetzen.**
 - Bei offenen Entscheidungen Varianten (A/B/C) mit kurzer Beschreibung vorschlagen; der Nutzer wählt kurz („Dann C“). Die Entscheidung wird als `TODO: … Variante C` festgehalten.
 - **„Leg los“** = alle offenen TODOs umsetzen, danach kleiner Versionssprung (siehe unten), Feature-Branch pushen, **Pull Request nach `dev`, grüne CI abwarten, Squash-Merge nach `dev`** (Image `:dev`; der Nutzer testet zuerst auf `dev`). **Nach `main` wird nur auf ausdrückliches Kommando des Nutzers gemergt** („passt so, nach main“): Pull Request `dev` → `main`, grüne CI abwarten, **normaler Merge-Commit** (kein Squash, damit `dev` und `main` nicht auseinanderlaufen). Ohne Freigabe wird nichts nach `main` gemergt, getaggt oder veröffentlicht.
-- **Windows-App**: vorerst nur auf `dev` (Entscheidung des Nutzers), nicht nach `main`, bis der Nutzer es freigibt.
+- **Windows-App**: die `p5converter-setup.exe` hängt (Entscheidung des Nutzers 19.10.) **bei jedem 0.x-Release** an `vX.Y.Z` (main) **und** `vX.Y.Z-dev` (dev); zwischendurch liegt der aktuelle dev-Stand in `dev-latest`.
 - CI-/Image-Stand (grün, `:latest` gebaut) meldet der Nutzer sich selbst unter GitHub → Actions; **nicht von selbst berichten** (vor dem Merge die CI abzuwarten bleibt Pflicht).
 - Regeln des Nutzers werden als „Arbeitsregel (Nutzer)“ in `TODO.md` oben festgehalten.
 
