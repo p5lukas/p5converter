@@ -108,7 +108,7 @@ function popHW() {
 // Ziel
 function cvDestText() {
   const custom = $('#outMode').value === 'custom', dir = $('#outDir').value.trim();
-  return custom ? (dir ? 'Ordner ' + dir.split(/[\\/]/).filter(Boolean).slice(-2).join('/') : 'eigenem Ordner (fehlt noch)') : 'neben der Quelle';
+  return custom ? (dir ? 'Ordner ' + pathLabel(dir).split(/[\\/]/).filter(Boolean).slice(-2).join('/') : 'eigenem Ordner (fehlt noch)') : 'neben der Quelle';
 }
 function popDest() {
   const custom = $('#outMode').value === 'custom';

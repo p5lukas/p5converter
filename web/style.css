@@ -744,3 +744,13 @@ dialog.sheet .dlg{height:100%;max-height:100dvh;padding:calc(14px + var(--sat-to
 
 .stepnav .lbl5{display:none}
 @media(max-width:700px){.stepnav .lbl4{display:none}.stepnav .lbl5{display:inline}.stepnav #start{padding:10px 12px}}
+
+/* Datei-Browser: Suche, Anzeigenamen der Quellordner */
+.bsearch{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.bsearch input[type=search]{flex:1 1 220px;width:auto}
+.bsearch label.check{margin:0}
+#bWhere:empty{display:none}
+.bi small{margin-left:6px}
+.rootnames{display:grid;gap:8px}
+.rootname{display:grid;grid-template-columns:minmax(80px,160px) 1fr;gap:10px;align-items:center}
+@media(max-width:700px){.rootname{grid-template-columns:1fr}.bsearch input[type=search]{flex:1 1 100%}}

@@ -347,7 +347,13 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
       <input id="bPath">
       <button type="button" id="bGo" class="small">Gehe</button>
     </div>
+    <div id="bWhere" class="muted small"></div>
     <div id="bDrives" class="small"></div>
+    <div class="bsearch">
+      <input id="bSearch" type="search" placeholder="Suchen (Name, ab 2 Zeichen) …" autocomplete="off" spellcheck="false" aria-label="Im Ordner suchen">
+      <label class="check small"><input type="checkbox" id="bDeep"><span>Auch in Unterordnern</span></label>
+      <span id="bInfo" class="muted small"></span>
+    </div>
     <div id="bList" class="blist"></div>
     <div class="dlg-f">
       <span class="btns"><button type="button" id="bAll" class="small">Alle auswählen</button><button type="button" id="bNone" class="small">Alle abwählen</button><span id="bCount" class="muted small"></span></span>

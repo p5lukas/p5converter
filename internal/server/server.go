@@ -141,6 +141,7 @@ func (s *Server) Handler() http.Handler {
 		writeJSON(w, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("GET /api/fs", s.browse)
+	mux.HandleFunc("GET /api/fs/search", s.browseSearch)
 	mux.HandleFunc("POST /api/scan", s.scan)
 	mux.HandleFunc("GET /api/probe", s.probe)
 	mux.HandleFunc("POST /api/jobs", s.submit)

@@ -255,31 +255,71 @@ function addScanned(files) {
 }
 
 // ---------- server file browser ----------
-let B = {path: '', sel: new Set(), mode: 'files', resolve: null};
+// Suche: ohne Haken filtert das Feld die Einträge des Ordners beim Tippen; mit Haken „Auch in Unterordnern“ fragt es den Server (/api/fs/search).
+// Umlaute dürfen so oder so getippt werden (muller / mueller finden Müller). Wurzelordner zeigen ihren Anzeigenamen aus den Einstellungen.
+let B = {path: '', sel: new Set(), mode: 'files', resolve: null, entries: [], roots: false, q: '', found: null, seq: 0};
+const bJoin = (p, n) => p.replace(/[\\/]$/, '') + (p.includes('\\') ? '\\' : '/') + n;
+const fU = t => String(t).toLowerCase().replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/ß/g, 'ss');
+const fE = t => String(t).toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss');
+const bMatch = (name, q) => fU(name).includes(fU(q)) || fE(name).includes(fE(q));
+const rootNameOf = path => (cfg().rootNames || {})[path] || '';
+// Pfad mit dem Anzeigenamen der Wurzel: „/video1/Filme/x“ → „Filme 4K/Filme/x“ (die längste passende Wurzel gewinnt)
+function pathLabel(p) {
+  const names = cfg().rootNames || {};
+  const root = Object.keys(names).filter(r => { const t = r.replace(/[\\/]$/, ''); return p === r || p === t || p.startsWith(t + '/') || p.startsWith(t + '\\'); }).sort((x, y) => y.length - x.length)[0];
+  return root ? names[root] + p.slice(root.replace(/[\\/]$/, '').length) : p;
+}
+function renderBrowser() {
+  const q = B.q.trim();
+  let rows;
+  if (B.found) rows = B.found.map(x => ({name: x.name, full: x.path, dir: x.dir, size: x.size, media: x.media}));
+  else {
+    rows = B.entries.map(e => ({name: B.roots ? (rootNameOf(e.name) || e.name) : e.name, sub: B.roots && rootNameOf(e.name) ? e.name : '', full: B.roots ? e.name : bJoin(B.path, e.name), dir: e.dir, size: e.size, media: e.media}));
+    if (q) rows = rows.filter(r => bMatch(r.name + ' ' + (r.sub || ''), q));
+  }
+  $('#bList').innerHTML = rows.map((r, i) => `<div class="bi" data-i="${i}">
+    ${r.dir ? ic('folder') : (B.mode === 'files' ? `<input type="checkbox" data-c="${i}" ${B.sel.has(r.full) ? 'checked' : ''}>` : '')}
+    <span>${esc(r.name)}${r.sub ? ` <small class="muted">${esc(r.sub)}</small>` : ''}</span><span class="sz">${r.dir ? '' : (r.media === 'video' ? ic('play') + ' ' : '♪ ') + fmtSize(r.size)}</span></div>`).join('')
+    || `<div class="empty">${q ? 'Nichts gefunden' : 'Leer'}</div>`;
+  $$('#bList .bi').forEach(row => {
+    const r = rows[+row.dataset.i];
+    row.onclick = ev => {
+      if (r.dir) { B.q = ''; B.found = null; $('#bSearch').value = ''; browseTo(r.full); return; }
+      if (B.mode !== 'files') return;
+      const cb = row.querySelector('input');
+      if (ev.target !== cb) cb.checked = !cb.checked;
+      cb.checked ? B.sel.add(r.full) : B.sel.delete(r.full);
+      $('#bCount').textContent = B.sel.size + ' ausgewählt';
+    };
+  });
+  if (!B.found) $('#bInfo').textContent = q ? rows.length + ' von ' + B.entries.length : '';
+}
+let bTimer = 0;
+function bSearchUpdate() {
+  B.q = $('#bSearch').value; clearTimeout(bTimer);
+  const q = B.q.trim();
+  if (!$('#bDeep').checked || q.length < 2) { B.found = null; $('#bInfo').textContent = ''; renderBrowser(); return; }
+  const my = ++B.seq; $('#bInfo').textContent = 'Suche …';
+  bTimer = setTimeout(async () => {
+    try {
+      const r = await api('/api/fs/search?path=' + encodeURIComponent(B.path) + '&q=' + encodeURIComponent(q) + (B.mode === 'dir' ? '&dirs=1' : ''));
+      if (my !== B.seq) return;
+      B.found = r.hits; renderBrowser();
+      $('#bInfo').textContent = r.hits.length + (r.hits.length === 1 ? ' Treffer' : ' Treffer') + (r.truncated ? ' (nur die ersten, bitte genauer suchen)' : '');
+    } catch (e) { if (my === B.seq) { B.found = null; $('#bInfo').textContent = e.message; renderBrowser(); } }
+  }, 300);
+}
 async function browseTo(path) {
   try {
     const d = await api('/api/fs?path=' + encodeURIComponent(path));
-    B.path = d.path; B.parent = d.parent; B.sel.clear();
-    $('#bPath').value = d.path;
-    $('#bUp').disabled = !d.parent && !d.roots;
+    B.path = d.path; B.parent = d.parent; B.sel.clear(); B.entries = d.entries; B.roots = !!d.roots; B.found = null; B.q = ''; B.seq++;
+    $('#bSearch').value = ''; $('#bPath').value = d.path;
+    const where = d.path ? pathLabel(d.path) : '';
+    $('#bWhere').textContent = where && where !== d.path ? 'Angezeigt als: ' + where : '';
+    $('#bUp').disabled = !!d.roots || (!d.parent && !((S.info && S.info.roots) || []).length); // in einem Wurzelordner führt „hoch“ zur Liste aller Wurzelordner
     $('#bDrives').innerHTML = (d.drives || []).map(x => `<button type="button" class="small" data-d="${esc(x)}">${esc(x)}</button>`).join(' ');
     $$('#bDrives [data-d]').forEach(b => b.onclick = () => browseTo(b.dataset.d));
-    const kindOK = e => B.mode === 'dir' ? false : true;
-    $('#bList').innerHTML = d.entries.map((e, i) => `<div class="bi" data-i="${i}">
-      ${e.dir ? ic('folder') : (B.mode === 'files' ? `<input type="checkbox" data-c="${i}">` : '')}
-      <span>${esc(e.name)}</span><span class="sz">${e.dir ? '' : (e.media === 'video' ? ic('play') + ' ' : '♪ ') + fmtSize(e.size)}</span></div>`).join('') || '<div class="empty">Leer</div>';
-    $$('#bList .bi').forEach(row => {
-      const e = d.entries[+row.dataset.i];
-      row.onclick = ev => {
-        if (e.dir) { browseTo(d.roots ? e.name : d.path.replace(/[\\/]$/, '') + (d.path.includes('\\') ? '\\' : '/') + e.name); return; }
-        if (B.mode !== 'files') return;
-        const cb = row.querySelector('input');
-        if (ev.target !== cb) cb.checked = !cb.checked;
-        const full = d.path.replace(/[\\/]$/, '') + (d.path.includes('\\') ? '\\' : '/') + e.name;
-        cb.checked ? B.sel.add(full) : B.sel.delete(full);
-        $('#bCount').textContent = B.sel.size + ' ausgewählt';
-      };
-    });
+    renderBrowser();
     $('#bCount').textContent = '';
   } catch (e) { $('#bList').innerHTML = `<div class="empty warn">${esc(e.message)}</div>`; }
 }
@@ -288,6 +328,7 @@ function openBrowser(mode, start) {
   $('#bAddSel').classList.toggle('hidden', mode !== 'files');
   $('#bAll').parentElement.classList.toggle('hidden', mode !== 'files');
   $('#bAddDir').textContent = mode === 'dir' ? 'Diesen Ordner wählen' : 'Diesen Ordner (rekursiv)';
+  $('#bDeep').checked = false;
   $('#browser').showModal();
   browseTo(start || '');
   return new Promise(res => B.resolve = res);
@@ -685,6 +726,8 @@ function wire() {
   $('#bUp').onclick = () => browseTo(B.parent || '');
   $('#bGo').onclick = () => browseTo($('#bPath').value);
   $('#bPath').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); browseTo($('#bPath').value); } };
+  $('#bSearch').addEventListener('input', bSearchUpdate); $('#bDeep').addEventListener('input', bSearchUpdate);
+  $('#bSearch').onkeydown = e => { if (e.key === 'Enter') e.preventDefault(); };
   $('#bCancel').onclick = () => closeBrowser(null);
   $('#browser').addEventListener('cancel', () => { if (B.resolve) B.resolve(null); B.resolve = null; });
   const bAll = on => { $$('#bList input[type=checkbox]').forEach(cb => { if (cb.checked !== on) cb.closest('.bi').click(); }); };

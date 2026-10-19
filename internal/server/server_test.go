@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -794,5 +795,69 @@ func TestStaticETagAndGzip(t *testing.T) {
 	}
 	if get("/index.html", nil).Code != 200 || get("/", nil).Code != 200 {
 		t.Error("Startseite")
+	}
+}
+
+func TestBrowseSearch(t *testing.T) {
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "Filme", "Müller Serie", "Staffel 1")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	os.MkdirAll(filepath.Join(dir, ".versteckt", "Müller"), 0o755)
+	for _, f := range []string{filepath.Join(sub, "Mueller S01E01.mkv"), filepath.Join(sub, "notizen müller.txt"), filepath.Join(dir, "Filme", "andere.mp3"), filepath.Join(dir, ".versteckt", "Müller", "x.mkv")} {
+		os.WriteFile(f, []byte("x"), 0o644)
+	}
+	_, ts := newTestServer(t, []string{dir})
+	get := func(q string) (int, struct {
+		Hits []struct {
+			Name, Path string
+			Dir        bool
+			Media      string
+		}
+		Truncated bool
+	}) {
+		var out struct {
+			Hits []struct {
+				Name, Path string
+				Dir        bool
+				Media      string
+			}
+			Truncated bool
+		}
+		resp, err := http.Get(ts.URL + "/api/fs/search?" + q)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		json.NewDecoder(resp.Body).Decode(&out)
+		return resp.StatusCode, out
+	}
+	code, r := get("path=" + url.QueryEscape(dir) + "&q=MUELLER")
+	if code != 200 || len(r.Hits) != 2 {
+		t.Fatalf("Suche „MUELLER“ (ä = a, Groß/Klein egal): %d %+v", code, r)
+	}
+	if !r.Hits[0].Dir || r.Hits[0].Name != "Filme/Müller Serie" || r.Hits[1].Media != "video" || !strings.HasSuffix(r.Hits[1].Path, "Mueller S01E01.mkv") {
+		t.Errorf("Treffer: %+v", r.Hits)
+	}
+	for _, h := range r.Hits {
+		if strings.Contains(h.Path, ".versteckt") || strings.HasSuffix(h.Path, ".txt") {
+			t.Errorf("versteckter Ordner oder Nicht-Medium im Ergebnis: %s", h.Path)
+		}
+	}
+	if _, r = get("path=" + url.QueryEscape(dir) + "&q=muller"); len(r.Hits) != 1 || !r.Hits[0].Dir {
+		t.Errorf("auch „muller“ (ohne Umlaut) findet Müller (den Ordner, nicht „Mueller“): %+v", r.Hits)
+	}
+	if _, r = get("q=staffel&dirs=1"); len(r.Hits) != 1 || !r.Hits[0].Dir {
+		t.Errorf("ohne path suchen alle erlaubten Wurzeln, dirs=1 nur Ordner: %+v", r.Hits)
+	}
+	if code, _ = get("q=a"); code != 400 {
+		t.Errorf("zu kurze Suche: %d", code)
+	}
+	if code, _ = get("path=/etc&q=passwd"); code != 403 {
+		t.Errorf("fremder Pfad: %d", code)
+	}
+	if _, r = get("path=" + url.QueryEscape(dir) + "&q=gibtesnicht"); len(r.Hits) != 0 {
+		t.Errorf("Suche ohne Treffer: %+v", r.Hits)
 	}
 }

@@ -64,6 +64,8 @@ type Settings struct {
 	Verify           map[string]Verify `json:"verify"`
 	TrackPrefs       TrackPrefs        `json:"trackPrefs"`
 	NoCRFSuggest     bool              `json:"noCrfSuggest"` // true = no automatic CRF suggestion in the video settings
+	// RootNames: display names for the source folders (key = path in the container, e.g. "/video1"); the browser shows the name, the path stays the real one.
+	RootNames map[string]string `json:"rootNames"`
 }
 
 // Fields a preset may contain, per world (the ids of the UI controls).
@@ -234,6 +236,11 @@ func Validate(in Settings) (Settings, error) {
 		return Settings{}, err
 	}
 	out.TrackPrefs = tp
+	names, err := cleanRootNames(out.RootNames)
+	if err != nil {
+		return Settings{}, err
+	}
+	out.RootNames = names
 	if len(out.Presets) > 100 {
 		return Settings{}, errors.New("Höchstens 100 Voreinstellungen")
 	}
@@ -322,6 +329,28 @@ func cleanTrackPrefs(in TrackPrefs) (TrackPrefs, error) {
 			seen[q] = true
 			out.SubDefault = append(out.SubDefault, q)
 		}
+	}
+	return out, nil
+}
+
+// cleanRootNames keeps only non-empty names (trimmed, at most 40 characters) for paths of at most 500 characters; at most 50 entries.
+func cleanRootNames(in map[string]string) (map[string]string, error) {
+	if len(in) > 50 {
+		return nil, errors.New("Höchstens 50 Anzeigenamen für Ordner")
+	}
+	out := map[string]string{}
+	for k, v := range in {
+		k, v = strings.TrimSpace(k), strings.TrimSpace(v)
+		if k == "" || v == "" {
+			continue
+		}
+		if len(k) > 500 {
+			return nil, errors.New("Ordnerpfad zu lang")
+		}
+		if len([]rune(v)) > 40 {
+			return nil, errors.New("Anzeigename eines Ordners: höchstens 40 Zeichen")
+		}
+		out[k] = v
 	}
 	return out, nil
 }
