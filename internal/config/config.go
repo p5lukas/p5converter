@@ -27,24 +27,50 @@ type Preset struct {
 	Values  map[string]any `json:"values"`
 }
 
+// Verify: the default of the controls after a conversion (one set per world; the wizard can change it per run).
+type Verify struct {
+	Tracks bool `json:"tracks"` // A: tracks complete, size plausible
+	Decode bool `json:"decode"` // B: read the whole result once
+}
+
+func defaultVerify() Verify { return Verify{Tracks: true, Decode: true} }
+
+// SubPref is one wish for the default subtitle: a language, optionally only the "forced" subtitle of it.
+type SubPref struct {
+	Lang   string `json:"lang"`
+	Forced bool   `json:"forced"`
+}
+
+// TrackPrefs are the language wishes for "Audio & Untertitel" (video world): which languages to keep (empty = all) and which audio /
+// subtitle becomes the default, as a ranking (first match wins).
+type TrackPrefs struct {
+	AudioKeep    []string  `json:"audioKeep"`
+	SubKeep      []string  `json:"subKeep"`
+	AudioDefault []string  `json:"audioDefault"`
+	SubDefault   []SubPref `json:"subDefault"`
+}
+
 type Settings struct {
-	Worlds           map[string]World `json:"worlds"`
-	WorldOrder       []string         `json:"worldOrder"`
-	StartWorld       string           `json:"startWorld"`       // last | audio | video
-	Concurrency      int              `json:"concurrency"`      // parallel video jobs
-	ConcurrencyAudio int              `json:"concurrencyAudio"` // parallel audio jobs
-	DefaultOutDir    string           `json:"defaultOutDir"`
-	ShowNews         bool             `json:"showNews"`
-	PreferredBackend string           `json:"preferredBackend"` // auto | cpu | qsv | nvenc | vaapi | amf
-	HWDecode         bool             `json:"hwDecode"`
-	Presets          []Preset         `json:"presets"`
+	Worlds           map[string]World  `json:"worlds"`
+	WorldOrder       []string          `json:"worldOrder"`
+	StartWorld       string            `json:"startWorld"`       // last | audio | video
+	Concurrency      int               `json:"concurrency"`      // parallel video jobs
+	ConcurrencyAudio int               `json:"concurrencyAudio"` // parallel audio jobs
+	DefaultOutDir    string            `json:"defaultOutDir"`
+	ShowNews         bool              `json:"showNews"`
+	PreferredBackend string            `json:"preferredBackend"` // auto | cpu | qsv | nvenc | vaapi | amf
+	HWDecode         bool              `json:"hwDecode"`
+	Presets          []Preset          `json:"presets"`
+	Verify           map[string]Verify `json:"verify"`
+	TrackPrefs       TrackPrefs        `json:"trackPrefs"`
+	NoCRFSuggest     bool              `json:"noCrfSuggest"` // true = no automatic CRF suggestion in the video settings
 }
 
 // Fields a preset may contain, per world (the ids of the UI controls).
 var presetFields = map[string][]string{
 	"audio": {"aFormat", "aMode", "aQuality", "aBitrate", "aFlac", "aWav", "aRate", "aCh", "aCover", "pattern", "suffix", "renRules"},
 	"video": {"vContainer", "vCodec", "vBackend", "vCrf", "vPreset", "vDepth", "vHeight", "vHwDec",
-		"vAudioMode", "vAudioCodec", "vAudioKbps", "vAudioLangs", "vSubMode", "vSubLangs", "pattern", "suffix", "renRules"},
+		"vAudioMode", "vAudioCodec", "vAudioKbps", "vAudioLangs", "vSubMode", "vSubLangs", "vTrkRules", "pattern", "suffix", "renRules"},
 }
 
 func Defaults() Settings {
@@ -58,6 +84,7 @@ func Defaults() Settings {
 		ShowNews:         true,
 		PreferredBackend: "auto",
 		HWDecode:         true,
+		Verify:           map[string]Verify{"audio": defaultVerify(), "video": defaultVerify()},
 		Presets: []Preset{
 			p("v-remux", "Remux als MKV", "video", map[string]any{"vCodec": "copy", "vContainer": "mkv"}),
 			p("a-flac", "Remux als FLAC", "audio", map[string]any{"aFormat": "flac", "aFlac": 5}),
@@ -192,6 +219,21 @@ func Validate(in Settings) (Settings, error) {
 	if !contains([]string{"auto", "cpu", "qsv", "nvenc", "vaapi", "amf"}, out.PreferredBackend) {
 		out.PreferredBackend = "auto"
 	}
+	// settings files from before 0.1.4 have no "verify": the defaults apply (A and B on); old fields (graceDays …) are ignored
+	ver := map[string]Verify{}
+	for _, w := range []string{"audio", "video"} {
+		v, ok := out.Verify[w]
+		if !ok {
+			v = defaultVerify()
+		}
+		ver[w] = v
+	}
+	out.Verify = ver
+	tp, err := cleanTrackPrefs(out.TrackPrefs)
+	if err != nil {
+		return Settings{}, err
+	}
+	out.TrackPrefs = tp
 	if len(out.Presets) > 100 {
 		return Settings{}, errors.New("Höchstens 100 Voreinstellungen")
 	}
@@ -230,5 +272,56 @@ func Validate(in Settings) (Settings, error) {
 		presets = append(presets, p)
 	}
 	out.Presets = presets
+	return out, nil
+}
+
+// cleanLangs lower-cases, dedupes and checks language codes (2-3 letters); the result is never nil.
+func cleanLangs(in []string) ([]string, error) {
+	if len(in) > 30 {
+		return nil, errors.New("Sprachliste: höchstens 30 Einträge")
+	}
+	out := []string{}
+	seen := map[string]bool{}
+	for _, l := range in {
+		l = strings.ToLower(strings.TrimSpace(l))
+		if len(l) < 2 || len(l) > 3 || strings.Trim(l, "abcdefghijklmnopqrstuvwxyz") != "" {
+			return nil, fmt.Errorf("Sprachcode %q ist ungültig (2–3 Buchstaben)", l)
+		}
+		if !seen[l] {
+			seen[l] = true
+			out = append(out, l)
+		}
+	}
+	return out, nil
+}
+
+func cleanTrackPrefs(in TrackPrefs) (TrackPrefs, error) {
+	var out TrackPrefs
+	var err error
+	if out.AudioKeep, err = cleanLangs(in.AudioKeep); err != nil {
+		return out, err
+	}
+	if out.SubKeep, err = cleanLangs(in.SubKeep); err != nil {
+		return out, err
+	}
+	if out.AudioDefault, err = cleanLangs(in.AudioDefault); err != nil {
+		return out, err
+	}
+	out.SubDefault = []SubPref{}
+	seen := map[SubPref]bool{}
+	if len(in.SubDefault) > 30 {
+		return out, errors.New("Standard-Untertitel: höchstens 30 Einträge")
+	}
+	for _, p := range in.SubDefault {
+		l, err := cleanLangs([]string{p.Lang})
+		if err != nil {
+			return out, err
+		}
+		q := SubPref{Lang: l[0], Forced: p.Forced}
+		if !seen[q] {
+			seen[q] = true
+			out.SubDefault = append(out.SubDefault, q)
+		}
+	}
 	return out, nil
 }

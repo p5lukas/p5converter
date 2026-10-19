@@ -31,6 +31,13 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     }
     await ctx.close();
   }
+  // Testvoreinstellungen früherer Läufe entfernen (der Test legt „Mein Test …“ an und soll wiederholbar sein)
+  const cleanTestPresets = async () => {
+    const cur = (await (await fetch(BASE + '/api/settings')).json()).settings;
+    cur.presets = cur.presets.filter(x => !x.name.startsWith('Mein Test '));
+    await fetch(BASE + '/api/settings', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(cur)});
+  };
+  await cleanTestPresets();
   // ---------- Abläufe (Desktop + iPhone) ----------
   for (const [name, opt] of [views[0], views[1]]) {
     const ctx = await b.newContext(opt); const p = await ctx.newPage();
@@ -38,7 +45,7 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     await p.goto(BASE); await p.waitForTimeout(1200);
     await p.click('[data-world=video]'); await p.waitForTimeout(1800);
     // Voreinstellung speichern
-    await p.click('[data-step-btn=video]'); await p.waitForTimeout(250);
+    await p.click('#startFlow'); await p.waitForTimeout(300); await p.click('[data-step-btn=video]'); await p.waitForTimeout(250);
     await p.selectOption('#vCodec', 'hevc'); await p.selectOption('#vDepth', '10'); await p.fill('#vCrf', '19');
     await p.evaluate(() => { const e = document.querySelector('#vCrf'); e.value = 19; e.dispatchEvent(new Event('input', {bubbles: true})); });
     await p.click('[data-step-btn=summary]'); await p.waitForTimeout(250);
@@ -80,6 +87,7 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     await p.click('.worldcard:nth-of-type(2) .swatch[title="Nebel"]'); await p.waitForTimeout(500);
     await ctx.close();
   }
+  await cleanTestPresets();
   // ---------- Anmeldung (Desktop + iPhone) ----------
   for (const [name, opt] of [views[0], views[1]]) {
     const ctx = await b.newContext(opt); const p = await ctx.newPage();

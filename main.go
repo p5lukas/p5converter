@@ -72,6 +72,9 @@ func main() {
 	// Desktop mode = started by a person on their own machine (not Docker/server with fixed roots).
 	desktop := strings.TrimSpace(*roots) == "" && !*noBrowser
 	setupLog(desktop)
+	if desktop {
+		setupDesktop()
+	}
 	cfgDir := *cfgFlag
 	if cfgDir == "" && desktop {
 		if d, err := os.UserConfigDir(); err == nil {
@@ -105,7 +108,7 @@ func main() {
 		// Port busy: if it is another p5converter, just bring up its window instead of failing.
 		if running(*addr) {
 			log.Printf("p5converter läuft bereits auf %s – öffne das Fenster.", *addr)
-			if !*noBrowser {
+			if !*noBrowser && !bringToFront(urlFor(*addr)) {
 				openWindow(urlFor(*addr))
 			}
 			return
@@ -125,12 +128,20 @@ func main() {
 		log.Printf("Erlaubte Ordner: %s · Konfiguration: %s", strings.Join(rs, ", "), cfgDir)
 	}
 	log.Printf("Oberfläche: %s", url)
+	go func() {
+		if err := http.Serve(ln, srv.Handler()); err != nil {
+			fatal(desktop, err.Error())
+		}
+	}()
 	if !*noBrowser {
-		go func() { time.Sleep(400 * time.Millisecond); openWindow(url) }()
+		// Windows: eigenes App-Fenster (WebView2); endet das Programm, wenn das Fenster geschlossen wird.
+		if desktopWindow(url, func() int { return busyJobs(srv) }, func(f func()) { srv.ShowWindow = f }) {
+			os.Exit(0)
+		}
+		time.Sleep(400 * time.Millisecond)
+		openWindow(url)
 	}
-	if err := http.Serve(ln, srv.Handler()); err != nil {
-		fatal(desktop, err.Error())
-	}
+	select {} // der Server läuft im Hintergrund weiter
 }
 
 func urlFor(addr string) string {
@@ -177,9 +188,14 @@ func setupLog(desktop bool) {
 	if err != nil {
 		return
 	}
-	log.SetOutput(io.MultiWriter(os.Stderr, f))
+	log.SetOutput(io.MultiWriter(f, stderrWriter{})) // Datei zuerst: ein Windows-Programm ohne Konsole hat keinen gültigen stderr
 	log.Printf("Logdatei: %s", f.Name())
 }
+
+// stderrWriter schreibt nach stderr und ignoriert Fehler (ohne Konsole ist stderr ungültig) – sonst bräche MultiWriter ab.
+type stderrWriter struct{}
+
+func (stderrWriter) Write(p []byte) (int, error) { os.Stderr.Write(p); return len(p), nil }
 
 // fatal logs and, on desktops without a terminal, shows a visible message.
 func fatal(desktop bool, msg string) {
@@ -201,8 +217,7 @@ func notify(title, msg string) {
 			exec.Command(p, title, msg).Run()
 		}
 	case "windows":
-		exec.Command("powershell", "-NoProfile", "-Command",
-			"Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show('"+strings.ReplaceAll(msg, "'", "''")+"','"+title+"')").Run()
+		showError(title, msg)
 	}
 }
 
@@ -272,4 +287,15 @@ func existingRoots(list string) []string {
 		return all
 	}
 	return found
+}
+
+// busyJobs zählt laufende und wartende Aufträge (für die Rückfrage beim Beenden).
+func busyJobs(srv *server.Server) int {
+	n := 0
+	for _, j := range srv.Jobs.Snapshot() {
+		if j.Status == "running" || j.Status == "queued" {
+			n++
+		}
+	}
+	return n
 }

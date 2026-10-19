@@ -5,7 +5,7 @@ package version
 import "strings"
 
 // Base is the current development version. Raised by one patch step per "leg los" (see CLAUDE.md).
-const Base = "0.1.0"
+const Base = "0.2.0"
 
 var (
 	Tag    string // e.g. "v0.1.0" for tag builds

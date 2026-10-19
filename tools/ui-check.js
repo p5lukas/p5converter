@@ -21,9 +21,12 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
     eq(name, 'Start sichtbar', await vis(), 'start');
     eq(name, 'Hardware auf der Startseite (Video)', await p.isVisible('#hwCard'), true);
     eq(name, 'Zurück/Weiter nicht auf der Startseite', await p.isVisible('#stepnav'), false);
+    eq(name, 'Schritt-Reiter auf der Startseite ausgeblendet', await p.isVisible('#steps'), false);
+    for (const id of ['#startFlow', '#startRename', '#startHistory']) eq(name, id + ' in der Kopfzeile', await p.locator('header.top ' + id).isVisible(), true);
     await p.screenshot({ path: `${L.SHOTS}/st-${name}-1-start.png`, fullPage: true });
     await p.click('#startFlow'); await p.waitForTimeout(300);
     eq(name, 'Dateien nach „Konvertierung starten“', await vis(), 'files');
+    eq(name, 'Schritt-Reiter im Assistenten sichtbar', await p.isVisible('#steps'), true);
     await L.addFile(p, 'long.mkv');
     await p.screenshot({ path: `${L.SHOTS}/st-${name}-2-files.png` });
     const seq = ['dest', 'name', 'video', 'tracks', 'summary'];
@@ -43,11 +46,14 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
     await L.goStep(p, 'summary');
     await p.click('#start'); await p.waitForTimeout(2500);
     eq(name, 'nach Start zurück auf der Startseite', await vis(), 'start');
-    eq(name, 'Auftrag in der Warteschlange', await p.locator('#queue .job').count() >= 1, true);
     eq(name, 'Datei-Liste nach Start leer', await p.locator('#steps .stepbtn em').count(), 0);
-    await p.locator('#queue').scrollIntoViewIfNeeded();
-    await p.screenshot({ path: `${L.SHOTS}/st-${name}-4-queue.png` });
+    // Warteschlange und Verlauf stehen auf der Seite „Verlauf“ (Kopfzeile)
+    await p.click('#startHistory'); await p.waitForTimeout(900);
+    eq(name, 'Auftrag in Warteschlange oder Verlauf', (await p.locator('#queue .job').count()) + (await p.locator('.histentry').count()) >= 1, true);
+    await p.screenshot({ path: `${L.SHOTS}/st-${name}-4-queue.png`, fullPage: true });
     await p.click('#cancelAll'); await p.waitForTimeout(800);
+    await p.click('#histBack'); await p.waitForTimeout(400);
+    eq(name, 'zurück auf der Startseite', await vis(), 'start');
 
     // ---- Audio: eigene, passende Schritte ----
     await L.setWorld(p, 'audio');

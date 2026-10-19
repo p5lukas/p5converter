@@ -28,6 +28,11 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
     <button data-world="audio" class="on"><span class="pl"></span><span class="wl">Audio</span></button>
     <button data-world="video"><span class="pl"></span><span class="wl">Video</span></button>
   </nav>
+  <div class="hactions">
+    <button id="startFlow" class="tb primary" title="Konvertierung starten" aria-label="Konvertierung starten"><span data-ic="play"></span><span class="hl"> Konvertieren</span></button>
+    <button id="startRename" class="tb" title="Umbenennen starten" aria-label="Umbenennen starten"><span data-ic="rename"></span><span class="hl"> Umbenennen</span></button>
+    <button id="startHistory" class="tb" title="Verlauf und Warteschlange" aria-label="Verlauf und Warteschlange"><span data-ic="history"></span><span class="hl"> Verlauf</span><span class="lbadge hbadge" id="histBadge"></span></button>
+  </div>
   <div class="spacer"></div>
   <span id="ffver" class="muted small hidewide"></span>
   <button id="logbtn" class="tb logbtn" title="Logs" aria-label="Logs"><span data-ic="terminal"></span><span class="lbadge"></span></button>
@@ -49,20 +54,9 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
   <!-- Schritt: Start -->
   <section class="stepsec" data-step="start">
   <section class="hero" id="hero">
-    <div class="ring" id="ring"><b id="ringTxt">–</b></div>
-    <div class="stats">
-      <div class="stat"><b id="stFiles">0</b><span>In Liste</span></div>
-      <div class="stat"><b id="stQueued">0</b><span>Wartet</span></div>
-      <div class="stat ok"><b id="stRun">0</b><span>Läuft</span></div>
-      <div class="stat ok"><b id="stDone">0</b><span>Fertig</span></div>
-      <div class="stat bad"><b id="stErr">0</b><span>Fehler</span></div>
-    </div>
+    <div class="jobnow" id="jobNow"></div>
     <div id="monitor" class="monitor"></div>
   </section>
-    <div class="startactions">
-      <button id="startFlow" class="primary big"><span data-ic="play"></span> Konvertierung starten</button>
-      <button id="startRename" class="big"><span data-ic="rename"></span> Umbenennen starten</button>
-    </div>
     <div class="startcols">
       <div class="panel" id="savedCard">
         <div class="panel-h"><h2 data-info="savedInfo">Gewonnener Platz</h2><button id="savedReset" class="small ghost hidden" title="Zählung dieser Welt auf 0 setzen">Zurücksetzen</button></div>
@@ -74,18 +68,6 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
       <div id="hwGpus" class="muted small"></div>
       </div>
     </div>
-    <section class="full">
-    <div class="panel">
-      <div class="panel-h"><h2>Warteschlange <span id="queueWorld" class="qworld"></span></h2>
-        <div class="btns">
-          <label class="inline small">Parallel <select id="conc"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
-          <button id="cancelAll" class="small ghost" title="Bricht alle Aufträge dieser Welt ab und löscht unfertige Dateien. Quelldateien bleiben unberührt.">Alle abbrechen</button>
-          <button id="clearDone" class="small ghost">Fertige entfernen</button>
-        </div>
-      </div>
-      <div id="queue"></div>
-    </div>
-    </section>
   </section>
 
   <!-- Schritt: Dateien -->
@@ -123,7 +105,6 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
           <span class="muted small" id="existsHint"></span>
         </label>
       </div>
-      <label class="check"><input type="checkbox" id="deleteSource"> Quelldatei nach Erfolg löschen <span class="warn small">(unwiderruflich)</span></label>
     </div>
   </section>
 
@@ -215,6 +196,14 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
           <input type="range" id="vCrf" min="10" max="40" value="22">
           <span class="muted small" id="vCrfHint"></span>
         </label>
+        <label id="vMatRow">Art des Materials
+          <select id="vMaterial">
+            <option value="standard">Standard (Film/Serie)</option><option value="modern">Aktueller Film (Blockbuster)</option>
+            <option value="grain">Altes Material / mit Filmkorn</option><option value="anime">Anime</option>
+            <option value="cartoon">Zeichentrick</option><option value="home">Heimvideo / Handyvideo</option>
+          </select>
+        </label>
+        <div id="vCrfAdvice" class="crfadvice"><span class="small" id="vCrfWhy"></span> <button type="button" id="vCrfSet" class="small hidden"></button></div>
         <label id="vPresetRow">Geschwindigkeit
           <select id="vPreset"><option value="slow">Langsam (beste Kompression)</option><option value="medium" selected>Mittel</option><option value="fast">Schnell</option><option value="veryfast">Sehr schnell</option></select>
         </label>
@@ -234,32 +223,22 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
   <section class="stepsec hidden" data-step="tracks" data-world="video">
     <div class="panel" id="trackSettings">
       <h2>Audio und Untertitel</h2>
-      <p class="trkintro">Hier musst du <b>nichts ändern</b>: Standardmäßig bleiben alle Ton- und Untertitelspuren unverändert („Passthrough“) – das ist verlustfrei und am schnellsten. Ändere nur etwas, wenn du Spuren loswerden, umbenennen oder den Ton kleiner machen willst.</p>
-      <h3 data-info="vAudioTracks">Ton: Regeln für alle Dateien</h3>
-      <div class="grid2">
-        <label>Was soll mit dem Ton passieren?
+      <p class="trkintro">Hier musst du <b>nichts ändern</b>: Standardmäßig bleiben alle Ton- und Untertitelspuren unverändert („Passthrough“) – das ist verlustfrei und am schnellsten. Das Programm macht Vorschläge (Sprachen, Standard-Spur, Formate); jeden Vorschlag kannst du abwählen.</p>
+      <div id="trkTop"></div>
+      <input type="hidden" id="vTrkRules">
+      <div id="trkHold" class="hidden">
+        <label id="vAudioModeRow">Alle übrigen Tonspuren
           <select id="vAudioMode"><option value="copy">Unverändert lassen (empfohlen)</option><option value="encode">Kleiner machen (neu kodieren)</option></select>
         </label>
         <label id="vAudioCodecRow">Format und Bitrate (je Stereo-Paar)
           <div class="row"><select id="vAudioCodec"><option value="aac">AAC (läuft überall, empfohlen)</option><option value="opus">Opus (sehr klein, modern)</option><option value="ac3">AC-3 (Dolby Digital, für TV/AV-Receiver)</option><option value="eac3">E-AC-3 (Dolby Digital Plus)</option><option value="flac">FLAC (verlustfrei, groß)</option></select>
           <input id="vAudioKbps" type="number" min="32" max="640" value="160" style="width:90px"></div>
         </label>
-        <label>Nur diese Sprachen behalten
-          <input id="vAudioLangs" placeholder="leer = alle, z. B. ger,eng">
-        </label>
-      </div>
-      <p class="muted small" id="vAudioHint"></p>
-      <h3 data-info="vSubTracks">Untertitel: Regeln für alle Dateien</h3>
-      <div class="grid2">
-        <label>Was soll mit den Untertiteln passieren?
+        <p class="muted small" id="vAudioHint"></p>
+        <label id="vSubModeRow">Alle übrigen Untertitel
           <select id="vSubMode"><option value="copy">Alle behalten (empfohlen)</option><option value="none">Alle entfernen</option></select>
         </label>
-        <label>Nur diese Sprachen behalten
-          <input id="vSubLangs" placeholder="leer = alle, z. B. ger,eng">
-        </label>
       </div>
-      <p class="muted small">Sprachcodes: <code>ger</code> = Deutsch, <code>eng</code> = Englisch, <code>fre</code> = Französisch, <code>jpn</code> = Japanisch. Spuren ohne Sprachangabe bleiben immer erhalten.</p>
-      <h3 data-info="trkTable">Spuren dieser Datei</h3>
       <div id="trackEditor"></div>
     </div>
   </section>
@@ -269,6 +248,17 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
     <div class="panel" id="summaryCard">
       <h2>Zusammenfassung</h2>
       <div id="summaryBody"></div>
+    </div>
+    <div class="panel" id="vfCard">
+      <h2 data-info="vfInfo">Ergebnis prüfen &amp; Original</h2>
+      <p class="muted small">Nach dem Umwandeln wird die neue Datei immer auf Lesbarkeit und Laufzeit geprüft. Hier kannst du mehr dazunehmen (Standard: in Einstellungen → Allgemein).</p>
+      <label class="check"><input type="checkbox" id="vfTracks"><span>Spuren &amp; Größe prüfen</span></label>
+      <div class="vfhint" id="vfTracksT"></div>
+      <label class="check"><input type="checkbox" id="vfDecode"><span>Ergebnis komplett durchlesen (Decode-Test)</span></label>
+      <div class="vfhint" id="vfDecodeT"></div>
+      <label class="check"><input type="checkbox" id="deleteSource"><span>Quelldatei nach bestandener Prüfung löschen</span></label>
+      <div class="vfhint warn">Unwiderruflich: kein Papierkorb.</div>
+      <div id="vfDelHint" class="warn small hidden">Das Original wird sofort und endgültig gelöscht, sobald alle gewählten Prüfungen bestanden sind.</div>
     </div>
   </section>
 
@@ -307,6 +297,19 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
   </div>
 </main>
 <main id="viewLogs" class="hidden"></main>
+<main id="viewHistory" class="hidden">
+  <div class="sethead"><button class="ghost" id="histBack"><span data-ic="back"></span> Zur Startseite</button><h1 id="histTitle">Verlauf</h1></div>
+    <div class="panel" id="queuePanel">
+      <div class="panel-h"><h2>Warteschlange <span id="queueWorld" class="qworld"></span></h2>
+        <div class="btns">
+          <label class="inline small">Parallel <select id="conc"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
+          <button id="cancelAll" class="small ghost" title="Bricht alle Aufträge dieser Welt ab und löscht unfertige Dateien. Quelldateien bleiben unberührt.">Alle abbrechen</button>
+        </div>
+      </div>
+      <div id="queue"></div>
+    </div>
+  <div id="historyBody"></div>
+</main>
 <main id="viewSettings" class="hidden"></main>
 <div id="viewLogin" class="hidden"></div>
 
@@ -382,8 +385,12 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
 <script src="info.js"></script>
 <script src="rename.js"></script>
 <script src="flow.js"></script>
+<script src="trkplan.js"></script>
 <script src="tracks.js"></script>
+<script src="verify.js"></script>
+<script src="crf.js"></script>
 <script src="logs.js"></script>
+<script src="history.js"></script>
 <script src="settings.js"></script>
 <script src="auth.js"></script>
 <script src="app.js"></script>

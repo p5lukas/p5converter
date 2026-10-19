@@ -1,6 +1,7 @@
 package hw
 
 import (
+	"github.com/p5lukas/p5converter/internal/proc"
 	"math"
 	"os"
 	"os/exec"
@@ -75,7 +76,7 @@ func nvidiaStats() []GPUStat {
 	if err != nil {
 		return nil
 	}
-	b, err := exec.Command(p, "--query-gpu=name,utilization.gpu,utilization.encoder,utilization.decoder",
+	b, err := proc.Command(p, "--query-gpu=name,utilization.gpu,utilization.encoder,utilization.decoder",
 		"--format=csv,noheader,nounits").Output()
 	if err != nil {
 		return nil

@@ -17,12 +17,14 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/p5lukas/p5converter/internal/auth"
 	"github.com/p5lukas/p5converter/internal/build"
 	"github.com/p5lukas/p5converter/internal/config"
 	"github.com/p5lukas/p5converter/internal/ffmpeg"
+	"github.com/p5lukas/p5converter/internal/history"
 	"github.com/p5lukas/p5converter/internal/hw"
 	"github.com/p5lukas/p5converter/internal/jobs"
 	"github.com/p5lukas/p5converter/internal/logs"
@@ -38,6 +40,7 @@ type Server struct {
 	Det         *hw.Detector
 	Sampler     *hw.Sampler
 	Stats       *stats.Store
+	History     *history.Store
 	news        *newsStore
 	newsEntries []newsEntry
 	Jobs        *jobs.Manager
@@ -45,6 +48,8 @@ type Server struct {
 	Settings    *config.Store
 	Roots       []string // empty = unrestricted (desktop mode)
 	Quit        func()   // set in desktop mode: enables the Beenden button
+	ShowWindow  func()   // set in the Windows app: a second start asks the running one to show its window
+	uiOnce      sync.Once
 	enc         map[string]bool
 	ffver       string
 }
@@ -55,6 +60,8 @@ func New(build version.Info, t ffmpeg.Tools, roots []string, concurrency int, co
 	s.Jobs = jobs.New(t, s.Sampler, concurrency)
 	s.Stats = stats.Open(statsDir(s.Settings, configDir))
 	s.Jobs.OnDone = s.Stats.Add
+	s.History = history.Open(configDir, s.Settings.Persistent())
+	s.Jobs.OnFinish = func(j jobs.Job) { s.History.Add(historyEntry(j)) }
 	json.Unmarshal(newsJSON, &s.newsEntries)
 	s.news = openNews(configDir, s.Settings.Persistent(), s.newsEntries, build.Base)
 	cfg := s.Settings.Get()
@@ -70,6 +77,11 @@ func New(build version.Info, t ffmpeg.Tools, roots []string, concurrency int, co
 	s.enc = t.Encoders()
 	s.ffver = t.Version()
 	go func() {
+		// P5_TEST_HW_DELAY (Millisekunden) verzögert die Erkennung künstlich – nur für Tests (die Oberfläche muss auch dann starten,
+		// wenn sie schon fragt, bevor die Erkennung fertig ist)
+		if ms, _ := strconv.Atoi(os.Getenv("P5_TEST_HW_DELAY")); ms > 0 {
+			time.Sleep(time.Duration(ms) * time.Millisecond)
+		}
 		s.Det.Detect()
 		logHardware(s.Det.Result())
 	}()
@@ -109,17 +121,20 @@ func (s *Server) allowed(p string) bool {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	sub, _ := fs.Sub(web.FS, ".")
-	static := http.FileServerFS(sub)
+	static, err := staticHandler(sub)
+	if err != nil {
+		panic(err) // embedded files are always readable
+	}
 	mux.HandleFunc("GET /{$}", s.indexPage)
 	mux.HandleFunc("GET /index.html", s.indexPage)
-	mux.Handle("GET /", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "no-cache") // always revalidate (ETag): new versions show up immediately
-		static.ServeHTTP(w, r)
-	}))
+	mux.Handle("GET /", static)
 	mux.HandleFunc("GET /manifest.webmanifest", s.manifest)
 	mux.HandleFunc("GET /api/news", s.newsGet)
 	mux.HandleFunc("POST /api/news/seen", s.newsSeen)
 	mux.HandleFunc("POST /api/stats/reset", s.statsReset)
+	mux.HandleFunc("GET /api/history", s.historyList)
+	mux.HandleFunc("GET /api/history.csv", s.historyCSV)
+	mux.HandleFunc("POST /api/history/clear", s.historyClear)
 	mux.HandleFunc("GET /api/info", s.info)
 	mux.HandleFunc("POST /api/hw/detect", func(w http.ResponseWriter, r *http.Request) {
 		go s.Det.Detect()
@@ -160,6 +175,21 @@ func (s *Server) Handler() http.Handler {
 		}
 		writeJSON(w, map[string]bool{"ok": true})
 		go s.Quit()
+	})
+	mux.HandleFunc("POST /api/client-error", func(w http.ResponseWriter, r *http.Request) {
+		var b struct{ Msg string }
+		if json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&b) == nil && b.Msg != "" {
+			logs.Get("ui").Errorf("Fehler in der Oberfläche: %s", b.Msg)
+		}
+		writeJSON(w, map[string]bool{"ok": true})
+	})
+	mux.HandleFunc("POST /api/desktop/show", func(w http.ResponseWriter, r *http.Request) {
+		if s.ShowWindow == nil {
+			httpErr(w, 404, "kein App-Fenster")
+			return
+		}
+		s.ShowWindow()
+		writeJSON(w, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("POST /api/concurrency", func(w http.ResponseWriter, r *http.Request) {
 		var b struct {
@@ -494,8 +524,10 @@ func (s *Server) concurrencies() map[string]int {
 }
 
 func (s *Server) state(w http.ResponseWriter, r *http.Request) {
+	// einmal protokollieren, womit die Oberfläche läuft (zeigt z. B. „Edg/…“ = WebView2-Fenster der Windows-App)
+	s.uiOnce.Do(func() { logs.Get("app").Infof("Oberfläche verbunden (%s)", shortUA(r.UserAgent())) })
 	writeJSON(w, map[string]any{
-		"jobs": s.Jobs.Snapshot(), "stats": s.Sampler.Latest(), "concurrency": s.concurrencies(), "saved": s.Stats.Get(),
+		"jobs": s.Jobs.Snapshot(), "finished": s.Jobs.Finished(), "stats": s.Sampler.Latest(), "concurrency": s.concurrencies(), "saved": s.Stats.Get(),
 	})
 }
 
@@ -748,4 +780,13 @@ func (s *Server) statsReset(w http.ResponseWriter, r *http.Request) {
 	s.Stats.Reset(body.Kind)
 	logs.Get("app").Infof("Statistik „Gewonnener Platz“ zurückgesetzt (%s)", body.Kind)
 	writeJSON(w, map[string]any{"ok": true, "saved": s.Stats.Get()})
+}
+
+// shortUA kürzt den User-Agent auf die Browser-Kennung (letzte zwei Teile, z. B. "Chrome/154.0.0.0 Edg/154.0.0.0").
+func shortUA(ua string) string {
+	f := strings.Fields(ua)
+	if len(f) > 2 {
+		f = f[len(f)-2:]
+	}
+	return strings.Join(f, " ")
 }

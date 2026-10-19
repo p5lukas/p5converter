@@ -8,13 +8,25 @@
 > Arbeitsregel (Nutzer): Ob die CI grün und das Image `:latest` gebaut ist, sieht der Nutzer selbst unter GitHub → Actions – nicht von selbst melden.
 > Arbeitsregel (Nutzer): In `p5lukas/p5assets` darf ich **immer lesen**; **ändern nur, wenn der Nutzer es ausdrücklich sagt**.
 > Entscheidung (Nutzer): Erst Unraid/Docker mit „mega Design“, dann Windows-App mit eigener GUI, dann Linux-App (Fedora KDE) mit eigener GUI.
+> Arbeitsregel (Nutzer): Stehen im Internet **Bereiche (Ranges)** für Werte (z. B. CRF 18–22), nehme ich **immer den niedrigeren Wert** (bessere Qualität, sicherer Startwert).
 
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
+- [ ] **Windows-App: Folgearbeiten** (erste Version 0.1.1 steht auf `dev`): (1) ~~Tray~~ (erledigt in 0.1.2); (2) **Prüfung durch den Nutzer** auf dem Windows-PC (Fenster, Symbol, Hardware-Erkennung, echte Konvertierung, Deinstallation); (3) Größe der `setup.exe` aus dem CI-Lauf (Zusammenfassung „Größen“) mitteilen; (4) Linux-App danach; (5) Windows erst nach Freigabe nach `main`
 - [ ] Optional: Image als multi-arch (amd64/arm64) bauen
 
 ## Vom Nutzer zu prüfen (nicht in der Sandbox möglich)
+- [ ] 0.2.0 Forced: Staffel mit mkvmerge-Untertiteln laden (Deutsch voll + Deutsch klein): erscheint „Forced?“ bzw. der Hinweis mit „nur N statt M Zeilen“, und ist mit dem Wunsch „Deutsch (Forced)“ der kleine Untertitel vorausgewählt und im Ergebnis (Plex neu analysieren) als Forced erkannt? Wirkt die Oberfläche bei einer großen Staffel flüssiger? Neue Windows-`.exe` (Aktionen-Lauf von `main`) ausprobieren
+- [ ] 0.1.7 Startseite: Kopfzeile (Konvertieren, Umbenennen, Verlauf mit Zähler) auf Desktop, iPhone/iPad (Handy: eigene Zeile unter den Welten) und als Web-App ansehen; startet „Datei X von Y“ bei einer Staffel richtig, zeigt der aktuelle Auftrag die grünen Haken bei Hardware-Encoding, bleibt die Warteschlange im Verlauf übersichtlich (laufende oben, beendete darunter)? Gefällt dir „Gerade nichts los“ statt des Kreises?
+- [ ] 0.1.6 Audio & Untertitel: eine ganze Staffel laden: sind die Gruppen richtig (gleiche Sprachen zusammen, Ausnahmen markiert)? Tabelle und Einzelansicht ansehen; Regel „DTS → AC-3“ anlegen (Vorschlag oder von Hand) und eine Datei umwandeln: stimmen Ton (nur DTS umgewandelt), Sprachen und Standard-Spur im Ergebnis (in Plex neu analysieren)? Einstellungen → Audio & Untertitel: Sprach-Wünsche als Rangliste (Deutsch, sonst Englisch; Untertitel „Deutsch Forced“ als Standard) – setzt das Programm sie bei deinen Dateien richtig? Regeln als Voreinstellung speichern und laden. Ist der Schritt jetzt übersichtlicher? Was fehlt noch?
+- [ ] 0.1.6 Encoder: „Bevorzugter Encoder“ = Quick Sync (Einstellungen → Hardware): steht im Video-Schritt „Automatisch (bevorzugt: Intel Quick Sync)“ und bei „Wird verwendet“ `hevc_qsv` + „Intel Quick Sync“? Nach „Zurücksetzen“ ebenfalls?
+- [ ] 0.1.5 Verlauf: Startseite → „Verlauf“ ansehen (Desktop und iPhone/iPad): erscheinen fertige, fehlgeschlagene und abgebrochene Aufträge je Welt? Bleibt der Verlauf nach „Fertige entfernen“ und nach einem Neustart des Containers (Unraid: /config muss beschreibbar sein)? Suche, Filter, Details, CSV-Export (öffnet sich in Excel mit Umlauten?), „Verlauf leeren“
+- [ ] 0.1.5 Benennen/Umbenennen: Ersetzungsregeln ohne „Regex“ und „Aa“ ansehen; funktionieren deine bisherigen Ersetzungen weiter?
+- [ ] 0.1.4 Kontrolle nach dem Konvertieren: im letzten Schritt „Ergebnis prüfen & Original“ ansehen (Desktop und iPhone/iPad); eine echte Datei mit A + B + „Quelldatei löschen“ umwandeln: steht am Auftrag „✓ geprüft“, ist das Original danach weg (Schonfrist gibt es seit 0.1.5 nicht mehr)? Wie lange braucht der Decode-Test bei einem echten Film (die Zeitangaben sind Schätzwerte)? Stimmen die Wörter „kaum/etwas/viel länger“?
+- [ ] 0.1.4 CRF-Vorschlag: im Video-Schritt „Art des Materials“ ausprobieren (Anime → 16, Standard H.265 → 20 …); passen die Vorschläge zu deinem Material? (Werte sind Erfahrungswerte aus Foren/Anleitungen, nicht gemessen; bei Hardware-Encodern nur grober Anhaltspunkt)
+- [ ] 0.1.3 Windows: neue `setup.exe` aus `dev-latest` über die alte installieren: erscheint die Hardware-Kachel (Quick Sync nutzbar, NVIDIA mit Klartext-Meldung), kein „Start fehlgeschlagen“, „Beenden“ sofort da? Nach NVIDIA-Treiber-Update: wird NVENC erkannt (Einstellungen → Hardware)?
+- [ ] 0.1.1 Windows: `p5converter-setup.exe` aus `dev-latest` laden, SmartScreen bestätigen, installieren; öffnet das Fenster mit der Oberfläche? Symbol/Titel ok? Tray-Symbol da, Schließen-Kreuz versteckt nur, „Beenden“ fragt bei laufenden Aufträgen? Unter Einstellungen → Hardware: werden Quick Sync/NVENC/AMF erkannt (Diagnose kopieren, falls nicht)? Eine echte Konvertierung mit Hardware; Laufwerke im Datei-Browser; Schließen beendet laufende ffmpeg; Deinstallation über die Windows-Einstellungen
 - [ ] 0.0.10: Schritt „Audio & Untertitel“ auf dem Gerät ansehen (Desktop und iPhone/iPad, hoch und quer): Ist jetzt klar, was „So lassen / Kleiner machen“ bedeutet? Sind „Erweitert“ (Titel, Sprache, Forced, startet automatisch) und die Tipps verständlich? Eine echte Datei mit mehreren Sprachen ausprobieren, auch „Kleiner machen“ (Zielbitrate stimmt mit der Anzeige?) und danach in Plex neu analysieren
 - [ ] 0.0.10: „Gewonnener Platz“ in Audio und Video getrennt ansehen; „Zurücksetzen“ in einer Welt (Rückfrage, andere Welt bleibt)
 - [ ] 0.0.10: Nach dem Update einmal den Hinweis „Neu in Version 0.0.10“ sehen (nur einmal, auf anderen Geräten nicht noch einmal); „Alle ansehen“ und Fußzeile „Neuigkeiten“ öffnen die Liste
@@ -29,10 +41,25 @@
 - [x] Unraid: leere optionale Pfade (Audio/Video) und neuer Pfad `/config` (Rechte) ausprobieren (Nutzer: passt)
 
 ## Später
+- [ ] **Geparkt (Nutzer 18.10.: Werkzeug nicht überladen): Eigenschaften direkt ändern wie jmkvpropedit** – Schnellmodus „Nur Kennzeichen ändern“ mit `mkvpropedit` (Titel/Sprache/Forced/Standard einer MKV in Sekunden, ohne neu zu schreiben, verändert die Originaldatei, braucht mkvtoolnix im Image und im Installer). Wird nicht gebaut, solange das Neuschreiben mit ffmpeg ausreicht; wieder aufgreifen, wenn reine Kennzeichen-Korrekturen großer Dateien häufig werden
+- [ ] **Geparkt: Sprache von Text-Untertiteln und SDH per Wortlisten erkennen (Teil der ULDAS-Idee)** – nicht jetzt; vorerst nur Forced nach Größe (siehe oben). Ton-Sprache (Whisper) wird nicht eingebaut
 - [ ] Windows-App mit eigener Oberfläche (zuerst nur auf `dev`)
 - [ ] Linux-App (Fedora KDE) mit eigener Oberfläche
 
 ## Erledigt
+- [x] 0.2.0: **Forced-Untertitel nach Größe erkennen** (nur Vorschlag, bei Wunsch „Deutsch (Forced)“ vorausgewählt), README-Hinweis auf ULDAS, **schneller** (ETag/gzip, schlanker `/api/state`, begrenzte Probes, ruhiger Poll im Hintergrund), Kopfzeile am Handy kompakter; Tests (Go, `test-trkplan.js`)
+- [x] 0.1.7: **Startseite aufgeräumt**: Aktionen in der Kopfzeile, Schritte erst im Assistenten, gleich große Kacheln, Warteschlange im Verlauf, oben der aktuelle Auftrag („Datei X von Y“) bzw. „Gerade nichts los“; Zähler am Verlauf-Knopf; Test `ui-check-home.js`
+- [x] 0.1.6: **Audio & Untertitel neu**: Gruppen nach Sprachen (B) mit Umschalter auf Tabelle (C) und Einzelansicht; **Regeln nach Format** (erste passende gewinnt, Wirkung vor dem Start, als Voreinstellung speicherbar, Regel-Vorschläge); **Sprach-Wünsche** als Rangliste in den Einstellungen (behalten, Standard-Ton, Standard-Untertitel); „Nur diese Sprachen behalten“ entfällt; Beschriftung „Forced (erzwungene Untertitel)“; Tests (`test-trkplan.js`, `ui-check-trkgroups.js`, Go-Config)
+- [x] 0.1.6: **Bevorzugter Encoder** wirkt bei „Automatisch“ (Variante B); „Wird verwendet“ mit Hardware-Namen
+- [x] 0.1.5: **Verlauf der Konvertierungen** (Variante B): letzte 100 Einträge je Welt, `history.json` in /config, Suche, Filter, Details, CSV, Leeren je Welt; Tests (Go: Speicher, 100er-Grenze, Welten getrennt, Neustart, API, CSV; UI-Prüfung `ui-check-history.js`)
+- [x] 0.1.5: **Schonfrist/„Papierkorb“ wieder entfernt** (war nie genutzt, keine Übergangslösung)
+- [x] 0.1.5: **Ersetzen ohne „Regex“ und „Aa“** (reiner Text, Groß-/Kleinschreibung egal; alte Felder werden ignoriert)
+- [x] 0.1.4: **Kontrolle vor „Quelldatei löschen“** (Variante A+B+C): immer Lesbarkeit + Laufzeit; A Spuren/Größe, B Decode-Test (beide standardmäßig an, mit Zeitangabe in Worten), C Schonfrist (in 0.1.5 wieder entfernt); im letzten Schritt wählbar, Standard je Welt in den Einstellungen; Tests (Go: Spurzählung, Größe, Decode-Test findet Schaden, Schonfrist, Server-Ablauf; UI-Prüfung `ui-check-verify.js`)
+- [x] 0.1.4: **Automatischer CRF-Vorschlag** (Variante A, Faustregel-Tabelle, bei Bereichen der niedrigere Wert) mit „Art des Materials“; Recherche: Anime/Zeichentrick eher niedriger CRF
+- [x] 0.1.4: **Fehler vorab finden**: `tools/precheck.sh` (gofmt, vet, Windows-Build, go.mod, JS-Syntax, eingebettete Dateien, Versionsstellen, YAML, Tests) + Regel in `CLAUDE.md`; CI bricht veraltete Läufe eines Pull Requests ab
+- [x] 0.1.3: **Windows: Hardware-Anzeige/Start-Fehler** (null-Listen, Absturz in `loadInfo`), **„Beenden“-Knopf sofort**, **NVENC: ältere ffmpeg-Reihe 6.1 + verständliche Treiber-Meldung** (A + B); Fehler der Oberfläche im Protokoll; Tests (UI-Prüfung `ui-check-hwnull.js`, Go-Tests, GUI-Test mit verzögerter Erkennung)
+- [x] 0.1.2: **Windows: Tray-Symbol**, Schließen versteckt nur das Fenster, „Beenden“ mit Rückfrage bei laufenden Aufträgen; GUI-Test in der CI unter echtem Windows; setup.exe zusätzlich als Anhang an Versions-Vorabversionen vom `dev`
+- [x] 0.1.1: **Windows-App (Variante B) auf `dev`**: eine `p5converter-setup.exe` (Programm + ffmpeg + WebView2-Starter), eigenes App-Fenster mit der Weboberfläche, automatische Hardware-Erkennung, Installation ohne Admin, CI baut/testet unter Windows und veröffentlicht `dev-latest`
 - [x] 0.1.0: **Branch-Modell wie p5assets**: Feature-Branch → `dev` (Image `:dev`, Vorlage `p5converter-dev.xml`) → `main` (Image `:latest`); Pre-Releases `v0.1.0` und `v0.1.0-dev`
 - [x] 0.0.10: **Audio & Untertitel verständlich** (Variante C): Klartext-Karten, „So lassen/Kleiner machen“, „Erweitert“, Tipps-Assistent, vorausgefüllte Empfehlungen mit angezeigter Zielbitrate, korrigierter Info-Text (5.1 = 3×)
 - [x] 0.0.10: **Gewonnener Platz strikt je Welt** + Zurücksetzen je Welt (mit Rückfrage)

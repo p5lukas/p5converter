@@ -6,9 +6,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/p5lukas/p5converter/internal/proc"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -37,6 +37,9 @@ type OutputOpts struct {
 	Replace      []rename.Rule `json:"replace"` // search & replace on the file name
 	Exists       string        `json:"exists"`  // skip | overwrite | rename
 	DeleteSource bool          `json:"deleteSource"`
+	// Controls after the conversion (the basic check - readable, same length - always runs):
+	VerifyTracks bool `json:"verifyTracks"` // A: tracks complete, size plausible
+	VerifyDecode bool `json:"verifyDecode"` // B: read the whole result once, report damaged spots
 }
 
 type Request struct {
@@ -69,17 +72,22 @@ type Job struct {
 	DecoderName      string `json:"decoderName,omitempty"`
 	DecoderConfirmed bool   `json:"decoderConfirmed"`
 	// Attempts: short notes about earlier tries that failed before the current one (shown calmly, not as an error).
-	Attempts []string  `json:"attempts,omitempty"`
-	Cmd      string    `json:"cmd"`
-	Error    string    `json:"error,omitempty"`
-	Warnings []string  `json:"warnings,omitempty"`
-	MapLines []string  `json:"mapLines,omitempty"`
-	Log      []string  `json:"log,omitempty"`
-	SizeIn   int64     `json:"sizeIn"`
-	SizeOut  int64     `json:"sizeOut"`
-	Created  time.Time `json:"created"`
-	Started  time.Time `json:"started"`
-	Ended    time.Time `json:"ended"`
+	Attempts []string `json:"attempts,omitempty"`
+	Cmd      string   `json:"cmd"`
+	Error    string   `json:"error,omitempty"`
+	Warnings []string `json:"warnings,omitempty"`
+	MapLines []string `json:"mapLines,omitempty"`
+	Log      []string `json:"log,omitempty"`
+	// Phase: "check" while the result is being verified (the conversion itself is finished).
+	Phase string `json:"phase,omitempty"`
+	// Checks: what the control after the conversion found; CheckFailed = at least one failed (the source is then kept).
+	Checks      []Check   `json:"checks,omitempty"`
+	CheckFailed bool      `json:"checkFailed"`
+	SizeIn      int64     `json:"sizeIn"`
+	SizeOut     int64     `json:"sizeOut"`
+	Created     time.Time `json:"created"`
+	Started     time.Time `json:"started"`
+	Ended       time.Time `json:"ended"`
 
 	item      Item
 	req       *Request
@@ -98,10 +106,16 @@ type Manager struct {
 	running     map[string]int
 	reserved    map[string]string // output path -> job id (queued/running jobs)
 	// OnDone is called after every successful conversion (kind, bytes in, bytes out).
-	OnDone      func(kind string, in, out int64)
+	OnDone func(kind string, in, out int64)
+	// OnFinish is called once for every job that reached an end state (done, error, canceled, skipped) – used for the history.
+	OnFinish    func(Job)
 	partialFile string
 	partials    map[string]bool
+	finished    int // jobs that reached an end state since start (also those already pruned)
 }
+
+// maxKept bounds the finished jobs kept in memory (the history holds the details).
+const maxKept = 500
 
 func New(t ffmpeg.Tools, s *hw.Sampler, concurrency int) *Manager {
 	m := &Manager{tools: t, sampler: s, reserved: map[string]string{},
@@ -169,15 +183,55 @@ func (m *Manager) Submit(req *Request) []string {
 	return ids
 }
 
+// Finished returns how many jobs reached an end state since start (changes whenever one ends).
+func (m *Manager) Finished() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.finished
+}
+
+// prune drops the oldest finished jobs beyond maxKept (caller holds m.mu).
+func (m *Manager) prune() {
+	done := 0
+	for _, j := range m.jobs {
+		if j.Status != "queued" && j.Status != "running" {
+			done++
+		}
+	}
+	if done <= maxKept {
+		return
+	}
+	drop := done - maxKept
+	keep := m.jobs[:0:0]
+	for _, j := range m.jobs {
+		if drop > 0 && j.Status != "queued" && j.Status != "running" {
+			drop--
+			continue
+		}
+		keep = append(keep, j)
+	}
+	m.jobs = keep
+}
+
+// Snapshot lists all jobs. Finished jobs come without command/log/map lines (the history keeps those).
 func (m *Manager) Snapshot() []Job {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	out := make([]Job, len(m.jobs))
 	for i, j := range m.jobs {
+		if j.Status != "queued" && j.Status != "running" {
+			c := *j
+			c.Log, c.MapLines, c.Cmd = nil, nil, ""
+			c.Warnings = append([]string(nil), j.Warnings...)
+			c.Checks = append([]Check(nil), j.Checks...)
+			out[i] = c
+			continue
+		}
 		c := *j
 		c.Log = append([]string(nil), j.Log...)
 		c.MapLines = append([]string(nil), j.MapLines...)
 		c.Warnings = append([]string(nil), j.Warnings...)
+		c.Checks = append([]Check(nil), j.Checks...)
 		if len(c.Log) > 25 && c.Status == "running" {
 			c.Log = c.Log[len(c.Log)-25:]
 		}
@@ -212,6 +266,7 @@ func (m *Manager) cancelLocked(j *Job) {
 	case "queued":
 		j.Status = "canceled"
 		j.Ended = time.Now()
+		go m.finish(j) // runs after the caller released the lock
 	case "running":
 		j.cancelled = true
 		if j.cancel != nil {
@@ -287,6 +342,24 @@ func (m *Manager) fail(j *Job, err error) {
 		j.Ended = time.Now()
 	})
 	jlog.Errorf("Auftrag %s fehlgeschlagen: %s – %v", j.ID, filepath.Base(j.item.Path), err)
+	m.finish(j)
+}
+
+// finish reports a job that reached an end state (copy, so the receiver may keep it).
+func (m *Manager) finish(j *Job) {
+	m.mu.Lock()
+	m.finished++
+	m.prune()
+	if m.OnFinish == nil {
+		m.mu.Unlock()
+		return
+	}
+	c := *j
+	c.Log = append([]string(nil), j.Log...)
+	c.Warnings = append([]string(nil), j.Warnings...)
+	c.Checks = append([]Check(nil), j.Checks...)
+	m.mu.Unlock()
+	m.OnFinish(c)
 }
 
 func outputPath(j *Job, info *ffmpeg.Info) string {
@@ -389,6 +462,7 @@ func (m *Manager) run(j *Job) {
 			j.Error = "Zieldatei existiert bereits"
 		})
 		jlog.Warnf("Auftrag %s übersprungen: Zieldatei existiert bereits (%s)", j.ID, out)
+		m.finish(j)
 		return
 	}
 	defer m.release(out)
@@ -446,6 +520,7 @@ func (m *Manager) run(j *Job) {
 			}
 		}
 	}
+	var usedArgs []string
 	for i, a := range attempts {
 		args, e := buildArgs(a)
 		if e != nil {
@@ -464,6 +539,7 @@ func (m *Manager) run(j *Job) {
 			j.HWDecodeFallback = len(attempts) > 1 && !a.hwdec
 			j.Progress = 0
 		})
+		usedArgs = args
 		err = m.exec(ctx, j, args, info.Duration)
 		if err == nil && a.hwdec && j.Kind == "video" && (j.req.Video.Backend == "vaapi" || j.req.Video.Backend == "nvenc") {
 			// these chains only work when the GPU really decodes (scale_vaapi/scale_cuda/hwdownload need GPU frames)
@@ -485,6 +561,7 @@ func (m *Manager) run(j *Job) {
 		if m.wasCancelled(j) {
 			m.update(j, func() { j.Status = "canceled"; j.Ended = time.Now(); j.Error = "" })
 			jlog.Infof("Auftrag %s abgebrochen, unfertige Datei gelöscht (%s)", j.ID, filepath.Base(j.item.Path))
+			m.finish(j)
 			return
 		}
 		m.fail(j, err)
@@ -499,19 +576,21 @@ func (m *Manager) run(j *Job) {
 	if st, err := os.Stat(out); err == nil {
 		size = st.Size()
 	}
-	if j.req.Output.DeleteSource && filepath.Clean(out) != filepath.Clean(j.item.Path) && size > 0 {
-		// Only delete the source if the result looks complete (duration matches the source).
+	o := j.req.Output
+	if filepath.Clean(out) != filepath.Clean(j.item.Path) && size > 0 {
 		outInfo, perr := m.tools.Probe(context.Background(), out)
-		switch {
-		case perr != nil:
-			m.update(j, func() {
-				j.Warnings = append(j.Warnings, "Quelle NICHT gelöscht: Ergebnis nicht prüfbar ("+perr.Error()+")")
-			})
-		case info.Duration > 0 && absf(outInfo.Duration-info.Duration) > maxf(2, info.Duration*0.02):
-			m.update(j, func() {
-				j.Warnings = append(j.Warnings, fmt.Sprintf("Quelle NICHT gelöscht: Laufzeit weicht ab (%.1fs → %.1fs)", info.Duration, outInfo.Duration))
-			})
-		default:
+		cs := m.verify(ctx, j, info, outInfo, perr, usedArgs, out, j.SizeIn, size)
+		ok := allOK(cs)
+		m.update(j, func() {
+			j.Checks, j.CheckFailed, j.Phase = cs, !ok, ""
+			for _, c := range cs {
+				if !c.OK {
+					j.Warnings = append(j.Warnings, "Prüfung nicht bestanden: "+c.Note+o.keepNote())
+					jlog.Warnf("Auftrag %s: Prüfung nicht bestanden: %s", j.ID, c.Note)
+				}
+			}
+		})
+		if ok && o.DeleteSource {
 			if err := os.Remove(j.item.Path); err != nil {
 				m.update(j, func() { j.Warnings = append(j.Warnings, "Quelle konnte nicht gelöscht werden: "+err.Error()) })
 			}
@@ -533,10 +612,11 @@ func (m *Manager) run(j *Job) {
 	if m.OnDone != nil {
 		m.OnDone(j.Kind, sizeIn, size)
 	}
+	m.finish(j)
 }
 
 func (m *Manager) exec(ctx context.Context, j *Job, args []string, duration float64) error {
-	cmd := exec.CommandContext(ctx, m.tools.FFmpeg, args...)
+	cmd := proc.CommandContext(ctx, m.tools.FFmpeg, args...)
 	m.update(j, func() { j.Error = "" })
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()
@@ -753,4 +833,12 @@ func isHWDecoder(name string) bool {
 		}
 	}
 	return false
+}
+
+// keepNote tells that the source was left alone because a check failed (only relevant when deleting was wanted).
+func (o OutputOpts) keepNote() string {
+	if o.DeleteSource {
+		return " – Quelle NICHT gelöscht"
+	}
+	return ""
 }

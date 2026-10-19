@@ -1,5 +1,105 @@
 # Änderungen
 
+## 0.2.0 – 2026-10-18
+
+**Neu**
+- **Forced-Untertitel nach Größe erkennen:** Ist ein Untertitel in derselben Sprache viel kleiner als die vollständige Spur (unter 20 %, z. B. „38 statt 1.240 Zeilen“), schlägt das Programm „Als Forced markieren“ vor (Hinweis mit Begründung und Schild „Forced?“). Gelesen werden die Größenangaben, die mkvmerge in MKV-Dateien ablegt; fehlen sie, bleibt es beim Hinweis nach dem Titel. Es wird **nie still gesetzt**; nur wenn in den Sprach-Wünschen „Deutsch (Forced)“ als Standard-Untertitel steht, ist der erkannte Untertitel gleich vorausgewählt (in der Vorschau „Was passiert“ sichtbar, änderbar)
+- README: Hinweis auf [ULDAS](https://github.com/netplexflix/ULDAS) für Spuren ohne Sprachangabe
+
+**Schneller**
+- **Weboberfläche:** Dateien kommen mit ETag (unveränderte nur noch als „304“) und gzip (Skripte und Styles etwa 65 % kleiner)
+- **`/api/state` (jede Sekunde abgefragt):** beendete Aufträge tragen kein Log/Befehl mehr (steht im Verlauf), höchstens 500 beendete Aufträge im Speicher; ein Zähler „beendet“ löst das Neuladen des Verlaufs aus. Bei großen Staffeln bleibt die Oberfläche flüssig
+- Beim Start werden die Dateien höchstens 6 gleichzeitig gelesen (statt alle auf einmal); ein Reiter im Hintergrund fragt nur alle 5 Sekunden ab
+
+**Design**
+- Kopfzeile am Handy kompakter (etwa 15 px niedriger)
+
+**Tests**
+- Neu: Go-Tests für Auftragsliste (Strippen, Begrenzen, Zähler), ETag/gzip, Größenangaben der Untertitel; 6 weitere Fälle in `test-trkplan.js` (Forced erraten, Vorauswahl, eigene Entscheidung gewinnt)
+
+## 0.1.7 – 2026-10-18
+
+**Geändert: Startseite aufgeräumt**
+- **Kopfzeile:** „Konvertieren“, „Umbenennen“ und „Verlauf“ sitzen jetzt dort und gelten in jeder Ansicht (am Handy als eigene Zeile unter den Welten); am Verlauf-Knopf zeigt ein Zähler die laufenden und wartenden Aufträge
+- **Start und Schritte 1–6 sind auf der Startseite ausgeblendet** und erscheinen erst, wenn man den Assistenten startet
+- **Oben auf der Startseite statt des Kreises mit den Zahlen: der aktuelle Auftrag** („Datei 4 von 13“, Dateiname, Fortschrittsbalken, Speed/fps/Restzeit, Schreiben/Lesen mit den grünen Haken, bei mehr als einem Auftrag zusätzlich „Gesamt“); bei parallelen Aufträgen nur die gerade aktuelle Datei. Ohne Auftrag steht dort „Gerade nichts los“; die Live-Auslastung bleibt daneben
+- **Hardware** und **Gewonnener Platz** sind gleich groß
+- **Die Warteschlange ist in den Verlauf umgezogen** (Seite „Verlauf“: oben laufende und wartende Aufträge mit „Parallel“ und „Alle abbrechen“, darunter die beendeten). Beendete Aufträge verlassen die Warteschlange sofort und stehen im Verlauf; „Fertige entfernen“ entfällt. Der Verlauf zeigt jetzt auch die Bestätigung (✓) für Hardware-Schreiben und -Lesen
+
+## 0.1.6 – 2026-10-18
+
+**Neu: „Audio & Untertitel“ neu gebaut (Videowelt)**
+- **Gruppen statt Einzeldateien:** alle Dateien werden nach ihren **Sprachen** zusammengefasst (z. B. „22 Folgen: Deutsch, Englisch, Untertitel Deutsch/Englisch“ und „2 Folgen: nur Englisch“). Je Gruppe stehen die Sprachen als Haken (gilt für die ganze Gruppe), eine Vorschau „Was passiert“ (Beispiel-Datei) und die Dateiliste. Abweichende Gruppen sind markiert. Oben steht die Gesamtwirkung („12 Spuren entfernt, 5 umgewandelt …“)
+- **Umschalter Gruppen / Tabelle / Einzelne Dateien:** die **Tabelle** zeigt alle Dateien als Zeilen und alle Sprachen als Spalten mit Haken (Spaltenhaken gilt für alle Dateien); „Einzelne Dateien“ sind die bisherigen Spurkarten
+- **Regeln nach Format** (Ton und Untertitel): z. B. „nur DTS → umwandeln in AC-3 192 kbit/s je Stereo-Paar, alles andere unverändert“, auch nach Kanälen (Surround/Stereo), „entfernen“ und für Untertitel „Bild-Untertitel (PGS/VobSub) entfernen“. Die erste passende Regel gewinnt, eigene Änderungen gehen vor. Das Programm **schlägt Regeln vor**, wenn es passende Spuren findet (DTS, TrueHD, Bild-Untertitel). Die Regeln sind als **Voreinstellung speicherbar**
+- **Sprach-Wünsche** (Einstellungen → Audio & Untertitel): Rangliste wie bei p5assets (Ziehgriff, ▲ ▼, ✕, „Sprache hinzufügen“) für: Ton behalten, Standard-Ton („Deutsch, sonst Englisch“), Untertitel behalten, Standard-Untertitel (z. B. „Deutsch (Forced)“ zuerst). Das Programm setzt das im Schritt automatisch (abschaltbar, jede Spur änderbar); die Tipps berücksichtigen es. Hat eine Datei keine der gewünschten Sprachen, wird nichts entfernt (Hinweis)
+- „Nur diese Sprachen behalten“ am Anfang des Schritts entfällt (steckt in den Sprach-Wünschen); die Wirkung steht auch in der Zusammenfassung
+- Beschriftung: „Forced (erzwungene Untertitel)“ statt „Nur bei fremdsprachigen Stellen zeigen (Forced)“
+
+**Behoben**
+- **Bevorzugter Encoder** (Einstellungen → Hardware) wirkte nur beim allerersten Besuch: „Automatisch“ nimmt jetzt den bevorzugten Encoder, wenn er für den Codec nutzbar ist (Auswahl heißt dann „Automatisch (bevorzugt: Intel Quick Sync)“); eine bewusst gewählte Hardware im Assistenten gilt immer. Auch „Zurücksetzen“ stellt nicht mehr auf „schnellste verfügbare“ zurück
+- „Wird verwendet“ zeigt den Encoder zusammen mit dem Hardware-Namen (z. B. `hevc_qsv` · Intel Quick Sync)
+
+**Intern**
+- `web/trkplan.js`: die Berechnung (Regeln, Wünsche, Standard-Spur, Gruppen) ist reine Logik und wird mit `tools/test-trkplan.js` getestet (auch in der CI); neue UI-Prüfung `tools/ui-check-trkgroups.js`
+## 0.1.5 – 2026-10-17
+
+**Neu**
+- **Verlauf der Konvertierungen** (Startseite → „Verlauf“, Adresse `#history`): die letzten **100** beendeten Aufträge je Welt (Audio und Video getrennt), gespeichert in `/config` (`history.json`), bleibt nach „Fertige entfernen“ und nach einem Neustart erhalten. Je Eintrag: Datum, Dateiname, Ergebnis (fertig, Fehler, abgebrochen, übersprungen), Größe vorher/nachher, Dauer; aufklappbar mit Quelle, Ziel, Encoder, Prüfergebnis, Warnungen und bei Fehlern ffmpeg-Befehl und Log. Suche, Filter nach Ergebnis und Zeitraum, **CSV-Export** (für Excel), „Verlauf leeren“ (mit Rückfrage, nur die gewählte Welt). Ohne beschreibbares `/config` bleibt der Verlauf nur im Arbeitsspeicher (Hinweis auf der Seite)
+
+**Geändert**
+- **Schonfrist („Papierkorb“) für Quelldateien wieder entfernt** (aus 0.1.4): „Quelldatei löschen“ löscht nach bestandener Prüfung sofort und endgültig. Die Prüfungen A (Spuren & Größe) und B (Decode-Test) bleiben
+- **Ersetzen (Benennen und Umbenennen): „Regex“ und „Aa“ entfernt**: gesucht wird genau der eingegebene Text (Sonderzeichen wie `[` oder `(` sind normale Zeichen), Groß-/Kleinschreibung ist egal. Gespeicherte Regeln mit den alten Feldern werden weiter geladen, die Felder werden ignoriert
+
+## 0.1.4 – 2026-10-17
+
+**Neu**
+- **Kontrolle der fertigen Datei, bevor das Original gelöscht wird** (Zusammenfassung → „Ergebnis prüfen & Original“, je Welt getrennt, Standardauswahl in Einstellungen → Allgemein):
+  - Immer: die neue Datei muss lesbar sein und (fast) die gleiche Laufzeit haben (wie bisher, jetzt auch ohne „Quelldatei löschen“)
+  - **A – Spuren & Größe** (standardmäßig an): alle gewählten Video-/Audio-/Untertitelspuren sind im Ergebnis, die Datei ist nicht absurd klein
+  - **B – Decode-Test** (standardmäßig an): ffmpeg liest das ganze Ergebnis einmal durch und meldet beschädigte Stellen; die Warteschlange zeigt dabei „prüfe Ergebnis …“
+  - **C – Schonfrist** (nur mit „Quelldatei löschen“, sonst ausgegraut): das Original wird nicht sofort gelöscht, sondern in den Ordner „p5converter-gelöscht“ neben der Quelle verschoben und nach 1–90 Tagen (einstellbar, Standard 7) endgültig entfernt (stündlich geprüft, auch nach einem Neustart)
+  - Neben jeder Kontrolle steht in Worten, wie viel länger es dauert („kaum länger“, „etwas länger“, „viel länger“, Schätzwerte)
+  - Fällt eine Prüfung durch, bleibt das Original liegen und der Auftrag zeigt eine Warnung; bestandene Prüfungen stehen als „✓ geprüft“ am Auftrag
+- **Automatischer CRF-Vorschlag** im Video-Schritt: Auswahl „Art des Materials“ (Standard, aktueller Film, altes Material mit Korn, Anime, Zeichentrick, Heimvideo); der Regler wird mit einem Startwert vorausgefüllt, mit kurzer Begründung und „Empfehlung setzen“. Werte aus Anleitungen und Foren (bei Bereichen der niedrigere Wert): x265 20, x264 18, AV1 24; Anime/Zeichentrick −4, Material mit Korn −2, 720p und kleiner −1. Abschaltbar in Einstellungen → Allgemein
+- `tools/precheck.sh`: Vorprüfung vor jedem Push (gofmt, vet, Windows-Build, go.mod, JS-Syntax, eingebettete Dateien, Versionsstellen, YAML, Tests)
+
+**Geändert**
+- „Quelldatei löschen“ steht jetzt im letzten Schritt (Zusammenfassung) und wird bewusst **nicht mehr gemerkt**: bei jedem Besuch aus, je Welt getrennt
+- CI: ein neuer Push auf denselben Pull Request bricht den veralteten Lauf ab
+
+## 0.1.3 – 2026-10-16
+
+**Behoben (Windows-App, nur `dev`)**
+- **Hardware wurde nicht angezeigt, beim Start erschien „Start fehlgeschlagen: Cannot read properties of null (reading 'find')“**: Das App-Fenster fragt schon, bevor die Hardware-Erkennung fertig ist (Windows: ca. 3 s); der Server lieferte dann `null` statt leerer Listen und die Oberfläche brach ab. Jetzt liefert der Server immer leere Listen, die Oberfläche kommt auch mit unvollständigen Antworten zurecht und zeigt „Erkennung läuft …“
+- **„Beenden“ erschien erst sehr spät**: Der Knopf und die Fußzeile erscheinen jetzt sofort beim Start, unabhängig von der Hardware-Erkennung
+- **NVIDIA: ältere ffmpeg-Version** (6.1.1 von gyan.dev, dieselbe Reihe wie im getesteten Docker-Image) statt der neuesten (9.0): sie braucht nur die NVENC-Schnittstelle 12.1 (Treiber ab ca. 531) statt 13.1 und läuft mit viel mehr NVIDIA-Treibern
+- **Verständliche Meldung, wenn der NVIDIA-Treiber zu alt ist** („Dein NVIDIA-Treiber ist zu alt für NVENC: er kann NVENC 12.0, dieses ffmpeg braucht … Bitte den Treiber aktualisieren“) und wenn keine NVIDIA-Grafik/kein Treiber da ist, statt der rohen ffmpeg-Zeilen
+
+**Neu**
+- Fehler der Oberfläche werden ins Protokoll des Programms geschrieben („Fehler in der Oberfläche: …“), damit sie auch ohne Entwicklerwerkzeuge sichtbar sind
+- Tests: UI-Prüfung mit unvollständiger Hardware-Antwort (hätte den Fehler gefunden), Go-Tests für leere Listen und die NVIDIA-Meldung; der GUI-Test in der CI verzögert die Erkennung künstlich und prüft, dass kein Fehler auftritt
+
+## 0.1.2 – 2026-10-16
+
+**Neu (nur Branch `dev`)**
+- **Windows: Symbol im Infobereich (Tray)** mit „p5converter öffnen“ und „Beenden“ (Rückfrage, wenn noch Aufträge laufen); Klick auf das Symbol zeigt das Fenster
+- **Das Schließen-Kreuz versteckt nur das Fenster**: p5converter und laufende Aufträge laufen im Infobereich weiter; ein zweiter Start oder das Symbol holt das Fenster zurück; beendet wird über das Symbol oder den Knopf „Beenden“ in der Oberfläche
+- **GUI-Test in der CI unter echtem Windows**: startet die App mit Fenster, prüft über die WebView2-Schnittstelle, dass die Oberfläche geladen ist (inkl. Bild als Artefakt `gui-test`), dass Schließen nur versteckt und dass der zweite Start das Fenster zurückholt
+- Bei einer Versions-Vorabversion vom Branch `dev` (z. B. `v0.2.0-dev`) hängt die CI die `p5converter-setup.exe` als Anhang an; sonst liegt sie immer in der laufenden Vorabversion `dev-latest`
+
+## 0.1.1 – 2026-10-16
+
+**Neu (nur Branch `dev`)**
+- **Windows-App** (Variante B): `p5converter-setup.exe` – **eine einzige Datei** mit Programm, ffmpeg und Installer; die Weboberfläche läuft in einem **eigenen App-Fenster** (Microsoft Edge WebView2, gleiches Aussehen wie im Browser), eigenes Programmsymbol, Installation nur für den Benutzer ohne Administrator-Abfrage (Startmenü, optional Desktop-Symbol und Autostart), die WebView2-Komponente wird nur bei Fehlen nachinstalliert
+- Hardware wird automatisch erkannt (Intel Quick Sync, NVIDIA NVENC, AMD AMF per echtem Test-Encode; für Quick Sync zusätzliche Windows-Startvarianten über Direct3D 11/DXVA2)
+- Links nach außen (z. B. GitHub) öffnen im Standardbrowser; ein zweiter Start holt das vorhandene Fenster nach vorn; beim Beenden werden laufende ffmpeg-Prozesse mit beendet
+- Die CI baut den Installer auf Windows, testet Server, Hardware-Erkennung und Laufwerksliste unter echtem Windows sowie Installation und Deinstallation und veröffentlicht die Datei als laufende Vorabversion **`dev-latest`** (nur vom Branch `dev`)
+- Einstellungen → Hardware: Hilfetext für Windows
+
+**Geändert**
+- Hilfsprogramme (ffmpeg, ffprobe, …) starten unter Windows ohne aufblitzendes Konsolenfenster
+
 ## 0.1.0 – 2026-10-16
 
 **Erste getestete Vorabversion (Pre-Release)** – Quick Sync und VAAPI laufen auf echter Hardware; Ablauf, Spuren-Editor, Statistik, Neuigkeiten und Oberfläche sind abgenommen.

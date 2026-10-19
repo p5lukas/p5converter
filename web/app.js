@@ -21,8 +21,8 @@ const SWENC = {h264: 'libx264', hevc: 'libx265', av1: 'libsvtav1', vp9: 'libvpx-
 
 // ---------- persisted settings ----------
 const FIELDS = ['outMode', 'outDir', 'outStruct', 'exists', 'aFormat', 'aMode', 'aQuality', 'aBitrate', 'aFlac', 'aWav', 'aRate', 'aCh',
-  'vContainer', 'vCodec', 'vBackend', 'vCrf', 'vPreset', 'vDepth', 'vHeight', 'vAudioMode', 'vAudioCodec', 'vAudioKbps', 'vAudioLangs', 'vSubMode', 'vSubLangs'];
-const CHECKS = ['deleteSource', 'aCover', 'vHwDec'];
+  'vContainer', 'vCodec', 'vBackend', 'vCrf', 'vPreset', 'vDepth', 'vHeight', 'vAudioMode', 'vAudioCodec', 'vAudioKbps', 'vSubMode', 'vTrkRules', 'vMaterial'];
+const CHECKS = ['aCover', 'vHwDec']; // „Quelldatei löschen“ wird bewusst NICHT gemerkt (verify.js, je Welt, nur für diesen Besuch)
 // Namensmuster, Zusatz und Ersetzungen gehören je Welt (Audio und Video getrennt)
 const NAME_FIELDS = ['pattern', 'suffix', 'renRules'];
 const NAME_EMPTY = {pattern: '', suffix: '', renRules: '[]'};
@@ -78,6 +78,8 @@ function setWorld(w, animate) {
   if (animate && w !== S.world) worldFx(w);
   if (S.nameFor && S.nameFor !== w) stashName(S.nameFor);
   if (S.nameFor !== w) showName(w);
+  if (S.vfFor && S.vfFor !== w) vfStash(S.vfFor);
+  if (S.vfFor !== w) vfShow(w);
   S.world = w;
   $$('#worlds button').forEach(b => b.classList.toggle('on', b.dataset.world === w));
   // Der Farbwechsel passiert mitten im Flug (dunkler Bildschirm), damit nichts flackert
@@ -87,7 +89,7 @@ function setWorld(w, animate) {
   refreshVideoUI();
   renderStartInfo();
   syncNameUI();
-  renderConc(); renderQueue(); renderHero(); renderWorldBadges(); renderSaved();
+  renderConc(); renderQueue(); renderHero(); renderHistBadge(); renderWorldBadges(); renderSaved();
   S.step = 'start'; applySteps();
   saveSettings();
 }
@@ -117,15 +119,33 @@ function refreshAudioUI() {
 }
 
 // ---------- video UI ----------
+// Antworten von /api/info: Listen sind nie null (die Erkennung kann noch laufen, wenn die Oberfläche schon fragt)
+function normInfo(info) {
+  const h = info.hw || {};
+  ['backends', 'gpus', 'renderNodes', 'diag', 'vainfo'].forEach(k => { if (!Array.isArray(h[k])) h[k] = []; });
+  info.hw = h; info.encoders = info.encoders || {};
+  return info;
+}
 function hwResult() { return (S.info && S.info.hw) || {backends: [], done: false}; }
-function backendCaps(id) { return hwResult().backends.find(b => b.id === id); }
+function backendCaps(id) { return (hwResult().backends || []).find(b => b.id === id); }
 function workingBackends(codec) {
   return BACKEND_ORDER.filter(id => { const b = backendCaps(id); return b && b.codecs && b.codecs[codec]; });
+}
+// „Automatisch“ nimmt den bevorzugten Encoder aus Einstellungen → Hardware, wenn er für diesen Codec nutzbar ist, sonst den schnellsten
+// verfügbaren (eine bewusst gewählte Hardware im Assistenten gilt immer)
+function preferredFor(codec) {
+  const p = cfg().preferredBackend;
+  if (!p || p === 'auto') return null;
+  if (p === 'cpu') return 'cpu';
+  const b = backendCaps(p);
+  return b && b.codecs && b.codecs[codec] ? p : null;
 }
 function resolveBackend() {
   const codec = $('#vCodec').value, sel = $('#vBackend').value;
   if (codec === 'copy') return {id: 'copy'};
   if (sel !== 'auto') return {id: sel};
+  const p = preferredFor(codec);
+  if (p) return {id: p, auto: true, pref: true};
   const w = workingBackends(codec);
   return {id: w[0] || 'cpu', auto: true};
 }
@@ -133,7 +153,8 @@ function refreshVideoUI() {
   const codec = $('#vCodec').value, copy = codec === 'copy';
   // backend options
   const cur = $('#vBackend').value || 'auto';
-  const opts = ['<option value="auto">Automatisch (schnellste verfügbare)</option>'];
+  const prefId = preferredFor(codec);
+  const opts = ['<option value="auto">' + (prefId ? 'Automatisch (bevorzugt: ' + esc(BACKEND_FULL[prefId] || prefId) + ')' : 'Automatisch (schnellste verfügbare)') + '</option>'];
   BACKEND_ORDER.forEach(id => {
     const b = backendCaps(id);
     if (!b) return;
@@ -146,14 +167,14 @@ function refreshVideoUI() {
 
   const r = resolveBackend();
   const hw = !copy && r.id !== 'cpu';
-  ['#vBackendRow', '#vCrfRow', '#vPresetRow', '#vDepthRow', '#vHeightRow', '#vHwDecRow'].forEach(s => $(s).classList.toggle('hidden', copy));
+  ['#vBackendRow', '#vCrfRow', '#vMatRow', '#vCrfAdvice', '#vPresetRow', '#vDepthRow', '#vHeightRow', '#vHwDecRow'].forEach(s => $(s).classList.toggle('hidden', copy));
   $('#vHwDecRow').classList.toggle('hidden', !hw);
   const container = $('#vContainer').value;
   const resolvedEl = $('#vResolved');
   if (copy) resolvedEl.innerHTML = '<span class="chip acc">Video wird kopiert</span>';
   else {
     const enc = encoderName(r.id, codec);
-    resolvedEl.innerHTML = `<b>${esc(enc)}</b> ${r.id === 'cpu' ? '<span class="chip">CPU</span>' : '<span class="chip ok">Hardware</span>'}` +
+    resolvedEl.innerHTML = `<b>${esc(enc)}</b> ${r.id === 'cpu' ? '<span class="chip">CPU</span>' : '<span class="chip ok">' + esc(BACKEND_FULL[r.id] || 'Hardware') + '</span>'}` + (r.pref ? ' <span class="muted small">(bevorzugt laut Einstellungen)</span>' : '') +
       (!hwResult().done ? ' <span class="muted small">Hardware-Erkennung läuft …</span>' : '');
   }
   const crf = $('#vCrf');
@@ -291,13 +312,14 @@ function langs(s) { return s.split(',').map(x => x.trim()).filter(Boolean); }
 async function start() {
   const kind = S.world, files = S.files[kind];
   if (!files.length) { toast('Bitte zuerst Dateien hinzufügen.', 'bad'); return; }
+  if (kind === 'video') await trkProbeAll(files); // höchstens 6 Dateien gleichzeitig lesen (nicht alle auf einmal)
   const req = {
     kind,
-    items: files.map(f => ({path: f.path, rel: f.rel, overrides: kind === 'video' ? trackOverrides(f) : {}})),
+    items: await Promise.all(files.map(async f => ({path: f.path, rel: f.rel, overrides: kind === 'video' ? await trackOverridesFor(f) : {}}))),
     output: {
       dir: $('#outMode').value === 'custom' ? $('#outDir').value.trim() : '', structure: $('#outStruct').value,
       suffix: $('#suffix').value, pattern: $('#pattern').value.trim(), replace: cleanRules(nameRules()), exists: $('#exists').value,
-      deleteSource: $('#deleteSource').checked,
+      ...vfCollect(),
     },
   };
   if ($('#outMode').value === 'custom' && !req.output.dir) { toast('Bitte einen Zielordner angeben.', 'bad'); return; }
@@ -311,8 +333,8 @@ async function start() {
     req.video = {container: $('#vContainer').value, codec: $('#vCodec').value, backend: r.id === 'copy' ? 'cpu' : r.id, crf: +$('#vCrf').value,
       preset: $('#vPreset').value, bitDepth: +$('#vDepth').value, height: +$('#vHeight').value, hwDecode: $('#vHwDec').checked,
       av1Aom: S.info && !S.info.encoders.libsvtav1 && S.info.encoders['libaom-av1'],
-      audioMode: $('#vAudioMode').value, audioCodec: $('#vAudioCodec').value, audioKbps: +$('#vAudioKbps').value, audioLangs: langs($('#vAudioLangs').value),
-      subMode: $('#vSubMode').value, subLangs: langs($('#vSubLangs').value)};
+      audioMode: $('#vAudioMode').value, audioCodec: $('#vAudioCodec').value, audioKbps: +$('#vAudioKbps').value, audioLangs: [],
+      subMode: $('#vSubMode').value, subLangs: []};
   }
   try {
     const r = await api('/api/jobs', req);
@@ -324,10 +346,12 @@ async function start() {
 // ---------- queue / monitor ----------
 const openDetails = new Set();
 function statusChip(j) {
+  if (j.status === 'running' && j.phase === 'check') return '<span class="chip acc" title="Die neue Datei ist fertig und wird jetzt geprüft.">prüfe Ergebnis …</span>';
   const m = {queued: ['wartet', ''], running: ['läuft', 'acc'], done: ['fertig', 'ok'], error: ['Fehler', 'err'], canceled: ['abgebrochen', 'warn'], skipped: ['übersprungen', 'warn']}[j.status];
   return `<span class="chip ${m[1]}">${m[0]}</span>`;
 }
-const BACKEND_NAMES = {qsv: 'Quick Sync', nvenc: 'NVIDIA NVENC', vaapi: 'VAAPI', amf: 'AMD AMF', cpu: 'CPU'};
+const BACKEND_NAMES = {qsv: 'Intel Quick Sync', nvenc: 'NVIDIA NVENC', vaapi: 'VAAPI', amf: 'AMD AMF', cpu: 'CPU'};
+const BACKEND_FULL = BACKEND_NAMES;
 // „Schreiben“ = Encoder, „Lesen“ = Decoder: zwei getrennte Angaben mit gleicher Logik –
 // grün + Haken = ffmpeg hat es bestätigt, gelb = nicht bestätigt bzw. Ausweichweg, grau = so eingestellt/noch offen
 function encoderBadge(j) {
@@ -352,9 +376,10 @@ function decoderBadge(j) {
   return `<span class="chip ${j.hwDecodeFallback ? 'warn' : ''}" title="Die Quelldatei wird auf der CPU gelesen${j.hwDecodeFallback ? ' (Hardware ging bei dieser Datei nicht)' : ' (so eingestellt)'}. Das Ergebnis ist gleich gut, nur die CPU hat mehr zu tun.">Lesen: CPU</span>`;
 }
 function renderQueue() {
-  const q = $('#queue'), mine = S.jobs.filter(j => j.kind === S.world);
+  // die Warteschlange zeigt nur laufende und wartende Aufträge; beendete stehen darunter im Verlauf
+  const q = $('#queue'), mine = S.jobs.filter(j => j.kind === S.world && (j.status === 'queued' || j.status === 'running'));
   $('#queueWorld').textContent = '· ' + W(S.world).name;
-  if (!mine.length) { q.innerHTML = '<div class="empty" style="margin-top:8px">Keine Aufträge in ' + esc(W(S.world).name) + '.</div>'; return; }
+  if (!mine.length) { q.innerHTML = '<div class="empty" style="margin-top:8px">Keine laufenden oder wartenden Aufträge in ' + esc(W(S.world).name) + '. Beendete Aufträge stehen unten im Verlauf.</div>'; return; }
   q.innerHTML = mine.slice().reverse().map(j => {
     const meta = [];
     if (j.status === 'running') {
@@ -365,6 +390,7 @@ function renderQueue() {
     if (j.status === 'done' && j.sizeOut) meta.push(`${fmtSize(j.sizeIn)} → ${fmtSize(j.sizeOut)} (${Math.round(j.sizeOut / j.sizeIn * 100)} %)`);
     if (j.status === 'done') meta.push('Dauer ' + fmtTime((new Date(j.ended) - new Date(j.started)) / 1000));
     if (j.hwDecodeFallback && j.status !== 'error') meta.push('<span class="muted">Lesen per Hardware ging bei dieser Datei nicht – die CPU liest, geschrieben wird trotzdem in Hardware</span>');
+    if (j.status === 'done' && (j.checks || []).length && !j.checkFailed) meta.push('<span class="okc" title="' + esc(j.checks.map(c => c.note).join(' · ')) + '">✓ geprüft: ' + esc(j.checks.map(c => c.note.replace(/ \(.*$/, '')).join(' · ')) + '</span>');
     (j.warnings || []).forEach(w => meta.push('<span class="warn">' + esc(w) + '</span>'));
     const act = (j.status === 'queued' || j.status === 'running') ? `<button class="small ghost" data-cancel="${j.id}" title="Bricht diesen Auftrag ab und löscht die unfertige Datei. Die Quelldatei bleibt unberührt.">Abbrechen</button>` : '';
     const note = j.status === 'done' && (j.hwDecodeFallback || (j.warnings || []).length);
@@ -433,20 +459,49 @@ function renderMonitor() {
   }
   [...box.children].forEach(c => { if (!keep.includes(c.dataset.m)) c.remove(); });
 }
-function renderHero() {
-  const c = {queued: 0, running: 0, done: 0, error: 0, other: 0};
-  let prog = 0;
-  const mine = S.jobs.filter(j => j.kind === S.world);
+// Aufträge einer Welt, die zum aktuellen Durchlauf gehören: alle, deren Zeitraum (angelegt → beendet) sich mit den noch aktiven überlappt.
+// So zählt „Datei 4 von 13“ nur den laufenden Durchlauf, auch nach dem Neuladen der Seite (die Zeiten kommen vom Server).
+function currentBatch(world) {
+  const mine = S.jobs.filter(j => j.kind === world).slice().sort((a, b) => new Date(a.created) - new Date(b.created));
+  const now = Date.now(), end = j => (j.status === 'queued' || j.status === 'running') ? now : new Date(j.ended).getTime() || now;
+  let comps = [], cur = null;
   mine.forEach(j => {
-    if (j.status in c) c[j.status]++; else c.other++;
-    prog += j.status === 'running' ? j.progress : (j.status === 'queued' ? 0 : 100);
+    const s = new Date(j.created).getTime(), e = end(j);
+    if (cur && s <= cur.end + 1500) { cur.jobs.push(j); cur.end = Math.max(cur.end, e); } else { cur = {jobs: [j], end: e}; comps.push(cur); }
   });
-  const total = mine.length, pct = total ? Math.round(prog / total) : 0;
-  $('#stFiles').textContent = S.files[S.world].length;
-  $('#stQueued').textContent = c.queued; $('#stRun').textContent = c.running;
-  $('#stDone').textContent = c.done; $('#stErr').textContent = c.error;
-  $('#ring').style.setProperty('--p', pct);
-  $('#ringTxt').textContent = total ? pct + '%' : '–';
+  const active = comps.find(c => c.jobs.some(j => j.status === 'queued' || j.status === 'running'));
+  return active ? active.jobs : [];
+}
+// Kopfbereich der Startseite: der aktuelle Auftrag („Datei 4 von 13“, Fortschritt, Hardware mit Haken) oder „Gerade nichts los“
+function renderHero() {
+  const box = $('#jobNow'); if (!box) return;
+  const batch = currentBatch(S.world), total = batch.length;
+  const running = batch.filter(j => j.status === 'running').sort((a, b) => new Date(a.started) - new Date(b.started));
+  const cur = running[0] || batch.find(j => j.status === 'queued');
+  if (!cur) {
+    box.className = 'jobnow idle';
+    box.innerHTML = '<div class="jn-title">Gerade nichts los</div><div class="muted small">Mit „Konvertieren“ oben startest du einen neuen Auftrag. Laufende Aufträge erscheinen hier; beendete stehen im Verlauf.</div>';
+    return;
+  }
+  const finished = batch.filter(j => !(j.status === 'queued' || j.status === 'running')).length;
+  const pos = Math.min(total, finished + 1);
+  const overall = Math.round(batch.reduce((a, j) => a + (j.status === 'running' ? j.progress : j.status === 'queued' ? 0 : 100), 0) / total);
+  const meta = [];
+  if (cur.status === 'running') { if (cur.speed) meta.push('Speed ' + esc(cur.speed)); if (cur.fps) meta.push(cur.fps.toFixed(0) + ' fps'); if (cur.eta) meta.push('noch ' + fmtTime(cur.eta)); }
+  box.className = 'jobnow';
+  box.innerHTML = `<div class="jn-title">Datei ${pos} von ${total}${running.length > 1 ? ` <span class="muted small">(${running.length} laufen parallel)</span>` : ''}</div>
+    <div class="jn-name" title="${esc(cur.input)}">${esc(cur.name)}</div>
+    <div class="bar"><i style="width:${cur.progress.toFixed(1)}%"></i></div>
+    <div class="job-m"><span>${cur.progress.toFixed(1)} %</span>${meta.map(m => `<span>${m}</span>`).join('')}</div>
+    <div class="jn-chips">${statusChip(cur)}${encoderBadge(cur)}${decoderBadge(cur)}</div>
+    ${total > 1 ? `<div class="jn-all"><span class="muted small">Gesamt ${overall} %</span><div class="bar thin"><i style="width:${overall}%"></i></div></div>` : ''}`;
+}
+// Zähler am Verlauf-Knopf: laufende und wartende Aufträge der gewählten Welt
+function renderHistBadge() {
+  const n = S.jobs.filter(j => j.kind === S.world && (j.status === 'running' || j.status === 'queued')).length;
+  const el = $('#histBadge'); if (!el) return;
+  el.textContent = n || ''; el.classList.toggle('hidden', !n);
+  $('#startHistory').title = n ? `Verlauf und Warteschlange (${n} ${n === 1 ? 'Auftrag läuft oder wartet' : 'Aufträge laufen oder warten'})` : 'Verlauf und Warteschlange';
 }
 // „Parallel“ gilt für die gerade gewählte Welt; an den Welt-Knöpfen zeigt ein Zähler, wo etwas läuft oder wartet
 function renderConc() {
@@ -461,13 +516,18 @@ function renderWorldBadges() {
 }
 let polling = false;
 async function poll() {
-  if (polling || S.stopped) return; polling = true;
+  if (polling || S.stopped) return;
+  if (document.hidden && (S.hiddenTick = (S.hiddenTick || 0) + 1) % 5) return; // Reiter im Hintergrund: nur alle 5 Sekunden
+  polling = true;
   try {
     const d = await api('/api/state');
     S.jobs = d.jobs; S.stats = d.stats; S.conc = d.concurrency;
     const savedChanged = JSON.stringify(S.saved) !== JSON.stringify(d.saved); S.saved = d.saved; if (savedChanged) renderSaved();
     renderConc(); renderWorldBadges();
-    renderQueue(); renderMonitor(); renderHero();
+    const fin = d.finished !== undefined ? d.finished : S.jobs.filter(j => !(j.status === 'queued' || j.status === 'running')).length;
+    renderQueue(); renderMonitor(); renderHero(); renderHistBadge();
+    if (S.histFin !== undefined && fin !== S.histFin && typeof S.histReload === 'function') S.histReload(); // ein Auftrag ist beendet: Verlauf sofort neu laden
+    S.histFin = fin;
   } catch (e) {} finally { polling = false; }
 }
 
@@ -544,13 +604,22 @@ window.addEventListener('scroll', () => { if (popFor && Math.abs(scrollY - popY)
 
 // ---------- init ----------
 async function loadInfo() {
-  S.info = await api('/api/info');
+  S.info = normInfo(await api('/api/info'));
+  // zuerst das, was nicht von der Hardware abhängt: Fußzeile und „Beenden“ (erscheint sofort)
   $('#ffver').textContent = S.info.ffmpeg.replace(/^ffmpeg version /, 'ffmpeg ').split(' Copyright')[0].split(' ').slice(0, 2).join(' ');
-  renderFooter();
-  refreshVideoUI();
   $('#quit').classList.toggle('hidden', !S.info.canQuit);
-  if (!S.info.hw.done) setTimeout(loadInfo, 1200);
+  renderFooter();
+  try { refreshVideoUI(); } catch (e) { reportError('Hardware-Anzeige: ' + (e && e.message)); }
+  if (!S.info.hw.done) setTimeout(() => loadInfo().catch(() => {}), 1200);
 }
+// Fehler der Oberfläche ins Protokoll des Programms schreiben (damit sie auch ohne Entwicklerwerkzeuge sichtbar sind)
+let reported = 0;
+function reportError(msg) {
+  if (reported++ > 5) return;
+  try { fetch('/api/client-error', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({msg: String(msg).slice(0, 500)})}); } catch (e) {}
+}
+window.addEventListener('error', e => reportError((e.message || 'Fehler') + (e.filename ? ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')' : '')));
+window.addEventListener('unhandledrejection', e => reportError('Promise: ' + (e.reason && e.reason.message || e.reason)));
 function renderFooter() {
   const b = S.info.build, ff = S.info.ffmpeg.replace(/^ffmpeg version /, '').split(' Copyright')[0].split(' ')[0];
   const ver = b.tag ? `<a href="${esc(b.branchUrl)}" target="_blank" rel="noopener">v${esc(b.tag)}</a>` : `<a href="${esc(b.branchUrl)}" target="_blank" rel="noopener">${esc(b.branch)}</a>`;
@@ -632,8 +701,9 @@ function wire() {
     S.stopped = true;
   };
   $('#cancelAll').onclick = () => api('/api/jobs/cancel-all', {kind: S.world}).then(poll);
-  $('#clearDone').onclick = () => api('/api/jobs/clear', {kind: S.world}).then(poll);
+  $('#histBack').onclick = () => { location.hash = ''; };
   $('#conc').onchange = () => api('/api/concurrency', {kind: S.world, n: +$('#conc').value});
+  wireVerify(); wireCrf();
   $('#hwRedetect').onclick = async () => { await api('/api/hw/detect', {}); S.info.hw.done = false; S.info.hw.backends = []; renderHwCard(); setTimeout(loadInfo, 800); };
 }
 function outModeUI() {
@@ -646,7 +716,6 @@ function applyDefaultsFromCfg() {
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem('p5c') || '{}'); } catch (e) {}
   refreshVideoUI();
-  if (c.preferredBackend && c.preferredBackend !== 'auto' && saved.vBackend === undefined) setField('vBackend', c.preferredBackend);
   if (saved.vHwDec === undefined) $('#vHwDec').checked = c.hwDecode !== false;
   if (c.defaultOutDir && saved.outDir === undefined) { $('#outDir').value = c.defaultOutDir; $('#outMode').value = 'custom'; }
   else if (!$('#outDir').value && S.info.roots && S.info.roots.length > 1) $('#outDir').value = S.info.roots[S.info.roots.length - 1];
@@ -664,6 +733,7 @@ async function startApp() {
   if (cfg().showNews !== false) loadNews();
   if (!S.cfg.persistent) toast('Einstellungen werden nicht dauerhaft gespeichert (Pfad /config fehlt).', 'bad');
   poll(); S.pollTimer = setInterval(poll, 1000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
   checkAlerts(); S.alertTimer = setInterval(() => checkAlerts(), 30000);
   route();
 }
@@ -697,5 +767,5 @@ async function startApp() {
   await loadAuth();
   if (S.auth.enabled && !S.auth.authenticated) { showLogin(); return; }
   updateAuthUI();
-  try { await startApp(); } catch (e) { if (e.status !== 401) toast('Start fehlgeschlagen: ' + e.message, 'bad'); }
+  try { await startApp(); } catch (e) { if (e.status !== 401) { toast('Start fehlgeschlagen: ' + e.message, 'bad'); reportError('Start fehlgeschlagen: ' + e.message); } }
 })();

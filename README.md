@@ -1,14 +1,58 @@
-<p align="center"><img src="web/icon-512.png" alt="p5converter" width="160"></p>
+<div align="center">
+
+<img src="web/icon-512.png" alt="p5converter" width="128">
 
 # p5converter
 
-Audio- und Video-Konverter mit Web-Oberfläche für **Unraid / Docker** – ein SoundConverter-Klon mit zusätzlicher Video-Welt.
-Ein einzelnes Go-Programm (nur Standardbibliothek) steuert **ffmpeg** an; das Docker-Image bringt alles mit (ffmpeg mit x264/x265/SVT-AV1, Intel-/AMD-Treiber für Quick Sync/VAAPI).
+**Audio und Video konvertieren – mit Hardware-Beschleunigung, Kontrolle nach dem Umwandeln und Web-Oberfläche im Matrix-Look.**
 
-> **Status: v0.0.x Vorabversion** (aktuell 0.0.8, siehe `CHANGELOG.md`). Windows- und Linux-Desktop-App (mit eigener Oberfläche) folgen später.
+Ein einzelnes Go-Programm steuert **ffmpeg** an. Läuft als Docker-Container auf **Unraid**, als **Windows-App** (Vorabversion) – und später als Linux-App.
+Ein SoundConverter-Klon mit zusätzlicher Video-Welt, gebaut für ganze Serien-Staffeln und Plex.
+
+![Docker](https://img.shields.io/badge/Docker-ghcr.io%2Fp5lukas%2Fp5converter-00ff5a?logo=docker&logoColor=white&labelColor=0a1a0f)
+![Unraid](https://img.shields.io/badge/Unraid-Template-00ff5a?labelColor=0a1a0f)
+![Windows](https://img.shields.io/badge/Windows-Vorabversion-ffcc00?labelColor=0a1a0f)
+![Version](https://img.shields.io/badge/Version-0.2.0-00ff5a?labelColor=0a1a0f)
+![Lizenz](https://img.shields.io/badge/Lizenz-MIT-00ff5a?labelColor=0a1a0f)
+
+<img src="docs/images/start.png" alt="Startseite mit laufendem Auftrag" width="900">
+
+<sub>Alle Dateinamen in den Bildern sind Testdateien.</sub>
+
+</div>
+
+> *English in short:* p5converter is a self-hosted web UI (single Go binary + ffmpeg) to convert audio and video. It supports
+> Intel Quick Sync, NVIDIA NVENC, AMD AMF and VAAPI, per-track audio/subtitle rules for whole seasons (e.g. DTS → AC-3, keep only German/English,
+> forced-subtitle detection), automatic CRF suggestions, a post-conversion check (tracks, length, full decode) before originals are touched, a
+> conversion history, renaming, and a Windows app. Docker image: `ghcr.io/p5lukas/p5converter:latest` (stable) or `:dev`, default port 8787.
+
+## Auf einen Blick
+* **Audio und Video getrennt** („Welten“ mit eigener Farbe), Voreinstellungen, Umbenennen mit Live-Vorschau
+* **Hardware-Encoding** (Quick Sync, NVENC, AMF, VAAPI) mit sichtbarer Bestätigung, ob Schreiben und Lesen wirklich auf der Hardware laufen
+* **Audio & Untertitel für ganze Staffeln:** Gruppen nach Sprachen, Regeln nach Format, Sprach-Wünsche, Forced-Erkennung
+* **Kontrolle nach dem Konvertieren:** Spuren, Laufzeit, Größe und auf Wunsch ein kompletter Decode-Test, bevor ein Original gelöscht wird
+* **Verlauf** der letzten 100 Aufträge je Welt (mit CSV-Export), **gewonnener Platz**, Live-Auslastung
+* **Handy und Tablet:** als Web-App auf dem Home-Bildschirm nutzbar
+
+<table>
+<tr>
+<td width="50%"><img src="docs/images/spuren.png" alt="Audio und Untertitel: Gruppen"><br><sub>Audio &amp; Untertitel: eine Staffel in Gruppen, Regel-Vorschläge</sub></td>
+<td width="50%"><img src="docs/images/verlauf.png" alt="Verlauf und Warteschlange"><br><sub>Warteschlange und Verlauf</sub></td>
+</tr>
+</table>
+
+<p align="center"><img src="docs/images/mobil.png" alt="Mobile Ansicht" width="280"><br><sub>Mobil / iPhone</sub></p>
 
 ## App-Icon
 Gleicher Aufbau wie bei **p5assets** (Matrix-Regen, Poster-Rahmen, „p5“); das Abzeichen unten rechts unterscheidet die Apps: bei p5converter **silberne Audio-CD + blaue Blu-ray** (Audio und Video), bei p5assets ein oranger Komet. Dateien: `web/icon*.png`, `web/apple-touch-icon.png` (iPhone/iPad-Web-App), `unraid/icon.png`; Quelle und Erzeugung: `tools/icons/` (`make_icons.py converter <Ordner>`).
+
+## Windows (Test auf `dev`)
+**Eine Datei:** `p5converter-setup.exe` aus der Vorabversion [`dev-latest`](https://github.com/p5lukas/p5converter/releases/tag/dev-latest) laden und starten. Windows meldet beim ersten Start einmal „Unbekannter Herausgeber“ (die Datei ist nicht mit einem Zertifikat signiert): **Weitere Informationen → Trotzdem ausführen**. Danach durchklicken – fertig. Der Installer richtet sich nur für dein Konto ein (keine Administrator-Abfrage), enthält Programm und ffmpeg und legt ein Startmenü-Symbol an (Desktop-Symbol und Autostart optional).
+* Die Oberfläche öffnet in einem **eigenen Fenster** (Microsoft Edge WebView2, in Windows 11 und aktuellem Windows 10 schon vorhanden; sonst richtet der Installer es ein) und sieht genauso aus wie im Browser.
+* **Hardware wird automatisch erkannt:** Intel Quick Sync, NVIDIA NVENC und AMD AMF (jeweils mit aktuellem Grafiktreiber), sonst rechnet die CPU. Ist ein NVIDIA-Treiber zu alt für NVENC, steht unter Einstellungen → Hardware → „Warum?“ in Klartext, welche Version fehlt – dann den Treiber aktualisieren.
+* Einstellungen und Logs liegen in `%APPDATA%\p5converter`.
+* **Symbol im Infobereich (Tray):** Das Schließen-Kreuz versteckt nur das Fenster, p5converter und laufende Aufträge laufen weiter. Klick auf das Symbol (oder ein zweiter Start) zeigt das Fenster wieder; **Beenden** über das Symbol oder den Knopf „Beenden“ in der Oberfläche.
+* Die Datei liegt immer in der laufenden Vorabversion `dev-latest` (nicht in `v0.1.0-dev`, das sind die Docker-Stände); bei einer neuen Versions-Vorabversion vom Branch `dev` hängt sie zusätzlich dort als Anhang.
 
 ## Kanäle: `:latest` und `:dev`
 | Image | Branch | Wofür |
@@ -58,13 +102,15 @@ Jede Einstellung hat einen kleinen **ⓘ**-Punkt mit einfacher Erklärung und Be
 
 ### Audio (wie SoundConverter)
 MP3, Ogg Vorbis, Opus, AAC/M4A, FLAC, WAV · VBR-Qualität oder konstante Bitrate · Samplerate/Kanäle · Tags und Cover bleiben erhalten · Ordner rekursiv hinzufügen ·
-Zielordner mit Struktur oder Namensmuster (`{artist}/{album}/{track} - {title}`) · „Wenn Datei existiert“: beide behalten und die neue nummerieren (`Film (2).mkv`) / überspringen / überschreiben (mit Warnfarbe) · Quelle optional löschen (nur nach Prüfung der Ergebnis-Laufzeit).
+Zielordner mit Struktur oder Namensmuster (`{artist}/{album}/{track} - {title}`) · „Wenn Datei existiert“: beide behalten und die neue nummerieren (`Film (2).mkv`) / überspringen / überschreiben (mit Warnfarbe) · Quelle optional löschen – nur nach bestandener **Kontrolle der neuen Datei** (lesbar und gleich lang; optional Spuren/Größe, kompletter Decode-Test).
 
 ### Video
 * Container **MKV** (Standard) oder MP4, „Nur Remux“ (Video kopieren)
 * Codec **H.264, H.265, AV1, VP9**
-* **Auflösung** (max. Höhe, nie hochskaliert), **CRF**, Geschwindigkeits-Preset, **8/10 Bit** (oder „wie Quelle“)
-* **Audio & Untertitel in einem Schritt, auch für Einsteiger:** Standard ist **Passthrough** (nichts ändern). Oben Regeln für alle Dateien (Sprachfilter, Kleiner machen mit vorausgefüllter Empfehlung und angezeigter Zielbitrate), darunter je Spur eine **Karte in Klartext** mit Behalten-Häkchen, bei Ton „So lassen / Kleiner machen“ und hinter „Erweitert“ **Titel, Sprache, Forced, Standard**; „Alle auswählen/abwählen“, „Auf alle Dateien anwenden“ und **Tipps** (z. B. nur Deutsch und Englisch behalten, Forced-Untertitel markieren, fehlende Sprache)
+* **Auflösung** (max. Höhe, nie hochskaliert), **CRF** (mit automatischem Vorschlag je nach Art des Materials: Anime, Korn, aktueller Film …), Geschwindigkeits-Preset, **8/10 Bit** (oder „wie Quelle“)
+* **Audio & Untertitel in einem Schritt, auch für Einsteiger und für ganze Serien:** Standard ist **Passthrough** (nichts ändern). Das Programm macht Vorschläge, jeder lässt sich abwählen. **Drei Ansichten:** **Gruppen** (Dateien mit gleichen Sprachen zusammengefasst, Haken je Sprache gilt für die ganze Gruppe, Vorschau „Was passiert“, abweichende Dateien markiert), **Tabelle** (Dateien × Sprachen mit Haken) und **Einzelne Dateien** (Spurkarten in Klartext mit „Erweitert“: Titel, Sprache, **Forced (erzwungene Untertitel)**, Standard, Format). **Regeln nach Format** (z. B. nur DTS in AC-3 umwandeln, Bild-Untertitel entfernen; erste passende Regel gewinnt; als Voreinstellung speicherbar; mit Regel-Vorschlägen) und **Sprach-Wünsche** in den Einstellungen als Rangliste (Ton/Untertitel behalten, Standard-Ton, Standard-Untertitel z. B. „Deutsch Forced“). Die Wirkung steht vor dem Start in der Zusammenfassung
+* **Forced erkennen:** Ist ein Untertitel viel kleiner als die vollständige Spur derselben Sprache (unter 20 %), schlägt das Programm „Als Forced markieren“ vor (nie ungefragt; mit dem Wunsch „Deutsch (Forced)“ ist er vorausgewählt). Dafür braucht die MKV die Größenangaben, die mkvmerge ablegt
+* **Spuren ohne Sprachangabe:** Das Programm liest nur, was in der Datei steht. Fehlt bei Ton oder Untertitel die Sprache, kann sie ein Werkzeug wie [ULDAS](https://github.com/netplexflix/ULDAS) vorher automatisch ergänzen (erkennt Sprache per Whisper, auch Forced und SDH); p5converter übernimmt dann die erkannten Sprachen. Es wird kein Code daraus verwendet
 * **Plex:** Sprache wird als dreibuchstabiger Code geschrieben; „Forced“ erkennt Plex nur in **MKV** (bei MP4 kommt eine Warnung) und die Untertitelsprache muss zur Tonspur passen; danach in Plex neu **analysieren**
 * Schriftarten-Anhänge bleiben in MKV erhalten
 
@@ -80,16 +126,20 @@ Zielordner mit Struktur oder Namensmuster (`{artist}/{album}/{track} - {title}`)
 * **Terminal-Symbol** in der Kopfzeile: Log-Seite mit Suche, Stufenfilter, Live-Ansicht, Download und „Leeren“; Zähler für neue Warnungen/Fehler. Datei: `/config/logs/p5converter.log` (rotierend). Passwörter, Cookies und Tokens werden nie geschrieben.
 
 ### Ablauf in Schritten
-* **Startseite:** Statistik, Auslastung, Hardware, **gewonnener Platz** (je Welt eigene Zählung, mit „Zurücksetzen“) und Warteschlange, dazu „Konvertierung starten“ und „Umbenennen starten“
+* **Kopfzeile:** „Konvertieren“, „Umbenennen“ und „Verlauf“ (mit Zähler für laufende und wartende Aufträge) sind in jeder Ansicht erreichbar
+* **Startseite:** oben der **aktuelle Auftrag** („Datei 4 von 13“ mit Fortschritt, Geschwindigkeit und Hardware mit grünen Haken) oder „Gerade nichts los“, daneben die Live-Auslastung; darunter gleich große Kacheln **Gewonnener Platz** (je Welt eigene Zählung, mit „Zurücksetzen“) und **Hardware**. Die Schritt-Reiter erscheinen erst, wenn man den Assistenten startet
 * **Konvertieren:** Dateien → Ziel → Benennen → Einstellungen (Video: Video, dann Audio & Untertitel · Audio: Format) → **Zusammenfassung** → Start (Voreinstellungen gibt es nur im Schritt „Video“ bzw. „Einstellungen“; „Zurücksetzen“ stellt die gewählte Welt auf „Remux“ zurück); oben als Reiter anklickbar, unten Zurück/Weiter; danach zurück zur Startseite mit der laufenden Warteschlange
 
-### Warteschlange
+### Verlauf
+* **Kopfzeile → Verlauf:** oben die Warteschlange (laufende und wartende Aufträge, „Parallel“, „Alle abbrechen“), darunter die letzten **100** beendeten Aufträge je Welt (Audio und Video getrennt, gespeichert in `/config`, bleibt nach „Fertige entfernen“ und Neustart): Ergebnis, Größe vorher/nachher, Dauer, Prüfergebnis, bei Fehlern ffmpeg-Befehl und Log · Suche, Filter nach Ergebnis und Zeitraum · **CSV-Export** · „Verlauf leeren“ (nur die gewählte Welt)
+
+### Warteschlange (auf der Seite „Verlauf“)
 * **Je Welt eine eigene Warteschlange** (Audio/Video) mit eigener Anzahl paralleler Aufträge; Farben: grün = geklappt, gelb = Hinweis/Ausweichweg, rot = Fehler; „Schreiben“/„Lesen“ mit Haken, wenn ffmpeg die Hardware bestätigt hat
 * **Abbrechen räumt auf**: unfertige Datei und vom Auftrag neu angelegte leere Ordner werden gelöscht; Reste eines Absturzes beim nächsten Start; die Quelldatei bleibt unberührt
 * **Auslastung** von CPU und Grafik/Videoeinheit live (auch im Leerlauf)
 
 ### Umbenennen
-* **Namensmuster** mit Variablen (`{title}`, `{year}`, `{res}`, `{codec}`, `{bit}`, `{container}`, `{date}`, `{filename}`; Audio: `{artist}`, `{album}`, `{track}` …) und **Suchen & Ersetzen** (mehrere Regeln, optional Regex/Groß-/Kleinschreibung) im Bereich „Ziel“, mit Live-Vorschau; beides lässt sich in Voreinstellungen speichern
+* **Namensmuster** mit Variablen (`{title}`, `{year}`, `{res}`, `{codec}`, `{bit}`, `{container}`, `{date}`, `{filename}`; Audio: `{artist}`, `{album}`, `{track}` …) und **Suchen & Ersetzen** (mehrere Regeln, einfacher Text, Groß-/Kleinschreibung egal) im Bereich „Ziel“, mit Live-Vorschau; beides lässt sich in Voreinstellungen speichern
 * **Seite „Umbenennen“** (Kopfzeile): Dateien ohne Konvertierung umbenennen, mit Vorschau; es wird nie überschrieben oder verschoben
 
 ### Hardware-Encoding
@@ -111,6 +161,7 @@ Optionale Anmeldung (Hash des Passworts, Sitzungs-Cookie, Bremse bei Fehlversuch
 
 ## Entwicklung
 ```bash
+sh tools/precheck.sh          # Vorprüfung vor jedem Push (gofmt, vet, Windows-Build, JS-Syntax, Versionsstellen, Tests)
 go test ./...                 # benötigt ffmpeg im PATH
 go build -o p5converter . && P5_NO_BROWSER=1 ./p5converter   # http://127.0.0.1:8787
 docker build -f docker/Dockerfile -t p5converter .

@@ -2,7 +2,9 @@ package server
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -417,18 +419,25 @@ func TestRenameTool(t *testing.T) {
 	if b, _ := os.ReadFile(filepath.Join(dir, "Show S01E02.mkv")); string(b) != "x" {
 		t.Error("vorhandene Datei überschrieben")
 	}
-	// outside the roots and invalid regex
+	// outside the roots; special characters are plain text; too many rules are refused
 	m = read(post(t, ts, "/api/rename", map[string]any{"items": []string{"/etc/hostname"}, "replace": rules}, nil))
 	if m["failed"].(float64) != 1 {
 		t.Errorf("Pfad außerhalb der Roots: %v", m)
 	}
-	if r := post(t, ts, "/api/rename/preview", map[string]any{"items": items, "replace": []map[string]any{{"find": "(", "regex": true}}}, nil); r.StatusCode != 400 {
-		t.Errorf("ungültige Regex: %d", r.StatusCode)
+	if r := post(t, ts, "/api/rename/preview", map[string]any{"items": items, "replace": []map[string]any{{"find": "(", "regex": true}}}, nil); r.StatusCode != 200 {
+		t.Errorf("Klammer (altes Feld regex wird ignoriert) muss normaler Text sein: %d", r.StatusCode)
+	}
+	tooMany := make([]map[string]any, 13)
+	for i := range tooMany {
+		tooMany[i] = map[string]any{"find": "x"}
+	}
+	if r := post(t, ts, "/api/rename/preview", map[string]any{"items": items, "replace": tooMany}, nil); r.StatusCode != 400 {
+		t.Errorf("zu viele Ersetzungen: %d", r.StatusCode)
 	}
 	// converter: output name uses variables and rules (invalid rules are refused on submit)
 	if r := post(t, ts, "/api/jobs", map[string]any{"kind": "audio", "items": []map[string]any{{"path": items[0]}},
-		"output": map[string]any{"replace": []map[string]any{{"find": "(", "regex": true}}}}, nil); r.StatusCode != 400 {
-		t.Errorf("Auftrag mit ungültiger Regex: %d", r.StatusCode)
+		"output": map[string]any{"replace": tooMany}}, nil); r.StatusCode != 400 {
+		t.Errorf("Auftrag mit zu vielen Ersetzungen: %d", r.StatusCode)
 	}
 }
 
@@ -631,5 +640,159 @@ func TestStatsResetPerWorld(t *testing.T) {
 	g := s.Stats.Get()
 	if g.Audio.Count != 0 || g.Video.Count != 1 {
 		t.Errorf("nur Audio zurücksetzen: %+v", g)
+	}
+}
+
+// Windows-App: ein zweiter Start bittet das laufende Programm über die Adresse, sein Fenster zu zeigen.
+func TestDesktopShow(t *testing.T) {
+	s, ts := newTestServer(t, nil)
+	if resp := post(t, ts, "/api/desktop/show", map[string]string{}, nil); resp.StatusCode != 404 {
+		t.Errorf("ohne App-Fenster: %d", resp.StatusCode)
+	}
+	called := make(chan struct{}, 1)
+	s.ShowWindow = func() { called <- struct{}{} }
+	if resp := post(t, ts, "/api/desktop/show", map[string]string{}, nil); resp.StatusCode != 200 {
+		t.Errorf("mit App-Fenster: %d", resp.StatusCode)
+	}
+	select {
+	case <-called:
+	default:
+		t.Error("ShowWindow wurde nicht aufgerufen")
+	}
+}
+
+func TestShortUA(t *testing.T) {
+	if got := shortUA("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0"); got != "Safari/537.36 Edg/154.0.0.0" {
+		t.Errorf("shortUA: %q", got)
+	}
+}
+
+// Kontrolle nach der Konvertierung: Spuren + Decode-Test bestanden, Quelle wird erst danach gelöscht.
+func TestVerifyThenDelete(t *testing.T) {
+	root := t.TempDir()
+	s, ts := newTestServer(t, []string{root})
+	src := filepath.Join(root, "v.mkv")
+	if out, err := exec.Command("ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=320x240:r=25:d=4", "-f", "lavfi", "-i", "sine=f=440:d=4",
+		"-c:v", "libx264", "-preset", "ultrafast", "-c:a", "aac", src).CombinedOutput(); err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	r := post(t, ts, "/api/jobs", map[string]any{"kind": "video", "items": []map[string]string{{"path": src}},
+		"output": map[string]any{"dir": filepath.Join(root, "o"), "structure": "flat", "deleteSource": true, "verifyTracks": true, "verifyDecode": true},
+		"video":  map[string]any{"codec": "copy", "container": "mkv", "audioMode": "copy", "subMode": "copy"}}, nil)
+	if r.StatusCode != 200 {
+		t.Fatalf("submit %d", r.StatusCode)
+	}
+	waitDone(t, s, 1)
+	j := s.Jobs.Snapshot()[0]
+	if j.Status != "done" || j.CheckFailed || len(j.Checks) != 4 {
+		t.Fatalf("status=%s fehler=%q prüfungen=%+v warnungen=%v", j.Status, j.Error, j.Checks, j.Warnings)
+	}
+	if _, err := os.Stat(src); err == nil {
+		t.Error("Quelle nach bestandener Prüfung nicht gelöscht")
+	}
+}
+
+// Verlauf: jeder beendete Auftrag landet je Welt im Verlauf, die Liste überlebt „Fertige entfernen“, CSV und Leeren je Welt.
+func TestHistory(t *testing.T) {
+	root := t.TempDir()
+	s, ts := newTestServer(t, []string{root})
+	src := filepath.Join(root, "song.wav")
+	if out, err := exec.Command("ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "sine=f=440:d=1", src).CombinedOutput(); err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	post(t, ts, "/api/jobs", map[string]any{"kind": "audio", "items": []map[string]string{{"path": src}},
+		"output": map[string]any{"dir": filepath.Join(root, "o"), "structure": "flat", "exists": "rename", "verifyTracks": true},
+		"audio":  map[string]any{"format": "mp3", "mode": "vbr", "quality": 4}}, nil)
+	waitDone(t, s, 1)
+	// nicht vorhandene Datei: endet mit Fehler (Eintrag mit Befehl/Log)
+	post(t, ts, "/api/jobs", map[string]any{"kind": "audio", "items": []map[string]string{{"path": filepath.Join(root, "fehlt.wav")}},
+		"output": map[string]any{"dir": filepath.Join(root, "o")}, "audio": map[string]any{"format": "mp3", "mode": "vbr", "quality": 4}}, nil)
+	waitDone(t, s, 2)
+	time.Sleep(300 * time.Millisecond)
+	post(t, ts, "/api/jobs/clear", map[string]any{"kind": "audio"}, nil) // „Fertige entfernen“
+	get := func(path string) map[string]any {
+		resp, err := http.Get(ts.URL + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		var m map[string]any
+		json.NewDecoder(resp.Body).Decode(&m)
+		return m
+	}
+	m := get("/api/history?kind=audio")
+	items, _ := m["items"].([]any)
+	if len(items) != 2 || m["max"].(float64) != 100 {
+		t.Fatalf("erwartet 2 Einträge, max 100: %v", m)
+	}
+	if st := items[0].(map[string]any)["status"]; st != "error" {
+		t.Errorf("neuester Eintrag zuerst (Fehler erwartet): %v", st)
+	}
+	if v := get("/api/history?kind=video")["items"].([]any); len(v) != 0 {
+		t.Errorf("Video-Verlauf muss leer sein (Welten getrennt): %v", v)
+	}
+	resp, _ := http.Get(ts.URL + "/api/history.csv?kind=audio")
+	b, _ := io.ReadAll(resp.Body)
+	if !strings.Contains(resp.Header.Get("Content-Disposition"), "verlauf-audio.csv") || !strings.Contains(string(b), "song.wav") || !strings.Contains(string(b), "Ende;Datei") {
+		t.Errorf("CSV unvollständig: %s", b)
+	}
+	if r := post(t, ts, "/api/history/clear", map[string]any{"kind": "video"}, nil); r.StatusCode != 200 {
+		t.Fatal("clear video")
+	}
+	if len(get("/api/history?kind=audio")["items"].([]any)) != 2 {
+		t.Error("Leeren von Video darf Audio nicht berühren")
+	}
+	post(t, ts, "/api/history/clear", map[string]any{"kind": "audio"}, nil)
+	if len(get("/api/history?kind=audio")["items"].([]any)) != 0 {
+		t.Error("Audio-Verlauf nicht geleert")
+	}
+	if r, _ := http.Get(ts.URL + "/api/history?kind=x"); r.StatusCode != 400 {
+		t.Error("ungültige Welt muss abgelehnt werden")
+	}
+}
+
+func TestStaticETagAndGzip(t *testing.T) {
+	s, _ := newTestServer(t, nil)
+	h := s.Handler()
+	get := func(path string, hdr map[string]string) *httptest.ResponseRecorder {
+		r := httptest.NewRequest("GET", path, nil)
+		for k, v := range hdr {
+			r.Header.Set(k, v)
+		}
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		return w
+	}
+	w := get("/app.js", nil)
+	if w.Code != 200 || w.Header().Get("ETag") == "" || !strings.Contains(w.Header().Get("Content-Type"), "javascript") {
+		t.Fatalf("app.js: %d %v", w.Code, w.Header())
+	}
+	if w.Header().Get("Content-Encoding") != "" {
+		t.Error("ohne Accept-Encoding darf nicht komprimiert werden")
+	}
+	plain := w.Body.Len()
+	if w2 := get("/app.js", map[string]string{"If-None-Match": w.Header().Get("ETag")}); w2.Code != 304 || w2.Body.Len() != 0 {
+		t.Errorf("erwartet 304, erhalten %d", w2.Code)
+	}
+	gz := get("/app.js", map[string]string{"Accept-Encoding": "gzip"})
+	if gz.Header().Get("Content-Encoding") != "gzip" || gz.Body.Len() >= plain {
+		t.Errorf("gzip fehlt oder nicht kleiner: %d vs %d", gz.Body.Len(), plain)
+	}
+	zr, err := gzip.NewReader(gz.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	un, _ := io.ReadAll(zr)
+	if !bytes.Equal(un, w.Body.Bytes()) {
+		t.Error("entpackter Inhalt weicht ab")
+	}
+	if p := get("/icon-192.png", map[string]string{"Accept-Encoding": "gzip"}); p.Code != 200 || p.Header().Get("Content-Encoding") != "" || p.Header().Get("Content-Type") != "image/png" {
+		t.Errorf("PNG: %d %v", p.Code, p.Header())
+	}
+	if get("/gibt-es-nicht.js", nil).Code != 404 {
+		t.Error("unbekannte Datei muss 404 liefern")
+	}
+	if get("/index.html", nil).Code != 200 || get("/", nil).Code != 200 {
+		t.Error("Startseite")
 	}
 }

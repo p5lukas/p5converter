@@ -46,6 +46,7 @@ async function saveCfg(mutate, msg) {
 // Farben, Namen, Reihenfolge, Vorschläge neu zeichnen
 function applyCfg() {
   renderWorldNav();
+  if (typeof refreshVideoUI === 'function' && S.info) refreshVideoUI();
   applyTheme(S.world);
   renderPresetChips();
   renderStartInfo();
@@ -55,7 +56,7 @@ function applyCfg() {
 // ---------- Voreinstellungen ----------
 const PRESET_FIELDS = {
   audio: ['aFormat', 'aMode', 'aQuality', 'aBitrate', 'aFlac', 'aWav', 'aRate', 'aCh', 'aCover', 'pattern', 'suffix', 'renRules'],
-  video: ['vContainer', 'vCodec', 'vBackend', 'vCrf', 'vPreset', 'vDepth', 'vHeight', 'vHwDec', 'vAudioMode', 'vAudioCodec', 'vAudioKbps', 'vAudioLangs', 'vSubMode', 'vSubLangs', 'pattern', 'suffix', 'renRules'],
+  video: ['vContainer', 'vCodec', 'vBackend', 'vCrf', 'vPreset', 'vDepth', 'vHeight', 'vHwDec', 'vAudioMode', 'vAudioCodec', 'vAudioKbps', 'vSubMode', 'vTrkRules', 'pattern', 'suffix', 'renRules'],
 };
 // diese Felder hängen von anderen ab (Optionen werden erst nach dem ersten Durchgang neu aufgebaut)
 const LATE_FIELDS = ['vBackend', 'aMode', 'aQuality', 'aBitrate'];
@@ -100,6 +101,7 @@ function describePreset(p) {
       if (v.vBackend && v.vBackend !== 'auto') o.push(v.vBackend);
     }
     if (v.vContainer) o.push(String(v.vContainer).toUpperCase());
+    try { const r = JSON.parse(v.vTrkRules || '{}'); const n = (r.audio || []).length + (r.sub || []).length; if (n) o.push(n + (n === 1 ? ' Regel für Spuren' : ' Regeln für Spuren')); } catch (e) { /* ignorieren */ }
   } else {
     o.push(AFMT_NAMES[v.aFormat] || 'Audio');
     if (v.aFormat === 'flac') o.push('Stufe ' + (v.aFlac ?? 5));
@@ -155,6 +157,7 @@ const SET_GROUPS = [
   {id: 'worlds', icon: 'planet', title: 'Welten & Farben', sub: 'Namen, Farben, Planeten'},
   {id: 'presets', icon: 'star', title: 'Voreinstellungen', sub: 'Vorschläge anlegen und ordnen'},
   {id: 'hardware', icon: 'bolt', title: 'Hardware', sub: 'Encoder, Erkennung, Diagnose'},
+  {id: 'tracks', icon: 'star', title: 'Audio & Untertitel', sub: 'Sprachen und Standard-Spuren'},
   {id: 'auth', icon: 'lock', title: 'Anmeldung', sub: 'Passwort und Benutzer'},
   {id: 'about', icon: 'info', title: 'Info', sub: 'Version, Neuigkeiten, Speicherort'},
 ];
@@ -165,7 +168,9 @@ function showView(v) {
   $('#viewSettings').classList.toggle('hidden', v !== 'settings');
   $('#viewRename').classList.toggle('hidden', v !== 'rename');
   $('#viewLogs').classList.toggle('hidden', v !== 'logs');
+  $('#viewHistory').classList.toggle('hidden', v !== 'history');
   if (v !== 'logs') stopLogs();
+  if (v !== 'history') stopHistory();
   document.body.classList.toggle('inSettings', v === 'settings');
   window.scrollTo(0, 0);
 }
@@ -173,6 +178,7 @@ function route() {
   const m = /^#settings(?:\/(\w+))?$/.exec(location.hash);
   if (location.hash === '#rename') { showView('rename'); renderRenamePage(); }
   else if (location.hash === '#logs') { showView('logs'); logsPage(); }
+  else if (location.hash === '#history') { showView('history'); historyPage(); }
   else if (m) { S.setPage = m[1] || ''; showView('settings'); renderSettings(); }
   else showView('main');
 }
@@ -199,13 +205,22 @@ function renderSettings() {
     return;
   }
   const nav = h('nav', {class: 'setnav'}, SET_GROUPS.map(g => h('button', {class: g.id === page ? 'on' : '', onclick: () => { location.hash = '#settings/' + g.id; }}, h('i', {}, icon(g.icon)), g.title)));
-  const builders = {general: pageGeneral, worlds: pageWorlds, presets: pagePresets, hardware: pageHardware, auth: pageAuth, about: pageAbout};
+  const builders = {general: pageGeneral, worlds: pageWorlds, presets: pagePresets, hardware: pageHardware, tracks: pageTracks, auth: pageAuth, about: pageAbout};
   const content = (builders[page] || pageGeneral)();
   fill(root, h('div', {class: 'sethead'}, mobile ? h('button', {class: 'ghost', onclick: () => { location.hash = '#settings'; }}, '‹ Einstellungen') : back,
     mobile ? null : h('h1', {}, 'Einstellungen')), warn,
     mobile ? h('div', {class: 'setpage panel'}, content) : h('div', {class: 'setlayout'}, nav, h('div', {class: 'setpage panel'}, content)));
 }
 matchMedia('(max-width:700px)').addEventListener('change', () => { if (!$('#viewSettings').classList.contains('hidden')) renderSettings(); });
+
+// Standardauswahl der Kontrolle nach dem Konvertieren, je Welt (im Konverter pro Lauf änderbar)
+function verifyControls(w) {
+  const v = (cfg().verify || {})[w] || {tracks: true, decode: true};
+  const set = f => saveCfg(x => { x.verify = x.verify || {}; x.verify[w] = {...(x.verify[w] || v)}; f(x.verify[w]); }, false).then(ok => { if (ok) { vfReset(w); toast('Gespeichert ✓', 'ok'); } });
+  return h('div', {class: 'vfset'},
+    check(v.tracks !== false, on => set(o => { o.tracks = on; }), 'Spuren & Größe prüfen (kaum länger)'),
+    check(v.decode !== false, on => set(o => { o.decode = on; }), w === 'audio' ? 'Ergebnis komplett durchlesen (kaum länger)' : 'Ergebnis komplett durchlesen (Decode-Test, bei Video merklich länger)'));
+}
 
 // --- Allgemein ---
 function pageGeneral() {
@@ -221,6 +236,9 @@ function pageGeneral() {
     row('Parallele Aufträge – ' + W('audio').name, concA, 'conc', 'Wie viele Audio-Dateien gleichzeitig laufen'),
     row('Parallele Aufträge – ' + W('video').name, concV, 'conc', 'Wie viele Videos gleichzeitig laufen (bei CPU-Encoding 1)'),
     row('Standard-Zielordner', h('div', {class: 'row'}, out, pick), 'outDir', 'Wird vorgeschlagen, wenn im Konverter nichts anderes gewählt ist'),
+    row('Kontrolle – ' + W('audio').name, verifyControls('audio'), 'vfInfo', 'Standardauswahl im letzten Schritt des Assistenten'),
+    row('Kontrolle – ' + W('video').name, verifyControls('video'), 'vfInfo', 'Standardauswahl im letzten Schritt des Assistenten'),
+    row('CRF-Vorschlag', check(c.noCrfSuggest !== true, v => saveCfg(x => { x.noCrfSuggest = !v; }).then(() => crfRefresh(false)), 'Im Video-Schritt einen passenden Wert vorschlagen (nach Art des Materials)'), 'vMaterial'),
     row('Neuigkeiten', check(c.showNews, v => saveCfg(x => { x.showNews = v; }), 'Hinweis „Neuigkeiten“ bei neuer Version zeigen')));
 }
 
@@ -291,9 +309,62 @@ async function restoreDefaultPresets() {
   } catch (e) { toast(e.message, 'bad'); }
 }
 
+// --- Audio & Untertitel: Sprach-Wünsche (nur Videowelt) ---
+// Gemeinsame Auswahlliste: Sprachen aus LANGS; bei Untertiteln zusätzlich „(Forced)“ je Sprache (Wert „ger:forced“)
+function langOptions(withForced) {
+  const o = [];
+  LANGS.forEach(([c, n]) => { o.push([c, n]); if (withForced) o.push([c + ':forced', n + ' (Forced – erzwungene Untertitel)']); });
+  return o;
+}
+// Rangliste wie bei p5assets: nummerierte Karten mit Ziehgriff, ↑ ↓ und ✕, darunter „Sprache hinzufügen“. Reihenfolge = Priorität.
+function rankList(items, labelOf, onChange, options, addText) {
+  const wrap = h('div', {class: 'ranklist'});
+  const key = x => typeof x === 'string' ? x : x.lang + (x.forced ? ':forced' : '');
+  const fromKey = k => options === 'sub' ? {lang: k.split(':')[0], forced: k.endsWith(':forced')} : k;
+  const render = () => {
+    const opts = langOptions(options === 'sub').filter(([v]) => !items.some(x => key(x) === v));
+    const add = h('select', {'aria-label': addText, onchange: () => { if (add.value) { items.push(fromKey(add.value)); onChange(items.slice()); render(); } }},
+      h('option', {value: ''}, '+ ' + addText), opts.map(([v, t]) => h('option', {value: v}, t)));
+    let drag = null;
+    fill(wrap, items.map((x, i) => {
+      const card = h('div', {class: 'rankcard', draggable: 'true'},
+        h('span', {class: 'rghandle', title: 'Ziehen zum Sortieren', 'aria-hidden': 'true'}, '⋮⋮'),
+        h('span', {class: 'rnum'}, i + 1),
+        h('span', {class: 'rname'}, labelOf(x)),
+        h('button', {type: 'button', class: 'small ghost', title: 'Nach oben', 'aria-label': 'Nach oben', disabled: i === 0, onclick: () => { [items[i - 1], items[i]] = [items[i], items[i - 1]]; onChange(items.slice()); render(); }}, '▲'),
+        h('button', {type: 'button', class: 'small ghost', title: 'Nach unten', 'aria-label': 'Nach unten', disabled: i === items.length - 1, onclick: () => { [items[i + 1], items[i]] = [items[i], items[i + 1]]; onChange(items.slice()); render(); }}, '▼'),
+        h('button', {type: 'button', class: 'small ghost', title: 'Entfernen', 'aria-label': 'Entfernen', onclick: () => { items.splice(i, 1); onChange(items.slice()); render(); }}, '✕'));
+      card.addEventListener('dragstart', e => { drag = i; e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', String(i)); } catch (err) { /* ok */ } });
+      card.addEventListener('dragover', e => { e.preventDefault(); });
+      card.addEventListener('drop', e => { e.preventDefault(); if (drag == null || drag === i) return; const [m] = items.splice(drag, 1); items.splice(i, 0, m); drag = null; onChange(items.slice()); render(); });
+      return card;
+    }), items.length ? null : h('p', {class: 'muted small'}, 'Noch keine Sprache.'), add);
+  };
+  render();
+  return wrap;
+}
+function pageTracks() {
+  const p = {audioKeep: [], subKeep: [], audioDefault: [], subDefault: [], ...(cfg().trackPrefs || {})};
+  const save = (k, v) => saveCfg(x => { x.trackPrefs = {audioKeep: [], subKeep: [], audioDefault: [], subDefault: [], ...(x.trackPrefs || {})}; x.trackPrefs[k] = v; }, 'Gespeichert ✓').then(() => { if (S.step === 'tracks') trkRender(); });
+  const nameOf = l => langName(l) + ' (' + l + ')';
+  const subName = x => langName(x.lang) + (x.forced ? ' (Forced)' : '') + ' (' + x.lang + ')';
+  const section = (title, hint, body) => h('div', {class: 'prefsec'}, h('h3', {}, title), h('p', {class: 'muted small'}, hint), body);
+  return h('div', {}, h('h2', {}, 'Audio & Untertitel', infoBtn('trkPrefs')),
+    h('p', {class: 'muted'}, 'Gilt für die Videowelt. Im Schritt „Audio & Untertitel“ schlägt das Programm damit automatisch vor, was entfernt wird und welche Spur Standard ist. Jeden Vorschlag kannst du dort ändern oder abwählen.'),
+    section('Ton: Sprachen behalten', 'Spuren in anderen Sprachen werden entfernt. Leer = alle behalten. Spuren ohne Sprachangabe bleiben immer. Hat eine Datei keine dieser Sprachen, wird nichts entfernt.',
+      rankList(p.audioKeep.slice(), nameOf, v => save('audioKeep', v), 'plain', 'Sprache hinzufügen')),
+    section('Ton: Standard-Spur', 'Diese Tonspur startet automatisch. Reihenfolge = Priorität: die erste Sprache, die in der Datei vorkommt, gewinnt (z. B. Deutsch, sonst Englisch). Kommentar-Spuren werden übersprungen.',
+      rankList(p.audioDefault.slice(), nameOf, v => save('audioDefault', v), 'plain', 'Sprache hinzufügen')),
+    section('Untertitel: Sprachen behalten', 'Untertitel in anderen Sprachen werden entfernt. Leer = alle behalten.',
+      rankList(p.subKeep.slice(), nameOf, v => save('subKeep', v), 'plain', 'Sprache hinzufügen')),
+    section('Untertitel: Standard', 'Dieser Untertitel startet automatisch. Reihenfolge = Priorität. „Deutsch (Forced)“ heißt: der erzwungene Untertitel, der nur bei fremdsprachigen Stellen erscheint. Findet das Programm keinen, bleibt alles wie es ist.',
+      rankList(p.subDefault.map(x => ({...x})), subName, v => save('subDefault', v), 'sub', 'Untertitel hinzufügen')));
+}
+
 // --- Hardware ---
 function pageHardware() {
   const c = cfg(), hw = (S.info && S.info.hw) || {backends: [], done: false};
+  hw.backends = hw.backends || []; hw.diag = hw.diag || [];
   const pref = h('select', {onchange: () => saveCfg(x => { x.preferredBackend = pref.value; })},
     opt('auto', 'Automatisch (schnellste verfügbare)'), opt('cpu', 'CPU (Software)'), opt('qsv', 'Intel Quick Sync'), opt('nvenc', 'NVIDIA NVENC'), opt('vaapi', 'VAAPI'), opt('amf', 'AMD AMF'));
   pref.value = c.preferredBackend;
@@ -302,13 +373,17 @@ function pageHardware() {
   const diagRows = (hw.diag || []).map(d => h('tr', {}, h('td', {}, d.backend), h('td', {}, d.codec + (d.ten ? ' 10b' : '')), h('td', {}, d.variant || ''),
     h('td', {class: d.ok ? '' : 'warn'}, d.ok ? '✓ ok' : '✗'), h('td', {class: 'muted'}, d.msg || '')));
   return h('div', {}, h('h2', {}, 'Hardware'),
-    row('Bevorzugter Encoder', pref, 'setBackend', 'Vorauswahl im Konverter (wenn keine eigene Wahl gespeichert ist)'),
+    row('Bevorzugter Encoder', pref, 'setBackend', 'Gilt im Konverter bei „Automatisch“, wenn dieser Encoder für den Codec nutzbar ist'),
     row('Hardware-Decoding', check(c.hwDecode, v => saveCfg(x => { x.hwDecode = v; }), 'Standardmäßig nutzen'), 'vHwDec'),
     h('h3', {}, 'Erkannte Hardware'), h('div', {}, hw.done ? backends : h('span', {class: 'muted'}, 'Erkennung läuft …')),
     h('details', {class: 'gpuhelp'}, h('summary', {}, 'Wie schalte ich meine GPU frei?'),
-      h('p', {class: 'small'}, h('b', {}, 'Intel (Quick Sync) und AMD (VAAPI): '), 'Das Gerät ', h('code', {}, '/dev/dri'), ' muss an den Container durchgereicht werden. Im Unraid-Template ist es schon eingetragen; bei Docker: ', h('code', {}, '--device /dev/dri'), '.'),
-      h('p', {class: 'small'}, h('b', {}, 'NVIDIA (NVENC): '), 'Nvidia-Treiber auf dem Server (Unraid: Plugin „Nvidia-Driver“) und beim Container ', h('code', {}, '--runtime=nvidia'), ' eintragen (Unraid: Erweiterte Ansicht → „Extra Parameters“). Alles Weitere ist im Image schon voreingestellt.'),
-      h('p', {class: 'small muted'}, 'AMD AMF gibt es nur unter Windows. Danach hier „Neu erkennen“ klicken.')),
+      ...((S.info && S.info.os) === 'windows' ? [
+        h('p', {class: 'small'}, h('b', {}, 'Windows: '), 'Hier musst du nichts einstellen. Intel Quick Sync, NVIDIA NVENC und AMD AMF werden automatisch erkannt, sobald der aktuelle Grafiktreiber des Herstellers installiert ist (Intel, NVIDIA oder AMD).'),
+        h('p', {class: 'small muted'}, 'Wird eine Grafikkarte nicht erkannt: Treiber aktualisieren, danach hier „Neu erkennen“ klicken. Quick Sync gibt es nur bei Intel-Prozessoren mit Grafikeinheit; NVIDIA-NVENC nur bei GeForce/Quadro ab der 600er-Reihe.')]
+      : [
+        h('p', {class: 'small'}, h('b', {}, 'Intel (Quick Sync) und AMD (VAAPI): '), 'Das Gerät ', h('code', {}, '/dev/dri'), ' muss an den Container durchgereicht werden. Im Unraid-Template ist es schon eingetragen; bei Docker: ', h('code', {}, '--device /dev/dri'), '.'),
+        h('p', {class: 'small'}, h('b', {}, 'NVIDIA (NVENC): '), 'Nvidia-Treiber auf dem Server (Unraid: Plugin „Nvidia-Driver“) und beim Container ', h('code', {}, '--runtime=nvidia'), ' eintragen (Unraid: Erweiterte Ansicht → „Extra Parameters“). Alles Weitere ist im Image schon voreingestellt.'),
+        h('p', {class: 'small muted'}, 'AMD AMF gibt es nur unter Windows. Danach hier „Neu erkennen“ klicken.')])),
     h('div', {class: 'btns', style: 'margin-top:12px'}, h('button', {onclick: async () => { await api('/api/hw/detect', {}); S.info.hw.done = false; renderSettings(); setTimeout(refreshInfoUntilDone, 800); }}, 'Neu erkennen'),
       h('button', {class: 'ghost', onclick: () => copyText(diagText)}, icon('clip'), ' Diagnose kopieren')),
     h('details', {class: 'diag'}, h('summary', {}, 'Diagnose (Details der Tests)'),
@@ -317,7 +392,7 @@ function pageHardware() {
       diagRows.length ? h('div', {class: 'tbody'}, h('table', {}, h('tr', {}, h('th', {}, 'Backend'), h('th', {}, 'Codec'), h('th', {}, 'Start-Variante'), h('th', {}, ''), h('th', {}, 'ffmpeg-Meldung')), diagRows)) : h('p', {class: 'muted small'}, 'Keine Testergebnisse.')));
 }
 async function refreshInfoUntilDone() {
-  S.info = await api('/api/info'); refreshVideoUI();
+  S.info = normInfo(await api('/api/info')); refreshVideoUI();
   if (!$('#viewSettings').classList.contains('hidden')) renderSettings();
   if (!S.info.hw.done) setTimeout(refreshInfoUntilDone, 1200);
 }

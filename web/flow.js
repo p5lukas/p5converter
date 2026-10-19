@@ -26,6 +26,7 @@ function applySteps() {
   $('#aPresets').classList.toggle('hidden', S.world !== 'audio');
   $('#vPresets').classList.toggle('hidden', S.world !== 'video');
   $('#stepnav').classList.toggle('hidden', S.step === 'start');
+  $('#steps').classList.toggle('hidden', S.step === 'start'); // Start und die Schritte erscheinen erst, wenn man den Assistenten startet
   $('#stepNext').classList.toggle('hidden', S.step === 'summary');
   $('#start').classList.toggle('hidden', S.step !== 'summary');
   $('#savePreset').classList.toggle('hidden', S.step !== 'summary');
@@ -38,7 +39,8 @@ function showStep(id, keepScroll) {
   if (!stepIds().includes(id)) id = 'start';
   S.step = id;
   applySteps();
-  if (id === 'summary') renderSummary();
+  if (id === 'summary') { vfUI(); renderSummary(); }
+  if (id === 'video') crfRefresh(false);
   if (id === 'files') renderFiles();
   if (id === 'name') syncNameUI();
   if (id === 'tracks') trkRender();
@@ -81,7 +83,7 @@ async function renderSummary() {
   const dir = $('#outMode').value === 'custom' ? $('#outDir').value.trim() : '';
   if (!files.length) warns.push('Es sind noch keine Dateien ausgewählt.');
   if ($('#outMode').value === 'custom' && !dir) warns.push('Es ist kein Zielordner angegeben.');
-  if ($('#deleteSource').checked) warns.push('Die Quelldateien werden nach erfolgreicher Konvertierung GELÖSCHT.');
+  if ($('#deleteSource').checked) warns.push('Die Quelldateien werden nach bestandener Prüfung sofort und endgültig GELÖSCHT.');
   if (S.world === 'video' && $('#vCodec').value !== 'copy') {
     const r = resolveBackend(); if (r && r.note) warns.push(r.note);
   }
@@ -92,6 +94,7 @@ async function renderSummary() {
   const nameParts = [pat ? 'Muster ' + pat : 'Originalname', suf ? 'Zusatz „' + suf + '“' : null, rules.length ? rules.length + (rules.length === 1 ? ' Ersetzung' : ' Ersetzungen') : null].filter(Boolean);
   const settings = describePreset({world: S.world, values: collectPresetValues(S.world)});
   const sp = h('span', {class: 'muted small'}, '');
+  let effect = null;
   const rows = [
     sumRow('Dateien', 'files', h('div', {}, files.length + (files.length === 1 ? ' Datei' : ' Dateien') + (files.length ? ' · ' + fmtSize(tot) : '')), files.length ? h('div', {class: 'muted small'}, names.join(' · ') + (files.length > 4 ? ' · … und ' + (files.length - 4) + ' weitere' : '')) : null),
     sumRow('Ziel', 'dest', h('div', {}, dir ? 'Ordner ' + dir : 'Neben der Quelldatei'), h('div', {class: 'muted small'}, existsTxt)),
@@ -101,14 +104,16 @@ async function renderSummary() {
   ];
   if (S.world === 'video') {
     const am = $('#vAudioMode').value === 'copy' ? 'Audiospuren unverändert' : 'Audio neu kodiert (' + $('#vAudioCodec').value.toUpperCase() + ' ' + $('#vAudioKbps').value + ' kbit/s)';
-    const al = $('#vAudioLangs').value.trim(), sl = $('#vSubLangs').value.trim();
     const sm = $('#vSubMode').value === 'none' ? 'Untertitel entfernt' : 'Untertitel unverändert';
-    const ed = trkEditedFiles();
-    rows.push(sumRow('Audio & Untertitel', 'tracks', h('div', {}, am + (al ? ' · nur ' + al : '')), h('div', {}, sm + (sl && $('#vSubMode').value !== 'none' ? ' · nur ' + sl : '')),
-      ed ? h('div', {class: 'muted small'}, 'Einzelne Spuren geändert bei ' + ed + (ed === 1 ? ' Datei' : ' Dateien')) : null));
+    const ed = trkEditedFiles(), tr = trkRules(), nr = tr.audio.length + tr.sub.length;
+    // Wirkung aller Regeln, Wünsche und eigenen Änderungen (liest bei Bedarf die Spuren aller Dateien)
+    effect = h('div', {class: 'muted small'}, files.length ? 'Wirkung wird berechnet …' : '');
+    rows.push(sumRow('Audio & Untertitel', 'tracks', h('div', {}, am + ' · ' + sm), effect,
+      nr || ed || (tr.usePrefs && trkHasPrefs()) ? h('div', {class: 'muted small'}, [nr ? nr + (nr === 1 ? ' Regel' : ' Regeln') : null, tr.usePrefs && trkHasPrefs() ? 'Sprach-Wünsche angewendet' : null, ed ? 'Einzelne Spuren geändert bei ' + ed + (ed === 1 ? ' Datei' : ' Dateien') : null].filter(Boolean).join(' · ')) : null));
   }
   fill($('#summaryBody'), warns.length ? h('div', {class: 'banner warn'}, warns.map(w => h('div', {}, icon('warn'), ' ' + w))) : null, rows);
   $('#start').disabled = !files.length || ($('#outMode').value === 'custom' && !dir);
+  if (effect && files.length) trkSummaryLines().then(l => { effect.textContent = l.join(' · '); }).catch(() => { effect.textContent = ''; });
   // Beispiel für den neuen Namen der ersten Datei
   if (files.length) {
     try {
@@ -136,7 +141,7 @@ function existsUI() {
 const DEST_FIELDS = ['outMode', 'outDir', 'outStruct', 'exists'];
 // Anfangswerte = die im HTML eingestellten; die Grundeinstellung ist „Remux“ (nichts wird umgewandelt)
 const RESET_OVERRIDES = {
-  video: {vContainer: 'mkv', vCodec: 'copy', vAudioMode: 'copy', vAudioLangs: '', vSubMode: 'copy', vSubLangs: ''},
+  video: {vContainer: 'mkv', vCodec: 'copy', vAudioMode: 'copy', vSubMode: 'copy', vTrkRules: ''},
   audio: {aFormat: 'flac'},
 };
 function captureDefaults() {
@@ -145,10 +150,11 @@ function captureDefaults() {
 }
 function resetWorld() {
   const w = S.world, d = S.defaults, over = RESET_OVERRIDES[w];
-  [...PRESET_FIELDS[w], ...DEST_FIELDS, 'deleteSource'].filter(k => !NAME_FIELDS.includes(k)).forEach(k => setField(k, k in over ? over[k] : d[k]));
+  [...PRESET_FIELDS[w], ...DEST_FIELDS].filter(k => !NAME_FIELDS.includes(k)).forEach(k => setField(k, k in over ? over[k] : d[k]));
   setField('vHwDec', cfg().hwDecode !== false);
   setField('outDir', cfg().defaultOutDir || ''); setField('outMode', cfg().defaultOutDir ? 'custom' : 'same');
-  S.name[w] = {...NAME_EMPTY}; showName(w);
+  S.name[w] = {...NAME_EMPTY}; showName(w); vfReset(w);
+  if (w === 'video') { setField('vMaterial', 'standard'); S.crfManual = false; }
   S.files[w].length = 0;
   refreshAudioUI(); refreshVideoUI(); outModeUI(); syncNameUI(); renderFiles(); renderHero(); saveSettings();
   showStep('start');
@@ -169,8 +175,10 @@ function wireFlow() {
   $('#resetAll').onclick = openReset;
   $('#resetNo').onclick = () => $('#resetDlg').close();
   $('#resetYes').onclick = () => { $('#resetDlg').close(); resetWorld(); };
-  $('#startFlow').onclick = () => showStep('files');
+  // die drei Knöpfe sitzen in der Kopfzeile und gelten in jeder Ansicht: zuerst zur Hauptansicht; ein schon geöffneter Assistent bleibt, wo er war
+  $('#startFlow').onclick = () => { if (location.hash) location.hash = ''; showStep(S.step === 'start' ? 'files' : S.step); };
   $('#startRename').onclick = () => { location.hash = '#rename'; };
+  $('#startHistory').onclick = () => { location.hash = '#history'; };
   $('#stepBack').onclick = () => stepMove(-1);
   $('#stepNext').onclick = () => stepMove(1);
 }

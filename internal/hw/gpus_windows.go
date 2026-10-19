@@ -1,12 +1,12 @@
 package hw
 
 import (
-	"os/exec"
+	"github.com/p5lukas/p5converter/internal/proc"
 	"strings"
 )
 
 func listGPUs() []string {
-	b, err := exec.Command("powershell", "-NoProfile", "-Command",
+	b, err := proc.Command("powershell", "-NoProfile", "-Command",
 		"(Get-CimInstance Win32_VideoController).Name").Output()
 	if err != nil {
 		return nil

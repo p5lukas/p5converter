@@ -37,18 +37,27 @@ const L = require('./ui-lib');
     eq(name, 'nach Neuladen (Video) 1 Zeile', await rows(), 1);
     await L.setWorld(p, 'audio'); await L.goStep(p, 'name');
     eq(name, 'nach Neuladen (Audio) Wert', await p.inputValue('#ruleRows .rulerow input >> nth=0'), 'nuraudio');
-    // --- Warteschlange je Welt (auf der Startseite) ---
+    // --- Verlauf je Welt (Seite „Verlauf“, Welten strikt getrennt) ---
+    // je Welt ein kurzer Auftrag, damit beide Verläufe Einträge haben (unabhängig vom Zustand des Servers)
+    await p.evaluate(async ([indir, out]) => {
+      const post = b => fetch('/api/jobs', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(b)});
+      const o = {dir: out, structure: 'flat', exists: 'overwrite'};
+      await post({kind: 'audio', items: [{path: indir + '/a.mp3'}], output: o, audio: {format: 'flac'}});
+      await post({kind: 'video', items: [{path: indir + '/hint.mkv'}], output: o, video: {container: 'mkv', codec: 'copy'}});
+    }, [L.INDIR, (process.env.OUTDIR || '/tmp/out') + '/world']);
+    await p.waitForTimeout(3500);
     await L.goStep(p, 'start');
-    const queued = async () => (await p.locator('#queue .job').allTextContents()).join('|');
-    const aq = await queued();
-    if (/long\.mkv|Show/.test(aq)) errs.push(name + ': Audio-Warteschlange zeigt Video-Aufträge: ' + aq);
-    if (!(await p.locator('#queue .job').count())) errs.push(name + ': Audio-Warteschlange leer');
-    await L.setWorld(p, 'video');
-    const vq = await queued();
-    if (/a\.mp3/.test(vq)) errs.push(name + ': Video-Warteschlange zeigt Audio-Aufträge: ' + vq);
+    await p.click('#startHistory'); await p.waitForTimeout(1000);
+    const listed = async () => (await p.locator('.histentry').allTextContents()).join('|');
+    const aq = await listed();
+    if (/long\.mkv|Show/.test(aq)) errs.push(name + ': Audio-Verlauf zeigt Video-Aufträge: ' + aq);
+    if (!(await p.locator('.histentry').count())) errs.push(name + ': Audio-Verlauf leer');
+    await p.click('[data-world=video]'); await p.waitForTimeout(3800);
+    const vq = await listed();
+    if (/a\.mp3/.test(vq)) errs.push(name + ': Video-Verlauf zeigt Audio-Aufträge: ' + vq);
+    await p.screenshot({ path: `${L.SHOTS}/wd-${name}-history.png`, fullPage: true });
+    await p.click('#histBack'); await p.waitForTimeout(500);
     if (!(await p.locator('#monitor .meter').count())) errs.push(name + ': keine Auslastungsanzeige');
-    await p.locator('#queue').scrollIntoViewIfNeeded();
-    await p.screenshot({ path: `${L.SHOTS}/wd-${name}-queue.png` });
     await ctx.close();
   }
   await b.close();

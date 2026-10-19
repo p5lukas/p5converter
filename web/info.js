@@ -18,15 +18,26 @@ const INFO = {
     <p><code>{res}</code>, <code>{codec}</code> und <code>{bit}</code> zeigen den <b>Zielwert</b> deiner Einstellungen (z. B. 720p, x265, 10bit); bei „Remux/kopieren“ den Wert der Quelle. Fehlt ein Tag, steht „Unbekannt“ (beim Titel der Dateiname).</p>`},
   renReplace: {t: 'Suchen und Ersetzen', b: `<p>Ändert Teile des Dateinamens, nachdem das Muster angewendet wurde – wie in einem Texteditor. Mehrere Ersetzungen laufen von oben nach unten.</p>
     <p class="ex">Suchen <code>WEBDL</code>, Ersetzen durch <code>WEB</code> → aus <code>Film [WEBDL-1080p]</code> wird <code>Film [WEB-1080p]</code>. „Ersetzen durch“ leer = Text löschen.</p>
-    <ul><li><b>Aa</b>: Groß-/Kleinschreibung beachten (sonst egal).</li>
-    <li><b>Regex</b> (für Fortgeschrittene): Suchtext ist ein regulärer Ausdruck, <code>$1</code> steht für die erste Klammer. Beispiel: <code>\[(\w+)-(\d+p)\]</code> → <code>$2 $1</code>.</li></ul>
+    <p>Es wird genau der Text gesucht, den du eingibst (Sonderzeichen wie <code>[</code> oder <code>(</code> sind ganz normale Zeichen). Groß- und Kleinschreibung ist egal.</p>
     <p>Die Vorschau zeigt sofort das Ergebnis; Endung und Ordner bleiben unberührt.</p>`},
   exists: {t: 'Wenn Datei existiert', b: `<p>Was passieren soll, wenn es die Zieldatei schon gibt.</p>
     <ul><li><b>Beide behalten, neue Datei nummerieren:</b> Die vorhandene Datei bleibt, die neue bekommt eine Nummer, z. B. <code>Film (2).mkv</code>. Nichts geht verloren – die sicherste Wahl.</li>
     <li><b>Überspringen, vorhandene Datei nicht anfassen:</b> Die Datei wird nicht erneut umgewandelt. Gut, wenn du einen Ordner nach einem Abbruch noch einmal startest.</li>
     <li><b>Überschreiben, vorhandene Datei ersetzen:</b> Die alte Zieldatei wird durch die neue ersetzt. Das lässt sich nicht rückgängig machen.</li></ul>`},
-  deleteSource: {t: 'Quelldatei löschen', b: `<p>Löscht das Original, <b>nachdem</b> die neue Datei erfolgreich fertig ist. Das ist <b>endgültig</b> (kein Papierkorb).</p>
+  deleteSource: {t: 'Quelldatei löschen', b: `<p>Löscht das Original, <b>nachdem</b> die neue Datei fertig ist <b>und die Prüfung bestanden hat</b>. Das ist <b>endgültig</b> (kein Papierkorb).</p>
+    <p>Fällt die Prüfung durch, bleibt das Original liegen und am Auftrag steht eine Warnung.</p>
     <p>Empfehlung für Anfänger: aus lassen, erst Ergebnis ansehen/anhören, dann selbst aufräumen.</p>`},
+  vfInfo: {t: 'Ergebnis prüfen & Original', b: `<p>Jede neue Datei wird immer geprüft: lässt sie sich lesen und ist sie (fast) genauso lang wie das Original?</p>
+    <ul><li><b>Spuren &amp; Größe:</b> Sind alle gewählten Video-, Audio- und Untertitelspuren drin? Ist die Datei nicht absurd klein? Kostet fast keine Zeit.</li>
+    <li><b>Komplett durchlesen (Decode-Test):</b> ffmpeg liest die ganze neue Datei einmal durch, ohne etwas zu speichern, und meldet beschädigte Stellen. Das geht schneller als abspielen, dauert bei langen Videos aber merklich (grob 5–10 Minuten für einen 2-Stunden-Film in 1080p, bei 4K mehr).</li></ul>
+    <p>Fällt eine Prüfung durch, bleibt das Original unangetastet und der Auftrag zeigt eine Warnung. Die Zeitangaben sind Schätzwerte.</p>
+    <p class="ex">Die Standardauswahl legst du in Einstellungen → Allgemein fest, getrennt für Audio und Video.</p>`},
+  vMaterial: {t: 'Art des Materials & CRF-Vorschlag', b: `<p>Je nach Material braucht dieselbe Qualität einen anderen CRF. Das Programm schlägt einen <b>Startwert</b> vor und füllt den Regler damit vor. Du kannst ihn jederzeit ändern.</p>
+    <ul><li><b>Anime / Zeichentrick:</b> eher <b>niedriger</b> (x265 etwa 16), weil Blöcke und Streifen auf glatten Flächen sofort auffallen.</li>
+    <li><b>Altes Material mit Filmkorn:</b> etwas niedriger (x265 etwa 18), damit das Korn nicht verschmiert.</li>
+    <li><b>Standard / aktueller Film:</b> x265 etwa 20, H.264 etwa 18, AV1 etwa 24.</li>
+    <li><b>720p oder kleiner:</b> zusätzlich ein Punkt niedriger.</li></ul>
+    <p class="ex">Die Werte stammen aus Erfahrungsberichten und Anleitungen (bei Bereichen gilt der niedrigere Wert), nicht aus einer Messung an deiner Datei. Bei Hardware-Encodern nur grober Anhaltspunkt. Abschaltbar unter Einstellungen → Allgemein.</p>`},
 
   aFormat: {t: 'Audio-Format', b: `<ul><li><b>MP3:</b> läuft überall (Auto, Handy, alte Geräte). Sicherste Wahl.</li>
     <li><b>Opus:</b> bei kleiner Bitrate die beste Qualität, ideal für Sprache/Podcasts. Nicht jedes ältere Gerät kann es.</li>
@@ -69,7 +80,7 @@ const INFO = {
     <li><b>Hardware (Intel Quick Sync – ein Teil der Intel-CPU –, NVIDIA NVENC, AMD AMF, VAAPI):</b> oft 5–20× schneller und schont die CPU. Bei gleicher Qualität werden die Dateien aber meist etwas größer.</li></ul>
     <p><b>Automatisch</b> nimmt die schnellste Hardware, die wirklich funktioniert. Nur Einträge mit ✓ lassen sich nutzen – das Programm testet das beim Start mit einem echten Mini-Encode.</p>
     <p class="ex">Tipp: Ganze Bibliothek schnell verkleinern → Hardware. Lieblingsfilm in bester Qualität archivieren → CPU.</p>`},
-  vResolved: {t: 'Wird verwendet', b: `<p>Zeigt den Encoder, den das Programm mit deinen Einstellungen einsetzt, z. B. <code>hevc_qsv</code> (Intel Quick Sync) oder <code>libx265</code> (CPU).</p>
+  vResolved: {t: 'Wird verwendet', b: `<p>Zeigt den Encoder, den das Programm mit deinen Einstellungen einsetzt, z. B. <code>hevc_qsv</code> mit dem Schild „Intel Quick Sync“ oder <code>libx265</code> mit „CPU“. Bei „Automatisch“ gilt der bevorzugte Encoder aus Einstellungen → Hardware, sonst der schnellste verfügbare.</p>
     <p>Beim laufenden Auftrag zeigt die Warteschlange zwei getrennte Angaben: <b>Schreiben</b> (Encoder, z. B. „Quick Sync · hevc_qsv ✓“ – das Häkchen heißt: ffmpeg hat die Nutzung bestätigt) und <b>Lesen</b> (Decoder: Hardware oder CPU).</p>`},
   vCrf: {t: 'Qualität (CRF)', b: `<p>Der wichtigste Regler: bestimmt Bildqualität und Dateigröße. <b>Kleinerer Wert = bessere Qualität, größere Datei.</b></p>
     <ul><li>H.264: 18 (sehr hoch) – <b>21–23 (gut)</b> – 28 (sichtbar schlechter)</li>
@@ -99,20 +110,27 @@ const INFO = {
     <p class="ex">Beispiel: Blu-ray mit 4 GB Ton → „AAC“ oder „Opus“ spart mehrere GB.</p>`},
   vAudioCodec: {t: 'Audio-Codec / Bitrate', b: `<ul><li><b>AAC:</b> läuft überall, guter Standard.</li><li><b>Opus:</b> sehr effizient, kleine Dateien (MKV ok, manche TVs nicht).</li><li><b>AC-3 / E-AC-3:</b> Dolby-Formate, nötig für manche Heimkino-Receiver.</li><li><b>FLAC:</b> verlustfrei, groß.</li></ul>
     <p>Die Bitrate gilt <b>je Stereo-Paar</b> (Empfehlung: AAC 160 kbit/s). Spuren mit mehr Kanälen bekommen automatisch mehr: Wert × Kanäle ÷ 2, höchstens 640. Bei 160 kbit/s sind das für Stereo 160, für 5.1 (6 Kanäle) <b>480</b> und für 7.1 (8 Kanäle) 640 kbit/s. Unter dem Feld steht, was bei dir herauskommt.</p>`},
-  vAudioLangs: {t: 'Audio-Sprachen behalten', b: `<p>Entfernt alle Tonspuren, deren Sprache nicht in der Liste steht. Leer = alle behalten.</p>
-    <p class="ex">Beispiel: <code>ger,eng</code> behält Deutsch und Englisch, entfernt z. B. Französisch und Spanisch. Auch <code>de,en</code> funktioniert.</p>
-    <p>Spuren ohne Sprachangabe bleiben erhalten. Würde der Filter <b>alle</b> Spuren entfernen, wird er ignoriert.</p>`},
   vSubMode: {t: 'Untertitel', b: `<ul><li><b>Passthrough:</b> alle Untertitel werden übernommen (in MKV ohne Verlust).</li><li><b>Alle entfernen:</b> keine Untertitel in der neuen Datei.</li></ul>
-    <p>Einzelne Untertitel pro Datei änderst du unten in der Tabelle „Einzelne Spuren“.</p>
+    <p>Einzelne Untertitel änderst du in den Ansichten darunter. Welche Sprachen bleiben, legst du in Einstellungen → Audio &amp; Untertitel fest.</p>
     <p class="ex">Hinweis: In MP4 gehen Bild-Untertitel (Blu-ray/PGS, DVD) nicht – nimm dafür MKV.</p>`},
-  vSubLangs: {t: 'Untertitel-Sprachen behalten', b: `<p>Wie bei den Audio-Sprachen: nur diese Sprachen behalten, leer = alle.</p>
-    <p class="ex">Beispiel: <code>ger</code> → nur deutsche Untertitel.</p>`},
+  trkRules: {t: 'Regeln nach Format', b: `<p>Damit wandelst du nur bestimmte Spuren um oder entfernst sie, statt alle Spuren gleich zu behandeln. Die Regeln laufen <b>von oben nach unten</b>, die <b>erste passende</b> gewinnt. Deine eigenen Änderungen an einer Spur gehen immer vor.</p>
+    <p class="ex">Beispiel: „DTS → umwandeln in AC-3 192 kbit/s je Stereo-Paar“. Alle anderen Tonspuren bleiben unverändert (oder folgen „Alle übrigen Tonspuren“). Mit „Surround“ oder „Stereo“ grenzt du nach Kanälen ein.</p>
+    <p>Bei Untertiteln unterscheidet das Programm Bild-Untertitel (PGS, VobSub, DVB: groß, nicht überall abspielbar) und Text-Untertitel (SRT, ASS).</p>
+    <p>Die Regeln lassen sich als Voreinstellung speichern (Diskette im Ablauf). Das Programm schlägt Regeln vor, wenn es passende Spuren in deinen Dateien findet (z. B. DTS).</p>`},
+  trkViews: {t: 'Gruppen, Tabelle, Einzelne Dateien', b: `<ul><li><b>Gruppen:</b> Dateien mit denselben Sprachen sind zusammengefasst (z. B. eine ganze Staffel). Ein Haken bei einer Sprache gilt für die ganze Gruppe. Abweichende Dateien stehen in eigenen, markierten Gruppen. Jede Gruppe zeigt, was passieren wird.</li>
+    <li><b>Tabelle:</b> Alle Dateien als Zeilen, alle Sprachen als Spalten, mit Häkchen. Der Haken in der Spaltenüberschrift gilt für alle Dateien.</li>
+    <li><b>Einzelne Dateien:</b> jede Spur einer Datei als Karte mit allen Einstellungen (Titel, Sprache, Forced, Standard, Format).</li></ul>`},
+  trkPrefs: {t: 'Sprach-Wünsche', b: `<p>Hier legst du einmal fest, welche Sprachen du haben willst. Im Schritt „Audio &amp; Untertitel“ wird das dann bei jeder Datei automatisch vorgeschlagen – und die Tipps berücksichtigen es.</p>
+    <ul><li><b>Behalten:</b> andere Sprachen werden entfernt (leer = nichts entfernen). Hat eine Datei keine deiner Sprachen, bleibt sie unverändert.</li>
+    <li><b>Standard:</b> eine Rangliste. Die erste Sprache, die in der Datei vorkommt, wird zur Spur, die der Player automatisch startet (z. B. Deutsch, sonst Englisch).</li>
+    <li><b>Forced:</b> „Deutsch (Forced)“ heißt: der erzwungene Untertitel, der nur bei fremdsprachigen Stellen erscheint.</li></ul>
+    <p>Reihenfolge ändern: ziehen oder ▲ ▼. Die Wünsche gelten für die Videowelt.</p>`},
   vAudioTracks: {t: 'Audiospuren', b: `<p>Regeln für den Ton in <b>allen</b> Dateien. Standard ist „Passthrough“: Alle Tonspuren bleiben unverändert. Einzelne Spuren änderst du unten in der Tabelle.</p>`},
   vSubTracks: {t: 'Untertitel', b: `<p>Regeln für die Untertitel in <b>allen</b> Dateien. Standard ist „Passthrough“: Alle Untertitel bleiben unverändert.</p>`},
   trkTable: {t: 'Spuren dieser Datei', b: `<p>Jede Ton- und Untertitelspur der gewählten Datei als Karte. Was du hier änderst, gilt nur für diese Datei – oder mit „Auf alle Dateien anwenden“ für alle.</p>
     <ul><li><b>Häkchen:</b> Spur behalten. Ohne Häkchen wird sie entfernt (z. B. Kommentar-Tonspur, fremde Untertitel).</li>
     <li><b>So lassen / Kleiner machen (nur Ton):</b> „So lassen“ ist verlustfrei und am schnellsten. „Kleiner machen“ rechnet nur diese Tonspur um; Format und Bitrate sind schon sinnvoll vorausgefüllt.</li>
-    <li><b>Erweitert:</b> Titel (so heißt die Spur im Player), Sprache, „Forced“ (bei Untertiteln nur fremdsprachige Stellen zeigen) und „startet automatisch“.</li></ul>
+    <li><b>Erweitert:</b> Titel (so heißt die Spur im Player), Sprache, „Forced (erzwungene Untertitel)“ und „startet automatisch“. Forced-Untertitel erscheinen nur bei fremdsprachigen Stellen.</li></ul>
     <p><b>Plex:</b> Die Sprache wird als Code aus drei Buchstaben geschrieben, nur so erkennt Plex sie sicher. „Forced“ erkennt Plex nur in MKV-Dateien, und die Untertitelsprache muss zur Tonspur passen. Danach in Plex das Element neu analysieren („Analysieren“).</p>
     <p class="ex">Die „Tipps zu dieser Datei“ schlagen Sinnvolles per Knopfdruck vor, z. B. nur Deutsch und Englisch behalten.</p>`},
   conc: {t: 'Parallel', b: `<p>Wie viele Dateien gleichzeitig umgewandelt werden.</p>
