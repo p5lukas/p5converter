@@ -78,7 +78,7 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
       }
     }
     // Assistent: Datei mit mehreren Sprachen und einem Forced-Untertitel ohne Markierung
-    await L.goStep(p, 'files'); await p.click('#clearFiles'); await L.addFile(p, 'hint.mkv'); await L.goStep(p, 'tracks'); await p.waitForSelector('.trkviews'); await p.click('.trkviews button:has-text("Einzelne Dateien")'); await p.waitForSelector('#trackEditor .trkcard');
+    await L.goStep(p, 'files'); await p.click('#cvStepper [data-step=files]'); await p.waitForTimeout(300); await p.click('#clearFiles'); await L.addFile(p, 'hint.mkv'); await L.goStep(p, 'tracks'); await p.waitForSelector('.trkviews'); await p.click('.trkviews button:has-text("Einzelne Dateien")'); await p.waitForSelector('#trackEditor .trkcard');
     const hintTxt = await p.textContent('#trackEditor .trkhints');
     if (!/Nur Deutsch und Englisch behalten/.test(hintTxt) || !/Als Forced markieren/.test(hintTxt)) errs.push(name + ': Assistent-Hinweise fehlen: ' + hintTxt);
     await p.screenshot({ path: `${L.SHOTS}/t-${name}-3b-hints.png`, fullPage: true });
@@ -86,7 +86,7 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
     eq(name, 'Forced-Hinweis erledigt', /Als Forced markieren/.test(await p.textContent('#trackEditor')), false);
     while (await p.getByRole('button', { name: 'Nur Deutsch und Englisch behalten' }).count()) { await p.getByRole('button', { name: 'Nur Deutsch und Englisch behalten' }).first().click(); await p.waitForTimeout(300); }
     eq(name, 'Fremdsprachen entfernt (1 Ton + 2 Untertitel)', await p.locator('#trackEditor .trkcard.off').count(), 3);
-    await L.goStep(p, 'files'); await p.click('#clearFiles'); await L.addFile(p, 'long.mkv'); await L.toCheck(p);
+    await L.goStep(p, 'files'); await p.click('#cvStepper [data-step=files]'); await p.waitForTimeout(300); await p.click('#clearFiles'); await L.addFile(p, 'long.mkv'); await L.toCheck(p);
     // Alles zurücksetzen
     await p.click('#resetAll'); await p.waitForTimeout(250);
     eq(name, 'Rücksetz-Dialog offen', await p.isVisible('#resetDlg'), true);
