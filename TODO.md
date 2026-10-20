@@ -7,6 +7,7 @@
 > Entscheidung (Nutzer): Die Test-Last-Regel von p5assets („Testumgebung doppelt so groß wie die echte Welt“) gilt hier **nicht**.
 > Arbeitsregel (Nutzer): Ob die CI grün und das Image `:latest` gebaut ist, sieht der Nutzer selbst unter GitHub → Actions – nicht von selbst melden.
 > Arbeitsregel (Nutzer): In `p5lukas/p5assets` darf ich **immer lesen**; **ändern nur, wenn der Nutzer es ausdrücklich sagt**.
+> Entscheidung (Nutzer 20.10.): Der nächste „Leg los“ setzt **alle offenen Punkte zusammen** um (Seite „Regeln“ in den Einstellungen, geführter Ablauf in 4 Schritten im Kachelstil, Info-Punkte, Codec-Kennung mit Bitrate, CRF vereinfachen und absichern, Fehler „zweite Standard-Tonspur“, Ziel-Codec anklickbar, Suche/Anzeigenamen sind schon in 0.3.1) und wird **Version 0.3.2** (Patch-Sprung, kein Tag/Release).
 > Entscheidung (Nutzer): Erst Unraid/Docker mit „mega Design“, dann Windows-App mit eigener GUI, dann Linux-App (Fedora KDE) mit eigener GUI.
 > Arbeitsregel (Nutzer): Stehen im Internet **Bereiche (Ranges)** für Werte (z. B. CRF 18–22), nehme ich **immer den niedrigeren Wert** (bessere Qualität, sicherer Startwert).
 
