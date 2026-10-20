@@ -13,6 +13,7 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
+- [ ] **Codec-Kennung statt Markenname bei Spuren (Nutzer 20.10.)**: Die Tabelle und die Spurkarten zeigen heute „Englisch · Dolby Digital 5.1“; gewünscht: **Kennung zuerst, Markenname in Klammern, mit Bitrate**, z. B. „Englisch · E-AC-3 (Dolby Digital Plus) 5.1 · 640 kbit/s“, „Deutsch · AC-3 (Dolby Digital) 5.1 · 448 kbit/s“, „DTS-HD MA 7.1“, „TrueHD (Dolby TrueHD)“; wo Name und Kennung gleich sind (AAC, FLAC, Opus, MP3) nur einmal. Bitrate aus ffprobe (`bit_rate` der Spur; fehlt sie, weglassen). Gilt überall, wo das Format steht (Tabelle, Gruppen, Spurkarten in Details, Regeln/Hinweise); nur Anzeige, keine Auswirkung auf die Umwandlung. Gilt auch für Untertitel-Codecs sinngemäß (SRT, ASS, PGS, VobSub)
 - [ ] **Windows-App: Folgearbeiten** (erste Version 0.1.1 steht auf `dev`): (1) ~~Tray~~ (erledigt in 0.1.2); (2) **Prüfung durch den Nutzer** auf dem Windows-PC (Fenster, Symbol, Hardware-Erkennung, echte Konvertierung, Deinstallation); (3) Größe der `setup.exe` aus dem CI-Lauf (Zusammenfassung „Größen“) mitteilen; (4) Linux-App danach; (5) Windows erst nach Freigabe nach `main`
 - [ ] Optional: Image als multi-arch (amd64/arm64) bauen
 
