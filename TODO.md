@@ -13,6 +13,8 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
+- [ ] **Einstellungen: Seite „Regeln“ für allgemeine Spur-Regeln (Nutzer 20.10.)**: Regeln nach Format (z. B. „DTS → E-AC-3, 256 kbit/s je Stereo-Paar“, „Bild-Untertitel entfernen“) bisher nur in Details → Audio & Untertitel und pro Browser bzw. Voreinstellung gespeichert. Neu: eigene Seite in den Einstellungen (wie die Sprach-Wünsche, auf dem Server in `/config`, für alle Geräte), mit dem gleichen Regel-Editor; die gespeicherten Regeln gelten als „voreingestellte Regeln“, werden im Konverter angezeigt und lassen sich dort abwählen (Haken je Regel). Bitrate-Hinweis: je Stereo-Paar, E-AC-3 höchstens 640 kbit/s. Hängt mit dem geplanten Ablauf zusammen (siehe nächster Eintrag)
+- [ ] **Geführter Ablauf in Schritten (Nutzer 20.10., Entscheidung offen)**: Vorschlag des Nutzers: 1. **Dateien wählen** (zuerst den Quellordner wählen, z. B. video1/video2; darin immer auch in Unterordnern suchen, ohne Haken „Auch in Unterordnern“), 2. **Regeln** (die voreingestellten Regeln werden angezeigt und sind abwählbar), 3. **Satzabfrage** (Hardware, Ziel, Prüfen) – „cooler gestalten“. Offen: wo die Tabelle „Vorher → Nachher“ und der Start bleiben (Vorschlag: als Abschluss/Kontrolle nach Schritt 3), und ob Schritte oder eine geführte Seite
 - [ ] **Windows-App: Folgearbeiten** (erste Version 0.1.1 steht auf `dev`): (1) ~~Tray~~ (erledigt in 0.1.2); (2) **Prüfung durch den Nutzer** auf dem Windows-PC (Fenster, Symbol, Hardware-Erkennung, echte Konvertierung, Deinstallation); (3) Größe der `setup.exe` aus dem CI-Lauf (Zusammenfassung „Größen“) mitteilen; (4) Linux-App danach; (5) Windows erst nach Freigabe nach `main`
 - [ ] Optional: Image als multi-arch (amd64/arm64) bauen
 
