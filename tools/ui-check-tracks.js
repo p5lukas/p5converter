@@ -59,7 +59,7 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
     eq(name, 'Änderungen auf 2. Datei übertragen', await p.locator('#trackEditor .trkcard.edited').count() >= 3, true);
     // Zusammenfassung nennt die Änderung
     await L.goStep(p, 'summary');
-    await p.waitForTimeout(600); await p.click('#cvFileDetails summary'); await p.waitForTimeout(200);
+    await p.click('#cvStepper [data-step=files]'); await p.waitForTimeout(600); await p.click('#cvFileDetails summary'); await p.waitForTimeout(200);
     eq(name, 'beide Dateien melden geänderte Spuren', await p.locator('#fileList [data-tr]').count(), 2);
     // nur Desktop: wirklich konvertieren und das Ergebnis prüfen
     if (name === 'desktop') {
