@@ -49,6 +49,7 @@ function cvLayout() {
   show('cvRules', conv && video && st === 2); show('cvHow', conv && video && st === 3);
   show('cvSentence', conv && !video); show('cvTable', conv && (!video || st === 4));
   show('presetBar', conv && (!video || st === 1));
+  show('scanFolder', conv && video); show('cvScan', conv && video && st === 1 && !!LIBUI.id);
   $('#aPresets').classList.toggle('hidden', video); $('#vPresets').classList.toggle('hidden', !video);
   show('wizNav', conv && video && st < 4); show('stepnav', conv && (!video || st === 4));
 }
@@ -316,6 +317,25 @@ function cvTrackRow(g, ex, r, n) {
 }
 
 // Dateiname: Beispiel für die erste Datei der Gruppe (vom Server berechnet)
+// Alle neuen Dateinamen einzeilig („alt → neu“), nur wenn tatsächlich umbenannt wird; Vorschau vom Server in einer Anfrage für alle Dateien
+function cvNameList(files) {
+  const pat = $('#pattern').value.trim(), rules = cleanRules(nameRules()), suf = $('#suffix').value;
+  if (!files.length || (!pat && !rules.length && !suf)) return null;
+  const target = S.world === 'video' ? {codec: $('#vCodec').value, height: +$('#vHeight').value, bitDepth: +$('#vDepth').value, container: $('#vContainer').value} : {container: outExt()};
+  const body = {items: files.map(f => f.path), pattern: pat, replace: rules, suffix: suf, ext: outExt(), mode: 'convert', target}, k = 'L' + JSON.stringify(body);
+  const box = h('div', {class: 'cvnamelist', 'aria-label': 'Neue Dateinamen'});
+  const paint = items => {
+    const seen = {}; items.forEach(x => { if (!x.error) seen[x.new.toLowerCase()] = (seen[x.new.toLowerCase()] || 0) + 1; });
+    const bad = items.filter(x => x.error || seen[x.new.toLowerCase()] > 1).length;
+    fill(box, h('div', {class: 'cvnlh muted small'}, items.length + (items.length === 1 ? ' Datei' : ' Dateien') + ' bekommen einen neuen Namen' + (bad ? ' · ' : ''), bad ? h('span', {class: 'bad'}, bad + (bad === 1 ? ' Problem' : ' Probleme')) : null),
+      items.map(x => { const dup = !x.error && seen[x.new.toLowerCase()] > 1;
+        return h('div', {class: 'cvnl' + (x.error || dup ? ' bad' : '')}, h('span', {class: 'o', title: x.old}, x.old), h('span', {class: 'ar'}, '→'),
+          h('span', {class: 'n', title: x.error ? x.error : x.new}, x.error ? x.error : x.new + (dup ? ' (doppelt!)' : ''))); }));
+  };
+  if (CV.names[k]) paint(CV.names[k]);
+  else { fill(box, h('div', {class: 'cvnlh muted small'}, 'Namen werden berechnet …')); api('/api/rename/preview', body).then(r => { CV.names[k] = r.items || []; paint(CV.names[k]); }).catch(() => fill(box, h('div', {class: 'cvnlh bad small'}, 'Vorschau nicht möglich'))); }
+  return box;
+}
 function cvNameCell(ex) {
   const pat = $('#pattern').value.trim(), rules = cleanRules(nameRules()), suf = $('#suffix').value, plain = !pat && !rules.length && !suf;
   const span = h('span', {class: 'cvname'}, plain ? 'bleibt' : '…');
@@ -415,7 +435,7 @@ function cvVideoTable(items) {
       folded ? (list.length - FOLD) + ' weitere ' + (type === 'audio' ? 'Tonspuren' : 'Untertitel') + ' anzeigen ▾' : 'Weniger anzeigen ▴')));
     if (!list.length) rows.push(cvRow(type === 'audio' ? 'Ton' : 'Untertitel', h('span', {class: 'muted'}, type === 'audio' ? 'keine Tonspur' : 'keine Untertitel'), h('span', {class: 'muted'}, '–')));
   });
-  const nRows = [cvRow('Dateiname', fileLabel(ex.f), cvNameCell(ex), {info: 'rowName'})];
+  const nRows = [cvRow('Dateiname', fileLabel(ex.f), cvNameCell(ex), {info: 'rowName'}), cvNameList(S.files.video)].filter(Boolean);
   const sumOf = (type, one, many) => {
     const list = ex.plan.tracks.filter(r => r.type === type);
     if (!list.length) return 'keine ' + many;
@@ -456,6 +476,7 @@ function cvAudioTable(items) {
     cvRow('Kanäle', a ? chTxt(a.channels) || a.channels : '?', h('div', {class: 'cvafter'}, cvSelect('aCh', null, 'Kanäle')), {info: 'aCh'}),
     !$('#aCover').parentElement.classList.contains('hidden') ? cvRow('Cover-Bild', pic ? 'vorhanden' : 'keines', h('div', {class: 'cvafter'}, h('label', {class: 'check'}, cvCheck('aCover'), h('span', {}, 'übernehmen'))), {info: 'aCover'}) : null,
     cvRow('Dateiname', fileLabel(ex.f), cvNameCell(ex), {info: 'rowName'}),
+    cvNameList(S.files.audio),
   ].filter(Boolean);
   return [cvWarnings(null, null, items), h('div', {class: 'cvlegend muted small'}, 'Jede Zeile lässt sich ändern · Tags (Titel, Interpret, Album …) werden immer übernommen · Namensmuster unter „Details“'),
     cvColHead(), cvCard('audio', 'audio', 'Audio-Datei', 'cardAudioFile', items.length === 1 ? 'Vorher → Nachher' : items.length + ' Dateien', rows)];

@@ -12,7 +12,7 @@ Ein SoundConverter-Klon mit zusätzlichem Video-Teil, gebaut für ganze Serien-S
 ![Docker](https://img.shields.io/badge/Docker-ghcr.io%2Fp5lukas%2Fp5converter-00ff5a?logo=docker&logoColor=white&labelColor=0a1a0f)
 ![Unraid](https://img.shields.io/badge/Unraid-Template-00ff5a?labelColor=0a1a0f)
 ![Windows](https://img.shields.io/badge/Windows-Vorabversion-ffcc00?labelColor=0a1a0f)
-![Version](https://img.shields.io/badge/Version-0.3.2-00ff5a?labelColor=0a1a0f)
+![Version](https://img.shields.io/badge/Version-0.3.3-00ff5a?labelColor=0a1a0f)
 ![Lizenz](https://img.shields.io/badge/Lizenz-MIT-00ff5a?labelColor=0a1a0f)
 
 <img src="docs/images/start.png" alt="Startseite mit laufendem Auftrag" width="900">
@@ -31,6 +31,7 @@ Ein SoundConverter-Klon mit zusätzlichem Video-Teil, gebaut für ganze Serien-S
 * **Hardware-Encoding** (Quick Sync, NVENC, AMF, VAAPI) mit sichtbarer Bestätigung, ob Schreiben und Lesen wirklich auf der Hardware laufen
 * **Audio & Untertitel für ganze Staffeln:** Gruppen nach Sprachen, Regeln nach Format, Sprach-Wünsche, Forced-Erkennung
 * **Kontrolle nach dem Konvertieren:** Spuren, Laufzeit, Größe und auf Wunsch ein kompletter Decode-Test, bevor ein Original gelöscht wird
+* **Warteschlange verwalten** (Reihenfolge ändern, anhalten, pausieren; überlebt einen Neustart) und **„Ordner prüfen“**: zeigt ordnerweise, wo sich das Umwandeln eher lohnt (nur Fakten, keine Schätzung)
 * **Verlauf** der letzten 100 Aufträge je Art, Video und Audio in einer Liste (mit CSV-Export), **gewonnener Platz**, Live-Auslastung
 * **Handy und Tablet:** als Web-App auf dem Home-Bildschirm nutzbar
 

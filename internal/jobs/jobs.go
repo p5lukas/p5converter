@@ -51,12 +51,14 @@ type Request struct {
 }
 
 type Job struct {
-	ID       string  `json:"id"`
-	Kind     string  `json:"kind"`
-	Name     string  `json:"name"`
-	Input    string  `json:"input"`
-	Output   string  `json:"output"`
-	Status   string  `json:"status"` // queued running done error canceled skipped
+	ID     string `json:"id"`
+	Kind   string `json:"kind"`
+	Name   string `json:"name"`
+	Input  string `json:"input"`
+	Output string `json:"output"`
+	Status string `json:"status"` // queued running done error canceled skipped
+	// Held: a queued job the user put on hold; it is skipped by the scheduler until it is released.
+	Held     bool    `json:"held,omitempty"`
 	Progress float64 `json:"progress"`
 	FPS      float64 `json:"fps"`
 	Speed    string  `json:"speed"`
@@ -112,6 +114,10 @@ type Manager struct {
 	partialFile string
 	partials    map[string]bool
 	finished    int // jobs that reached an end state since start (also those already pruned)
+	// queue management (queue.go): whole queue paused, file with the pending jobs, jobs of a previous run waiting for the user's decision
+	paused     bool
+	queueFile  string
+	restorable []Request
 }
 
 // maxKept bounds the finished jobs kept in memory (the history holds the details).
@@ -178,6 +184,7 @@ func (m *Manager) Submit(req *Request) []string {
 		m.jobs = append(m.jobs, j)
 		ids = append(ids, j.ID)
 	}
+	m.persistLocked()
 	m.mu.Unlock()
 	m.schedule()
 	return ids
@@ -291,12 +298,15 @@ func (m *Manager) ClearFinished(kind string) {
 func (m *Manager) schedule() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.paused {
+		return // queue paused: running jobs finish, nothing new starts
+	}
 	// each world has its own queue and its own number of parallel jobs
 	for _, kind := range []string{"audio", "video"} {
 		for m.running[kind] < m.concurrency[kind] {
 			var next *Job
 			for _, j := range m.jobs {
-				if j.Status == "queued" && j.Kind == kind {
+				if j.Status == "queued" && !j.Held && j.Kind == kind {
 					next = j
 					break
 				}
@@ -350,6 +360,7 @@ func (m *Manager) finish(j *Job) {
 	m.mu.Lock()
 	m.finished++
 	m.prune()
+	m.persistLocked()
 	if m.OnFinish == nil {
 		m.mu.Unlock()
 		return

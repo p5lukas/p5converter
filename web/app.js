@@ -377,6 +377,8 @@ async function start() {
 const openDetails = new Set();
 function statusChip(j) {
   if (j.status === 'running' && j.phase === 'check') return '<span class="chip acc" title="Die neue Datei ist fertig und wird jetzt geprüft.">prüfe Ergebnis …</span>';
+  if (j.status === 'queued' && j.held) return '<span class="chip warn" title="Dieser Auftrag ist angehalten und startet erst, wenn du ihn freigibst.">angehalten</span>';
+  if (j.status === 'queued' && S.paused) return '<span class="chip warn" title="Die Warteschlange ist pausiert.">pausiert</span>';
   const m = {queued: ['wartet', ''], running: ['läuft', 'acc'], done: ['fertig', 'ok'], error: ['Fehler', 'err'], canceled: ['abgebrochen', 'warn'], skipped: ['übersprungen', 'warn']}[j.status];
   return `<span class="chip ${m[1]}">${m[0]}</span>`;
 }
@@ -405,13 +407,29 @@ function decoderBadge(j) {
   }
   return `<span class="chip ${j.hwDecodeFallback ? 'warn' : ''}" title="Die Quelldatei wird auf der CPU gelesen${j.hwDecodeFallback ? ' (Hardware ging bei dieser Datei nicht)' : ' (so eingestellt)'}. Das Ergebnis ist gleich gut, nur die CPU hat mehr zu tun.">Lesen: CPU</span>`;
 }
+// Warteschlange pausieren/fortsetzen: Knopf und Hinweis im Verlauf
+function renderPauseUI() {
+  const b = $('#pauseQueue'); if (!b) return;
+  b.textContent = S.paused ? 'Fortsetzen' : 'Pausieren'; b.classList.toggle('on', !!S.paused);
+  b.title = S.paused ? 'Die Warteschlange fortsetzen' : 'Die Warteschlange pausieren: laufende Aufträge werden fertig, es startet kein neuer';
+  $('#queuePaused').classList.toggle('hidden', !S.paused);
+}
+// unterbrochene Aufträge aus dem letzten Lauf (Neustart des Containers): einmal fragen
+function restoreAsk() {
+  const n = (S.restorable && S.restorable.count) || 0;
+  if (!n || S.restoreShown || $('#restoreDlg').open) return;
+  S.restoreShown = true;
+  $('#restoreText').textContent = n + (n === 1 ? ' Auftrag wurde' : ' Aufträge wurden') + ' beim letzten Beenden unterbrochen (' + (S.restorable.video ? S.restorable.video + ' Video' : '') + (S.restorable.video && S.restorable.audio ? ', ' : '') + (S.restorable.audio ? S.restorable.audio + ' Audio' : '') + '). Fortsetzen? Unfertige Zieldateien sind schon gelöscht, die Quelldateien sind unberührt.';
+  $('#restoreDlg').showModal();
+}
 // Abzeichen „Video“ / „Audio“ (Audio in Orange) in Warteschlange und Verlauf
 const kindBadge = k => `<span class="kindbadge ${k}">${esc(W(k).name)}</span>`;
 function renderQueue() {
+  renderPauseUI();
   // die Warteschlange zeigt nur laufende und wartende Aufträge; beendete stehen darunter im Verlauf
   const q = $('#queue'), mine = S.jobs.filter(j => j.status === 'queued' || j.status === 'running');
   if (!mine.length) { q.innerHTML = '<div class="empty" style="margin-top:8px">Keine laufenden oder wartenden Aufträge. Beendete Aufträge stehen unten im Verlauf.</div>'; return; }
-  q.innerHTML = mine.slice().reverse().map(j => {
+  q.innerHTML = mine.map(j => { // in der Reihenfolge, in der sie dran kommen (oben: läuft bzw. als Nächstes)
     const meta = [];
     if (j.status === 'running') {
       if (j.speed) meta.push('Speed ' + esc(j.speed));
@@ -423,7 +441,8 @@ function renderQueue() {
     if (j.hwDecodeFallback && j.status !== 'error') meta.push('<span class="muted">Lesen per Hardware ging bei dieser Datei nicht – die CPU liest, geschrieben wird trotzdem in Hardware</span>');
     if (j.status === 'done' && (j.checks || []).length && !j.checkFailed) meta.push('<span class="okc" title="' + esc(j.checks.map(c => c.note).join(' · ')) + '">✓ geprüft: ' + esc(j.checks.map(c => c.note.replace(/ \(.*$/, '')).join(' · ')) + '</span>');
     (j.warnings || []).forEach(w => meta.push('<span class="warn">' + esc(w) + '</span>'));
-    const act = (j.status === 'queued' || j.status === 'running') ? `<button class="small ghost" data-cancel="${j.id}" title="Bricht diesen Auftrag ab und löscht die unfertige Datei. Die Quelldatei bleibt unberührt.">Abbrechen</button>` : '';
+    const mv = j.status === 'queued' ? `<span class="qmove"><button class="small ghost" data-mv="${j.id}" data-how="top" title="An den Anfang der Warteschlange" aria-label="An den Anfang">Zuerst</button><button class="small ghost" data-mv="${j.id}" data-how="up" title="Eine Stelle nach vorn" aria-label="Nach vorn">${ic('up')}</button><button class="small ghost" data-mv="${j.id}" data-how="down" title="Eine Stelle nach hinten" aria-label="Nach hinten"><span class="flip">${ic('up')}</span></button><button class="small ghost" data-hold="${j.id}" data-on="${j.held ? 0 : 1}" title="${j.held ? 'Wieder zur Warteschlange freigeben' : 'Diesen Auftrag anhalten: er startet erst, wenn du ihn freigibst'}">${j.held ? 'Freigeben' : 'Anhalten'}</button></span>` : '';
+    const act = mv + ((j.status === 'queued' || j.status === 'running') ? `<button class="small ghost" data-cancel="${j.id}" title="Bricht diesen Auftrag ab und löscht die unfertige Datei. Die Quelldatei bleibt unberührt.">Abbrechen</button>` : '');
     const note = j.status === 'done' && (j.hwDecodeFallback || (j.warnings || []).length);
     return `<div class="job ${j.status}${note ? ' note' : ''}"><div class="job-h">${kindBadge(j.kind)}<span class="n" title="${esc(j.input)}">${esc(j.name)}</span>${encoderBadge(j)}${decoderBadge(j)}${statusChip(j)}${act}</div>
       <div class="bar"><i style="width:${j.progress.toFixed(1)}%"></i></div>
@@ -436,6 +455,8 @@ function renderQueue() {
         <pre>${esc(j.cmd || '')}</pre><pre>${esc((j.log || []).slice(-25).join('\n'))}</pre></details></div>`;
   }).join('');
   $$('#queue [data-cancel]').forEach(b => b.onclick = () => api('/api/jobs/' + b.dataset.cancel + '/cancel', {}).then(poll));
+  $$('#queue [data-mv]').forEach(b => b.onclick = () => api('/api/jobs/' + b.dataset.mv + '/move', {how: b.dataset.how}).then(poll).catch(e => toast(e.message, 'bad')));
+  $$('#queue [data-hold]').forEach(b => b.onclick = () => api('/api/jobs/' + b.dataset.hold + '/hold', {on: b.dataset.on === '1'}).then(poll));
   $$('#queue details').forEach(d => d.ontoggle = () => d.open ? openDetails.add(d.dataset.id) : openDetails.delete(d.dataset.id));
 }
 // Auslastungsanzeige: die Elemente bleiben bestehen und werden nur aktualisiert, damit die Balken sichtbar gleiten
@@ -511,7 +532,7 @@ function renderHero() {
   const cur = running[0] || batch.find(j => j.status === 'queued');
   if (!cur) {
     box.className = 'jobnow idle';
-    box.innerHTML = '<div class="jn-title">Gerade nichts los</div><div class="muted small">Wähle oben Video oder Audio, um einen neuen Auftrag zu starten. Laufende Aufträge erscheinen hier; beendete stehen im Verlauf.</div>';
+    box.innerHTML = (S.paused ? '<div class="jn-pause">Warteschlange pausiert</div>' : '') + '<div class="jn-title">Gerade nichts los</div><div class="muted small">Wähle oben Video oder Audio, um einen neuen Auftrag zu starten. Laufende Aufträge erscheinen hier; beendete stehen im Verlauf.</div>';
     return;
   }
   const finished = batch.filter(j => !(j.status === 'queued' || j.status === 'running')).length;
@@ -520,7 +541,7 @@ function renderHero() {
   const meta = [];
   if (cur.status === 'running') { if (cur.speed) meta.push('Speed ' + esc(cur.speed)); if (cur.fps) meta.push(cur.fps.toFixed(0) + ' fps'); if (cur.eta) meta.push('noch ' + fmtTime(cur.eta)); }
   box.className = 'jobnow';
-  box.innerHTML = `<div class="jn-title">Datei ${pos} von ${total}${running.length > 1 ? ` <span class="muted small">(${running.length} laufen parallel)</span>` : ''}</div>
+  box.innerHTML = `${S.paused ? '<div class="jn-pause">Warteschlange pausiert: laufende Aufträge werden fertig, es startet kein neuer</div>' : ''}<div class="jn-title">Datei ${pos} von ${total}${running.length > 1 ? ` <span class="muted small">(${running.length} laufen parallel)</span>` : ''}</div>
     <div class="jn-name" title="${esc(cur.input)}">${esc(cur.name)}</div>
     <div class="bar"><i style="width:${cur.progress.toFixed(1)}%"></i></div>
     <div class="job-m"><span>${cur.progress.toFixed(1)} %</span>${meta.map(m => `<span>${m}</span>`).join('')}</div>
@@ -547,11 +568,11 @@ async function poll() {
   polling = true;
   try {
     const d = await api('/api/state');
-    S.jobs = d.jobs; S.stats = d.stats; S.conc = d.concurrency;
+    S.jobs = d.jobs; S.stats = d.stats; S.conc = d.concurrency; S.paused = !!d.paused; S.restorable = d.restorable || {count: 0};
     const savedChanged = JSON.stringify(S.saved) !== JSON.stringify(d.saved); S.saved = d.saved; if (savedChanged) renderSaved();
     renderConc();
     const fin = d.finished !== undefined ? d.finished : S.jobs.filter(j => !(j.status === 'queued' || j.status === 'running')).length;
-    renderQueue(); renderMonitor(); renderHero(); renderHistBadge();
+    renderQueue(); renderMonitor(); renderHero(); renderHistBadge(); renderStartTiles(); restoreAsk(); rainOnDone(S.jobs);
     if (S.histFin !== undefined && fin !== S.histFin && typeof S.histReload === 'function') S.histReload(); // ein Auftrag ist beendet: Verlauf sofort neu laden
     S.histFin = fin;
   } catch (e) {} finally { polling = false; }
@@ -726,6 +747,10 @@ function wire() {
   };
   $('#cancelAll').onclick = () => api('/api/jobs/cancel-all', {kind: ''}).then(poll);
   $('#histBack').onclick = () => { location.hash = ''; };
+  $('#pauseQueue').onclick = () => api('/api/queue/pause', {on: !S.paused}).then(poll);
+  $('#restoreYes').onclick = () => { $('#restoreDlg').close(); api('/api/queue/restore', {action: 'resume'}).then(r => { toast(r.resumed + (r.resumed === 1 ? ' Auftrag' : ' Aufträge') + ' fortgesetzt', 'ok'); poll(); }).catch(e => toast(e.message, 'bad')); };
+  $('#restoreNo').onclick = () => { $('#restoreDlg').close(); api('/api/queue/restore', {action: 'discard'}).then(() => toast('Unterbrochene Aufträge verworfen', 'ok')).catch(e => toast(e.message, 'bad')); };
+  $('#scanFolder').onclick = libPick;
   $('#concV').onchange = () => api('/api/concurrency', {kind: 'video', n: +$('#concV').value});
   $('#concA').onchange = () => api('/api/concurrency', {kind: 'audio', n: +$('#concA').value});
   wireVerify(); wireCrf(); wireConvert();

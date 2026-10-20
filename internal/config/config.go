@@ -77,6 +77,7 @@ type Settings struct {
 	Verify           map[string]Verify `json:"verify"`
 	TrackPrefs       TrackPrefs        `json:"trackPrefs"`
 	TrackRules       TrackRules        `json:"trackRules"`
+	NoRain           bool              `json:"noRain"` // true = no Matrix rain when a job is finished (false = on, the default)
 	// RootNames: display names for the source folders (key = path in the container, e.g. "/video1"); the browser shows the name, the path stays the real one.
 	RootNames map[string]string `json:"rootNames"`
 }

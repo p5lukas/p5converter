@@ -1,5 +1,28 @@
 # Änderungen
 
+## 0.3.3 – 2026-10-20
+
+**Neu: Warteschlange verwalten**
+- **Reihenfolge ändern:** bei wartenden Aufträgen „Zuerst“, nach vorn und nach hinten (je Art). Die Warteschlange steht jetzt in der Reihenfolge, in der die Aufträge drankommen (oben: läuft oder kommt als Nächstes), nicht mehr „neueste oben“
+- **Anhalten und freigeben** je wartendem Auftrag (er startet erst nach „Freigeben“) und **„Pausieren“ für die ganze Warteschlange**: laufende Aufträge werden fertig, es startet kein neuer; Hinweis im Verlauf und auf der Startseite
+- **Neustart-fest:** wartende und laufende Aufträge stehen in `queue.json` (in `/config`). Nach einem Neustart des Containers fragt das Programm einmal: **„N Aufträge wurden unterbrochen – fortsetzen?“**; unfertige Zieldateien sind schon gelöscht, die Quellen unberührt. Bis zur Entscheidung bleiben sie in der Datei
+
+**Neu: Ordner prüfen („Was lohnt sich?“), nur Video, nur ordnerweise**
+- In Schritt 1 gibt es den Knopf **„Ordner prüfen …“**: ein Ordner wird rekursiv im Hintergrund gelesen (ffprobe, zwei Dateien gleichzeitig, mit Fortschritt und Abbruch) und als **Liste von Ordnern** gezeigt, **nie einzelne Dateien**: je Ordner Dateien, Größe, Codec-Mix, Ø Bitrate, Höhe und **Hinweise** (älterer Codec, hohe Bitrate, schwerer Ton DTS-HD/TrueHD, DTS, Bild-Untertitel, „schon klein“). Über mehreren Ordnern steht eine Sammelzeile („ganzer Ordner · 2 Ordner“, z. B. eine ganze Serie). **Keine Schätzung der Ersparnis**
+- „Nur Ordner mit Hinweisen“ (Standard), Sortierung (Ordnerbaum, Größe, Bitrate, Name); „Ordner übernehmen“ legt den ganzen Ordner rekursiv in Schritt 1 ab (schon vorhandene Dateien doppeln sich nicht)
+
+**Neu: alle neuen Dateinamen einzeilig in der Kontrolle**
+- Wird umbenannt (Namensmuster, Zusatz oder Ersetzung), zeigt die Karte „Dateiname“ alle Dateien einzeilig als „alt → neu“ (lange Namen gekürzt, voller Name als Tooltip, scrollbar); Fehler und doppelte Namen sind rot. Ohne Umbenennen bleibt es bei „bleibt“. Gilt für Video und Audio
+
+**Neu: Matrix-Regen**
+- Ein kurzer Regen (etwa eine Sekunde) läuft über die Karte des aktuellen Auftrags auf der Startseite bzw. über die Warteschlange im Verlauf, wenn ein Auftrag **erfolgreich** beendet ist (Kontrolle bestanden). Abschaltbar unter Einstellungen → Allgemein → „Matrix-Regen“; bei „Bewegung reduzieren“ und bei Fehlern gibt es keinen
+
+**Behoben**
+- Die Seite „Audio & Untertitel“ in den Einstellungen stürzte bei frischen Einstellungen ab (leere Listen kamen als `null`); neue Tests
+
+**Intern**
+- Neu: `internal/jobs/queue.go` (mit Tests), `internal/server/library.go` (mit Tests), `web/library.js`, `web/rain.js`, `noRain` in den Einstellungen, Verlauf `kind=all`; neue UI-Prüfungen `ui-check-library.js`, `ui-check-queue.js`, `ui-check-rain.js`, Node-Test `tools/test-library.js`
+
 ## 0.3.2 – 2026-10-20
 
 **Neu: Startseite mit zwei Kacheln statt „Welten“**
