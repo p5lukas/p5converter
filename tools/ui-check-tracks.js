@@ -86,7 +86,7 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
     eq(name, 'Forced-Hinweis erledigt', /Als Forced markieren/.test(await p.textContent('#trackEditor')), false);
     while (await p.getByRole('button', { name: 'Nur Deutsch und Englisch behalten' }).count()) { await p.getByRole('button', { name: 'Nur Deutsch und Englisch behalten' }).first().click(); await p.waitForTimeout(300); }
     eq(name, 'Fremdsprachen entfernt (1 Ton + 2 Untertitel)', await p.locator('#trackEditor .trkcard.off').count(), 3);
-    await L.goStep(p, 'files'); await p.click('#clearFiles'); await L.addFile(p, 'long.mkv');
+    await L.goStep(p, 'files'); await p.click('#clearFiles'); await L.addFile(p, 'long.mkv'); await L.toCheck(p);
     // Alles zurücksetzen
     await p.click('#resetAll'); await p.waitForTimeout(250);
     eq(name, 'Rücksetz-Dialog offen', await p.isVisible('#resetDlg'), true);
