@@ -63,7 +63,7 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     ok(/1 ausgewählt/.test(await p.textContent('#bCount')), name + ': Auswahl in den Treffern klappt nicht');
     await p.screenshot({path: `${L.SHOTS}/p5c-br-${name}-2-tief.png`});
     await p.click('#bAddSel'); await p.waitForTimeout(1500);
-    ok(/ep01\.mkv/.test(await p.textContent('#fileSummary')) && /1 Datei/.test(await p.textContent('#fileSummary')), name + ': Treffer wurde nicht hinzugefügt: ' + await p.textContent('#fileSummary'));
+    ok(/ep01\.mkv/.test(await p.textContent('#fileList')) && /1 Datei/.test(await p.textContent('#fileSummary')), name + ': Treffer wurde nicht hinzugefügt: ' + await p.textContent('#fileSummary'));
     // Ordner wählen: nur Ordner, Umlaute egal
     await p.click('#clearFiles'); await p.waitForTimeout(200);
     await p.click('#addFolder'); await p.waitForTimeout(500);

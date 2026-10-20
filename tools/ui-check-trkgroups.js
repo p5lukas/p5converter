@@ -30,7 +30,7 @@ const probe = f => JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-print_fo
     ok(/6 Dateien in 2 Gruppen/.test(await T()), name + ': Gruppierung 6 Dateien in 2 Gruppen fehlt');
     ok(await p.locator('.trkgrp.odd').count() === 1, name + ': Abweichung nicht markiert');
     ok(!(await p.textContent('#trackSettings')).includes('Nur diese Sprachen behalten'), name + ': „Nur diese Sprachen behalten“ sollte weg sein');
-    ok(/Regeln nach Format/.test(await p.textContent('#trackSettings')), name + ': Regeln-Bereich fehlt');
+    ok(/Eigene Regeln für diesen Lauf/.test(await p.textContent('#trackSettings')) && /Voreingestellte Regeln/.test(await p.textContent('#trackSettings')), name + ': Regeln-Bereiche fehlen');
     await p.screenshot({path: `${L.SHOTS}/p5c-grp-${name}-1.png`, fullPage: true});
     // Vorschlag „DTS → E-AC-3“ übernehmen
     await p.click('#trackEditor button:has-text("Regel: DTS")'); await p.waitForTimeout(600);
@@ -105,7 +105,7 @@ const probe = f => JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-print_fo
       ok(fs.existsSync(f1) && fs.existsSync(f6), name + ': Ergebnisdateien fehlen');
       if (fs.existsSync(f1)) {
         const st = probe(f1), a = st.filter(s => s.codec_type === 'audio'), u = st.filter(s => s.codec_type === 'subtitle');
-        ok(a.length === 2 && a[0].codec_name === 'ac3' && a[0].tags.language === 'ger', name + ': ep01 Ton: ger muss AC-3 sein (DTS-Regel), eng bleiben, fre fehlen: ' + JSON.stringify(a.map(s => [s.codec_name, s.tags && s.tags.language])));
+        ok(a.length === 2 && a[0].codec_name === 'eac3' && a[0].tags.language === 'ger', name + ': ep01 Ton: ger muss E-AC-3 sein (DTS-Regel), eng bleiben, fre fehlen: ' + JSON.stringify(a.map(s => [s.codec_name, s.tags && s.tags.language])));
         ok(a[0].disposition.default === 1 && a[1].disposition.default === 0, name + ': ep01: Deutsch sollte Standard-Ton sein');
         ok(u.length === 3 && u[0].disposition.default === 1 && u[1].disposition.default === 0, name + ': ep01 Untertitel: alle 3 bleiben (keine Untertitel-Sprachliste), Deutsch wird Standard');
       }
