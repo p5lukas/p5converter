@@ -30,6 +30,17 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
     await p.screenshot({ path: `${L.SHOTS}/t-${name}-1-dest.png` });
     await p.selectOption('#exists', 'rename');
     await L.goStep(p, 'name');
+    // Namensliste: nur wenn umbenannt wird, dann alle Dateien einzeilig („alt → neu“)
+    eq(name, 'ohne Umbenennen keine Namensliste', await p.locator('.cvnamelist').count(), 0);
+    await p.fill('#pattern', '{filename} [X]'); await p.waitForTimeout(300);
+    await L.goStep(p, 'summary'); await p.waitForSelector('.cvnamelist .cvnl', {timeout: 8000}); await p.waitForTimeout(500);
+    eq(name, 'Namensliste: eine Zeile je Datei (2)', await p.locator('.cvnamelist .cvnl').count(), 2);
+    const nl = (await p.locator('.cvnamelist').textContent()).replace(/\s+/g, ' ');
+    if (!/multi\.mkv.*multi \[X\]\.mkv/.test(nl) || !/multi2\.mkv.*multi2 \[X\]\.mkv/.test(nl)) errs.push(name + ': Namensliste „alt → neu“ unerwartet: ' + nl);
+    eq(name, 'Namensliste einzeilig (Ellipse, keine Umbrüche)', await p.evaluate(() => [...document.querySelectorAll('.cvnamelist .cvnl')].every(r => r.getBoundingClientRect().height < 40)), true);
+    if (await ov() > 0) errs.push(`${name}: Überlauf mit Namensliste: ${await ov()}px`);
+    await p.screenshot({ path: `${L.SHOTS}/t-${name}-1b-namensliste.png`, fullPage: true });
+    await L.goStep(p, 'name'); await p.fill('#pattern', ''); await p.waitForTimeout(200);
     await L.goStep(p, 'video');
     await L.goStep(p, 'tracks');
     await p.waitForSelector('.trkviews'); await p.click('.trkviews button:has-text("Einzelne Dateien")'); await p.waitForSelector('#trackEditor .trkcard');

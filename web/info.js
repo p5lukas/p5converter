@@ -182,6 +182,12 @@ const INFO = {
     <p>Abweichend aufgebaute Dateien sind eine eigene Gruppe und müssen <b>kontrolliert</b> werden. Entscheidungen einer kontrollierten Gruppe werden bei gleichen Spuren anderer Gruppen übernommen („Übernommen“).</p>`},
   trkGlobal: {t: 'Voreingestellte Regeln', b: `<p>Allgemeine Regeln aus Einstellungen → Regeln, zum Beispiel „DTS → E-AC-3, 256 kbit/s je Stereo-Paar“. Sie gelten bei jedem Lauf. Mit dem Haken schaltest du eine Regel für <b>diesen Lauf</b> aus.</p>
     <p>Rechts steht, wie viele deiner Dateien die Regel betrifft. Die Bitrate gilt je Stereo-Paar; eine 5.1-Spur bekommt mehr (Wert × Kanäle ÷ 2), höchstens 640 kbit/s.</p>`},
+  libScan: {t: 'Ordner prüfen', b: `<p>Prüft einen Ordner samt allen Unterordnern und zeigt, <b>bei welchen Ordnern</b> sich das Umwandeln eher lohnt. Es werden nie einzelne Dateien vorgeschlagen, immer nur ganze Ordner (zum Beispiel eine Staffel, und darüber die ganze Serie).</p>
+    <p>Die Dateien werden nur <b>gelesen</b> (ffprobe, zwei gleichzeitig), nichts wird verändert. Es gibt <b>keine Schätzung</b>, wie viel du sparst, nur Fakten und Hinweise:</p>
+    <ul><li><b>Älterer Codec:</b> H.264, MPEG-4 und Ähnliches statt H.265/AV1.</li><li><b>Hohe Bitrate:</b> die Datei ist für ihre Auflösung sehr groß (ab etwa 8 Mbit/s bei 1080p).</li>
+    <li><b>Schwerer Ton / DTS:</b> DTS-HD und TrueHD sind riesig, DTS spielen viele Fernseher nicht.</li><li><b>Bild-Untertitel:</b> PGS und VobSub sind groß und nicht überall abspielbar.</li>
+    <li><b>Schon klein:</b> Neukodieren spart hier kaum Platz.</li></ul>
+    <p>„Ordner übernehmen“ legt den ganzen Ordner mit allen Unterordnern in Schritt 1 ab.</p>`},
   setRules: {t: 'Regeln', b: `<p>Allgemeine Regeln für Tonspuren und Untertitel von Videos, auf dem Server gespeichert und für alle Geräte gültig. Beim Konvertieren erscheinen sie als voreingestellte Regeln, jede lässt sich je Lauf abwählen.</p>
     <p>Die Regeln laufen von oben nach unten, die erste passende gewinnt. Beispiel: „DTS → umwandeln in E-AC-3 mit 256 kbit/s je Stereo-Paar“.</p>
     <p class="ex">E-AC-3 (und AC-3) schafft höchstens 640 kbit/s. Bei 5.1 ergeben 256 je Stereo-Paar rechnerisch 768; das Programm deckelt dann auf 640 und zeigt „Maximum“.</p>`},
