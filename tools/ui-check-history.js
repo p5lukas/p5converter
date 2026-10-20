@@ -20,13 +20,12 @@ const OUT = process.env.OUTDIR || '/tmp/out';
     p.on('console', m => m.type() === 'error' && !/401|Anmeldung/.test(m.text()) && fails.push(name + ' console: ' + m.text()));
     p.on('dialog', d => d.dismiss());
     await p.goto(L.url); await p.evaluate(() => localStorage.clear()); await p.goto(L.url); await p.waitForTimeout(1300);
-    await L.setWorld(p, 'audio');
     ok(await p.isVisible('#startHistory'), name + ': Verlauf-Knopf fehlt');
     await p.click('#startHistory'); await p.waitForTimeout(800);
     ok(await p.evaluate(() => location.hash) === '#history', name + ': Hash #history fehlt');
     ok(await p.locator('.histentry').count() >= 2, name + ': weniger als 2 Einträge');
     const total = await p.locator('.histentry').count();
-    ok(/Verlauf · Audio/.test(await p.textContent('#viewHistory h1')), name + ': Überschrift ohne Weltname');
+    ok(/Verlauf/.test(await p.textContent('#viewHistory h1')) && await p.locator('.histentry .kindbadge.audio').count() >= 2, name + ': Überschrift oder Abzeichen „Audio“ fehlen');
     await p.screenshot({path: `${L.SHOTS}/p5c-hist-${name}.png`, fullPage: true});
     // Filter nach Ergebnis
     await p.click('#viewHistory .lvl-chip:has-text("Fehler")'); await p.waitForTimeout(200);
@@ -50,11 +49,8 @@ const OUT = process.env.OUTDIR || '/tmp/out';
     ok(await p.locator('.histentry').count() >= 2, name + ': Zeitraum „Heute“ blendet neue Einträge aus');
     // CSV-Link
     await p.locator('a.btnlink:has-text("CSV")').evaluate(a => a.dispatchEvent(new MouseEvent('click', {bubbles: true})));
-    ok((await p.getAttribute('a.btnlink:has-text("CSV")', 'href')).includes('/api/history.csv?kind=audio'), name + ': CSV-Link falsch');
-    // Welt wechseln: Video ist getrennt (leer)
-    await p.click('[data-world=video]'); await p.waitForTimeout(3600);
-    ok(/Verlauf · Video/.test(await p.textContent('#viewHistory h1')), name + ': Weltwechsel ändert die Überschrift nicht');
-    ok(await p.locator('.histentry').count() === 0, name + ': Video-Verlauf sollte leer sein');
+    ok((await p.getAttribute('a.btnlink:has-text("CSV")', 'href')).includes('/api/history.csv?kind=all'), name + ': CSV-Link falsch');
+    // ein Eintrag je Auftrag, Video und Audio in einer Liste: ein Video-Auftrag erscheint mit Abzeichen „Video“
     const ov = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     ok(ov <= 0, `${name}: horizontaler Überlauf ${ov}px`);
     // Startseite: drei Knöpfe ohne Überlauf

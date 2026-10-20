@@ -21,11 +21,11 @@ const setPrefs = async (p, subDefault) => { if (p.url() === 'about:blank') await
     p.on('pageerror', e => fails.push(name + ' JS: ' + e.message));
     p.on('console', m => m.type() === 'error' && !/401|Anmeldung/.test(m.text()) && fails.push(name + ' console: ' + m.text()));
     const ov = () => p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-    const row = lbl => p.locator('.cvgrid .cvr', {has: p.locator('.cvk', {hasText: new RegExp('^' + lbl + '$', 'i')})});
+    const row = lbl => p.locator('.cvgrid .cvr', {has: p.locator('.cvk', {hasText: new RegExp('^' + lbl + '\\s*i?$', 'i')})});
     const open = async () => {
       await p.goto(L.url); await p.evaluate(() => localStorage.clear()); await p.goto(L.url); await p.waitForTimeout(1200);
-      await L.setWorld(p, 'video'); await p.click('#startFlow'); await p.waitForTimeout(300);
-      await L.addFile(p, 'forced.mkv'); await p.waitForSelector('.cvgrid .cvr:not(.cvh)'); await p.waitForTimeout(400);
+      await L.enter(p, 'video');
+      await L.addFile(p, 'forced.mkv'); await L.toCheck(p); await p.waitForSelector('.cvgrid .cvr:not(.cvh)'); await p.waitForTimeout(400);
     };
     // ---- 1) ohne Wunsch: nur Vorschlag, nichts wird still gesetzt ----
     await setPrefs(p, []);

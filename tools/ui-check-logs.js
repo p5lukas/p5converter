@@ -35,7 +35,7 @@ const L = require('./ui-lib');
     if (ov > 0) errs.push(`${name}: horizontaler Überlauf ${ov}px`);
     // zurück: Zähler ist zurückgesetzt
     await p.click('#viewLogs .sethead button'); await p.waitForTimeout(500);
-    eq(name, 'zurück auf der Startseite', await p.isVisible('#startFlow'), true);
+    eq(name, 'zurück auf der Startseite', await p.isVisible('#startTiles'), true);
     const cls2 = await p.getAttribute('#logbtn', 'class');
     if (/alert-(warn|err)/.test(cls2)) errs.push(`${name}: Zähler nach dem Ansehen nicht zurückgesetzt (${cls2})`);
     await ctx.close();

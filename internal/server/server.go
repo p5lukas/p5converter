@@ -775,7 +775,7 @@ func (s *Server) statsReset(w http.ResponseWriter, r *http.Request) {
 		Kind string `json:"kind"`
 	}
 	if json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<12)).Decode(&body) != nil || (body.Kind != "audio" && body.Kind != "video") {
-		http.Error(w, `{"error":"Welt fehlt (audio oder video)"}`, 400)
+		http.Error(w, `{"error":"Art fehlt (audio oder video)"}`, 400)
 		return
 	}
 	s.Stats.Reset(body.Kind)

@@ -44,10 +44,10 @@ import json,sys
 d=json.load(sys.stdin)
 assert d["persistent"], "/config nicht beschreibbar"
 assert len(d["settings"]["presets"])==2
-d["settings"]["worlds"]["video"]["name"]="Filme"
+d["settings"]["trackRules"]["audio"]=[{"codec":"dts","ch":"any","action":"encode","to":"eac3","kbps":256}]
 open("/tmp/p5-settings.json","w").write(json.dumps(d["settings"]))'
 curl -fs -X PUT -H "$H" localhost:8787/api/settings -d @/tmp/p5-settings.json >/dev/null
-test -s "$C/settings.json" && grep -q '"Filme"' "$C/settings.json" || { echo "settings.json fehlt/falsch"; exit 1; }
+test -s "$C/settings.json" && grep -q '"eac3"' "$C/settings.json" || { echo "settings.json fehlt/falsch"; exit 1; }
 # Anmeldung: einschalten, ohne Cookie gesperrt, Login, wieder ausschalten
 J=$(mktemp)
 curl -fs -c "$J" -X POST -H "$H" localhost:8787/api/auth/setup -d '{"username":"smoke","password":"smoke-passwort-1"}' >/dev/null

@@ -1,4 +1,4 @@
-// Package config stores the user settings (worlds, colours, presets, defaults) as JSON in the config
+// Package config stores the user settings (presets, track rules, language wishes, defaults) as JSON in the config
 // folder (Docker: /config). Without a writable folder everything stays in memory and the UI says so.
 package config
 
@@ -14,15 +14,10 @@ import (
 	"sync"
 )
 
-type World struct {
-	Name string `json:"name"`
-	Hue  int    `json:"hue"`
-}
-
 type Preset struct {
 	ID      string         `json:"id"`
 	Name    string         `json:"name"`
-	World   string         `json:"world"` // audio | video
+	World   string         `json:"world"` // kind: audio | video
 	Suggest bool           `json:"suggest"`
 	Values  map[string]any `json:"values"`
 }
@@ -50,10 +45,28 @@ type TrackPrefs struct {
 	SubDefault   []SubPref `json:"subDefault"`
 }
 
+// AudioRule is one general rule for audio tracks ("DTS → E-AC-3, 256 kbit/s per stereo pair"); the first matching rule wins.
+type AudioRule struct {
+	Codec  string `json:"codec"`  // any | dts | dtshd | truehd | eac3 | ac3 | aac | flac | pcm | mp3 | opus | vorbis
+	Ch     string `json:"ch"`     // any | multi | stereo
+	Action string `json:"action"` // copy | encode | drop
+	To     string `json:"to,omitempty"`
+	Kbps   int    `json:"kbps,omitempty"` // per stereo pair
+}
+
+// SubRule is one general rule for subtitles ("remove image subtitles").
+type SubRule struct {
+	Kind   string `json:"kind"`   // any | image | text
+	Action string `json:"action"` // copy | drop
+}
+
+// TrackRules are the general rules (video kind); they are offered in the converter as "preset rules" that can be switched off per run.
+type TrackRules struct {
+	Audio []AudioRule `json:"audio"`
+	Sub   []SubRule   `json:"sub"`
+}
+
 type Settings struct {
-	Worlds           map[string]World  `json:"worlds"`
-	WorldOrder       []string          `json:"worldOrder"`
-	StartWorld       string            `json:"startWorld"`       // last | audio | video
 	Concurrency      int               `json:"concurrency"`      // parallel video jobs
 	ConcurrencyAudio int               `json:"concurrencyAudio"` // parallel audio jobs
 	DefaultOutDir    string            `json:"defaultOutDir"`
@@ -63,7 +76,7 @@ type Settings struct {
 	Presets          []Preset          `json:"presets"`
 	Verify           map[string]Verify `json:"verify"`
 	TrackPrefs       TrackPrefs        `json:"trackPrefs"`
-	NoCRFSuggest     bool              `json:"noCrfSuggest"` // true = no automatic CRF suggestion in the video settings
+	TrackRules       TrackRules        `json:"trackRules"`
 	// RootNames: display names for the source folders (key = path in the container, e.g. "/video1"); the browser shows the name, the path stays the real one.
 	RootNames map[string]string `json:"rootNames"`
 }
@@ -80,10 +93,9 @@ func Defaults() Settings {
 		return Preset{ID: id, Name: name, World: world, Suggest: true, Values: v}
 	}
 	return Settings{
-		Worlds:           map[string]World{"audio": {"Audio", 140}, "video": {"Video", 270}},
-		WorldOrder:       []string{"audio", "video"},
-		StartWorld:       "last",
 		ShowNews:         true,
+		TrackRules:       TrackRules{Audio: []AudioRule{}, Sub: []SubRule{}},
+		TrackPrefs:       TrackPrefs{AudioKeep: []string{}, SubKeep: []string{}, AudioDefault: []string{}, SubDefault: []SubPref{}},
 		PreferredBackend: "auto",
 		HWDecode:         true,
 		Verify:           map[string]Verify{"audio": defaultVerify(), "video": defaultVerify()},
@@ -179,36 +191,7 @@ func newID() string {
 
 // Validate normalises user input and rejects anything out of range.
 func Validate(in Settings) (Settings, error) {
-	d := Defaults()
 	out := in
-	if out.Worlds == nil {
-		out.Worlds = map[string]World{}
-	}
-	for _, id := range []string{"audio", "video"} {
-		w, ok := out.Worlds[id]
-		if !ok {
-			w = d.Worlds[id]
-		}
-		w.Name = strings.TrimSpace(w.Name)
-		if w.Name == "" || len([]rune(w.Name)) > 20 {
-			return Settings{}, errors.New("Weltname: 1–20 Zeichen")
-		}
-		if w.Hue < 0 || w.Hue > 360 {
-			return Settings{}, errors.New("Farbton: 0–360")
-		}
-		out.Worlds[id] = w
-	}
-	for k := range out.Worlds {
-		if k != "audio" && k != "video" {
-			delete(out.Worlds, k)
-		}
-	}
-	if len(out.WorldOrder) != 2 || !contains(out.WorldOrder, "audio") || !contains(out.WorldOrder, "video") {
-		out.WorldOrder = d.WorldOrder
-	}
-	if !contains([]string{"last", "audio", "video"}, out.StartWorld) {
-		out.StartWorld = "last"
-	}
 	if out.ConcurrencyAudio < 0 || out.ConcurrencyAudio > 8 {
 		return Settings{}, errors.New("Parallele Audio-Aufträge: 1–8")
 	}
@@ -236,6 +219,11 @@ func Validate(in Settings) (Settings, error) {
 		return Settings{}, err
 	}
 	out.TrackPrefs = tp
+	tr, err := cleanTrackRules(out.TrackRules)
+	if err != nil {
+		return Settings{}, err
+	}
+	out.TrackRules = tr
 	names, err := cleanRootNames(out.RootNames)
 	if err != nil {
 		return Settings{}, err
@@ -253,7 +241,7 @@ func Validate(in Settings) (Settings, error) {
 		}
 		allowed, ok := presetFields[p.World]
 		if !ok {
-			return Settings{}, fmt.Errorf("Voreinstellung %q: Welt muss audio oder video sein", p.Name)
+			return Settings{}, fmt.Errorf("Voreinstellung %q: Art muss audio oder video sein", p.Name)
 		}
 		if p.ID == "" || seen[p.ID] || len(p.ID) > 40 {
 			p.ID = newID()
@@ -329,6 +317,51 @@ func cleanTrackPrefs(in TrackPrefs) (TrackPrefs, error) {
 			seen[q] = true
 			out.SubDefault = append(out.SubDefault, q)
 		}
+	}
+	return out, nil
+}
+
+var (
+	ruleCodecs  = []string{"any", "dts", "dtshd", "truehd", "eac3", "ac3", "aac", "flac", "pcm", "mp3", "opus", "vorbis"}
+	ruleTargets = []string{"aac", "opus", "ac3", "eac3", "flac", "mp3"}
+)
+
+// cleanTrackRules checks the general track rules: known values only, at most 30 per list, bitrates 32–640; the lists are never nil.
+func cleanTrackRules(in TrackRules) (TrackRules, error) {
+	out := TrackRules{Audio: []AudioRule{}, Sub: []SubRule{}}
+	if len(in.Audio) > 30 || len(in.Sub) > 30 {
+		return out, errors.New("Regeln: höchstens 30 je Liste")
+	}
+	for _, r := range in.Audio {
+		if r.Codec == "" {
+			r.Codec = "any"
+		}
+		if r.Ch == "" {
+			r.Ch = "any"
+		}
+		if !contains(ruleCodecs, r.Codec) || !contains([]string{"any", "multi", "stereo"}, r.Ch) || !contains([]string{"copy", "encode", "drop"}, r.Action) {
+			return out, errors.New("Regel für Ton: ungültiger Wert")
+		}
+		if r.Action == "encode" {
+			if !contains(ruleTargets, r.To) {
+				return out, errors.New("Regel für Ton: Zielformat ungültig")
+			}
+			if r.Kbps < 0 || r.Kbps > 640 || (r.Kbps > 0 && r.Kbps < 32) {
+				return out, errors.New("Regel für Ton: Bitrate 32–640 kbit/s")
+			}
+		} else {
+			r.To, r.Kbps = "", 0
+		}
+		out.Audio = append(out.Audio, r)
+	}
+	for _, r := range in.Sub {
+		if r.Kind == "" {
+			r.Kind = "any"
+		}
+		if !contains([]string{"any", "image", "text"}, r.Kind) || !contains([]string{"copy", "drop"}, r.Action) {
+			return out, errors.New("Regel für Untertitel: ungültiger Wert")
+		}
+		out.Sub = append(out.Sub, r)
 	}
 	return out, nil
 }

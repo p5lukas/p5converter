@@ -20,7 +20,7 @@ const probe = f => JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-print_fo
     // Sprach-Wünsche zurücksetzen (frischer Zustand je Ansicht)
     await p.evaluate(async () => { const s = await (await fetch('/api/settings')).json(); s.settings.trackPrefs = {audioKeep: [], subKeep: [], audioDefault: [], subDefault: []}; await fetch('/api/settings', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(s.settings)}); });
     await p.goto(L.url); await p.waitForTimeout(1300);
-    await L.setWorld(p, 'video'); await p.click('#startFlow'); await p.waitForTimeout(300);
+    await L.enter(p, 'video');
     await p.click('#addFiles'); await p.waitForTimeout(300);
     await p.fill('#bPath', L.INDIR); await p.click('#bGo'); await p.waitForTimeout(500);
     await p.click('#bAll'); await p.click('#bAddSel'); await p.waitForTimeout(500);
@@ -30,11 +30,11 @@ const probe = f => JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-print_fo
     ok(/6 Dateien in 2 Gruppen/.test(await T()), name + ': Gruppierung 6 Dateien in 2 Gruppen fehlt');
     ok(await p.locator('.trkgrp.odd').count() === 1, name + ': Abweichung nicht markiert');
     ok(!(await p.textContent('#trackSettings')).includes('Nur diese Sprachen behalten'), name + ': „Nur diese Sprachen behalten“ sollte weg sein');
-    ok(/Regeln nach Format/.test(await p.textContent('#trackSettings')), name + ': Regeln-Bereich fehlt');
+    ok(/Eigene Regeln für diesen Lauf/.test(await p.textContent('#trackSettings')) && /Voreingestellte Regeln/.test(await p.textContent('#trackSettings')), name + ': Regeln-Bereiche fehlen');
     await p.screenshot({path: `${L.SHOTS}/p5c-grp-${name}-1.png`, fullPage: true});
-    // Vorschlag „DTS → AC-3“ übernehmen
-    await p.click('#trackEditor button:has-text("Regel anlegen: DTS")'); await p.waitForTimeout(600);
-    ok(/→ AC-3/.test(await p.textContent('.trkgrp')), name + ': Wirkung „→ AC-3“ nicht sichtbar');
+    // Vorschlag „DTS → E-AC-3“ übernehmen
+    await p.click('#trackEditor button:has-text("Regel: DTS")'); await p.waitForTimeout(600);
+    ok(/→ E-AC-3/.test(await p.textContent('.trkgrp')), name + ': Wirkung „→ E-AC-3“ nicht sichtbar');
     ok(/1 aktiv/.test(await p.textContent('.trkrules summary')), name + ': Regelzähler fehlt');
     ok(await p.locator('.trkrule').count() === 1, name + ': Regelzeile fehlt');
     await p.screenshot({path: `${L.SHOTS}/p5c-grp-${name}-2-regel.png`, fullPage: true});
@@ -105,7 +105,7 @@ const probe = f => JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-print_fo
       ok(fs.existsSync(f1) && fs.existsSync(f6), name + ': Ergebnisdateien fehlen');
       if (fs.existsSync(f1)) {
         const st = probe(f1), a = st.filter(s => s.codec_type === 'audio'), u = st.filter(s => s.codec_type === 'subtitle');
-        ok(a.length === 2 && a[0].codec_name === 'ac3' && a[0].tags.language === 'ger', name + ': ep01 Ton: ger muss AC-3 sein (DTS-Regel), eng bleiben, fre fehlen: ' + JSON.stringify(a.map(s => [s.codec_name, s.tags && s.tags.language])));
+        ok(a.length === 2 && a[0].codec_name === 'eac3' && a[0].tags.language === 'ger', name + ': ep01 Ton: ger muss E-AC-3 sein (DTS-Regel), eng bleiben, fre fehlen: ' + JSON.stringify(a.map(s => [s.codec_name, s.tags && s.tags.language])));
         ok(a[0].disposition.default === 1 && a[1].disposition.default === 0, name + ': ep01: Deutsch sollte Standard-Ton sein');
         ok(u.length === 3 && u[0].disposition.default === 1 && u[1].disposition.default === 0, name + ': ep01 Untertitel: alle 3 bleiben (keine Untertitel-Sprachliste), Deutsch wird Standard');
       }

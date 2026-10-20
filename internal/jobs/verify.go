@@ -83,6 +83,16 @@ func checkSize(in, out int64) Check {
 	return Check{"size", true, "Größe plausibel"}
 }
 
+// checkBigger (always on for re-encoded video): a result that is not smaller than the source is no gain.
+// The check fails so the source is never deleted; the note names the percentage and what to try next.
+func checkBigger(in, out int64) Check {
+	if in >= 1<<20 && out >= in {
+		return Check{"bigger", false, fmt.Sprintf("Ergebnis ist größer als die Quelle (%d %%, %s statt %s). Das Original bleibt erhalten. Wähle beim nächsten Mal eine kleinere Qualitätsstufe (Normal oder Klein) oder lass das Video unverändert",
+			out*100/in, humanSize(out), humanSize(in))}
+	}
+	return Check{"bigger", true, "Kleiner als die Quelle"}
+}
+
 func humanSize(n int64) string {
 	switch {
 	case n >= 1<<30:
@@ -153,6 +163,11 @@ func (m *Manager) verify(ctx context.Context, j *Job, in, outInfo *ffmpeg.Info, 
 	cs = append(cs, checkBase(in.Duration, outInfo, perr))
 	if perr != nil {
 		return cs
+	}
+	if j.Kind == "video" && j.req.Video.Codec != "copy" {
+		if c := checkBigger(sizeIn, sizeOut); !c.OK {
+			cs = append(cs, c)
+		}
 	}
 	if o.VerifyTracks {
 		cs = append(cs, checkTracks(expectedCounts(in, args), outInfo), checkSize(sizeIn, sizeOut))

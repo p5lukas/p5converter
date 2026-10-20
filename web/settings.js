@@ -1,6 +1,6 @@
 'use strict';
 /* Einstellungen-Seite, Voreinstellungen und gemeinsame Hilfsfunktionen. Wird vor app.js geladen; app.js stellt
-   $, api, S, toast, applyTheme, … bereit (nur zur Laufzeit benutzt). Die Einstellungen liegen auf dem Server (/config). */
+   $, api, S, toast, … bereit (nur zur Laufzeit benutzt). Die Einstellungen liegen auf dem Server (/config). */
 
 // ---------- kleine DOM-Helfer ----------
 function h(tag, attrs, ...kids) {
@@ -19,17 +19,11 @@ function h(tag, attrs, ...kids) {
 const fill = (el, ...kids) => { el.replaceChildren(...kids.flat(Infinity).filter(k => k != null && k !== false)); return el; };
 const opt = (v, t) => h('option', {value: v}, t);
 
-// ---------- Welten (Namen/Farben aus den Einstellungen) ----------
-const WORLD_DEFAULTS = {audio: {name: 'Audio', hue: 140}, video: {name: 'Video', hue: 270}};
-const cfg = () => (S.cfg && S.cfg.settings) || {worlds: WORLD_DEFAULTS, worldOrder: ['audio', 'video'], presets: [], startWorld: 'last', showNews: true, preferredBackend: 'auto', hwDecode: true};
-const W = w => (cfg().worlds && cfg().worlds[w]) || WORLD_DEFAULTS[w];
-const worldOrder = () => cfg().worldOrder || ['audio', 'video'];
-
-function renderWorldNav() {
-  const nav = $('#worlds');
-  fill(nav, worldOrder().map(id => h('button', {'data-world': id, class: id === S.world ? 'on' : '', onclick: () => setWorld(id, true)},
-    h('span', {class: 'pl'}), h('span', {class: 'wl'}, W(id).name), h('span', {class: 'wbadge hidden', title: 'Aufträge laufen oder warten'}))));
-}
+// ---------- Arten (Video und Audio) ----------
+// Namen sind fest; die Art wird auf der Startseite gewählt (Video grün, Audio orange).
+const KIND_NAMES = {audio: 'Audio', video: 'Video'};
+const cfg = () => (S.cfg && S.cfg.settings) || {presets: [], showNews: true, preferredBackend: 'auto', hwDecode: true, trackRules: {audio: [], sub: []}};
+const W = w => ({name: KIND_NAMES[w] || w});
 
 async function saveCfg(mutate, msg) {
   const next = JSON.parse(JSON.stringify(cfg()));
@@ -43,11 +37,9 @@ async function saveCfg(mutate, msg) {
   } catch (e) { toast(e.message, 'bad'); return false; }
 }
 
-// Farben, Namen, Reihenfolge, Vorschläge neu zeichnen
+// Voreinstellungen, Regeln und Anzeige neu zeichnen
 function applyCfg() {
-  renderWorldNav();
   if (typeof refreshVideoUI === 'function' && S.info) refreshVideoUI();
-  applyTheme(S.world);
   renderPresetChips();
   renderStartInfo();
   if (!$('#viewSettings').classList.contains('hidden')) renderSettings();
@@ -81,11 +73,20 @@ function applyPreset(p) {
   refreshAudioUI(); refreshVideoUI(); syncNameUI(); saveSettings();
   if (typeof cvRender === 'function') cvRender();
 }
+// Video, Schritt 1: wer eine Voreinstellung wählt, springt direkt zur Kontrolle (ohne Dateien erst nach der Dateiwahl)
+function presetChosen(p) {
+  if (S.step === 'convert' && p.world === 'video' && S.vstep === 1) {
+    if (S.files.video.length) { toast('Voreinstellung „' + p.name + '“ geladen – hier die Kontrolle', 'ok'); vGo(4); return; }
+    S.presetSkip = true; cvRender();
+    toast('Voreinstellung „' + p.name + '“ geladen – wähle jetzt Dateien, danach geht es direkt zur Kontrolle', 'ok'); return;
+  }
+  toast('Voreinstellung „' + p.name + '“ geladen', 'ok');
+}
 function renderPresetChips() {
   [['audio', '#aPresets'], ['video', '#vPresets']].forEach(([world, sel]) => {
     const box = $(sel); if (!box) return;
     const list = cfg().presets.filter(p => p.world === world && p.suggest);
-    fill(box, list.map(p => h('button', {title: describePreset(p), onclick: () => { applyPreset(p); toast('Voreinstellung „' + p.name + '“ geladen', 'ok'); }}, p.name)),
+    fill(box, list.map(p => h('button', {title: describePreset(p), onclick: () => { applyPreset(p); presetChosen(p); }}, p.name)),
       h('button', {class: 'ghost', title: 'Voreinstellungen verwalten', onclick: () => { location.hash = '#settings/presets'; }}, icon('gear'), list.length ? '' : ' Keine Vorschläge – Voreinstellungen verwalten'));
   });
 }
@@ -120,7 +121,7 @@ function openPresetDialog() {
   const world = S.world;
   $('#presetName').value = '';
   $('#presetSuggest').checked = true;
-  $('#presetHint').textContent = 'Gespeichert werden alle Einstellungen der Welt „' + W(world).name + '“ (ohne Dateien und Zielordner).';
+  $('#presetHint').textContent = 'Gespeichert werden alle Einstellungen von „' + W(world).name + '“ (ohne Dateien und Zielordner).';
   $('#presetDlg').showModal();
   setTimeout(() => $('#presetName').focus(), 50);
 }
@@ -135,9 +136,9 @@ async function savePresetFromDialog() {
 function editPreset(id) {
   const p = cfg().presets.find(x => x.id === id); if (!p) return;
   S.editPreset = id;
-  location.hash = '';
-  setWorld(p.world, false);
+  enterKind(p.world);
   applyPreset(p);
+  if (p.world === 'video') S.vstep = 4;
   renderEditBanner();
   showStep('convert');
 }
@@ -156,10 +157,10 @@ function renderEditBanner() {
 // ---------- Seite „Einstellungen“ ----------
 const SET_GROUPS = [
   {id: 'general', icon: 'gear', title: 'Allgemein', sub: 'Startansicht, Zielordner, parallele Aufträge'},
-  {id: 'worlds', icon: 'planet', title: 'Welten & Farben', sub: 'Namen, Farben, Planeten'},
   {id: 'presets', icon: 'star', title: 'Voreinstellungen', sub: 'Vorschläge anlegen und ordnen'},
   {id: 'hardware', icon: 'bolt', title: 'Hardware', sub: 'Encoder, Erkennung, Diagnose'},
   {id: 'tracks', icon: 'star', title: 'Audio & Untertitel', sub: 'Sprachen und Standard-Spuren'},
+  {id: 'rules', icon: 'edit', title: 'Regeln', sub: 'Allgemeine Regeln für Ton und Untertitel'},
   {id: 'auth', icon: 'lock', title: 'Anmeldung', sub: 'Passwort und Benutzer'},
   {id: 'about', icon: 'info', title: 'Info', sub: 'Version, Neuigkeiten, Speicherort'},
 ];
@@ -174,6 +175,7 @@ function showView(v) {
   if (v !== 'logs') stopLogs();
   if (v !== 'history') stopHistory();
   document.body.classList.toggle('inSettings', v === 'settings');
+  applyKindTheme();
   window.scrollTo(0, 0);
 }
 function route() {
@@ -208,7 +210,7 @@ function renderSettings() {
     return;
   }
   const nav = h('nav', {class: 'setnav'}, SET_GROUPS.map(g => h('button', {class: g.id === page ? 'on' : '', onclick: () => { location.hash = '#settings/' + g.id; }}, h('i', {}, icon(g.icon)), g.title)));
-  const builders = {general: pageGeneral, worlds: pageWorlds, presets: pagePresets, hardware: pageHardware, tracks: pageTracks, auth: pageAuth, about: pageAbout};
+  const builders = {general: pageGeneral, presets: pagePresets, hardware: pageHardware, tracks: pageTracks, rules: pageRules, auth: pageAuth, about: pageAbout};
   const content = (builders[page] || pageGeneral)();
   fill(root, h('div', {class: 'sethead'}, mobile ? h('button', {class: 'ghost', onclick: () => { location.hash = '#settings'; }}, '‹ Einstellungen') : back,
     mobile ? null : h('h1', {}, 'Einstellungen')), warn,
@@ -216,7 +218,7 @@ function renderSettings() {
 }
 matchMedia('(max-width:700px)').addEventListener('change', () => { if (!$('#viewSettings').classList.contains('hidden')) renderSettings(); });
 
-// Standardauswahl der Kontrolle nach dem Konvertieren, je Welt (im Konverter pro Lauf änderbar)
+// Standardauswahl der Kontrolle nach dem Konvertieren, je Art (im Konverter pro Lauf änderbar)
 function verifyControls(w) {
   const v = (cfg().verify || {})[w] || {tracks: true, decode: true};
   const set = f => saveCfg(x => { x.verify = x.verify || {}; x.verify[w] = {...(x.verify[w] || v)}; f(x.verify[w]); }, false).then(ok => { if (ok) { vfReset(w); toast('Gespeichert ✓', 'ok'); } });
@@ -238,42 +240,28 @@ function rootNamesRow() {
 }
 function pageGeneral() {
   const c = cfg();
-  const start = h('select', {onchange: () => saveCfg(x => { x.startWorld = start.value; })}, opt('last', 'Zuletzt benutzte Welt'), opt('audio', W('audio').name), opt('video', W('video').name));
-  start.value = c.startWorld;
   const concSel = (key, fallback) => { const s = h('select', {onchange: () => saveCfg(x => { x[key] = +s.value; })}, [1, 2, 3, 4, 5, 6, 7, 8].map(n => opt(n, n))); s.value = c[key] || fallback || 1; return s; };
   const concA = concSel('concurrencyAudio', S.conc && S.conc.audio), concV = concSel('concurrency', S.conc && S.conc.video);
   const out = h('input', {value: c.defaultOutDir || '', placeholder: 'leer = neben der Quelldatei', onchange: () => saveCfg(x => { x.defaultOutDir = out.value.trim(); })});
   const pick = h('button', {onclick: async () => { const r = await openBrowser('dir', out.value); if (r) { out.value = r.dir; out.dispatchEvent(new Event('change')); } }}, '…');
   return h('div', {}, h('h2', {}, 'Allgemein'),
-    row('Startansicht', start, 'setStart', 'Welche Welt beim Öffnen erscheint'),
     row('Parallele Aufträge – ' + W('audio').name, concA, 'conc', 'Wie viele Audio-Dateien gleichzeitig laufen'),
     row('Parallele Aufträge – ' + W('video').name, concV, 'conc', 'Wie viele Videos gleichzeitig laufen (bei CPU-Encoding 1)'),
     row('Standard-Zielordner', h('div', {class: 'row'}, out, pick), 'outDir', 'Wird vorgeschlagen, wenn im Konverter nichts anderes gewählt ist'),
     rootNamesRow(),
     row('Kontrolle – ' + W('audio').name, verifyControls('audio'), 'vfInfo', 'Standardauswahl für „danach geprüft“ beim Konvertieren'),
     row('Kontrolle – ' + W('video').name, verifyControls('video'), 'vfInfo', 'Standardauswahl für „danach geprüft“ beim Konvertieren'),
-    row('Qualität nach Material', check(c.noCrfSuggest !== true, v => saveCfg(x => { x.noCrfSuggest = !v; }).then(() => { S.qSig = null; refreshVideoUI(); }), 'Die Qualitätsstufe nach der Art des Materials anpassen (Anime, Korn …)'), 'vMaterial'),
     row('Neuigkeiten', check(c.showNews, v => saveCfg(x => { x.showNews = v; }), 'Hinweis „Neuigkeiten“ bei neuer Version zeigen')));
 }
 
-// --- Welten & Farben ---
-function pageWorlds() {
-  const order = worldOrder();
-  return h('div', {}, h('h2', {}, 'Welten & Farben', infoBtn('setWorlds')),
-    h('p', {class: 'muted'}, 'Jede Welt hat ihren Namen, ihre Farbe und ihren Planeten. Die Farbe färbt die ganze Oberfläche.'),
-    order.map((id, i) => {
-      const w = W(id);
-      const name = h('input', {value: w.name, maxlength: 20, 'aria-label': 'Name der Welt', onchange: () => {
-        if (!name.value.trim()) { name.value = w.name; return; }
-        saveCfg(x => { x.worlds[id].name = name.value.trim(); });
-      }});
-      return h('div', {class: 'worldcard'},
-        h('div', {class: 'wchead'}, planetSvg(w.hue, 38), name,
-          h('button', {class: 'small', disabled: i === 0, title: 'Nach oben/links', onclick: () => saveCfg(x => { x.worldOrder = [x.worldOrder[1], x.worldOrder[0]]; })}, '◀'),
-          h('button', {class: 'small', disabled: i === order.length - 1, title: 'Nach unten/rechts', onclick: () => saveCfg(x => { x.worldOrder = [x.worldOrder[1], x.worldOrder[0]]; })}, '▶')),
-        h('div', {class: 'swatches'}, WORLD_THEMES.map(t => h('button', {class: 'swatch' + (t.hue === w.hue ? ' on' : ''), title: t.name,
-          onclick: () => saveCfg(x => { x.worlds[id].hue = t.hue; })}, planetSvg(t.hue, 26), h('span', {}, t.name)))));
-    }));
+// --- Regeln: allgemeine Regeln für Ton und Untertitel (Video), für alle Geräte auf dem Server ---
+function pageRules() {
+  const r = JSON.parse(JSON.stringify(cfg().trackRules || {})); r.audio = r.audio || []; r.sub = r.sub || [];
+  const save = () => saveCfg(x => { x.trackRules = {audio: r.audio, sub: r.sub}; }, false);
+  return h('div', {}, h('h2', {}, 'Regeln', infoBtn('setRules')),
+    h('p', {class: 'muted'}, 'Allgemeine Regeln für Tonspuren und Untertitel bei Videos, zum Beispiel „DTS → E-AC-3, 256 kbit/s je Stereo-Paar“ oder „Bild-Untertitel entfernen“. Sie liegen auf dem Server und gelten für alle Geräte. Beim Konvertieren erscheinen sie im Schritt „Regeln“ als voreingestellte Regeln; dort lässt sich jede für den jeweiligen Lauf abwählen.'),
+    h('div', {class: 'trkrules open'}, trkRulesBody(r, save, () => renderSettings(), false)),
+    h('p', {class: 'muted small'}, 'Die Regeln laufen von oben nach unten, die erste passende gewinnt. Die Bitrate gilt je Stereo-Paar: eine 5.1-Spur bekommt automatisch mehr (Wert × Kanäle ÷ 2), höchstens aber 640 kbit/s. Mehr kann der Encoder bei AC-3 und E-AC-3 nicht.'));
 }
 
 // --- Voreinstellungen ---
@@ -302,15 +290,15 @@ function pagePresets() {
         h('button', {class: 'small', title: 'Werte im Konverter bearbeiten', onclick: () => editPreset(p.id)}, icon('edit'), ' Werte'),
         h('button', {class: 'small', title: 'Duplizieren', onclick: () => saveCfg(x => { const q = x.presets.find(r => r.id === p.id); x.presets.push({...JSON.parse(JSON.stringify(q)), id: '', name: (q.name + ' Kopie').slice(0, 40)}); })}, icon('copy')),
         h('button', {class: 'small danger', title: 'Löschen', onclick: () => { if (confirm('Voreinstellung „' + p.name + '“ löschen?')) saveCfg(x => { x.presets = x.presets.filter(q => q.id !== p.id); }); }}, icon('trash'))));
-  }) : h('div', {class: 'empty'}, 'Keine Voreinstellungen in dieser Welt.');
+  }) : h('div', {class: 'empty'}, 'Keine Voreinstellungen in dieser Art.');
   return h('div', {}, h('h2', {}, 'Voreinstellungen', infoBtn('setPresets')),
-    h('p', {class: 'muted'}, 'Voreinstellungen füllen alle Einstellungen einer Welt mit einem Klick. Die mit „Vorschlag“ erscheinen im Konverter oben als Knöpfe.'),
+    h('p', {class: 'muted'}, 'Voreinstellungen füllen alle Einstellungen von Video oder Audio mit einem Klick. Die mit „Vorschlag“ erscheinen im Konverter oben als Knöpfe.'),
     tabs, mine.length > 1 ? h('div', {class: 'btns', style: 'margin-bottom:10px'}, h('span', {class: 'muted small'}, 'Vorschläge:'),
       h('button', {class: 'small', onclick: () => saveCfg(x => x.presets.forEach(q => { if (q.world === tab) q.suggest = true; }), false)}, 'Alle auswählen'),
       h('button', {class: 'small', onclick: () => saveCfg(x => x.presets.forEach(q => { if (q.world === tab) q.suggest = false; }), false)}, 'Alle abwählen')) : null,
     h('div', {class: 'plist'}, list),
     h('p', {class: 'muted small'}, 'Neue Voreinstellung: im Konverter die Einstellungen wählen und auf „Als Voreinstellung speichern“ (Diskette) klicken.'),
-    h('div', {class: 'btns'}, h('button', {onclick: () => { location.hash = ''; setWorld(tab, false); }}, '→ Zum Konverter'),
+    h('div', {class: 'btns'}, h('button', {onclick: () => enterKind(tab)}, '→ Zum Konverter'),
       h('button', {class: 'ghost', onclick: restoreDefaultPresets}, 'Standard-Voreinstellungen wiederherstellen')));
 }
 async function restoreDefaultPresets() {
@@ -358,7 +346,7 @@ function rankList(items, labelOf, onChange, options, addText) {
   return wrap;
 }
 function pageTracks() {
-  const p = {audioKeep: [], subKeep: [], audioDefault: [], subDefault: [], ...(cfg().trackPrefs || {})};
+  const tp = cfg().trackPrefs || {}, p = {audioKeep: tp.audioKeep || [], subKeep: tp.subKeep || [], audioDefault: tp.audioDefault || [], subDefault: tp.subDefault || []};
   const save = (k, v) => saveCfg(x => { x.trackPrefs = {audioKeep: [], subKeep: [], audioDefault: [], subDefault: [], ...(x.trackPrefs || {})}; x.trackPrefs[k] = v; }, 'Gespeichert ✓').then(() => { if (S.step === 'tracks') trkRender(); });
   const nameOf = l => langName(l) + ' (' + l + ')';
   const subName = x => langName(x.lang) + (x.forced ? ' (Forced)' : '') + ' (' + x.lang + ')';

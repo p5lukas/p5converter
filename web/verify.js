@@ -1,8 +1,8 @@
 'use strict';
 /* Kontrolle nach dem Konvertieren (Satz „danach geprüft“ und Details → Prüfen): Spuren prüfen (A), Decode-Test (B), Quelldatei löschen.
-   Je Welt getrennt; die Anfangswerte kommen aus Einstellungen → Allgemein. Nutzt S, $, h(), cfg(), W() aus app.js/settings.js. */
+   Je Art (Video, Audio) getrennt; die Anfangswerte kommen aus Einstellungen → Allgemein. Nutzt S, $, h(), cfg(), W() aus app.js/settings.js. */
 
-// S.vf (je Welt: {tracks, decode, del}) entsteht in wireVerify()
+// S.vf (je Art: {tracks, decode, del}) entsteht in wireVerify()
 function vfDefaults(w) {
   const v = (cfg().verify || {})[w] || {};
   return {tracks: v.tracks !== false, decode: v.decode !== false, del: false};

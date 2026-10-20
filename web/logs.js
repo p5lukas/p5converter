@@ -18,7 +18,7 @@ async function checkAlerts(markSeen) {
 }
 function paintAlert() {
   const b = $('#logbtn'); if (!b) return;
-  const a = S.alert || {errors: 0, warnings: 0}, hue = W(S.world).hue;
+  const a = S.alert || {errors: 0, warnings: 0}, hue = document.documentElement.dataset.kind === 'audio' ? 35 : 140;
   const nearRed = hue >= 340 || hue <= 20, nearAmber = hue > 20 && hue <= 65;
   b.classList.toggle('alert-err', a.errors > 0);
   b.classList.toggle('alert-warn', !a.errors && a.warnings > 0);

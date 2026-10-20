@@ -1,5 +1,5 @@
 'use strict';
-/* Verlauf der Konvertierungen (Seite #history): die letzten 100 Einträge der gewählten Welt (Audio und Video getrennt),
+/* Verlauf der Konvertierungen (Seite #history): eine gemeinsame Liste für Video und Audio (je Art bleiben die letzten 100), jeder Eintrag mit Abzeichen,
    mit Suche, Filter nach Ergebnis und Zeitraum, Details, CSV-Export und „Verlauf leeren“.
    Nutzt h(), fill(), icon(), api(), toast(), debounce(), fmtSize(), fmtTime(), W(), S aus den anderen Dateien. */
 
@@ -13,7 +13,7 @@ const fmtDateTime = d => { const x = new Date(d); return x.toLocaleDateString('d
 async function historyPage() {
   const root = $('#historyBody');
   stopHistory();
-  const st = {world: S.world, items: [], max: 100, persistent: true, q: '', status: 'all', range: 'all', open: new Set()};
+  const st = {kind: 'all', items: [], max: 100, persistent: true, q: '', status: 'all', range: 'all', open: new Set()};
   const list = h('div', {class: 'histlist'}), count = h('span', {class: 'muted small'}), chips = h('div', {class: 'lvlchips'}),
     q = h('input', {type: 'search', placeholder: 'Dateiname, Ordner, Meldung …', autocomplete: 'off'}),
     range = h('select', {onchange: () => { st.range = range.value; render(); }}, HIST_RANGE.map(r => h('option', {value: r[0]}, r[1]))),
@@ -31,7 +31,7 @@ async function historyPage() {
     const checks = (e.checks || []).map(c => h('div', {class: 'small ' + (c.ok ? 'okc' : 'warn')}, (c.ok ? '✓ ' : '✗ ') + c.note));
     const det = h('details', {class: 'histentry', open: st.open.has(e.id), ontoggle: ev => { ev.target.open ? st.open.add(e.id) : st.open.delete(e.id); }},
       h('summary', {},
-        h('span', {class: 'hname', title: e.input}, e.name),
+        h('span', {class: 'hname', title: e.input}, h('span', {class: 'kindbadge ' + e.kind}, W(e.kind).name), e.name),
         h('span', {class: 'chip ' + cls}, lbl),
         e.checkFailed ? h('span', {class: 'chip warn', title: 'Eine Prüfung nach dem Umwandeln ist durchgefallen'}, 'Prüfung ✗') : null,
         h('span', {class: 'muted small hmeta'}, fmtDateTime(e.ended),
@@ -50,18 +50,17 @@ async function historyPage() {
   }
   function render() {
     const rows = visible();
-    fill(list, rows.length ? rows.map(entry) : h('div', {class: 'empty', style: 'padding:24px'}, st.items.length ? 'Keine Einträge für diesen Filter.' : 'In dieser Welt wurde noch nichts umgewandelt.'));
-    count.textContent = `${rows.length} von ${st.items.length} Einträgen (es bleiben die letzten ${st.max} je Welt)`;
+    fill(list, rows.length ? rows.map(entry) : h('div', {class: 'empty', style: 'padding:24px'}, st.items.length ? 'Keine Einträge für diesen Filter.' : 'Es wurde noch nichts umgewandelt.'));
+    count.textContent = `${rows.length} von ${st.items.length} Einträgen (es bleiben die letzten ${st.max} je Art: Video und Audio)`;
     const n = k => st.items.filter(e => e.status === k).length;
     fill(chips, h('button', {type: 'button', class: 'lvl-chip all' + (st.status === 'all' ? ' on' : ''), onclick: () => { st.status = 'all'; render(); }}, 'Alle', h('small', {}, st.items.length)),
       Object.entries(HIST_STATUS).map(([k, [lbl]]) => h('button', {type: 'button', class: 'lvl-chip' + (st.status === k ? ' on' : ''), onclick: () => { st.status = k; render(); }}, lbl, h('small', {}, n(k)))));
     fill(note, st.persistent ? null : h('div', {class: 'banner warn'}, icon('warn'), ' Ohne beschreibbaren Ordner /config bleibt der Verlauf nur im Arbeitsspeicher und ist nach einem Neustart weg.'));
-    $('#histTitle').textContent = 'Verlauf · ' + W(st.world).name;
   }
   async function load() {
     if (location.hash !== '#history') return stopHistory();
     try {
-      const r = await api('/api/history?kind=' + st.world);
+      const r = await api('/api/history?kind=' + st.kind);
       st.items = r.items || []; st.max = r.max; st.persistent = r.persistent;
       render();
     } catch (e) { toast(e.message, 'bad'); }
@@ -76,10 +75,10 @@ async function historyPage() {
         h('div', {}, h('label', {}, 'Zeitraum', range)),
         h('div', {class: 'spacer'}),
         h('button', {onclick: load}, icon('sync'), ' Aktualisieren'),
-        h('a', {class: 'btnlink', href: '#', onclick: e => { e.currentTarget.href = '/api/history.csv?kind=' + st.world; }}, icon('download'), ' CSV'),
+        h('a', {class: 'btnlink', href: '#', onclick: e => { e.currentTarget.href = '/api/history.csv?kind=' + st.kind; }}, icon('download'), ' CSV'),
         h('button', {class: 'danger', onclick: async () => {
-          if (!confirm(`Den Verlauf der Welt „${W(st.world).name}“ wirklich leeren? Die andere Welt behält ihren Verlauf. Das kann nicht rückgängig gemacht werden.`)) return;
-          try { await api('/api/history/clear', {kind: st.world}); await load(); toast('Verlauf geleert', 'ok'); } catch (e) { toast(e.message, 'bad'); }
+          if (!confirm('Den ganzen Verlauf (Video und Audio) wirklich leeren? Das kann nicht rückgängig gemacht werden.')) return;
+          try { await api('/api/history/clear', {kind: 'all'}); await load(); toast('Verlauf geleert', 'ok'); } catch (e) { toast(e.message, 'bad'); }
         }}, icon('trash'), ' Verlauf leeren')),
       h('div', {style: 'margin-top:14px;border-top:1px solid var(--line);padding-top:12px'}, h('label', {}, 'Nach Ergebnis filtern'), chips)),
     h('div', {class: 'logcard', style: 'padding:0;margin-top:18px'},
@@ -87,5 +86,5 @@ async function historyPage() {
       list));
   S.histReload = load;
   await load();
-  histTimer = setInterval(() => { if (S.world !== st.world) { st.world = S.world; st.open.clear(); } load(); }, 3000);
+  histTimer = setInterval(load, 3000);
 }

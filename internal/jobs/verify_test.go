@@ -45,6 +45,21 @@ func TestCheckSizeAndBase(t *testing.T) {
 	}
 }
 
+func TestCheckBigger(t *testing.T) {
+	if c := checkBigger(100<<20, 112<<20); c.OK || c.Note == "" {
+		t.Error("größeres Ergebnis nicht erkannt")
+	}
+	if c := checkBigger(100<<20, 100<<20); c.OK {
+		t.Error("gleich großes Ergebnis ist kein Gewinn")
+	}
+	if c := checkBigger(100<<20, 58<<20); !c.OK {
+		t.Error("kleineres Ergebnis fälschlich bemängelt")
+	}
+	if c := checkBigger(1000, 2000); !c.OK {
+		t.Error("sehr kleine Quelle soll nicht geprüft werden")
+	}
+}
+
 func testTools(t *testing.T) ffmpeg.Tools {
 	t.Helper()
 	tl, err := ffmpeg.Locate("")

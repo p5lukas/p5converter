@@ -17,26 +17,27 @@ const Q = (() => {
   // Name der Zahl je Encoder (Erweitert zeigt ihn neben dem Regler)
   const SCALE = {cpu: 'CRF', nvenc: 'CQ', qsv: 'ICQ', vaapi: 'QP', amf: 'QP'};
   const SCALE_HELP = {CRF: 'Constant Rate Factor (x264, x265, AV1, VP9 auf der CPU)', CQ: 'Constant Quality (NVIDIA NVENC)', ICQ: 'Intelligent Constant Quality (Intel Quick Sync)', QP: 'Quantisierungsparameter (VAAPI, AMD AMF)'};
-  // Art des Materials: Abzug (Anime/Zeichentrick brauchen eine niedrigere Zahl, Korn etwas niedriger)
-  const MATERIAL = {standard: 0, modern: 0, grain: -2, anime: -4, cartoon: -4, home: 0};
-  const clamp = n => Math.max(10, Math.min(51, Math.round(n)));
 
   const row = (backend, codec) => (TABLE[backend] || TABLE.cpu)[codec] || null;
-  function offset(material, height) { return (MATERIAL[material] || 0) + (height && height <= 720 ? -1 : 0); }
-  // Zahl für eine Stufe; null = für diesen Codec gibt es keinen Richtwert (z. B. Kopieren)
-  function value(backend, codec, stage, material, height) {
+  // Zahl für eine Stufe (fest, ohne Zu- oder Abschläge); null = für diesen Codec gibt es keinen Richtwert (z. B. Kopieren)
+  function value(backend, codec, stage) {
     const r = row(backend, codec), i = STAGES.findIndex(s => s[0] === stage);
-    if (!r || i < 0) return null;
-    return clamp(r[i] + offset(material, height));
+    return !r || i < 0 ? null : r[i];
   }
   // welche Stufe gehört zu dieser Zahl? 'custom' = eigener Wert
-  function stageOf(backend, codec, crf, material, height) {
+  function stageOf(backend, codec, crf) {
     const n = +crf;
-    for (const [id] of STAGES) if (value(backend, codec, id, material, height) === n) return id;
+    for (const [id] of STAGES) if (value(backend, codec, id) === n) return id;
     return 'custom';
+  }
+  // Quelle schon klein? Unter etwa 4 Mbit/s bei 1080p (bei anderer Höhe im Verhältnis zur Pixelzahl); dann spart Neukodieren kaum Platz
+  const LOW_1080 = 4e6;
+  function lowBitrate(bitRate, height) {
+    if (!(bitRate > 0) || !(height > 0)) return false;
+    return bitRate < LOW_1080 * Math.min(1, (height * height) / (1080 * 1080));
   }
   const scaleName = backend => SCALE[backend] || 'CRF';
   const stageName = id => (STAGES.find(s => s[0] === id) || [])[1] || 'Eigener Wert';
-  return {STAGES, TABLE, SCALE, SCALE_HELP, MATERIAL, value, stageOf, scaleName, stageName, offset};
+  return {STAGES, TABLE, SCALE, SCALE_HELP, value, stageOf, scaleName, stageName, lowBitrate};
 })();
 if (typeof module !== 'undefined') module.exports = Q;

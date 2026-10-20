@@ -11,8 +11,8 @@ const EMOJI = /\p{Emoji_Presentation}|[⚙⚠⚡⬆▶✎✦⭐]/u; // echte Emo
     p.on('pageerror', e => errs.push(name + ': ' + e.message));
     p.on('console', m => m.type() === 'error' && errs.push(name + ': ' + m.text()));
     await p.goto(L.url); await p.waitForTimeout(1200);
-    await L.setWorld(p, 'video');
     await p.screenshot({ path: `${L.SHOTS}/rn-${name}-head.png` });
+    await L.enter(p, 'video');
     await L.goStep(p, 'files'); await L.addFile(p, 'Show S01E01');
     await L.goStep(p, 'video'); await p.selectOption('#vCodec', 'hevc'); await p.selectOption('#vHeight', '720');
     await L.goStep(p, 'name');
@@ -37,7 +37,7 @@ const EMOJI = /\p{Emoji_Presentation}|[⚙⚠⚡⬆▶✎✦⭐]/u; // echte Emo
     if (!rp.includes('Show Folge 1 [WEBDL-1080p].mkv')) errs.push(name + ': Umbenennen-Vorschau unerwartet: ' + rp);
     await p.screenshot({ path: `${L.SHOTS}/rn-${name}-page.png`, fullPage: true });
     await p.click('#rnBack'); await p.waitForTimeout(300);
-    if (!(await p.isVisible('#startFlow'))) errs.push(name + ': „← Zur Startseite“ führt nicht zur Startseite');
+    if (!(await p.isVisible('#startTiles'))) errs.push(name + ': „← Zur Startseite“ führt nicht zur Startseite');
     await ctx.close();
   }
   await b.close();

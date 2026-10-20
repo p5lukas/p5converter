@@ -1,5 +1,43 @@
 # Änderungen
 
+## 0.3.2 – 2026-10-20
+
+**Neu: Startseite mit zwei Kacheln statt „Welten“**
+- Die Startseite fragt **„Was möchtest du umwandeln?“** mit den Kacheln **Video** (grün) und **Audio** (orange). Die Umschaltung in der Kopfzeile, der Weltenübergang, die Seite „Welten & Farben“ und die Einstellung „Startansicht“ sind **weg**; es gibt eine Grundfarbe (p5-Grün), nur der Audio-Bereich ist orange
+- **Warteschlange und Verlauf sind eine gemeinsame Liste** mit Abzeichen „Video“/„Audio“; „Alle abbrechen“ gilt für beide, „Parallel“ gibt es je Art. „Gewonnener Platz“ zeigt Video und Audio nebeneinander, getrennt gezählt und getrennt zurücksetzbar. Eine begonnene Auswahl zeigt die Kachel als „weiter“
+
+**Neu: geführter Ablauf für Video in vier Schritten**
+- **1 Dateien:** zuerst der **Quellordner** (Knöpfe mit den Anzeigenamen, z. B. „Filme 4K“; der Datei-Browser öffnet gleich dort). Die **Suche durchsucht immer auch alle Unterordner** (ab 2 Zeichen, ohne Haken). Hier stehen auch die Voreinstellungen: wer eine wählt, **springt direkt zur Kontrolle**
+- **2 Regeln:** die **voreingestellten Regeln** (siehe unten) mit Haken je Regel und „betrifft N Dateien“, Sprach-Wünsche, Regel-Vorschläge zu den gewählten Dateien („Regel: DTS → E-AC-3“ nur für diesen Lauf oder „Immer anwenden“) und eigene Regeln für diesen Lauf
+- **3 Wie umwandeln?:** drei Kacheln **Hardware** (Video-Codec und Encoder als Pillen), **Speichern** (Ort, Struktur, „Wenn die Datei schon da ist“) und **Danach prüfen** (Kästchen mit Erklärung, „Original danach löschen“ rot), darunter die Zusammenfassung als Satz
+- **4 Kontrolle & Start:** die Tabelle „Vorher → Nachher“ mit Startleiste. Oben eine **Schrittleiste** (am Handy nur der aktuelle Schritt beschriftet); alle Schritte lassen sich anklicken, die Auswahl bleibt erhalten
+- Audio bleibt eine einzige Ansicht (Dateien, Satz, Tabelle), jetzt komplett orange
+
+**Neu: Tabelle in vier Karten**
+- **Video** (Video, Container, Qualität), **Audio** (alle Tonspuren, orange), **Untertitel** und **Dateiname** sind eigene Karten mit Symbol, Titel und Kurzfassung („3 Tonspuren · 2 umgewandelt“)
+- **Info-Punkte (i)** an Schritten, Karten, Zeilen, Kacheln und Gruppen (Texte in `web/info.js`; neu u. a. Stufen, Funkel-Markierung, Gruppen, Kontrolle)
+
+**Neu: Einstellungen → Regeln**
+- Allgemeine Regeln für Ton und Untertitel (z. B. „DTS → E-AC-3, 256 kbit/s je Stereo-Paar“, „Bild-Untertitel entfernen“) mit demselben Editor, **auf dem Server in `/config`**, für alle Geräte. Im Ablauf erscheinen sie als voreingestellte Regeln und lassen sich je Lauf abwählen (die Abwahl wandert mit in Voreinstellungen). Hinweis: die Bitrate gilt je Stereo-Paar, **E-AC-3/AC-3 höchstens 640 kbit/s**; bei 5.1 zeigt die Tabelle „Maximum“ mit Erklärung der Rechnung
+
+**Neu: Codec-Kennung mit Bitrate**
+- Spuren heißen jetzt **„Englisch · E-AC-3 (Dolby Digital Plus) 5.1 · 640 kbit/s“** (Kennung zuerst, Markenname in Klammern, bei AAC/FLAC/Opus/MP3 nur einmal; DTS-HD MA/HRA, TrueHD, PGS/VobSub/SRT/ASS sinngemäß). Die Bitrate liest das Programm bei MKV auch aus dem Tag `BPS`, wenn ffprobe sie nicht meldet
+
+**Geändert: Qualität einfacher und sicherer**
+- **„Art des Materials“ ist gestrichen.** Es bleiben die vier festen Stufen (x265 auf der CPU: 17 / 20 / 23 / 27) und der Regler unter „Erweitert“; die Abzüge für Anime, Korn und kleine Auflösung entfallen (sie konnten z. B. CRF 14 ergeben und die Datei größer als die Quelle machen). Die Einstellung „Qualität nach Material“ ist entfernt
+- **Schutz vor größerem Ergebnis:** wird ein neu kodiertes Video **nicht kleiner** als die Quelle, schlägt die Kontrolle an („Ergebnis ist größer als die Quelle (112 %) …, wähle eine kleinere Stufe“), und das **Original wird nie gelöscht**
+- **Hinweis vorher:** ist die Quelle schon klein (unter etwa 4 Mbit/s bei 1080p), steht in der Zeile „Qualität“ ein Hinweis, dass Neukodieren kaum Platz spart
+
+**Geändert**
+- Ziel einer umzuwandelnden Tonspur („→ E-AC-3 … 640 kbit/s“) ist **direkt anklickbar**: kleines Fenster für Format und Bitrate, ohne „⋯“
+- Regel-Vorschläge nennen jetzt E-AC-3 mit 256 kbit/s je Stereo-Paar (statt AC-3 192)
+
+**Behoben**
+- **Standard-Tonspur:** eine zweite Spur ließ sich als Standard markieren, aber nicht wieder abwählen (beide zeigten „Standard“). Jetzt gibt es höchstens eine; ein Klick auf eine andere setzt sie und nimmt allen übrigen den Standard (auch dem aus der Quelldatei oder der Rangliste), ein Klick auf die gesetzte nimmt die eigene Wahl zurück
+
+**Intern**
+- Neu: `trackRules` in den Einstellungen (mit Prüfung und Tests), Verlauf `kind=all`, `checkBigger` in der Kontrolle, `web/planets.js` entfernt; neue UI-Prüfung `tools/ui-check-rules.js`; die UI-Prüfungen laufen durch die vier Schritte
+
 ## 0.3.1 – 2026-10-19
 
 **Neu: Suche im Datei-Browser** („+ Dateien“, „+ Ordner“, Zielordner)
