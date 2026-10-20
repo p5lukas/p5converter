@@ -1,4 +1,4 @@
-// Prüfregel: Einstellungen, Voreinstellungen, Welten/Farben und Anmeldung in allen Ansichten (Desktop, iPhone, iPad; hoch/quer).
+// Prüfregel: Einstellungen (ohne Welten und Farben), Seite „Regeln“, Voreinstellungen und Anmeldung in allen Ansichten (Desktop, iPhone, iPad; hoch/quer).
 // Aufruf (Server mit leerem Konfigurationsordner starten): SHOTS=/tmp/shots node tools/ui-check-settings.js
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
 const L = require('./ui-lib');
@@ -19,17 +19,22 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     p.on('pageerror', e => fails.push(name + ' JS: ' + e.message));
     p.on('console', m => m.type() === 'error' && !/401|Anmeldung/.test(m.text()) && fails.push(name + ' console: ' + m.text()));
     await p.goto(BASE); await p.waitForTimeout(1300);
-    await p.click('[data-world=video]'); await p.waitForTimeout(1800);
     await p.screenshot({ path: `${SH}${name}-main.png`, fullPage: true });
+    ok(await p.locator('#worlds').count() === 0, name + ': die Welten-Umschaltung ist noch da');
     const mobile = opt.viewport.width <= 700;
     await p.click('#gearBtn'); await p.waitForTimeout(500);
     if (mobile) await p.screenshot({ path: `${SH}${name}-set-list.png`, fullPage: true });
-    for (const g of ['general', 'worlds', 'presets', 'hardware', 'auth', 'about']) {
+    for (const g of ['general', 'presets', 'hardware', 'tracks', 'rules', 'auth', 'about']) {
       await p.evaluate(g => { location.hash = '#settings/' + g; }, g); await p.waitForTimeout(400);
       await p.screenshot({ path: `${SH}${name}-set-${g}.png`, fullPage: true });
       const ov = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       ok(ov <= 0, `${name}/${g}: horizontaler Überlauf ${ov}px`);
     }
+    // keine Welten-Seite, keine Startansicht, kein „Material“ in den Einstellungen
+    await p.evaluate(() => { location.hash = '#settings/general'; }); await p.waitForTimeout(400);
+    const gen = await p.evaluate(() => document.querySelector('#viewSettings').textContent);
+    ok(!/Welten|Farben|Planet|Startansicht|Material/.test(gen), name + ': Einstellungen enthalten noch Welten/Startansicht/Material: ' + gen.slice(0, 120));
+    ok(await p.locator('.setnav button:has-text("Regeln")').count() >= (mobile ? 0 : 1), name + ': „Regeln“ fehlt in der Einstellungsliste');
     await ctx.close();
   }
   // Testvoreinstellungen früherer Läufe entfernen (der Test legt „Mein Test …“ an und soll wiederholbar sein)
@@ -44,7 +49,7 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     const ctx = await b.newContext(opt); const p = await ctx.newPage();
     p.on('pageerror', e => fails.push(name + ' JS: ' + e.message));
     await p.goto(BASE); await p.waitForTimeout(1200);
-    await p.click('[data-world=video]'); await p.waitForTimeout(1800);
+    await L.enter(p, 'video'); await L.addFile(p, 'long.mkv');
     // Voreinstellung speichern
     await L.goStep(p, 'video');
     await p.selectOption('#vCodec', 'hevc'); await p.selectOption('#vDepth', '10'); await p.fill('#vCrf', '19');
@@ -56,11 +61,13 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     // zurücksetzen und per Chip laden
     await L.goStep(p, 'video');
     await p.selectOption('#vCodec', 'h264'); await p.selectOption('#vDepth', '8'); await L.goStep(p, 'files');
-    await p.click('#vPresets button:has-text("Mein Test ' + name + '")'); await p.waitForTimeout(300);
+    await p.click('#cvStepper [data-step=files]'); await p.waitForTimeout(400); // Schritt 1: dort stehen die Voreinstellungen
+    await p.click('#vPresets button:has-text("Mein Test ' + name + '")'); await p.waitForTimeout(500);
+    ok(await p.locator('#cvStepper .stp.on').getAttribute('data-step') === 'check', name + ': Voreinstellung sollte direkt zur Kontrolle springen');
     ok((await p.inputValue('#vCodec')) === 'hevc' && (await p.inputValue('#vDepth')) === '10', name + ': Voreinstellung wurde nicht angewendet');
     // Reload: kommt vom Server
     await p.reload(); await p.waitForTimeout(1500);
-    await p.click('[data-world=video]'); await p.waitForTimeout(1500);
+    await L.enter(p, 'video');
     ok(await p.locator('#vPresets button', {hasText: 'Mein Test ' + name}).count() === 1, name + ': Voreinstellung nach Reload weg');
     // bearbeiten
     await p.click('#gearBtn'); await p.waitForTimeout(300);
@@ -77,15 +84,8 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     await p.evaluate(() => { location.hash = '#settings/presets'; }); await p.waitForTimeout(500);
     await p.click('.prow:has(input[value="Mein Test ' + name + '"]) input[type=checkbox]'); await p.waitForTimeout(600);
     await p.evaluate(() => { location.hash = ''; }); await p.waitForTimeout(500);
+    await L.enter(p, 'video'); await p.click('#cvStepper [data-step=files]').catch(() => {}); await p.waitForTimeout(300);
     ok(await p.locator('#vPresets button', {hasText: 'Mein Test ' + name}).count() === 0, name + ': Chip trotz abgewähltem Vorschlag');
-    // Farbe der Video-Welt ändern
-    await p.evaluate(() => { location.hash = '#settings/worlds'; }); await p.waitForTimeout(500);
-    await p.screenshot({ path: `${SH}${name}-worlds.png`, fullPage: true });
-    await p.click('.worldcard:nth-of-type(2) .swatch[title="Ozean"]'); await p.waitForTimeout(700);
-    const hue = await p.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--h').trim());
-    ok(hue === '205', name + ': Farbe nicht übernommen, --h=' + hue);
-    // zurück auf Violett
-    await p.click('.worldcard:nth-of-type(2) .swatch[title="Nebel"]'); await p.waitForTimeout(500);
     await ctx.close();
   }
   await cleanTestPresets();

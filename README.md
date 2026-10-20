@@ -7,12 +7,12 @@
 **Audio und Video konvertieren – mit Hardware-Beschleunigung, Kontrolle nach dem Umwandeln und Web-Oberfläche im Matrix-Look.**
 
 Ein einzelnes Go-Programm steuert **ffmpeg** an. Läuft als Docker-Container auf **Unraid**, als **Windows-App** (Vorabversion) – und später als Linux-App.
-Ein SoundConverter-Klon mit zusätzlicher Video-Welt, gebaut für ganze Serien-Staffeln und Plex.
+Ein SoundConverter-Klon mit zusätzlichem Video-Teil, gebaut für ganze Serien-Staffeln und Plex.
 
 ![Docker](https://img.shields.io/badge/Docker-ghcr.io%2Fp5lukas%2Fp5converter-00ff5a?logo=docker&logoColor=white&labelColor=0a1a0f)
 ![Unraid](https://img.shields.io/badge/Unraid-Template-00ff5a?labelColor=0a1a0f)
 ![Windows](https://img.shields.io/badge/Windows-Vorabversion-ffcc00?labelColor=0a1a0f)
-![Version](https://img.shields.io/badge/Version-0.2.0-00ff5a?labelColor=0a1a0f)
+![Version](https://img.shields.io/badge/Version-0.3.2-00ff5a?labelColor=0a1a0f)
 ![Lizenz](https://img.shields.io/badge/Lizenz-MIT-00ff5a?labelColor=0a1a0f)
 
 <img src="docs/images/start.png" alt="Startseite mit laufendem Auftrag" width="900">
@@ -22,19 +22,19 @@ Ein SoundConverter-Klon mit zusätzlicher Video-Welt, gebaut für ganze Serien-S
 </div>
 
 > *English in short:* p5converter is a self-hosted web UI (single Go binary + ffmpeg) to convert audio and video. It supports
-> Intel Quick Sync, NVIDIA NVENC, AMD AMF and VAAPI, per-track audio/subtitle rules for whole seasons (e.g. DTS → AC-3, keep only German/English,
+> Intel Quick Sync, NVIDIA NVENC, AMD AMF and VAAPI, per-track audio/subtitle rules for whole seasons (e.g. DTS → E-AC-3, keep only German/English,
 > forced-subtitle detection), quality in four steps (translated per encoder, with the real number under "Erweitert"), one before/after table instead of wizard steps, a post-conversion check (tracks, length, full decode) before originals are touched, a
 > conversion history, renaming, and a Windows app. Docker image: `ghcr.io/p5lukas/p5converter:latest` (stable) or `:dev`, default port 8787.
 
 ## Auf einen Blick
-* **Audio und Video getrennt** („Welten“ mit eigener Farbe), Voreinstellungen, Umbenennen mit Live-Vorschau
+* **Startseite mit zwei Kacheln:** Video (grün) oder Audio (orange); Video läuft in **vier Schritten** (Dateien, Regeln, Wie umwandeln?, Kontrolle & Start), dazu Voreinstellungen und Umbenennen mit Live-Vorschau
 * **Hardware-Encoding** (Quick Sync, NVENC, AMF, VAAPI) mit sichtbarer Bestätigung, ob Schreiben und Lesen wirklich auf der Hardware laufen
 * **Audio & Untertitel für ganze Staffeln:** Gruppen nach Sprachen, Regeln nach Format, Sprach-Wünsche, Forced-Erkennung
 * **Kontrolle nach dem Konvertieren:** Spuren, Laufzeit, Größe und auf Wunsch ein kompletter Decode-Test, bevor ein Original gelöscht wird
-* **Verlauf** der letzten 100 Aufträge je Welt (mit CSV-Export), **gewonnener Platz**, Live-Auslastung
+* **Verlauf** der letzten 100 Aufträge je Art, Video und Audio in einer Liste (mit CSV-Export), **gewonnener Platz**, Live-Auslastung
 * **Handy und Tablet:** als Web-App auf dem Home-Bildschirm nutzbar
 
-<p align="center"><img src="docs/images/konvertieren.png" alt="Konvertieren: Satz und Tabelle Vorher → Nachher" width="820"><br><sub>Konvertieren in einer Ansicht: Satz zum Antippen, Tabelle „Vorher → Nachher“, Gruppen, Funkel-Markierung für Automatisches</sub></p>
+<p align="center"><img src="docs/images/konvertieren.png" alt="Kontrolle: Karten Video, Audio, Untertitel, Dateiname" width="820"><br><sub>Kontrolle & Start: die Tabelle „Vorher → Nachher“ in vier Karten (Audio orange), Gruppen, Funkel-Markierung für Automatisches</sub></p>
 
 <table>
 <tr>
@@ -95,7 +95,7 @@ docker run -d --name p5converter -p 8787:8787 \
 ## Funktionen
 
 ### Design
-Gleiche Designlinie wie [p5assets](https://github.com/p5lukas/p5assets): Matrix-Theme, Audio und Video als eigene **Welten** mit Farbe und Planet (Wurmloch-Flug beim Wechsel), Übersicht mit Fortschrittsring und Live-Auslastung, Version und Neuigkeiten in der Fußzeile (nach einem Update einmal pro Version ein kurzer Hinweis, der Merker liegt auf dem Server); in der iPhone/iPad-Web-App Ziehen zum Aktualisieren.
+Gleiche Designlinie wie [p5assets](https://github.com/p5lukas/p5assets): Matrix-Theme mit **einer** Grundfarbe (p5-Grün, nur Audio orange), Startseite mit Kacheln, aktuellem Auftrag und Live-Auslastung, Version und Neuigkeiten in der Fußzeile (nach einem Update einmal pro Version ein kurzer Hinweis, der Merker liegt auf dem Server); in der iPhone/iPad-Web-App Ziehen zum Aktualisieren.
 Läuft auf Desktop, Handy und iPad (Hoch-/Querformat); auf iPhone/iPad per **Teilen → Zum Home-Bildschirm** als Web-App.
 
 ### Hilfe für Einsteiger
@@ -109,7 +109,7 @@ Zielordner mit Struktur oder Namensmuster (`{artist}/{album}/{track} - {title}`)
 * Container **MKV** (Standard) oder MP4, „Nur Remux“ (Video kopieren)
 * Codec **H.264, H.265, AV1, VP9**
 * **Auflösung** (max. Höhe, nie hochskaliert), **Qualität in vier Stufen** (Sehr gut, Gut, Normal, Klein; je Encoder in die passende Zahl umgerechnet, mit Anpassung an die Art des Materials: Anime, Korn …; „Erweitert“ zeigt CRF/CQ/ICQ/QP), Geschwindigkeits-Preset, **8/10 Bit** (oder „wie Quelle“)
-* **Audio & Untertitel direkt in der Tabelle, auch für Einsteiger und für ganze Serien:** Standard ist **Passthrough** (nichts ändern). Das Programm macht Vorschläge, jeder lässt sich abwählen. **Drei Ansichten:** **Gruppen** (Dateien mit gleichen Sprachen zusammengefasst, Haken je Sprache gilt für die ganze Gruppe, Vorschau „Was passiert“, abweichende Dateien markiert), **Tabelle** (Dateien × Sprachen mit Haken) und **Einzelne Dateien** (Spurkarten in Klartext mit „Erweitert“: Titel, Sprache, **Forced (erzwungene Untertitel)**, Standard, Format). **Regeln nach Format** (z. B. nur DTS in AC-3 umwandeln, Bild-Untertitel entfernen; erste passende Regel gewinnt; als Voreinstellung speicherbar; mit Regel-Vorschlägen) und **Sprach-Wünsche** in den Einstellungen als Rangliste (Ton/Untertitel behalten, Standard-Ton, Standard-Untertitel z. B. „Deutsch Forced“). Die Wirkung steht vor dem Start in der Zusammenfassung
+* **Audio & Untertitel direkt in der Tabelle, auch für Einsteiger und für ganze Serien:** Standard ist **Passthrough** (nichts ändern). Das Programm macht Vorschläge, jeder lässt sich abwählen. **Drei Ansichten:** **Gruppen** (Dateien mit gleichen Sprachen zusammengefasst, Haken je Sprache gilt für die ganze Gruppe, Vorschau „Was passiert“, abweichende Dateien markiert), **Tabelle** (Dateien × Sprachen mit Haken) und **Einzelne Dateien** (Spurkarten in Klartext mit „Erweitert“: Titel, Sprache, **Forced (erzwungene Untertitel)**, Standard, Format). **Regeln nach Format** (z. B. nur DTS in E-AC-3 umwandeln, Bild-Untertitel entfernen; erste passende Regel gewinnt; **allgemeine Regeln** in den Einstellungen auf dem Server, die im Ablauf als voreingestellte Regeln erscheinen und je Lauf abwählbar sind; eigene Regeln als Voreinstellung speicherbar; mit Regel-Vorschlägen) und **Sprach-Wünsche** in den Einstellungen als Rangliste (Ton/Untertitel behalten, Standard-Ton, Standard-Untertitel z. B. „Deutsch Forced“). Die Wirkung steht vor dem Start in der Zusammenfassung
 * **Forced erkennen:** Ist ein Untertitel viel kleiner als die vollständige Spur derselben Sprache (unter 20 %), schlägt das Programm „Als Forced markieren“ vor (nie ungefragt; mit dem Wunsch „Deutsch (Forced)“ ist er vorausgewählt). Dafür braucht die MKV die Größenangaben, die mkvmerge ablegt
 * **Spuren ohne Sprachangabe:** Das Programm liest nur, was in der Datei steht. Fehlt bei Ton oder Untertitel die Sprache, kann sie ein Werkzeug wie [ULDAS](https://github.com/netplexflix/ULDAS) vorher automatisch ergänzen (erkennt Sprache per Whisper, auch Forced und SDH); p5converter übernimmt dann die erkannten Sprachen. Es wird kein Code daraus verwendet
 * **Datei-Browser:** Suchfeld (filtert den Ordner beim Tippen; „Auch in Unterordnern“ durchsucht alles darunter, Umlaute egal) und eigene **Namen für die Quellordner** (Einstellungen → Allgemein)
@@ -119,9 +119,9 @@ Zielordner mit Struktur oder Namensmuster (`{artist}/{album}/{track} - {title}`)
 > **Unraid:** Zeigt dein Container noch „Passwort (optional)“ (`P5_PASSWORD`), mit REMOVE löschen – die Variable wird seit 0.0.3 nicht mehr benutzt; die Anmeldung legst du in den Einstellungen an.
 
 ### Einstellungen, Voreinstellungen, Anmeldung
-* **Zahnrad** oben rechts (am Handy als Liste mit Gruppen): Allgemein, Welten & Farben, Voreinstellungen, Hardware, Anmeldung, Info
+* **Zahnrad** oben rechts (am Handy als Liste mit Gruppen): Allgemein, Voreinstellungen, Hardware, Audio & Untertitel, Regeln, Anmeldung, Info
 * **Voreinstellungen** (Audio und Video): Knopf „Als Voreinstellung speichern“ (Diskette) neben „Konvertierung starten“; in den Einstellungen umbenennen, sortieren, duplizieren, löschen, „Vorschlag“ an/aus und „Werte“ zum Bearbeiten
-* **Welten & Farben**: Name, Farbe und Planet je Welt (wie bei p5assets), Reihenfolge
+* **Regeln**: allgemeine Regeln für Ton und Untertitel (Codec → umwandeln/entfernen, Bitrate je Stereo-Paar, E-AC-3 höchstens 640 kbit/s), gespeichert in `/config` für alle Geräte
 * **Anmeldung** wie bei p5assets: im Browser anlegen, „Angemeldet bleiben (30 Tage)“, Spaßmeldung nach falschem Passwort (abschaltbar), Passwort nur als Hash; vergessen: `docker exec -it p5converter p5converter auth reset`, `P5_AUTH_RESET=1` oder `/config/auth.json` löschen
 
 ### Logs
@@ -129,14 +129,15 @@ Zielordner mit Struktur oder Namensmuster (`{artist}/{album}/{track} - {title}`)
 
 ### Konvertieren in einer Ansicht
 * **Kopfzeile:** „Konvertieren“, „Umbenennen“ und „Verlauf“ (mit Zähler für laufende und wartende Aufträge) sind in jeder Ansicht erreichbar
-* **Startseite:** oben der **aktuelle Auftrag** („Datei 4 von 13“ mit Fortschritt, Geschwindigkeit und Hardware mit grünen Haken) oder „Gerade nichts los“, daneben die Live-Auslastung; darunter gleich große Kacheln **Gewonnener Platz** (je Welt eigene Zählung, mit „Zurücksetzen“) und **Hardware**.
-* **Konvertieren:** oben die **Dateien**, darunter ein **Satz zum Antippen** (Hardware, Ziel, „danach geprüft“; am Handy als Blatt unten) und die Tabelle **„Vorher → Nachher“**: links die Quelle, rechts das Ergebnis, Zeile für Zeile (Video, Container, Qualität, jede Tonspur, jeder Untertitel, Dateiname), jede Zeile direkt änderbar. Dateien mit gleichem Aufbau sind eine **Gruppe**; abweichende Gruppen müssen kontrolliert werden, danach übernimmt das Programm deine Entscheidungen bei gleichen Spuren. Das **Funkel-Zeichen** steht nur bei Automatischem (Regeln, Sprach-Wünsche, Forced-Erkennung, Übernahme) – mit Begründung und „rückgängig“. Unten die Startleiste (Zusammenfassung, **Details**, „Als Voreinstellung speichern“, „Zurücksetzen“, Start); **Details** enthält Ziel & Name, Video, Audio & Untertitel (Regeln, Einzelspuren), Prüfen & Original. Danach zurück zur Startseite mit der laufenden Warteschlange
+* **Startseite:** die Kacheln **Video** und **Audio** („Was möchtest du umwandeln?“), der **aktuelle Auftrag** („Datei 4 von 13“ mit Fortschritt, Geschwindigkeit und Hardware mit grünen Haken) oder „Gerade nichts los“, daneben die Live-Auslastung; oben die Kacheln **Video** und **Audio**; darunter gleich große Kacheln **Gewonnener Platz** (Video und Audio getrennt gezählt, mit „Zurücksetzen“) und **Hardware**.
+* **Video in vier Schritten:** **1 Dateien** (zuerst der Quellordner, die Suche geht immer auch in Unterordner; wer eine Voreinstellung wählt, springt direkt zur Kontrolle), **2 Regeln** (voreingestellte Regeln mit Haken und „betrifft N Dateien“, Vorschläge, eigene Regeln), **3 Wie umwandeln?** (drei Kacheln: Hardware, Speichern, Danach prüfen, mit Satz als Zusammenfassung) und **4 Kontrolle & Start**: die Tabelle **„Vorher → Nachher“** in vier Karten (**Video**, **Audio** in Orange, **Untertitel**, **Dateiname**), links die Quelle, rechts das Ergebnis, jede Zeile direkt änderbar; Spuren heißen „E-AC-3 (Dolby Digital Plus) 5.1 · 640 kbit/s“, das Ziel einer umzuwandelnden Spur ist anklickbar. Dateien mit gleichem Aufbau sind eine **Gruppe**; abweichende Gruppen müssen kontrolliert werden, danach übernimmt das Programm deine Entscheidungen bei gleichen Spuren. Das **Funkel-Zeichen** steht nur bei Automatischem – mit Begründung und „rückgängig“. Info-Punkte (i) erklären jeden Bereich. Unten die Startleiste (Zusammenfassung, **Details**, „Als Voreinstellung speichern“, „Zurücksetzen“, Start). **Audio** ist eine einzige Ansicht mit Dateien, Satz und Tabelle. Danach zurück zur Startseite mit der laufenden Warteschlange
+* **Qualität in vier festen Stufen** (Sehr gut / Gut / Normal / Klein, je Encoder und Codec in die passende Zahl umgerechnet, Regler unter „Erweitert“); wird ein neu kodiertes Video **nicht kleiner** als die Quelle, schlägt die Kontrolle an und das Original bleibt erhalten; bei schon kleiner Quelle steht vorher ein Hinweis
 
 ### Verlauf
-* **Kopfzeile → Verlauf:** oben die Warteschlange (laufende und wartende Aufträge, „Parallel“, „Alle abbrechen“), darunter die letzten **100** beendeten Aufträge je Welt (Audio und Video getrennt, gespeichert in `/config`, bleibt nach „Fertige entfernen“ und Neustart): Ergebnis, Größe vorher/nachher, Dauer, Prüfergebnis, bei Fehlern ffmpeg-Befehl und Log · Suche, Filter nach Ergebnis und Zeitraum · **CSV-Export** · „Verlauf leeren“ (nur die gewählte Welt)
+* **Kopfzeile → Verlauf:** oben die Warteschlange (laufende und wartende Aufträge von Video und Audio mit Abzeichen, „Parallel“ je Art, „Alle abbrechen“), darunter die letzten **100** beendeten Aufträge je Art (Video und Audio in einer Liste, gespeichert in `/config`, bleibt nach „Fertige entfernen“ und Neustart): Ergebnis, Größe vorher/nachher, Dauer, Prüfergebnis, bei Fehlern ffmpeg-Befehl und Log · Suche, Filter nach Ergebnis und Zeitraum · **CSV-Export** · „Verlauf leeren“
 
 ### Warteschlange (auf der Seite „Verlauf“)
-* **Je Welt eine eigene Warteschlange** (Audio/Video) mit eigener Anzahl paralleler Aufträge; Farben: grün = geklappt, gelb = Hinweis/Ausweichweg, rot = Fehler; „Schreiben“/„Lesen“ mit Haken, wenn ffmpeg die Hardware bestätigt hat
+* **Video und Audio laufen in getrennten Warteschlangen** mit eigener Anzahl paralleler Aufträge (eine gemeinsame Liste in der Anzeige); Farben: grün = geklappt, gelb = Hinweis/Ausweichweg, rot = Fehler; „Schreiben“/„Lesen“ mit Haken, wenn ffmpeg die Hardware bestätigt hat
 * **Abbrechen räumt auf**: unfertige Datei und vom Auftrag neu angelegte leere Ordner werden gelöscht; Reste eines Absturzes beim nächsten Start; die Quelldatei bleibt unberührt
 * **Auslastung** von CPU und Grafik/Videoeinheit live (auch im Leerlauf)
 

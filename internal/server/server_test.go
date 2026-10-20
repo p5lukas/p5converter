@@ -363,7 +363,7 @@ func TestSettingsEndpoint(t *testing.T) {
 		t.Fatalf("Standard: %+v", got)
 	}
 	got.Settings.Concurrency = 3
-	got.Settings.Worlds["video"] = config.World{Name: "Filme", Hue: 205}
+	got.Settings.TrackRules.Audio = []config.AudioRule{{Codec: "dts", Ch: "any", Action: "encode", To: "eac3", Kbps: 256}}
 	got.Settings.Presets[0].Name = "Mein Archiv"
 	if r, _ := doJSON(t, c, "PUT", ts.URL+"/api/settings", got.Settings); r.StatusCode != 200 {
 		t.Fatalf("PUT: %d", r.StatusCode)
@@ -371,12 +371,12 @@ func TestSettingsEndpoint(t *testing.T) {
 	if s.Jobs.Concurrency("video") != 3 {
 		t.Errorf("parallele Aufträge nicht übernommen: %d", s.Jobs.Concurrency("video"))
 	}
-	if now := s.Settings.Get(); now.Worlds["video"].Name != "Filme" || now.Presets[0].Name != "Mein Archiv" {
-		t.Errorf("nicht gespeichert: %+v", now.Worlds)
+	if now := s.Settings.Get(); len(now.TrackRules.Audio) != 1 || now.TrackRules.Audio[0].To != "eac3" || now.Presets[0].Name != "Mein Archiv" {
+		t.Errorf("nicht gespeichert: %+v", now.TrackRules)
 	}
-	got.Settings.Worlds["video"] = config.World{Name: "Filme", Hue: 999}
+	got.Settings.TrackRules.Audio = []config.AudioRule{{Codec: "dts", Action: "encode", To: "wav"}}
 	if r, m := doJSON(t, c, "PUT", ts.URL+"/api/settings", got.Settings); r.StatusCode != 400 {
-		t.Errorf("ungültiger Farbton: %d %v", r.StatusCode, m)
+		t.Errorf("ungültige Regel: %d %v", r.StatusCode, m)
 	}
 }
 
@@ -693,7 +693,7 @@ func TestVerifyThenDelete(t *testing.T) {
 	}
 }
 
-// Verlauf: jeder beendete Auftrag landet je Welt im Verlauf, die Liste überlebt „Fertige entfernen“, CSV und Leeren je Welt.
+// Verlauf: jeder beendete Auftrag landet im Verlauf (je Art oder gemeinsam), die Liste überlebt „Fertige entfernen“, CSV und Leeren je Art.
 func TestHistory(t *testing.T) {
 	root := t.TempDir()
 	s, ts := newTestServer(t, []string{root})
@@ -730,7 +730,7 @@ func TestHistory(t *testing.T) {
 		t.Errorf("neuester Eintrag zuerst (Fehler erwartet): %v", st)
 	}
 	if v := get("/api/history?kind=video")["items"].([]any); len(v) != 0 {
-		t.Errorf("Video-Verlauf muss leer sein (Welten getrennt): %v", v)
+		t.Errorf("Video-Verlauf muss leer sein (Arten getrennt): %v", v)
 	}
 	resp, _ := http.Get(ts.URL + "/api/history.csv?kind=audio")
 	b, _ := io.ReadAll(resp.Body)
@@ -743,12 +743,23 @@ func TestHistory(t *testing.T) {
 	if len(get("/api/history?kind=audio")["items"].([]any)) != 2 {
 		t.Error("Leeren von Video darf Audio nicht berühren")
 	}
+	// eine gemeinsame Liste für beide Arten (ohne kind oder mit kind=all), „alle“ leert beide
+	if all := get("/api/history")["items"].([]any); len(all) != 2 {
+		t.Errorf("gemeinsame Liste: %d Einträge statt 2", len(all))
+	}
+	if all := get("/api/history?kind=all")["items"].([]any); len(all) != 2 {
+		t.Errorf("kind=all: %d Einträge statt 2", len(all))
+	}
+	post(t, ts, "/api/history/clear", map[string]any{"kind": "all"}, nil)
+	if len(get("/api/history?kind=all")["items"].([]any)) != 0 {
+		t.Error("kind=all leert nicht beide Arten")
+	}
 	post(t, ts, "/api/history/clear", map[string]any{"kind": "audio"}, nil)
 	if len(get("/api/history?kind=audio")["items"].([]any)) != 0 {
 		t.Error("Audio-Verlauf nicht geleert")
 	}
 	if r, _ := http.Get(ts.URL + "/api/history?kind=x"); r.StatusCode != 400 {
-		t.Error("ungültige Welt muss abgelehnt werden")
+		t.Error("ungültige Art muss abgelehnt werden")
 	}
 }
 

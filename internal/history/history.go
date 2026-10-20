@@ -1,10 +1,11 @@
-// Package history keeps the list of finished conversions (per world, the last Max entries) in the config folder.
+// Package history keeps the list of finished conversions (per kind audio/video, the last Max entries) in the config folder.
 package history
 
 import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"sort"
 	"sync"
 	"time"
 )
@@ -90,21 +91,33 @@ func (s *Store) Add(e Entry) {
 	s.saveLocked()
 }
 
-// List returns a copy of one world's entries, newest first.
+// List returns a copy of one kind's entries, newest first; kind "all" (or empty) merges both kinds, newest first (at most 2×Max entries).
 func (s *Store) List(kind string) []Entry {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if kind == "all" || kind == "" {
+		all := append(append([]Entry{}, s.items["video"]...), s.items["audio"]...)
+		sort.SliceStable(all, func(i, j int) bool { return all[i].Ended.After(all[j].Ended) })
+		if len(all) > 2*Max {
+			all = all[:2*Max]
+		}
+		return all
+	}
 	return append([]Entry{}, s.items[kind]...)
 }
 
-// Clear empties one world's history; the other world stays.
+// Clear empties one kind's history; kind "all" (or empty) empties both.
 func (s *Store) Clear(kind string) {
-	if kind != "audio" && kind != "video" {
-		return
-	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.items[kind] = nil
+	switch kind {
+	case "audio", "video":
+		s.items[kind] = nil
+	case "all", "":
+		s.items["audio"], s.items["video"] = nil, nil
+	default:
+		return
+	}
 	s.saveLocked()
 }
 

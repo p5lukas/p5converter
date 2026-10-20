@@ -20,7 +20,7 @@ const probe = f => JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-print_fo
     // Sprach-Wünsche zurücksetzen (frischer Zustand je Ansicht)
     await p.evaluate(async () => { const s = await (await fetch('/api/settings')).json(); s.settings.trackPrefs = {audioKeep: [], subKeep: [], audioDefault: [], subDefault: []}; await fetch('/api/settings', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(s.settings)}); });
     await p.goto(L.url); await p.waitForTimeout(1300);
-    await L.setWorld(p, 'video'); await p.click('#startFlow'); await p.waitForTimeout(300);
+    await L.enter(p, 'video');
     await p.click('#addFiles'); await p.waitForTimeout(300);
     await p.fill('#bPath', L.INDIR); await p.click('#bGo'); await p.waitForTimeout(500);
     await p.click('#bAll'); await p.click('#bAddSel'); await p.waitForTimeout(500);
@@ -32,9 +32,9 @@ const probe = f => JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-print_fo
     ok(!(await p.textContent('#trackSettings')).includes('Nur diese Sprachen behalten'), name + ': „Nur diese Sprachen behalten“ sollte weg sein');
     ok(/Regeln nach Format/.test(await p.textContent('#trackSettings')), name + ': Regeln-Bereich fehlt');
     await p.screenshot({path: `${L.SHOTS}/p5c-grp-${name}-1.png`, fullPage: true});
-    // Vorschlag „DTS → AC-3“ übernehmen
-    await p.click('#trackEditor button:has-text("Regel anlegen: DTS")'); await p.waitForTimeout(600);
-    ok(/→ AC-3/.test(await p.textContent('.trkgrp')), name + ': Wirkung „→ AC-3“ nicht sichtbar');
+    // Vorschlag „DTS → E-AC-3“ übernehmen
+    await p.click('#trackEditor button:has-text("Regel: DTS")'); await p.waitForTimeout(600);
+    ok(/→ E-AC-3/.test(await p.textContent('.trkgrp')), name + ': Wirkung „→ E-AC-3“ nicht sichtbar');
     ok(/1 aktiv/.test(await p.textContent('.trkrules summary')), name + ': Regelzähler fehlt');
     ok(await p.locator('.trkrule').count() === 1, name + ': Regelzeile fehlt');
     await p.screenshot({path: `${L.SHOTS}/p5c-grp-${name}-2-regel.png`, fullPage: true});

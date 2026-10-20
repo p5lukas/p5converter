@@ -14,16 +14,16 @@ const api = async (url, body, method) => {
 const fmtSize = n => n > 1e9 ? (n / 1e9).toFixed(2) + ' GB' : n > 1e6 ? (n / 1e6).toFixed(1) + ' MB' : n > 1e3 ? (n / 1e3).toFixed(0) + ' KB' : (n || 0) + ' B';
 const fmtTime = s => { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s % 60).padStart(2, '0'); };
 
-const S = {step: 'start', world: 'audio', files: {audio: [], video: []}, info: null, jobs: [], stats: null};
+const S = {step: 'start', vstep: 1, world: 'video', files: {audio: [], video: []}, info: null, jobs: [], stats: null};
 const BACKEND_ORDER = ['qsv', 'nvenc', 'amf', 'vaapi', 'cpu'];
 const CODEC_LABEL = {h264: 'H.264', hevc: 'H.265', av1: 'AV1', vp9: 'VP9'};
 const SWENC = {h264: 'libx264', hevc: 'libx265', av1: 'libsvtav1', vp9: 'libvpx-vp9'};
 
 // ---------- persisted settings ----------
 const FIELDS = ['outMode', 'outDir', 'outStruct', 'exists', 'aFormat', 'aMode', 'aQuality', 'aBitrate', 'aFlac', 'aWav', 'aRate', 'aCh',
-  'vContainer', 'vCodec', 'vBackend', 'vCrf', 'vQuality', 'vPreset', 'vDepth', 'vHeight', 'vAudioMode', 'vAudioCodec', 'vAudioKbps', 'vSubMode', 'vTrkRules', 'vMaterial'];
-const CHECKS = ['aCover', 'vHwDec']; // „Quelldatei löschen“ wird bewusst NICHT gemerkt (verify.js, je Welt, nur für diesen Besuch)
-// Namensmuster, Zusatz und Ersetzungen gehören je Welt (Audio und Video getrennt)
+  'vContainer', 'vCodec', 'vBackend', 'vCrf', 'vQuality', 'vPreset', 'vDepth', 'vHeight', 'vAudioMode', 'vAudioCodec', 'vAudioKbps', 'vSubMode', 'vTrkRules'];
+const CHECKS = ['aCover', 'vHwDec']; // „Quelldatei löschen“ wird bewusst NICHT gemerkt (verify.js, je Art, nur für diesen Besuch)
+// Namensmuster, Zusatz und Ersetzungen gehören je Art (Audio und Video getrennt)
 const NAME_FIELDS = ['pattern', 'suffix', 'renRules'];
 const NAME_EMPTY = {pattern: '', suffix: '', renRules: '[]'};
 S.name = {audio: {...NAME_EMPTY}, video: {...NAME_EMPTY}};
@@ -47,51 +47,34 @@ function loadSettings() {
   } catch (e) {}
 }
 
-// ---------- worlds ----------
-// Welten: jede hat ihre Farbe (Farbton) und ihren Planeten, wie bei p5assets (Themes in planets.js).
-// Namen, Farben und Reihenfolge kommen aus den Einstellungen (settings.js: W(), worldOrder()).
-function applyTheme(w) {
-  const hue = W(w).hue, t = themeOf(hue), root = document.documentElement.style;
-  root.setProperty('--h', hue); root.setProperty('--sat', t.sat + '%'); root.setProperty('--lit', t.lit + '%');
-  try { localStorage.setItem('p5hue', hue); localStorage.setItem('p5theme', JSON.stringify({h: hue, sat: t.sat, lit: t.lit})); } catch (e) {}
-  $$('#worlds button').forEach(b => {
-    const wh = W(b.dataset.world).hue, wt = themeOf(wh);
-    b.style.setProperty('--c', `hsl(${wh} ${wt.sat}% ${wt.lit}%)`);
-    const slot = b.querySelector('.pl');
-    if (slot) slot.replaceChildren(planetSvg(wh, 22));
-  });
-  const meta = document.querySelector('meta[name=theme-color]');
-  if (meta) meta.content = `hsl(${hue} 80% 2%)`;
+// ---------- Art (Video oder Audio) ----------
+// Die Art wird auf der Startseite gewählt. Video ist grün, Audio orange (nur Audio-Kachel und Audio-Ablauf); die Startseite und alle anderen Seiten sind grün.
+function applyKindTheme() {
+  const inFlow = S.step !== 'start' && !$('#viewMain').classList.contains('hidden');
+  if (inFlow) document.documentElement.dataset.kind = S.world; else delete document.documentElement.dataset.kind;
 }
-function worldFx(w) {
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const hue = W(w).hue, t = themeOf(hue), ms = 1300;
-  const fx = document.createElement('div'); fx.className = 'worldfx';
-  fx.style.setProperty('--c', `hsl(${hue} ${t.sat}% ${t.lit}%)`);
-  const cv = document.createElement('canvas'), pl = document.createElement('div');
-  pl.className = 'wfplanet'; pl.appendChild(planetSvg(hue, 200));
-  fx.append(cv, pl); document.body.appendChild(fx);
-  runWormhole(cv, hue, ms);
-  setTimeout(() => fx.remove(), ms + 60);
-}
-function setWorld(w, animate) {
-  if (animate && w !== S.world) worldFx(w);
+function setWorld(w) {
   if (S.nameFor && S.nameFor !== w) stashName(S.nameFor);
   if (S.nameFor !== w) showName(w);
   if (S.vfFor && S.vfFor !== w) vfStash(S.vfFor);
   if (S.vfFor !== w) vfShow(w);
   S.world = w;
-  $$('#worlds button').forEach(b => b.classList.toggle('on', b.dataset.world === w));
-  // Der Farbwechsel passiert mitten im Flug (dunkler Bildschirm), damit nichts flackert
-  setTimeout(() => { applyTheme(w); }, animate ? 380 : 0);
   renderFiles();
   refreshAudioUI();
   refreshVideoUI();
   renderStartInfo();
   syncNameUI();
-  renderConc(); renderQueue(); renderHero(); renderHistBadge(); renderWorldBadges(); renderSaved();
-  S.step = 'start'; applySteps();
+  renderQueue(); renderHero(); renderHistBadge(); renderSaved(); renderStartTiles();
   saveSettings();
+}
+// Startseite: Kachel Video oder Audio gewählt → in den Ablauf dieser Art
+function enterKind(w) {
+  if (w !== S.world) setWorld(w);
+  if (location.hash) location.hash = '';
+  S.step = 'convert';
+  if (w === 'video' && !S.files.video.length) S.vstep = 1;
+  applySteps(); cvRender();
+  window.scrollTo(0, 0);
 }
 
 // ---------- audio UI ----------
@@ -167,7 +150,7 @@ function refreshVideoUI() {
 
   const r = resolveBackend();
   const hw = !copy && r.id !== 'cpu';
-  ['#vBackendRow', '#vCrfRow', '#vMatRow', '#vCrfAdvice', '#vPresetRow', '#vDepthRow', '#vHeightRow', '#vHwDecRow'].forEach(s => $(s).classList.toggle('hidden', copy));
+  ['#vBackendRow', '#vCrfRow', '#vCrfAdvice', '#vPresetRow', '#vDepthRow', '#vHeightRow', '#vHwDecRow'].forEach(s => $(s).classList.toggle('hidden', copy));
   $('#vHwDecRow').classList.toggle('hidden', !hw);
   const container = $('#vContainer').value;
   const resolvedEl = $('#vResolved');
@@ -255,7 +238,7 @@ function addScanned(files) {
 }
 
 // ---------- server file browser ----------
-// Suche: ohne Haken filtert das Feld die Einträge des Ordners beim Tippen; mit Haken „Auch in Unterordnern“ fragt es den Server (/api/fs/search).
+// Suche: ab 2 Zeichen sucht das Feld immer auch in allen Unterordnern (Server, /api/fs/search); bei einem Zeichen filtert es nur die Einträge des Ordners.
 // Umlaute dürfen so oder so getippt werden (muller / mueller finden Müller). Wurzelordner zeigen ihren Anzeigenamen aus den Einstellungen.
 let B = {path: '', sel: new Set(), mode: 'files', resolve: null, entries: [], roots: false, q: '', found: null, seq: 0};
 const bJoin = (p, n) => p.replace(/[\\/]$/, '') + (p.includes('\\') ? '\\' : '/') + n;
@@ -298,7 +281,7 @@ let bTimer = 0;
 function bSearchUpdate() {
   B.q = $('#bSearch').value; clearTimeout(bTimer);
   const q = B.q.trim();
-  if (!$('#bDeep').checked || q.length < 2) { B.found = null; $('#bInfo').textContent = ''; renderBrowser(); return; }
+  if (q.length < 2) { B.found = null; $('#bInfo').textContent = ''; renderBrowser(); return; }
   const my = ++B.seq; $('#bInfo').textContent = 'Suche …';
   bTimer = setTimeout(async () => {
     try {
@@ -328,12 +311,18 @@ function openBrowser(mode, start) {
   $('#bAddSel').classList.toggle('hidden', mode !== 'files');
   $('#bAll').parentElement.classList.toggle('hidden', mode !== 'files');
   $('#bAddDir').textContent = mode === 'dir' ? 'Diesen Ordner wählen' : 'Diesen Ordner (rekursiv)';
-  $('#bDeep').checked = false;
   $('#browser').showModal();
   browseTo(start || '');
   return new Promise(res => B.resolve = res);
 }
 function closeBrowser(v) { $('#browser').close(); if (B.resolve) B.resolve(v); B.resolve = null; }
+
+// Dateien aus dem Browser holen (start = Ordner, in dem er aufgeht, z. B. ein Quellordner)
+async function pickFrom(start) {
+  const r = await openBrowser('files', start); if (!r) return;
+  if (r.dir) S.lastDir = r.dir;
+  const d = await api('/api/scan', {paths: r.paths, kind: S.world}); addScanned(d.files);
+}
 
 // ---------- Toasts ----------
 function toast(msg, kind) {
@@ -379,7 +368,8 @@ async function start() {
   try {
     const r = await api('/api/jobs', req);
     toast(r.ids.length + (r.ids.length === 1 ? ' Auftrag eingereiht.' : ' Aufträge eingereiht.'), 'ok');
-    files.length = 0; renderFiles(); saveSettings(); poll(); showStep('start');
+    files.length = 0; if (kind === 'video') { S.vstep = 1; S.rulesSeen = false; S.presetSkip = false; }
+    renderFiles(); saveSettings(); poll(); renderStartTiles(); showStep('start');
   } catch (e) { toast(e.message, 'bad'); }
 }
 
@@ -415,11 +405,12 @@ function decoderBadge(j) {
   }
   return `<span class="chip ${j.hwDecodeFallback ? 'warn' : ''}" title="Die Quelldatei wird auf der CPU gelesen${j.hwDecodeFallback ? ' (Hardware ging bei dieser Datei nicht)' : ' (so eingestellt)'}. Das Ergebnis ist gleich gut, nur die CPU hat mehr zu tun.">Lesen: CPU</span>`;
 }
+// Abzeichen „Video“ / „Audio“ (Audio in Orange) in Warteschlange und Verlauf
+const kindBadge = k => `<span class="kindbadge ${k}">${esc(W(k).name)}</span>`;
 function renderQueue() {
   // die Warteschlange zeigt nur laufende und wartende Aufträge; beendete stehen darunter im Verlauf
-  const q = $('#queue'), mine = S.jobs.filter(j => j.kind === S.world && (j.status === 'queued' || j.status === 'running'));
-  $('#queueWorld').textContent = '· ' + W(S.world).name;
-  if (!mine.length) { q.innerHTML = '<div class="empty" style="margin-top:8px">Keine laufenden oder wartenden Aufträge in ' + esc(W(S.world).name) + '. Beendete Aufträge stehen unten im Verlauf.</div>'; return; }
+  const q = $('#queue'), mine = S.jobs.filter(j => j.status === 'queued' || j.status === 'running');
+  if (!mine.length) { q.innerHTML = '<div class="empty" style="margin-top:8px">Keine laufenden oder wartenden Aufträge. Beendete Aufträge stehen unten im Verlauf.</div>'; return; }
   q.innerHTML = mine.slice().reverse().map(j => {
     const meta = [];
     if (j.status === 'running') {
@@ -434,7 +425,7 @@ function renderQueue() {
     (j.warnings || []).forEach(w => meta.push('<span class="warn">' + esc(w) + '</span>'));
     const act = (j.status === 'queued' || j.status === 'running') ? `<button class="small ghost" data-cancel="${j.id}" title="Bricht diesen Auftrag ab und löscht die unfertige Datei. Die Quelldatei bleibt unberührt.">Abbrechen</button>` : '';
     const note = j.status === 'done' && (j.hwDecodeFallback || (j.warnings || []).length);
-    return `<div class="job ${j.status}${note ? ' note' : ''}"><div class="job-h"><span class="n" title="${esc(j.input)}">${esc(j.name)}</span>${encoderBadge(j)}${decoderBadge(j)}${statusChip(j)}${act}</div>
+    return `<div class="job ${j.status}${note ? ' note' : ''}"><div class="job-h">${kindBadge(j.kind)}<span class="n" title="${esc(j.input)}">${esc(j.name)}</span>${encoderBadge(j)}${decoderBadge(j)}${statusChip(j)}${act}</div>
       <div class="bar"><i style="width:${j.progress.toFixed(1)}%"></i></div>
       <div class="job-m"><span>${j.progress.toFixed(1)} %</span>${meta.map(m => `<span>${m}</span>`).join('')}</div>
       ${j.error && j.status === 'error' ? `<div class="small" style="color:var(--bad)">${esc(j.error)}</div>` : ''}
@@ -499,10 +490,10 @@ function renderMonitor() {
   }
   [...box.children].forEach(c => { if (!keep.includes(c.dataset.m)) c.remove(); });
 }
-// Aufträge einer Welt, die zum aktuellen Durchlauf gehören: alle, deren Zeitraum (angelegt → beendet) sich mit den noch aktiven überlappt.
+// Aufträge, die zum aktuellen Durchlauf gehören: alle, deren Zeitraum (angelegt → beendet) sich mit den noch aktiven überlappt.
 // So zählt „Datei 4 von 13“ nur den laufenden Durchlauf, auch nach dem Neuladen der Seite (die Zeiten kommen vom Server).
-function currentBatch(world) {
-  const mine = S.jobs.filter(j => j.kind === world).slice().sort((a, b) => new Date(a.created) - new Date(b.created));
+function currentBatch() {
+  const mine = S.jobs.slice().sort((a, b) => new Date(a.created) - new Date(b.created));
   const now = Date.now(), end = j => (j.status === 'queued' || j.status === 'running') ? now : new Date(j.ended).getTime() || now;
   let comps = [], cur = null;
   mine.forEach(j => {
@@ -515,12 +506,12 @@ function currentBatch(world) {
 // Kopfbereich der Startseite: der aktuelle Auftrag („Datei 4 von 13“, Fortschritt, Hardware mit Haken) oder „Gerade nichts los“
 function renderHero() {
   const box = $('#jobNow'); if (!box) return;
-  const batch = currentBatch(S.world), total = batch.length;
+  const batch = currentBatch(), total = batch.length;
   const running = batch.filter(j => j.status === 'running').sort((a, b) => new Date(a.started) - new Date(b.started));
   const cur = running[0] || batch.find(j => j.status === 'queued');
   if (!cur) {
     box.className = 'jobnow idle';
-    box.innerHTML = '<div class="jn-title">Gerade nichts los</div><div class="muted small">Mit „Konvertieren“ oben startest du einen neuen Auftrag. Laufende Aufträge erscheinen hier; beendete stehen im Verlauf.</div>';
+    box.innerHTML = '<div class="jn-title">Gerade nichts los</div><div class="muted small">Wähle oben Video oder Audio, um einen neuen Auftrag zu starten. Laufende Aufträge erscheinen hier; beendete stehen im Verlauf.</div>';
     return;
   }
   const finished = batch.filter(j => !(j.status === 'queued' || j.status === 'running')).length;
@@ -536,23 +527,18 @@ function renderHero() {
     <div class="jn-chips">${statusChip(cur)}${encoderBadge(cur)}${decoderBadge(cur)}</div>
     ${total > 1 ? `<div class="jn-all"><span class="muted small">Gesamt ${overall} %</span><div class="bar thin"><i style="width:${overall}%"></i></div></div>` : ''}`;
 }
-// Zähler am Verlauf-Knopf: laufende und wartende Aufträge der gewählten Welt
+// Zähler am Verlauf-Knopf: laufende und wartende Aufträge (Video und Audio)
 function renderHistBadge() {
-  const n = S.jobs.filter(j => j.kind === S.world && (j.status === 'running' || j.status === 'queued')).length;
+  const n = S.jobs.filter(j => j.status === 'running' || j.status === 'queued').length;
   const el = $('#histBadge'); if (!el) return;
   el.textContent = n || ''; el.classList.toggle('hidden', !n);
   $('#startHistory').title = n ? `Verlauf und Warteschlange (${n} ${n === 1 ? 'Auftrag läuft oder wartet' : 'Aufträge laufen oder warten'})` : 'Verlauf und Warteschlange';
 }
-// „Parallel“ gilt für die gerade gewählte Welt; an den Welt-Knöpfen zeigt ein Zähler, wo etwas läuft oder wartet
+// „Parallel“ gilt je Art (Video und Audio haben je eine eigene Warteschlange)
 function renderConc() {
-  if (S.conc && document.activeElement !== $('#conc')) $('#conc').value = S.conc[S.world];
-}
-function renderWorldBadges() {
-  $$('#worlds button').forEach(b => {
-    const n = S.jobs.filter(j => j.kind === b.dataset.world && (j.status === 'running' || j.status === 'queued')).length;
-    const el = b.querySelector('.wbadge');
-    if (el) { el.textContent = n; el.classList.toggle('hidden', !n || b.dataset.world === S.world); }
-  });
+  if (!S.conc) return;
+  if (document.activeElement !== $('#concV')) $('#concV').value = S.conc.video;
+  if (document.activeElement !== $('#concA')) $('#concA').value = S.conc.audio;
 }
 let polling = false;
 async function poll() {
@@ -563,7 +549,7 @@ async function poll() {
     const d = await api('/api/state');
     S.jobs = d.jobs; S.stats = d.stats; S.conc = d.concurrency;
     const savedChanged = JSON.stringify(S.saved) !== JSON.stringify(d.saved); S.saved = d.saved; if (savedChanged) renderSaved();
-    renderConc(); renderWorldBadges();
+    renderConc();
     const fin = d.finished !== undefined ? d.finished : S.jobs.filter(j => !(j.status === 'queued' || j.status === 'running')).length;
     renderQueue(); renderMonitor(); renderHero(); renderHistBadge();
     if (S.histFin !== undefined && fin !== S.histFin && typeof S.histReload === 'function') S.histReload(); // ein Auftrag ist beendet: Verlauf sofort neu laden
@@ -711,11 +697,7 @@ function wire() {
   window.addEventListener('hashchange', route);
   [...FIELDS, ...CHECKS].forEach(f => $('#' + f).addEventListener('input', () => { refreshAudioUI(); refreshVideoUI(); saveSettings(); refreshNamePreview(); if (typeof cvRender === 'function') cvRender(); }));
   $('#outMode').addEventListener('input', outModeUI);
-  $('#addFiles').onclick = async () => {
-    const r = await openBrowser('files', S.lastDir); if (!r) return;
-    if (r.dir) S.lastDir = r.dir;
-    const d = await api('/api/scan', {paths: r.paths, kind: S.world}); addScanned(d.files);
-  };
+  $('#addFiles').onclick = () => pickFrom(S.lastDir);
   $('#addFolder').onclick = async () => {
     const r = await openBrowser('dir', S.lastDir); if (!r) return;
     S.lastDir = r.dir;
@@ -726,7 +708,7 @@ function wire() {
   $('#bUp').onclick = () => browseTo(B.parent || '');
   $('#bGo').onclick = () => browseTo($('#bPath').value);
   $('#bPath').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); browseTo($('#bPath').value); } };
-  $('#bSearch').addEventListener('input', bSearchUpdate); $('#bDeep').addEventListener('input', bSearchUpdate);
+  $('#bSearch').addEventListener('input', bSearchUpdate);
   $('#bSearch').onkeydown = e => { if (e.key === 'Enter') e.preventDefault(); };
   $('#bCancel').onclick = () => closeBrowser(null);
   $('#browser').addEventListener('cancel', () => { if (B.resolve) B.resolve(null); B.resolve = null; });
@@ -742,9 +724,10 @@ function wire() {
     document.body.innerHTML = '<div style="padding:60px;text-align:center;font:18px system-ui">p5converter wurde beendet.<br><br><small>Du kannst dieses Fenster schließen. Zum Neustart das Programm erneut öffnen.</small></div>';
     S.stopped = true;
   };
-  $('#cancelAll').onclick = () => api('/api/jobs/cancel-all', {kind: S.world}).then(poll);
+  $('#cancelAll').onclick = () => api('/api/jobs/cancel-all', {kind: ''}).then(poll);
   $('#histBack').onclick = () => { location.hash = ''; };
-  $('#conc').onchange = () => api('/api/concurrency', {kind: S.world, n: +$('#conc').value});
+  $('#concV').onchange = () => api('/api/concurrency', {kind: 'video', n: +$('#concV').value});
+  $('#concA').onchange = () => api('/api/concurrency', {kind: 'audio', n: +$('#concA').value});
   wireVerify(); wireCrf(); wireConvert();
   $('#hwRedetect').onclick = async () => { await api('/api/hw/detect', {}); S.info.hw.done = false; S.info.hw.backends = []; renderHwCard(); setTimeout(loadInfo, 800); };
 }
@@ -766,13 +749,11 @@ function applyDefaultsFromCfg() {
 
 async function startApp() {
   S.cfg = await api('/api/settings');
-  captureDefaults(); loadSettings(); decorateInfo(); wire(); renderWorldNav();
+  captureDefaults(); loadSettings(); decorateInfo(); wire();
   await loadInfo();
   applyDefaultsFromCfg();
-  const sw = cfg().startWorld;
-  if (sw === 'audio' || sw === 'video') S.world = sw;
-  if (!worldOrder().includes(S.world)) S.world = worldOrder()[0];
-  outModeUI(); setWorld(S.world, false); renderPresetChips(); renderHero();
+  if (S.world !== 'audio' && S.world !== 'video') S.world = 'video';
+  outModeUI(); setWorld(S.world); renderPresetChips(); renderHero(); applySteps();
   if (cfg().showNews !== false) loadNews();
   if (!S.cfg.persistent) toast('Einstellungen werden nicht dauerhaft gespeichert (Pfad /config fehlt).', 'bad');
   poll(); S.pollTimer = setInterval(poll, 1000);

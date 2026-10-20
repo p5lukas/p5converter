@@ -17,7 +17,7 @@ const L = require('./ui-lib');
       await route.fulfill({response: r, json: j});
     });
     await p.goto(L.url); await p.waitForTimeout(700);
-    await p.click('[data-world=video]'); await p.waitForTimeout(500);
+    await p.waitForTimeout(500);
     const toasts = await p.locator('#toasts').textContent();
     if (/Start fehlgeschlagen/.test(toasts)) errs.push(`${name}: „Start fehlgeschlagen“ trotz leerer Hardware-Liste: ${toasts}`);
     eq(name, '„Beenden“ ist sofort sichtbar', await p.locator('#quit').isVisible(), true);

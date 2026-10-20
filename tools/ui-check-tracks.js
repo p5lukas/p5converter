@@ -18,12 +18,11 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
     const ov = async () => p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     eq(name, 'Neuigkeiten nicht in der Kopfzeile', await p.locator('header.top #newsBtn').count(), 0);
     eq(name, 'Neuigkeiten in der Fußzeile', await p.locator('#footNews').count(), 1);
-    await L.setWorld(p, 'video');
     // Hardware-Kachel: eine Zeile je Hardware, Gründe eingeklappt
     eq(name, 'Hardware-Zeilen', (await p.locator('#hwList > .hw, #hwList > details.hwoff').count()) > 0, true);
     eq(name, 'Gründe eingeklappt', await p.locator('#hwList details[open]').count(), 0);
     await p.screenshot({ path: `${L.SHOTS}/t-${name}-0-start.png`, fullPage: true });
-    await p.click('#startFlow'); await p.waitForTimeout(300);
+    await L.enter(p, 'video');
     await L.addFile(p, 'multi.mkv'); await L.addFile(p, 'multi2.mkv');
     await L.goStep(p, 'dest');
     await p.selectOption('#exists', 'overwrite'); await p.waitForTimeout(100);

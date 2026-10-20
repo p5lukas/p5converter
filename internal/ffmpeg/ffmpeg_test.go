@@ -15,6 +15,9 @@ func TestStatTag(t *testing.T) {
 	if statTag(map[string]string{"number_of_bytes-eng": "1234"}, "number_of_bytes") != 1234 {
 		t.Error("tag with language suffix")
 	}
+	if statTag(map[string]string{"bps-eng": "640000"}, "bps") != 640000 {
+		t.Error("BPS tag (stream bitrate in MKV)")
+	}
 	if statTag(map[string]string{"title": "x"}, "number_of_frames") != 0 {
 		t.Error("missing tag must be 0")
 	}

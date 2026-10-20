@@ -9,19 +9,39 @@ exports.views = [
 exports.url = process.env.P5_URL || 'http://127.0.0.1:8787';
 exports.SHOTS = process.env.SHOTS || '/tmp/shots';
 exports.INDIR = process.env.INDIR || '/tmp/media';
-// Ansichten ansteuern. Seit 0.3.0 gibt es keine Schritte mehr, sondern eine Ansicht „Konvertieren“ plus das Fenster „Details“ mit den
-// früheren Schritten als Reiter. Die alten Namen bleiben: files/summary = Hauptansicht, dest/name/video/audio/tracks = Reiter in „Details“.
+// Ansichten ansteuern. Seit 0.3.2 wählt die Startseite die Art (Kacheln Video/Audio); Video läuft in vier Schritten (1 Dateien, 2 Regeln,
+// 3 Wie umwandeln?, 4 Kontrolle & Start), Audio in einer Ansicht. Das Fenster „Details“ hat die früheren Schritte als Reiter (dest/video/tracks/verify).
 const DTAB = {dest: 'dest', name: 'dest', video: 'video', audio: 'video', tracks: 'tracks', verify: 'verify'};
+// zur Startseite (Fenster zu, Ablauf verlassen, andere Seiten schließen)
+exports.home = async p => {
+  if (await p.isVisible('#detailsDlg')) { await p.click('#detailsClose'); await p.waitForTimeout(200); }
+  if (!(await p.isVisible('#startTiles'))) {
+    if (await p.isVisible('#cvHome')) await p.click('#cvHome');
+    else { await p.evaluate(() => { location.hash = ''; }); await p.waitForTimeout(300); if (await p.isVisible('#cvHome')) await p.click('#cvHome'); }
+  }
+  await p.waitForTimeout(200);
+};
+// Art wählen: Kachel Video oder Audio (Video beginnt bei Schritt 1, Audio in der einen Ansicht)
+exports.enter = async (p, kind) => { await exports.home(p); await p.click(`[data-kind=${kind}]`); await p.waitForTimeout(400); };
+exports.setWorld = exports.enter;
+// Video: von Schritt 1 (mit Dateien) bis zur Kontrolle (Schritt 4)
+exports.toCheck = async p => {
+  for (let i = 0; i < 4 && !(await p.isVisible('#stepnav')); i++) { await p.click('#wizNext'); await p.waitForTimeout(700); }
+  await p.waitForTimeout(400);
+};
 exports.goStep = async (p, id) => {
-  if (id === 'start') { if (await p.isVisible('#detailsDlg')) await p.click('#detailsClose'); if (await p.isVisible('#convertView')) await p.click('#cvHome'); await p.waitForTimeout(200); return; }
-  if (!(await p.isVisible('#convertView'))) { await p.click('#startFlow'); await p.waitForTimeout(300); }
+  if (id === 'start') { await exports.home(p); return; }
+  if (await p.isVisible('#startTiles')) { const k = await p.evaluate(() => S.world); await p.click(`[data-kind=${k}]`); await p.waitForTimeout(400); } // von der Startseite aus: die zuletzt benutzte Art
   const open = await p.isVisible('#detailsDlg');
   if (id in DTAB) {
-    if (!open) { await p.click('#detailsBtn'); await p.waitForTimeout(250); }
+    if (!open) {
+      if (!(await p.isVisible('#stepnav')) && (await p.locator('#fileList .file').count())) await exports.toCheck(p);
+      if (await p.isVisible('#detailsBtn')) await p.click('#detailsBtn'); else await p.evaluate(t => openSheet(t), DTAB[id]); // ohne Dateien (Video, Schritt 1) gibt es keine Startleiste
+      await p.waitForTimeout(250);
+    }
     await p.click(`[data-dtab=${DTAB[id]}]`); await p.waitForTimeout(300);
   } else if (open) { await p.click('#detailsClose'); await p.waitForTimeout(250); }
 };
-exports.setWorld = async (p, w) => { if (await p.isVisible('#detailsDlg')) { await p.click('#detailsClose'); await p.waitForTimeout(200); } await p.click(`[data-world=${w}]`); await p.waitForTimeout(1300); };
 // Datei im Server-Browser auswählen (im Schritt „Dateien“)
 exports.addFile = async (p, name, btn = '#addFiles', add = '#bAddSel') => {
   await p.click(btn); await p.waitForTimeout(300);

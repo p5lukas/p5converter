@@ -20,18 +20,16 @@ t('Quick Sync liegt bei gleicher Stufe niedriger als NVENC (gleiche Zahl wäre d
 t('Gut entspricht dem bisherigen Richtwert der CPU (niedrigster Wert der Bereiche)', () => {
   assert.strictEqual(Q.value('cpu', 'h264', 'good'), 18); assert.strictEqual(Q.value('cpu', 'hevc', 'good'), 20); assert.strictEqual(Q.value('cpu', 'av1', 'good'), 24);
 });
-t('Material verschiebt alle Stufen (Anime −4, Korn −2) und kleine Auflösung −1', () => {
-  assert.strictEqual(Q.value('cpu', 'hevc', 'good', 'anime'), 16);
-  assert.strictEqual(Q.value('cpu', 'hevc', 'good', 'grain'), 18);
-  assert.strictEqual(Q.value('cpu', 'hevc', 'good', 'standard', 720), 19);
-  assert.strictEqual(Q.value('cpu', 'hevc', 'good', 'anime', 576), 15);
+t('Feste Zahlen: x265 auf der CPU 17 / 20 / 23 / 27, ohne Zu- oder Abschläge', () => {
+  assert.deepStrictEqual(Q.STAGES.map(([id]) => Q.value('cpu', 'hevc', id)), [17, 20, 23, 27]);
 });
-t('Zahlen bleiben im sinnvollen Bereich', () => {
-  assert.ok(Q.value('cpu', 'h264', 'very', 'anime', 480) >= 10);
+t('Quelle schon klein: unter 4 Mbit/s bei 1080p, kleinere Bilder im Verhältnis', () => {
+  assert.ok(Q.lowBitrate(3.2e6, 1080)); assert.ok(!Q.lowBitrate(8e6, 1080)); assert.ok(!Q.lowBitrate(0, 1080)); assert.ok(!Q.lowBitrate(3e6, 0));
+  assert.ok(Q.lowBitrate(3e6, 2160)); assert.ok(!Q.lowBitrate(5e6, 2160)); assert.ok(Q.lowBitrate(1e6, 720)); assert.ok(!Q.lowBitrate(3e6, 720));
 });
 t('stageOf ist die Umkehrung von value, sonst „custom“', () => {
-  for (const [id] of Q.STAGES) assert.strictEqual(Q.stageOf('qsv', 'hevc', Q.value('qsv', 'hevc', id, 'standard'), 'standard'), id);
-  assert.strictEqual(Q.stageOf('qsv', 'hevc', 22, 'standard'), 'custom');
+  for (const [id] of Q.STAGES) assert.strictEqual(Q.stageOf('qsv', 'hevc', Q.value('qsv', 'hevc', id)), id);
+  assert.strictEqual(Q.stageOf('qsv', 'hevc', 22), 'custom');
   assert.strictEqual(Q.stageOf('cpu', 'copy', 22), 'custom');
 });
 t('Kopieren hat keine Zahl', () => { assert.strictEqual(Q.value('cpu', 'copy', 'good'), null); });
