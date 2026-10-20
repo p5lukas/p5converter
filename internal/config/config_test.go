@@ -199,3 +199,20 @@ func TestDefaultsHaveNoNullLists(t *testing.T) {
 		}
 	}
 }
+
+// Der Matrix-Regen ist standardmäßig an (noRain = false) und lässt sich ausschalten; das Feld bleibt gespeichert.
+func TestNoRainDefaultAndSaved(t *testing.T) {
+	dir := t.TempDir()
+	st := Open(dir)
+	if st.Get().NoRain {
+		t.Fatal("Regen sollte standardmäßig an sein")
+	}
+	s := st.Get()
+	s.NoRain = true
+	if _, err := st.Put(s); err != nil {
+		t.Fatal(err)
+	}
+	if !Open(dir).Get().NoRain {
+		t.Error("noRain nicht gespeichert")
+	}
+}

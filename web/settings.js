@@ -251,6 +251,7 @@ function pageGeneral() {
     rootNamesRow(),
     row('Kontrolle – ' + W('audio').name, verifyControls('audio'), 'vfInfo', 'Standardauswahl für „danach geprüft“ beim Konvertieren'),
     row('Kontrolle – ' + W('video').name, verifyControls('video'), 'vfInfo', 'Standardauswahl für „danach geprüft“ beim Konvertieren'),
+    row('Matrix-Regen', check(c.noRain !== true, v => saveCfg(x => { x.noRain = !v; }), 'Kurzer Regen über der Karte, wenn ein Auftrag erfolgreich fertig ist'), null, 'Bleibt bei „Bewegung reduzieren“ und bei Fehlern aus'),
     row('Neuigkeiten', check(c.showNews, v => saveCfg(x => { x.showNews = v; }), 'Hinweis „Neuigkeiten“ bei neuer Version zeigen')));
 }
 

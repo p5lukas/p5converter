@@ -30,6 +30,9 @@ node tools/test-trkplan.js || bad "tools/test-trkplan.js"
 step "Qualitätsstufen (web/quality.js, Node-Test)"
 node tools/test-quality.js || bad "tools/test-quality.js"
 
+step "Bibliothek-Scan (web/library.js, Node-Test)"
+node tools/test-library.js || bad "tools/test-library.js"
+
 step "web/embed.go: jede Datei aus index.html ist eingebettet und vorhanden"
 for f in $(grep -o 'src="[a-z0-9.-]*\.js"' web/index.html | sed 's/src="//;s/"//'); do
   [ -f "web/$f" ] || bad "web/$f fehlt"

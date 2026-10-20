@@ -75,11 +75,13 @@
         <div class="btns">
           <button id="addFiles">+ Dateien</button>
           <button id="addFolder">+ Ordner</button>
+          <button id="scanFolder" class="hidden" title="Einen Ordner rekursiv prüfen und zeigen, bei welchen Ordnern sich das Umwandeln lohnt"><span data-ic="chip"></span> Ordner prüfen …</button>
           <button id="clearFiles" class="ghost">Leeren</button>
         </div>
         <details id="cvFileDetails" class="cvfd"><summary>Liste der Dateien</summary><div id="fileList" class="files"></div></details>
       </div>
     </div>
+    <section class="cvcard hidden" id="cvScan" aria-live="polite"></section>
     <div id="cvRules" class="cvstep hidden"></div>
     <div id="cvHow" class="cvstep hidden"></div>
     <div class="panel cvsentence" id="cvSentence"></div>
@@ -133,9 +135,11 @@
         <div class="btns">
           <label class="inline small">Parallel · Video <select id="concV"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
           <label class="inline small">Audio <select id="concA"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
+          <button id="pauseQueue" class="small">Pausieren</button>
           <button id="cancelAll" class="small ghost" title="Bricht alle laufenden und wartenden Aufträge ab und löscht unfertige Dateien. Quelldateien bleiben unberührt.">Alle abbrechen</button>
         </div>
       </div>
+      <div id="queuePaused" class="banner warn hidden">Die Warteschlange ist pausiert: laufende Aufträge werden fertig, es startet kein neuer. Mit „Fortsetzen“ geht es weiter.</div>
       <div id="queue"></div>
     </div>
   <div id="historyBody"></div>
@@ -312,6 +316,14 @@
   </div>
 </dialog>
 
+<dialog id="restoreDlg">
+  <form method="dialog" class="dlg">
+    <h2><span data-ic="history"></span> Unterbrochene Aufträge</h2>
+    <p id="restoreText"></p>
+    <div class="dlg-f"><button type="button" id="restoreNo" class="ghost">Verwerfen</button><button type="button" id="restoreYes" class="primary">Fortsetzen</button></div>
+  </form>
+</dialog>
+
 <dialog id="presetDlg">
   <form method="dialog" class="dlg" id="presetForm">
     <h2><span data-ic="floppy"></span> Als Voreinstellung speichern</h2>
@@ -391,6 +403,8 @@
 <script src="quality.js"></script>
 <script src="crf.js"></script>
 <script src="convert.js"></script>
+<script src="library.js"></script>
+<script src="rain.js"></script>
 <script src="logs.js"></script>
 <script src="history.js"></script>
 <script src="settings.js"></script>
