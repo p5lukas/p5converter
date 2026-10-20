@@ -429,7 +429,7 @@ function renderQueue() {
   // die Warteschlange zeigt nur laufende und wartende Aufträge; beendete stehen darunter im Verlauf
   const q = $('#queue'), mine = S.jobs.filter(j => j.status === 'queued' || j.status === 'running');
   if (!mine.length) { q.innerHTML = '<div class="empty" style="margin-top:8px">Keine laufenden oder wartenden Aufträge. Beendete Aufträge stehen unten im Verlauf.</div>'; return; }
-  q.innerHTML = mine.slice().reverse().map(j => {
+  q.innerHTML = mine.map(j => { // in der Reihenfolge, in der sie dran kommen (oben: läuft bzw. als Nächstes)
     const meta = [];
     if (j.status === 'running') {
       if (j.speed) meta.push('Speed ' + esc(j.speed));
