@@ -872,3 +872,69 @@ func TestBrowseSearch(t *testing.T) {
 		t.Errorf("Suche ohne Treffer: %+v", r.Hits)
 	}
 }
+
+// Warteschlange verwalten über die API: pausieren, einen Auftrag anhalten und verschieben, fortsetzen; der Stand steht in /api/state.
+func TestQueueAPI(t *testing.T) {
+	root := t.TempDir()
+	s, ts := newTestServer(t, []string{root})
+	src := filepath.Join(root, "song.wav")
+	if out, err := exec.Command("ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "sine=f=440:d=1", src).CombinedOutput(); err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	state := func() map[string]any {
+		resp, err := http.Get(ts.URL + "/api/state")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		var m map[string]any
+		json.NewDecoder(resp.Body).Decode(&m)
+		return m
+	}
+	post(t, ts, "/api/queue/pause", map[string]any{"on": true}, nil)
+	if state()["paused"] != true {
+		t.Fatal("Warteschlange nicht pausiert")
+	}
+	var ids []string
+	for i := 0; i < 2; i++ {
+		var r struct{ IDs []string }
+		resp := post(t, ts, "/api/jobs", map[string]any{"kind": "audio", "items": []map[string]string{{"path": src}},
+			"output": map[string]any{"dir": filepath.Join(root, "o"), "structure": "flat", "exists": "rename"}, "audio": map[string]any{"format": "mp3", "mode": "vbr", "quality": 4}}, nil)
+		json.NewDecoder(resp.Body).Decode(&r)
+		resp.Body.Close()
+		ids = append(ids, r.IDs...)
+	}
+	time.Sleep(300 * time.Millisecond)
+	for _, j := range s.Jobs.Snapshot() {
+		if j.Status != "queued" {
+			t.Fatalf("pausiert, aber %s ist %s", j.ID, j.Status)
+		}
+	}
+	if r := post(t, ts, "/api/jobs/"+ids[1]+"/move", map[string]any{"how": "top"}, nil); r.StatusCode != 200 {
+		t.Errorf("move: %d", r.StatusCode)
+	}
+	if r := post(t, ts, "/api/jobs/"+ids[1]+"/move", map[string]any{"how": "top"}, nil); r.StatusCode != 400 {
+		t.Errorf("erneut nach oben muss abgelehnt werden: %d", r.StatusCode)
+	}
+	post(t, ts, "/api/jobs/"+ids[0]+"/hold", map[string]any{"on": true}, nil)
+	post(t, ts, "/api/queue/pause", map[string]any{"on": false}, nil)
+	waitDone(t, s, 1)
+	time.Sleep(500 * time.Millisecond)
+	held := ""
+	for _, j := range s.Jobs.Snapshot() {
+		if j.Held {
+			held = j.ID
+			if j.Status != "queued" {
+				t.Errorf("angehaltener Auftrag lief trotzdem: %s", j.Status)
+			}
+		}
+	}
+	if held != ids[0] {
+		t.Errorf("angehaltener Auftrag: %q, erwartet %s", held, ids[0])
+	}
+	post(t, ts, "/api/jobs/"+ids[0]+"/hold", map[string]any{"on": false}, nil)
+	waitDone(t, s, 2)
+	if r := post(t, ts, "/api/queue/restore", map[string]any{"action": "x"}, nil); r.StatusCode != 400 {
+		t.Error("ungültige Aktion muss abgelehnt werden")
+	}
+}
