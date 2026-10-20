@@ -31,7 +31,7 @@ async function historyPage() {
     const checks = (e.checks || []).map(c => h('div', {class: 'small ' + (c.ok ? 'okc' : 'warn')}, (c.ok ? '✓ ' : '✗ ') + c.note));
     const det = h('details', {class: 'histentry', open: st.open.has(e.id), ontoggle: ev => { ev.target.open ? st.open.add(e.id) : st.open.delete(e.id); }},
       h('summary', {},
-        h('span', {class: 'hname', title: e.input}, kindBadge(e.kind), e.name),
+        h('span', {class: 'hname', title: e.input}, h('span', {class: 'kindbadge ' + e.kind}, W(e.kind).name), e.name),
         h('span', {class: 'chip ' + cls}, lbl),
         e.checkFailed ? h('span', {class: 'chip warn', title: 'Eine Prüfung nach dem Umwandeln ist durchgefallen'}, 'Prüfung ✗') : null,
         h('span', {class: 'muted small hmeta'}, fmtDateTime(e.ended),

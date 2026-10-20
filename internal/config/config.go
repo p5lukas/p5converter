@@ -95,6 +95,7 @@ func Defaults() Settings {
 	return Settings{
 		ShowNews:         true,
 		TrackRules:       TrackRules{Audio: []AudioRule{}, Sub: []SubRule{}},
+		TrackPrefs:       TrackPrefs{AudioKeep: []string{}, SubKeep: []string{}, AudioDefault: []string{}, SubDefault: []SubPref{}},
 		PreferredBackend: "auto",
 		HWDecode:         true,
 		Verify:           map[string]Verify{"audio": defaultVerify(), "video": defaultVerify()},

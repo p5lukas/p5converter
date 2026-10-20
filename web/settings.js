@@ -346,7 +346,7 @@ function rankList(items, labelOf, onChange, options, addText) {
   return wrap;
 }
 function pageTracks() {
-  const p = {audioKeep: [], subKeep: [], audioDefault: [], subDefault: [], ...(cfg().trackPrefs || {})};
+  const tp = cfg().trackPrefs || {}, p = {audioKeep: tp.audioKeep || [], subKeep: tp.subKeep || [], audioDefault: tp.audioDefault || [], subDefault: tp.subDefault || []};
   const save = (k, v) => saveCfg(x => { x.trackPrefs = {audioKeep: [], subKeep: [], audioDefault: [], subDefault: [], ...(x.trackPrefs || {})}; x.trackPrefs[k] = v; }, 'Gespeichert ✓').then(() => { if (S.step === 'tracks') trkRender(); });
   const nameOf = l => langName(l) + ' (' + l + ')';
   const subName = x => langName(x.lang) + (x.forced ? ' (Forced)' : '') + ' (' + x.lang + ')';

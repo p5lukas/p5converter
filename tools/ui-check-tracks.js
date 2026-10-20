@@ -46,7 +46,7 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
     const expand = async i => { if (!(await card(i).locator('.trkadv').count())) { await card(i).locator('.trkmore').click(); await p.waitForTimeout(150); } };
     // Titel der 1. Tonspur, 2. Tonspur automatisch, 1. Untertitel Forced (alles unter „Erweitert“)
     await expand(0); await card(0).locator('.trkadv input:not([type])').first().fill('Deutsch Stereo'); await card(0).locator('.trkadv input:not([type])').first().dispatchEvent('change'); await p.waitForTimeout(200);
-    await expand(1); await card(1).locator('.trkadv input[type=radio]').check(); await p.waitForTimeout(200);
+    await expand(1); await card(1).locator('.trkadv input[type=checkbox]').first().check(); await p.waitForTimeout(200);
     await expand(2); await card(2).locator('.trkadv input[type=checkbox]').first().check(); await p.waitForTimeout(200);
     eq(name, 'bearbeitete Karten markiert', await p.locator('#trackEditor .trkcard.edited').count() >= 3, true);
     // Neu kodieren: Empfehlung und Zielbitrate sichtbar

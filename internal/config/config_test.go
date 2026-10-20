@@ -189,3 +189,13 @@ func TestTrackRulesCleaned(t *testing.T) {
 		t.Error("nil-Liste")
 	}
 }
+
+// Frische Einstellungen schicken leere Listen statt null (die Oberfläche ruft .slice() darauf auf).
+func TestDefaultsHaveNoNullLists(t *testing.T) {
+	b, _ := json.Marshal(Open(t.TempDir()).Get())
+	for _, k := range []string{`"audioKeep":null`, `"subKeep":null`, `"audioDefault":null`, `"subDefault":null`, `"trackRules":{"audio":null`} {
+		if strings.Contains(string(b), k) {
+			t.Errorf("null statt leerer Liste: %s", k)
+		}
+	}
+}
