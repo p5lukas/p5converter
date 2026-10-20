@@ -14,6 +14,7 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
+- [ ] **Neue Dateinamen einzeilig zur Kontrolle (Nutzer 20.10.)**: Wenn im Ablauf umbenannt wird (Namensmuster, Zusatz, Ersetzungen), soll die Kontrolle (Schritt 4, Karte „Dateiname“) **alle Dateien einzeilig** zeigen: je Datei eine Zeile „alter Name → neuer Name“ (Vorschau vom Server), nicht nur das Beispiel der ersten Datei; braucht wenig Platz, lange Namen einzeilig abgeschnitten mit vollem Namen als Tooltip; bei vielen Dateien (Staffel) scrollbar oder mit „weitere anzeigen“; Fehler/Doppelte Namen rot markiert. Gilt für Video und Audio
 - [ ] **Windows-App: Folgearbeiten** (erste Version 0.1.1 steht auf `dev`): (1) ~~Tray~~ (erledigt in 0.1.2); (2) **Prüfung durch den Nutzer** auf dem Windows-PC (Fenster, Symbol, Hardware-Erkennung, echte Konvertierung, Deinstallation); (3) Größe der `setup.exe` aus dem CI-Lauf (Zusammenfassung „Größen“) mitteilen; (4) Linux-App danach; (5) Windows erst nach Freigabe nach `main`
 - [ ] Optional: Image als multi-arch (amd64/arm64) bauen
 
