@@ -572,7 +572,7 @@ async function poll() {
     const savedChanged = JSON.stringify(S.saved) !== JSON.stringify(d.saved); S.saved = d.saved; if (savedChanged) renderSaved();
     renderConc();
     const fin = d.finished !== undefined ? d.finished : S.jobs.filter(j => !(j.status === 'queued' || j.status === 'running')).length;
-    renderQueue(); renderMonitor(); renderHero(); renderHistBadge(); renderStartTiles(); restoreAsk(); rainOnDone(S.jobs);
+    renderQueue(); renderMonitor(); renderHero(); renderHistBadge(); renderStartTiles(); restoreAsk(); rainOnDone(S.jobs); rainBarsSync();
     if (S.histFin !== undefined && fin !== S.histFin && typeof S.histReload === 'function') S.histReload(); // ein Auftrag ist beendet: Verlauf sofort neu laden
     S.histFin = fin;
   } catch (e) {} finally { polling = false; }

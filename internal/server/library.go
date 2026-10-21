@@ -16,6 +16,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/p5lukas/p5converter/internal/ffmpeg"
 )
 
 // LibRow: eine Zeile der Ergebnisliste = ein Ordner (oder ein Sammelordner über mehrere Ordner mit Videos).
@@ -122,6 +124,7 @@ type libScan struct {
 	state   string // running | done | canceled | error
 	total   int
 	done    int
+	cached  int // davon aus dem Merker (nicht neu gelesen)
 	current string
 	err     string
 	rows    []LibRow
@@ -173,7 +176,7 @@ func (s *Server) libraryStart(w http.ResponseWriter, r *http.Request) {
 func (s *Server) libraryRun(ctx context.Context, sc *libScan) {
 	defer sc.cancel()
 	var files []string
-	var sizes = map[string]int64{}
+	var sizes, mtimes = map[string]int64{}, map[string]int64{}
 	filepath.WalkDir(sc.root, func(fp string, d fs.DirEntry, err error) error {
 		if err != nil || ctx.Err() != nil || len(files) >= libMaxFiles {
 			return nil
@@ -187,7 +190,7 @@ func (s *Server) libraryRun(ctx context.Context, sc *libScan) {
 		if mediaKind(d.Name()) == "video" {
 			files = append(files, fp)
 			if inf, err := d.Info(); err == nil {
-				sizes[fp] = inf.Size()
+				sizes[fp], mtimes[fp] = inf.Size(), inf.ModTime().UnixNano()
 			}
 		}
 		return nil
@@ -204,9 +207,21 @@ func (s *Server) libraryRun(ctx context.Context, sc *libScan) {
 		go func() {
 			defer wg.Done()
 			for fp := range next {
-				pctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-				info, err := s.Tools.Probe(pctx, fp)
-				cancel()
+				facts, ok := s.libCache.get(fp, sizes[fp], mtimes[fp])
+				var info *ffmpeg.Info
+				var err error
+				if !ok {
+					pctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+					info, err = s.Tools.Probe(pctx, fp)
+					cancel()
+					if err == nil && info != nil {
+						facts = factsOf(info)
+						facts.Size, facts.Mtime = sizes[fp], mtimes[fp]
+						if ctx.Err() == nil {
+							s.libCache.put(fp, facts)
+						}
+					}
+				}
 				dir := filepath.Dir(fp)
 				dmu.Lock()
 				a := direct[dir]
@@ -216,40 +231,15 @@ func (s *Server) libraryRun(ctx context.Context, sc *libScan) {
 				}
 				a.files++
 				a.bytes += sizes[fp]
-				if err != nil || info == nil {
+				if !ok && (err != nil || info == nil) {
 					a.unreadable++
 				} else {
-					a.dur += info.Duration
-					if v := info.FirstVideo(); v != nil {
-						a.codecs[v.Codec]++
-						if v.Height > a.maxHeight {
-							a.maxHeight = v.Height
-						}
-					} else {
-						a.codecs["?"]++
-					}
-					heavy := map[string]bool{}
-					img := false
-					for _, st := range info.Streams {
-						switch {
-						case st.Type == "audio" && st.Codec == "truehd":
-							heavy["truehd"] = true
-						case st.Type == "audio" && st.Codec == "dts":
-							if strings.Contains(strings.ToUpper(st.Profile), "MA") || strings.Contains(strings.ToUpper(st.Profile), "HD") {
-								heavy["dtshd"] = true
-							} else {
-								heavy["dts"] = true
-							}
-						case st.Type == "subtitle" && (st.Codec == "hdmv_pgs_subtitle" || st.Codec == "dvd_subtitle" || st.Codec == "dvb_subtitle" || st.Codec == "xsub"):
-							img = true
-						}
-					}
-					for k := range heavy {
-						a.heavy[k]++
-					}
-					if img {
-						a.imageSubs++
-					}
+					a.addFacts(facts)
+				}
+				if ok {
+					sc.mu.Lock()
+					sc.cached++
+					sc.mu.Unlock()
 				}
 				dmu.Unlock()
 				sc.mu.Lock()
@@ -269,6 +259,13 @@ loop:
 	}
 	close(next)
 	wg.Wait()
+	seen := make(map[string]bool, len(files))
+	for _, fp := range files {
+		seen[fp] = true
+	}
+	if ctx.Err() == nil {
+		s.libCache.finish(sc.root, seen)
+	}
 	rows := libraryRows(sc.root, direct)
 	sc.mu.Lock()
 	sc.rows = rows
@@ -291,7 +288,7 @@ func (s *Server) libraryGet(w http.ResponseWriter, r *http.Request) {
 	}
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
-	out := map[string]any{"id": sc.ID, "root": sc.root, "state": sc.state, "total": sc.total, "done": sc.done, "current": sc.current, "error": sc.err}
+	out := map[string]any{"id": sc.ID, "root": sc.root, "state": sc.state, "total": sc.total, "done": sc.done, "cached": sc.cached, "current": sc.current, "error": sc.err}
 	if sc.state != "running" {
 		out["rows"] = sc.rows
 	}
