@@ -15,6 +15,7 @@
 
 ## Offen
 - [ ] **Windows-App: Folgearbeiten** (erste Version 0.1.1 steht auf `dev`): (1) ~~Tray~~ (erledigt in 0.1.2); (2) **Prüfung durch den Nutzer** auf dem Windows-PC (Fenster, Symbol, Hardware-Erkennung, echte Konvertierung, Deinstallation); (3) Größe der `setup.exe` aus dem CI-Lauf (Zusammenfassung „Größen“) mitteilen; (4) Linux-App danach; (5) Windows erst nach Freigabe nach `main`
+- [ ] **Fortschrittsbalken mit Matrix-Regen** (Variante B, Optik A „Regenfront“; Entscheidung des Nutzers 21.10.): Balken dicker (≈ 22 px statt 6 px); die Füllung besteht aus dichtem, fallendem Regen (Zeichen wie beim Regen), eine helle Kante läuft vorn mit; zusätzlich bleibt der Regen bei erfolgreich fertigem Auftrag (Startseite und Verlauf). Überall, wo es Balken gibt (Auftragskarten, Startseite, Verlauf), abschaltbar über „Matrix-Regen“, aus bei reduzierter Bewegung und bei Fehlern (dann der normale Balken); bei vielen laufenden Aufträgen sparsam (nur sichtbare Karten animieren). Vorschau: `balken-vorschau.gif`
 - [ ] Optional: Image als multi-arch (amd64/arm64) bauen
 
 ## Vom Nutzer zu prüfen (nicht in der Sandbox möglich)
