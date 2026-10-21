@@ -2,10 +2,14 @@ package server
 
 import (
 	"encoding/json"
+	"github.com/p5lukas/p5converter/internal/ffmpeg"
+	"github.com/p5lukas/p5converter/internal/version"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -118,5 +122,84 @@ func TestLibraryScanAPI(t *testing.T) {
 	}
 	if r, _ := http.Get(ts.URL + "/api/library/scan/gibtsnicht"); r.StatusCode != 404 {
 		t.Error("unbekannte Auswertung")
+	}
+}
+
+// Merker: ein zweiter Scan liest nichts neu und liefert dieselben Fakten; geänderte Dateien werden neu gelesen, gelöschte vergessen,
+// und der Merker übersteht einen Neustart.
+func TestLibraryScanCache(t *testing.T) {
+	root, cfg := t.TempDir(), t.TempDir()
+	tl, err := ffmpeg.Locate("")
+	if err != nil {
+		t.Skip("ffmpeg nicht installiert")
+	}
+	mkv := func(rel, codec string) {
+		p := filepath.Join(root, rel)
+		os.MkdirAll(filepath.Dir(p), 0o755)
+		if out, err := exec.Command("ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=160x120:r=10:d=1", "-f", "lavfi", "-i", "sine=f=440:d=1", "-shortest", "-c:v", codec, "-c:a", "ac3", p).CombinedOutput(); err != nil {
+			t.Fatalf("%v %s", err, out)
+		}
+	}
+	mkv("Serie/Staffel 1/e1.mkv", "libx264")
+	mkv("Serie/Staffel 1/e2.mkv", "libx264")
+	mkv("Film/film.mkv", "libx264")
+	run := func(s *Server, ts *httptest.Server) (rows []LibRow, total, cached int) {
+		resp := post(t, ts, "/api/library/scan", map[string]any{"path": root}, nil)
+		var st struct{ ID string }
+		json.NewDecoder(resp.Body).Decode(&st)
+		resp.Body.Close()
+		var got struct {
+			State         string
+			Total, Cached int
+			Rows          []LibRow
+		}
+		for i := 0; i < 300; i++ {
+			r, _ := http.Get(ts.URL + "/api/library/scan/" + st.ID)
+			got.Rows = nil
+			json.NewDecoder(r.Body).Decode(&got)
+			r.Body.Close()
+			if got.State != "running" {
+				break
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+		if got.State != "done" {
+			t.Fatalf("Zustand %s", got.State)
+		}
+		return got.Rows, got.Total, got.Cached
+	}
+	s := New(version.Get(), tl, []string{root}, 2, cfg)
+	ts := httptest.NewServer(s.Handler())
+	defer ts.Close()
+	rows1, total, cached := run(s, ts)
+	if total != 3 || cached != 0 {
+		t.Fatalf("erster Scan: %d Dateien, %d aus dem Merker", total, cached)
+	}
+	rows2, _, cached := run(s, ts)
+	if cached != 3 || !reflect.DeepEqual(rows1, rows2) {
+		t.Errorf("zweiter Scan: %d aus dem Merker, gleiche Zeilen: %v\n%+v\n%+v", cached, reflect.DeepEqual(rows1, rows2), rows1, rows2)
+	}
+	// Neustart: der Merker liegt in /config
+	s2 := New(version.Get(), tl, []string{root}, 2, cfg)
+	ts2 := httptest.NewServer(s2.Handler())
+	defer ts2.Close()
+	rows3, _, cached := run(s2, ts2)
+	if cached != 3 || !reflect.DeepEqual(rows1, rows3) {
+		t.Errorf("nach Neustart: %d aus dem Merker", cached)
+	}
+	// eine Datei ändert sich (anderer Codec, neue Größe), eine wird gelöscht
+	mkv("Serie/Staffel 1/e1.mkv", "mpeg4")
+	os.Remove(filepath.Join(root, "Film", "film.mkv"))
+	rows4, total, cached := run(s2, ts2)
+	if total != 2 || cached != 1 {
+		t.Errorf("nach Änderung: %d Dateien, %d aus dem Merker (erwartet 2 und 1)", total, cached)
+	}
+	for _, r := range rows4 {
+		if r.Name == "Staffel 1" && (r.Codecs["mpeg4"] != 1 || r.Codecs["h264"] != 1) {
+			t.Errorf("geänderte Datei nicht neu gelesen: %+v", r.Codecs)
+		}
+	}
+	if _, ok := s2.libCache.files[filepath.Join(root, "Film", "film.mkv")]; ok {
+		t.Error("gelöschte Datei steht noch im Merker")
 	}
 }

@@ -38,6 +38,26 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     ok(!/Mbit\/s.*gespart|spart.*%|geschätzt/i.test(await p.textContent('#cvScan')), name + ': keine Schätzung der Ersparnis erlaubt');
     ok(await ov() <= 0, name + ': Überlauf mit Ergebnisliste ' + await ov() + 'px');
     await p.screenshot({path: `${L.SHOTS}/p5c-lib-${name}-1-ergebnis.png`, fullPage: true});
+    // Filter-Kärtchen: einzeln an-/abwählbar, mindestens ein gewählter Hinweis genügt
+    ok(await p.locator('#cvScan .libfilters .libfil').count() === 5, name + ': 5 Filter-Kärtchen erwartet');
+    ok((await p.locator('#cvScan .libfil[data-fil=old]').getAttribute('aria-pressed')) === 'true' && (await p.locator('#cvScan .libfil[data-fil=small]').getAttribute('aria-pressed')) === 'false', name + ': Standardwahl der Kärtchen');
+    ok(/Älterer Codec · \d+/.test(await p.textContent('#cvScan .libfil[data-fil=old]')), name + ': Zähler am Kärtchen');
+    const before = await p.locator('#cvScan .librow').count();
+    await p.click('#cvScan .libfil[data-fil=old]'); await p.click('#cvScan .libfil[data-fil=heavy]'); await p.waitForTimeout(250);
+    ok(await p.locator('#cvScan .librow').count() < before, name + ': ohne „Älterer Codec“ und „DTS“ sollten Ordner verschwinden (' + await p.locator('#cvScan .librow').count() + ' von ' + before + ')');
+    await p.click('#cvScan .libfil[data-fil=old]'); await p.waitForTimeout(250);
+    ok(await p.locator('#cvScan .librow').count() === before, name + ': „Älterer Codec“ wieder an: alle Ordner zurück');
+    await p.click('#cvScan .libfil[data-fil=old]'); await p.click('#cvScan .libfil[data-fil=img]'); await p.click('#cvScan .libfil[data-fil=high]'); await p.waitForTimeout(250);
+    ok(await p.locator('#cvScan .librow').count() === 0 && /Kein Hinweis gewählt/.test(await p.textContent('#cvScan')), name + ': kein Kärtchen gewählt: leere Liste mit Hinweis');
+    ok(await ov() <= 0, name + ': Überlauf mit Kärtchen ' + await ov() + 'px');
+    await p.click('#cvScan .libfil[data-fil=old]'); await p.click('#cvScan .libfil[data-fil=heavy]'); await p.click('#cvScan .libfil[data-fil=img]'); await p.click('#cvScan .libfil[data-fil=high]'); await p.waitForTimeout(250);
+    ok(await p.locator('#cvScan .librow').count() === before, name + ': Standard wiederhergestellt');
+    await p.screenshot({path: `${L.SHOTS}/p5c-lib-${name}-1b-filter.png`, fullPage: true});
+    // zweiter Durchlauf desselben Ordners: alles kommt aus dem Merker, die Zeilen bleiben gleich
+    const rowsBefore = (await p.locator('#cvScan .librow').allTextContents()).join('|');
+    await p.evaluate(() => libStart(LIBUI.root)); await p.waitForSelector('#cvScan .librow', {timeout: 20000}); await p.waitForTimeout(500);
+    ok(/4 von 4 Dateien kamen aus dem Merker/.test(await p.textContent('#cvScan .libcached').catch(() => '')), name + ': Hinweis „aus dem Merker“ fehlt');
+    ok((await p.locator('#cvScan .librow').allTextContents()).join('|') === rowsBefore, name + ': Zeilen aus dem Merker weichen vom ersten Durchlauf ab');
     // Filter und Sortierung
     await p.uncheck('#cvScan .liberctl input[type=checkbox]'); await p.waitForTimeout(200);
     ok(await p.locator('#cvScan .librow').count() >= 5, name + ': ohne Filter fehlen Ordner');

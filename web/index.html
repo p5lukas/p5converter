@@ -90,12 +90,13 @@
 
   <div class="stepnav hidden" id="wizNav">
     <button id="wizBack" class="ghost"><span data-ic="back"></span> Zurück</button>
+    <button id="wizDiscard" class="ghost discard" title="Abbrechen: Dateien und alle Eingaben verwerfen, zurück zur Startseite"><span data-ic="close"></span><span class="lbl2"> Verwerfen</span></button>
     <span id="wizInfo" class="small muted"></span>
     <span class="spacer"></span>
     <button id="wizNext" class="primary big">Weiter →</button>
   </div>
   <div class="stepnav hidden" id="stepnav">
-    <button id="resetAll" class="ghost" title="Alle Eingaben dieser Art auf den Anfang zurücksetzen"><span data-ic="reset"></span><span class="lbl2"> Zurücksetzen</span></button>
+    <button id="resetAll" class="ghost discard" title="Abbrechen: Dateien und alle Eingaben verwerfen, zurück zur Startseite"><span data-ic="close"></span><span class="lbl2"> Verwerfen</span></button>
     <span id="startInfo" class="small muted"></span>
     <span class="spacer"></span>
     <button id="detailsBtn" title="Weitere Einstellungen: Ziel, Namen, Video, Spuren, Prüfen"><span data-ic="gear"></span><span class="lbl3"> Details</span></button>
@@ -386,10 +387,10 @@
 
 <dialog id="resetDlg">
   <form method="dialog" class="dlg">
-    <h2><span data-ic="reset"></span> Alles zurücksetzen?</h2>
+    <h2><span data-ic="close"></span> Abbrechen und verwerfen?</h2>
     <p id="resetText"></p>
     <p class="muted small">Laufende Aufträge, Einstellungen und Voreinstellungen bleiben unberührt.</p>
-    <div class="dlg-f"><button type="button" id="resetNo" class="ghost">Abbrechen</button><button type="button" id="resetYes" class="primary">Zurücksetzen</button></div>
+    <div class="dlg-f"><button type="button" id="resetNo" class="ghost">Weitermachen</button><button type="button" id="resetYes" class="primary">Verwerfen</button></div>
   </form>
 </dialog>
 

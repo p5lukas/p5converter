@@ -1,5 +1,25 @@
 # Änderungen
 
+## 0.3.4 – 2026-10-21
+
+**Neu: Fortschrittsbalken mit Matrix-Regen**
+- Laufende Aufträge zeigen einen **dickeren Balken (22 px statt 6 px)**, dessen Füllung aus dichtem, fallendem Regen besteht; eine helle Kante läuft vorn mit („Regenfront“). Auf der Startseite (aktueller Auftrag) und im Verlauf (jede laufende Karte). Dazu bleibt der Regen bei erfolgreich fertigem Auftrag
+- Abschaltbar über „Matrix-Regen“; aus bei „Bewegung reduzieren“ und im versteckten Tab; fertige, fehlerhafte und wartende Aufträge haben den normalen Balken; höchstens 6 Balken werden gleichzeitig gezeichnet, nur sichtbare
+
+**Neu: „Verwerfen“ in der Fußleiste (Wizard sauber beenden)**
+- In jedem Schritt (Video 1–4 und Audio) steht in der Fußleiste ein roter Knopf **„✕ Verwerfen“**: er setzt Dateien, Schritt, Regeln, Ziel und Einstellungen dieser Art zurück und führt zur Startseite. Eine Rückfrage kommt nur, wenn schon etwas gewählt ist („Abbrechen und verwerfen?“ mit „Weitermachen“ / „Verwerfen“); ohne Auswahl geht es sofort zur Startseite. Der frühere Knopf „Zurücksetzen“ in Schritt 4 ist dieser Knopf; „Startseite“ lässt die Auswahl wie bisher stehen
+
+**Geändert: Ordnerstruktur im Ziel ab dem Quellordner**
+- „Struktur beibehalten“ rechnet jetzt ab dem **Quellordner (Wurzel, z. B. `/video2`)** statt ab dem im Datei-Browser geöffneten Ordner: aus `/video2/The Lost Room (2006) {tvdb-79637}/Season 01/Datei.mkv` wird im Ziel `The Lost Room (2006) {tvdb-79637}/Season 01/Datei.mkv`, egal ob einzelne Dateien, `Season 01`, die Serie oder „Diesen Ordner (rekursiv)“ gewählt wurde. Ohne Quellordner (Desktop-App) bleibt es beim Elternordner der Auswahl
+- Enthält das Namensmuster selbst Unterordner (z. B. `Serien/…`), **ersetzen** sie die beibehaltene Struktur, damit keine Ordner doppelt entstehen
+
+**Neu: Ordner prüfen – Hinweise als Filter, schneller beim zweiten Mal**
+- Die Hinweise stehen als **Kärtchen** über der Liste (Älterer Codec, Hohe Bitrate, Schwerer Ton / DTS, Bild-Untertitel, Schon klein, je mit Zähler) und lassen sich einzeln an- und abwählen; ein Ordner erscheint, wenn **mindestens ein** gewählter Hinweis zutrifft („Schon klein“ ist standardmäßig aus). Nur „Hohe Bitrate“ gewählt: nach Bitrate sortiert (solange nicht von Hand sortiert)
+- **Merker:** was `ffprobe` über eine Datei gefunden hat, wird mit Größe und Änderungsdatum in `/config/library-cache.json` gemerkt. Ein zweiter Durchlauf liest nur neue oder geänderte Dateien (Anzeige „N von M Dateien kamen aus dem Merker“), gelöschte Dateien werden vergessen; die Ergebnisse sind dieselben Fakten. Ein schnelleres `ffprobe` (kleinere Analyse-Grenzen) wurde **nicht** eingebaut: ohne echte DTS-HD-Dateien lässt sich nicht beweisen, dass die Ergebnisse gleich bleiben
+
+**Intern**
+- `internal/server/library_cache.go`, `relFrom`/`rootOf` in `server.go`; Tests: `TestScanRelFromRoot`, `TestScanRelWithoutRoots`, `TestOutputPathKeepStructure`, `TestLibraryScanCache`, Filter in `tools/test-library.js`; UI-Prüfungen `ui-check-discard.js`, `ui-check-rainbar.js`, Filter und Merker in `ui-check-library.js`
+
 ## 0.3.3 – 2026-10-20
 
 **Neu: Warteschlange verwalten**

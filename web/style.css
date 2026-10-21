@@ -399,7 +399,9 @@ button.danger{color:var(--bad);border-color:#ff4d5e66}
 #existsHint{display:block;margin-top:6px;line-height:1.4;text-transform:none;letter-spacing:0}
 #existsHint.warn{color:var(--warn)}
 .presetnote{flex-basis:100%}
-#resetAll .ic{width:1.1em;height:1.1em}
+#resetAll .ic,#wizDiscard .ic{width:1.1em;height:1.1em}
+button.discard{border-color:color-mix(in srgb,var(--bad) 65%,transparent);color:var(--bad)}
+button.discard:hover{border-color:var(--bad);color:var(--bad);box-shadow:0 0 14px #ff4d5e33,inset 0 0 10px #ff4d5e22}
 #resetDlg p{margin:0}
 
 .trkintro{margin:0 0 6px;line-height:1.55}
@@ -841,6 +843,7 @@ button.cvenc{background:transparent}
 #wizNav #wizInfo{flex:1 1 300px;min-width:180px;font-size:12.5px;line-height:1.4;overflow-wrap:anywhere}
 @media(max-width:700px){
   #wizNav{gap:6px}#wizNav #wizInfo{order:-1;flex:1 1 100%}#wizNav .spacer{display:none}#wizNav #wizNext{flex:1 1 auto;justify-content:center;padding:10px 12px}#wizNav #wizBack{flex:0 0 auto}
+  #wizNav #wizDiscard .lbl2{display:inline}
 }
 .cvcbody h4{margin:6px 0 0;font-size:13px}
 .cvcbody .trkrule:first-of-type{border-top:0}
@@ -884,6 +887,11 @@ button.cvenc{background:transparent}
 .libmain{display:grid;gap:3px;min-width:0;flex:1}
 .libname{display:flex;gap:6px;align-items:center;flex-wrap:wrap;overflow-wrap:anywhere}
 .libname .ic{color:var(--accent)}
+.libfilters{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 2px}
+button.libfil{font:inherit;font-size:12px;cursor:pointer;padding:5px 11px;border-radius:999px;background:transparent;color:var(--muted);border:1px solid var(--line);box-shadow:none}
+button.libfil.on{color:var(--accent);border-color:var(--accent);background:var(--dim);text-shadow:0 0 8px var(--glow)}
+button.libfil:not(.on){opacity:.75}
+button.libfil:disabled{opacity:.4;cursor:default}
 .libhints{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
 .libfoot{margin-top:2px;align-items:center}
 .libfoot button.primary{padding:9px 16px}
@@ -894,3 +902,7 @@ button.cvenc{background:transparent}
 .rainhost{position:relative}
 canvas.rain{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;border-radius:inherit;z-index:3}
 @media(prefers-reduced-motion:reduce){canvas.rain{display:none}}
+/* Fortschrittsbalken mit Regen: dicker, die Füllung ist dunkel und trägt den Regen (Canvas), die helle Kante läuft vorn mit */
+.bar.rain{position:relative;height:22px;border-radius:4px;border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);background:color-mix(in srgb,var(--accent) 7%,var(--bg))}
+.bar.rain>i{background:color-mix(in srgb,var(--accent) 18%,transparent);box-shadow:0 0 12px var(--dim)}
+canvas.rainbar{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}

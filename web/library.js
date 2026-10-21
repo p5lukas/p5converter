@@ -35,6 +35,14 @@ const LIB = (() => {
   // lohnt sich ein Blick? (mindestens ein Hinweis, der dafür spricht)
   const worth = (r, lowBitrate) => hints(r, lowBitrate).some(x => x.good);
 
+  // Filter-Kärtchen über der Liste: einzeln an- und abwählbar; ein Ordner bleibt sichtbar, wenn MINDESTENS EIN gewählter Hinweis zutrifft
+  const FILTERS = [['old', 'Älterer Codec'], ['high', 'Hohe Bitrate'], ['heavy', 'Schwerer Ton / DTS'], ['img', 'Bild-Untertitel'], ['small', 'Schon klein']];
+  const FILTER_DEFAULT = ['old', 'high', 'heavy', 'img']; // „Schon klein“ ist ein Hinweis dagegen und standardmäßig aus
+  const filterOf = id => id === 'dts' ? 'heavy' : id;
+  const filterIds = (r, lowBitrate) => new Set(hints(r, lowBitrate).map(x => filterOf(x.id)));
+  const matches = (r, on, lowBitrate) => { const f = filterIds(r, lowBitrate); return [...on].some(id => f.has(id)); };
+  const filterCounts = (rows, lowBitrate) => { const c = Object.fromEntries(FILTERS.map(([id]) => [id, 0])); rows.forEach(r => filterIds(r, lowBitrate).forEach(id => { if (id in c) c[id]++; })); return c; };
+
   // Reihenfolge: „tree“ = wie im Dateibaum (Sammelordner vor ihren Ordnern), sonst flach nach Größe, Bitrate oder Name
   function sortRows(rows, key) {
     const r = rows.slice();
@@ -43,12 +51,12 @@ const LIB = (() => {
     else if (key === 'name') r.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()) || a.path.localeCompare(b.path));
     return r;
   }
-  return {hints, worth, mix, sortRows, codecName, mbit, highLimit};
+  return {hints, worth, mix, sortRows, codecName, mbit, highLimit, FILTERS, FILTER_DEFAULT, filterIds, matches, filterCounts};
 })();
 if (typeof module !== 'undefined') module.exports = LIB;
 
 // ---------- Oberfläche (nur im Browser) ----------
-const LIBUI = {id: null, state: '', root: '', total: 0, done: 0, current: '', rows: [], sel: new Set(), onlyHints: true, sort: 'tree', timer: 0, err: ''};
+const LIBUI = {id: null, state: '', root: '', total: 0, done: 0, current: '', rows: [], sel: new Set(), onlyHints: true, fil: new Set(LIB.FILTER_DEFAULT), sort: 'tree', sortUser: false, timer: 0, err: ''};
 const libLow = typeof Q !== 'undefined' ? Q.lowBitrate : null;
 
 // Ordner wählen, der geprüft werden soll (der Datei-Browser öffnet im zuletzt benutzten Ordner)
@@ -62,7 +70,7 @@ async function libStart(dir) {
   if (LIBUI.id && LIBUI.state === 'running') api('/api/library/scan/' + LIBUI.id + '/cancel', {}).catch(() => {});
   try {
     const r = await api('/api/library/scan', {path: dir});
-    Object.assign(LIBUI, {id: r.id, state: 'running', root: dir, total: 0, done: 0, current: '', rows: [], sel: new Set(), err: ''});
+    Object.assign(LIBUI, {id: r.id, state: 'running', root: dir, total: 0, done: 0, cached: 0, current: '', rows: [], sel: new Set(), err: ''});
   } catch (e) { toast(e.message, 'bad'); return; }
   if (typeof cvLayout === 'function') cvLayout();
   libRender(); libPoll();
@@ -73,7 +81,7 @@ async function libPoll() {
   if (!LIBUI.id) return;
   try {
     const d = await api('/api/library/scan/' + LIBUI.id);
-    Object.assign(LIBUI, {state: d.state, total: d.total, done: d.done, current: d.current || '', rows: d.rows || LIBUI.rows});
+    Object.assign(LIBUI, {state: d.state, total: d.total, done: d.done, cached: d.cached || 0, current: d.current || '', rows: d.rows || LIBUI.rows});
   } catch (e) { LIBUI.state = 'error'; LIBUI.err = e.message; }
   libRender();
   if (LIBUI.state === 'running') LIBUI.timer = setTimeout(libPoll, 700);
@@ -95,7 +103,7 @@ async function libAdopt() {
 const num0 = n => n + (n === 1 ? ' Datei' : ' Dateien');
 
 function libRowEl(r) {
-  const hs = LIB.hints(r, libLow), checked = LIBUI.sel.has(r.path), flat = LIBUI.sort !== 'tree';
+  const hs = LIB.hints(r, libLow), checked = LIBUI.sel.has(r.path), flat = LIBUI.flat;
   const rel = pathLabel(r.path);
   return h('label', {class: 'librow' + (r.group ? ' group' : '') + (checked ? ' on' : ''), style: flat ? null : '--d:' + Math.min(r.depth, 4), 'data-path': r.path},
     h('input', {type: 'checkbox', checked, 'aria-label': 'Ordner ' + r.name + ' übernehmen', onchange: ev => { ev.target.checked ? LIBUI.sel.add(r.path) : LIBUI.sel.delete(r.path); libRender(); }}),
@@ -115,22 +123,31 @@ function libRender() {
   if (running) {
     const pct = LIBUI.total ? Math.round(LIBUI.done / LIBUI.total * 100) : 0;
     body = [h('div', {class: 'libprog'}, h('div', {class: 'bar'}, h('i', {style: 'width:' + pct + '%'})),
-      h('div', {class: 'job-m'}, h('span', {}, LIBUI.total ? LIBUI.done + ' von ' + num0(LIBUI.total) + ' gelesen' : 'Suche Videos …'), h('span', {class: 'muted'}, LIBUI.current ? LIBUI.current.split(/[\\/]/).pop() : '')),
+      h('div', {class: 'job-m'}, h('span', {}, LIBUI.total ? LIBUI.done + ' von ' + num0(LIBUI.total) + ' gelesen' + (LIBUI.cached ? ' (' + LIBUI.cached + ' aus dem Merker)' : '') : 'Suche Videos …'), h('span', {class: 'muted'}, LIBUI.current ? LIBUI.current.split(/[\\/]/).pop() : '')),
       h('div', {class: 'btns'}, h('button', {type: 'button', class: 'small', onclick: libCancel}, 'Abbrechen'))),
-      h('p', {class: 'muted small'}, 'Die Dateien werden nur gelesen (ffprobe, zwei gleichzeitig), nichts wird verändert.')];
+      h('p', {class: 'muted small'}, 'Die Dateien werden nur gelesen (ffprobe, zwei gleichzeitig), nichts wird verändert. Bereits gelesene, unveränderte Dateien kommen beim nächsten Mal aus dem Merker.')];
   } else if (LIBUI.state === 'error') body = [h('p', {class: 'warn'}, LIBUI.err || 'Die Prüfung ist fehlgeschlagen.')];
   else if (ready) {
-    const all = LIBUI.rows, shown = LIB.sortRows(LIBUI.onlyHints ? all.filter(r => LIB.worth(r, libLow)) : all, LIBUI.sort);
+    const all = LIBUI.rows, counts = LIB.filterCounts(all, libLow);
+    // nur „Hohe Bitrate“ gewählt und nicht von Hand sortiert: nach Bitrate sortieren
+    const sortKey = !LIBUI.sortUser && LIBUI.onlyHints && LIBUI.fil.size === 1 && LIBUI.fil.has('high') ? 'bitrate' : LIBUI.sort;
+    const shown = LIB.sortRows(LIBUI.onlyHints ? all.filter(r => LIB.matches(r, LIBUI.fil, libLow)) : all, sortKey);
     // im Dateibaum: ein Ordner mit Hinweisen zeigt auch seine Sammelordner darüber nur, wenn diese selbst Hinweise haben
     const ctl = h('div', {class: 'liberctl'},
       h('label', {class: 'check', style: 'margin:0'}, h('input', {type: 'checkbox', checked: LIBUI.onlyHints, onchange: ev => { LIBUI.onlyHints = ev.target.checked; libRender(); }}), h('span', {}, 'Nur Ordner mit Hinweisen')),
-      h('label', {class: 'inline small'}, h('span', {}, 'Sortieren'), h('select', {'aria-label': 'Sortieren', onchange: ev => { LIBUI.sort = ev.target.value; libRender(); }},
-        [['tree', 'wie im Ordnerbaum'], ['size', 'nach Größe'], ['bitrate', 'nach Bitrate'], ['name', 'nach Name']].map(([v, t]) => h('option', {value: v, selected: v === LIBUI.sort}, t)))),
+      h('label', {class: 'inline small'}, h('span', {}, 'Sortieren'), h('select', {'aria-label': 'Sortieren', onchange: ev => { LIBUI.sort = ev.target.value; LIBUI.sortUser = true; libRender(); }},
+        [['tree', 'wie im Ordnerbaum'], ['size', 'nach Größe'], ['bitrate', 'nach Bitrate'], ['name', 'nach Name']].map(([v, t]) => h('option', {value: v, selected: v === sortKey}, t)))),
       h('span', {class: 'muted small'}, LIBUI.state === 'canceled' ? 'Abgebrochen: ' + shown.length + ' Ordner bis hierher' : shown.length + ' von ' + all.length + (all.length === 1 ? ' Ordner' : ' Ordnern')));
+    LIBUI.flat = sortKey !== 'tree';
+    const fil = h('div', {class: 'libfilters', role: 'group', 'aria-label': 'Hinweise als Filter'}, LIB.FILTERS.map(([id, t]) => {
+      const on = LIBUI.fil.has(id);
+      return h('button', {type: 'button', class: 'chip libfil' + (on ? ' on' : '') + (id === 'small' ? '' : ' acc'), 'data-fil': id, 'aria-pressed': on ? 'true' : 'false', disabled: !LIBUI.onlyHints, title: (on ? 'Abwählen: ' : 'Anwählen: ') + 'Ordner mit diesem Hinweis ' + (on ? 'nicht mehr zeigen' : 'zeigen'),
+        onclick: () => { on ? LIBUI.fil.delete(id) : LIBUI.fil.add(id); libRender(); }}, t + ' · ' + counts[id]);
+    }));
     const list = shown.length ? h('div', {class: 'liblist'}, shown.map(libRowEl))
-      : h('div', {class: 'cvempty'}, all.length ? 'Keine Ordner mit Hinweisen: alles sieht schon schlank aus. Mit „Nur Ordner mit Hinweisen“ aus siehst du alle ' + all.length + '.' : 'Keine Videos gefunden.');
-    body = [ctl, list, h('div', {class: 'btns libfoot'}, h('button', {type: 'button', class: 'primary', disabled: !LIBUI.sel.size, onclick: libAdopt},
-      LIBUI.sel.size ? 'Ausgewählte Ordner übernehmen (' + LIBUI.sel.size + ')' : 'Ordner übernehmen'), h('span', {class: 'muted small'}, 'Übernommen wird immer der ganze Ordner mit allen Unterordnern.'))];
+      : h('div', {class: 'cvempty'}, all.length ? (LIBUI.fil.size ? 'Keine Ordner mit den gewählten Hinweisen. Wähle weitere Kärtchen an oder schalte „Nur Ordner mit Hinweisen“ aus: dann siehst du alle ' + all.length + '.' : 'Kein Hinweis gewählt: wähle oben mindestens ein Kärtchen an oder schalte „Nur Ordner mit Hinweisen“ aus.') : 'Keine Videos gefunden.');
+    body = [ctl, fil, list, h('div', {class: 'btns libfoot'}, h('button', {type: 'button', class: 'primary', disabled: !LIBUI.sel.size, onclick: libAdopt},
+      LIBUI.sel.size ? 'Ausgewählte Ordner übernehmen (' + LIBUI.sel.size + ')' : 'Ordner übernehmen'), h('span', {class: 'muted small'}, 'Übernommen wird immer der ganze Ordner mit allen Unterordnern.'), LIBUI.cached ? h('span', {class: 'muted small libcached'}, LIBUI.cached + ' von ' + num0(LIBUI.total) + ' kamen aus dem Merker (unverändert seit dem letzten Mal).') : null)];
   } else body = [];
   fill(box, head, h('div', {class: 'cvcbody'}, body));
 }

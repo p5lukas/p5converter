@@ -53,6 +53,7 @@ type Server struct {
 	enc         map[string]bool
 	ffver       string
 	lib         libraryScans
+	libCache    *libCache // Merker des Ordner-Scans
 }
 
 func New(build version.Info, t ffmpeg.Tools, roots []string, concurrency int, configDir string) *Server {
@@ -75,6 +76,10 @@ func New(build version.Info, t ffmpeg.Tools, roots []string, concurrency int, co
 	if s.Settings.Persistent() { // unfinished .part files of a crashed run are removed at start
 		s.Jobs.SetPartialLog(filepath.Join(configDir, "partials.json"))
 		s.Jobs.SetQueueFile(filepath.Join(configDir, "queue.json")) // jobs of an interrupted run wait for the user's decision
+	}
+	s.libCache = openLibCache("")
+	if s.Settings.Persistent() {
+		s.libCache = openLibCache(filepath.Join(configDir, "library-cache.json"))
 	}
 	s.enc = t.Encoders()
 	s.ffver = t.Version()
@@ -118,6 +123,30 @@ func (s *Server) allowed(p string) bool {
 		}
 	}
 	return false
+}
+
+// rootOf liefert den Quellordner (Wurzel), unter dem p liegt; ohne Wurzeln (Desktop-App) oder außerhalb: "".
+func (s *Server) rootOf(p string) string {
+	p = filepath.Clean(p)
+	best := ""
+	for _, r := range s.Roots {
+		r = filepath.Clean(r)
+		if (p == r || strings.HasPrefix(p, r+string(filepath.Separator))) && len(r) > len(best) {
+			best = r
+		}
+	}
+	return best
+}
+
+// relFrom: Pfad des Ziels bei „Struktur beibehalten“, ab dem Quellordner (Wurzel) gerechnet; ohne Wurzel ab dem Elternordner der gewählten Auswahl.
+func (s *Server) relFrom(fp, picked string) string {
+	if root := s.rootOf(fp); root != "" {
+		if rel, err := filepath.Rel(root, fp); err == nil {
+			return filepath.ToSlash(rel)
+		}
+	}
+	rel, _ := filepath.Rel(filepath.Dir(picked), fp)
+	return filepath.ToSlash(rel)
 }
 
 func (s *Server) Handler() http.Handler {
@@ -446,10 +475,9 @@ func (s *Server) scan(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		if !st.IsDir() {
-			files = append(files, scanFile{p, filepath.Base(p), st.Size()})
+			files = append(files, scanFile{p, s.relFrom(p, p), st.Size()})
 			continue
 		}
-		base := filepath.Base(p)
 		filepath.WalkDir(p, func(fp string, d fs.DirEntry, err error) error {
 			if err != nil || len(files) > 20000 {
 				return nil
@@ -461,12 +489,11 @@ func (s *Server) scan(w http.ResponseWriter, r *http.Request) {
 				return nil
 			}
 			if k := mediaKind(d.Name()); k == b.Kind || (b.Kind == "media" && k != "") {
-				rel, _ := filepath.Rel(p, fp)
 				var size int64
 				if inf, err := d.Info(); err == nil {
 					size = inf.Size()
 				}
-				files = append(files, scanFile{fp, filepath.ToSlash(filepath.Join(base, rel)), size})
+				files = append(files, scanFile{fp, s.relFrom(fp, p), size})
 			}
 			return nil
 		})

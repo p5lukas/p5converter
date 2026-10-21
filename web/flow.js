@@ -113,12 +113,13 @@ function resetWorld() {
   S.files[w].length = 0;
   refreshAudioUI(); refreshVideoUI(); outModeUI(); syncNameUI(); renderFiles(); renderHero(); renderStartTiles(); saveSettings();
   showStep('start');
-  toast(W(w).name + ' wurde zurückgesetzt.', 'ok');
+  toast(W(w).name + ' wurde verworfen.', 'ok');
 }
 function openReset() {
   const w = S.world, n = S.files[w].length;
-  $('#resetText').textContent = `Dateien${n ? ' (' + n + ')' : ''}, Ziel, Benennung und alle Einstellungen von „${W(w).name}“ gehen zurück auf den Anfang: ` +
-    (w === 'video' ? 'Video „Remux als MKV“, Audio und Untertitel unverändert.' : 'Einstellungen „Remux als FLAC“.');
+  // nichts gewählt (keine Dateien, noch im ersten Schritt): kein Grund zur Rückfrage
+  if (!n && (w !== 'video' || S.vstep <= 1)) { resetWorld(); return; }
+  $('#resetText').textContent = `${n ? n + (n === 1 ? ' Datei' : ' Dateien') + ' und alle' : 'Alle'} Eingaben von „${W(w).name}“ (Ziel, Benennung, Regeln, Einstellungen) gehen verloren, danach geht es zur Startseite.`;
   $('#resetDlg').showModal();
 }
 
@@ -126,7 +127,7 @@ function wireFlow() {
   $('#savedResetNo').onclick = () => $('#savedResetDlg').close();
   $('#savedResetYes').onclick = doSavedReset;
   $('#exists').addEventListener('input', existsUI);
-  $('#resetAll').onclick = openReset;
+  $('#resetAll').onclick = openReset; $('#wizDiscard').onclick = openReset;
   $('#resetNo').onclick = () => $('#resetDlg').close();
   $('#resetYes').onclick = () => { $('#resetDlg').close(); resetWorld(); };
   // Kopfzeile: Umbenennen und Verlauf gelten in jeder Ansicht; der Ablauf bleibt dabei, wo er war

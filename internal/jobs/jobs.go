@@ -402,6 +402,8 @@ func outputPath(j *Job, info *ffmpeg.Info) string {
 		}
 		if o.Dir == "" {
 			dir = filepath.Dir(in)
+		} else if len(parts) > 1 {
+			dir = o.Dir // Unterordner aus dem Muster ersetzen die beibehaltene Struktur (sonst entstünden Ordner doppelt)
 		}
 		dir = filepath.Join(append([]string{dir}, parts[:len(parts)-1]...)...)
 		base = parts[len(parts)-1]

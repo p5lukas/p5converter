@@ -37,4 +37,18 @@ t('Codec-Mix und Sortierung', () => {
   assert.deepStrictEqual(LIB.sortRows(rows, 'name').map(r => r.name), ['a', 'B', 'C']);
   assert.deepStrictEqual(LIB.sortRows(rows, 'tree').map(r => r.path), ['/a', '/b', '/c']);
 });
+t('Filter-Kärtchen: ein Ordner bleibt, wenn mindestens ein gewählter Hinweis zutrifft', () => {
+  const old = row({codecs: {h264: 4}}), high = row({avgBitrate: 9e6}), both = row({codecs: {h264: 4}, avgBitrate: 9e6}), dts = row({heavy: {dts: 1}}), none = row({}), small = row({avgBitrate: 2e6});
+  const m = (r, ...on) => LIB.matches(r, new Set(on), Q.lowBitrate);
+  assert.ok(m(old, 'old') && !m(old, 'high') && m(old, 'high', 'old'));
+  assert.ok(m(high, 'high') && !m(high, 'old'));
+  assert.ok(m(both, 'old') && m(both, 'high'));
+  assert.ok(m(dts, 'heavy'), 'DTS zählt zu „Schwerer Ton / DTS“');
+  assert.ok(!m(none, 'old', 'high', 'heavy', 'img', 'small'));
+  assert.ok(m(small, 'small') && !m(small, 'old', 'high', 'heavy', 'img'));
+  assert.ok(!m(old), 'kein Kärtchen gewählt: nichts passt');
+  assert.deepStrictEqual(LIB.FILTER_DEFAULT, ['old', 'high', 'heavy', 'img']);
+  const c = LIB.filterCounts([old, high, both, dts, none, small], Q.lowBitrate);
+  assert.deepStrictEqual(c, {old: 2, high: 2, heavy: 1, img: 0, small: 1});
+});
 console.log('library: ' + n + ' Tests ok');
