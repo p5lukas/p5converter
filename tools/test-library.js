@@ -51,4 +51,21 @@ t('Filter-Kärtchen: ein Ordner bleibt, wenn mindestens ein gewählter Hinweis z
   const c = LIB.filterCounts([old, high, both, dts, none, small], Q.lowBitrate);
   assert.deepStrictEqual(c, {old: 2, high: 2, heavy: 1, img: 0, small: 1});
 });
+t('Anzeigename: Serie vor Staffelordnern, ohne {tvdb-…}', () => {
+  const season = row({path: '/video2/Serien/Chernobyl (2019) {tvdb-360893}/Season 01', name: 'Season 01'});
+  assert.deepStrictEqual(LIB.title(season, new Set(), true), {series: 'Chernobyl (2019)', name: 'Season 01', up: '/video2/Serien'});
+  assert.strictEqual(LIB.title(season, new Set(), false).series, 'Chernobyl (2019)', 'flache Liste: immer mit Serie');
+  // im Ordnerbaum steht die Sammelzeile der Serie darüber: kein Wiederholen
+  const grp = new Set(['/video2/Serien/Chernobyl (2019) {tvdb-360893}']);
+  assert.strictEqual(LIB.title(season, grp, true).series, '');
+  assert.strictEqual(LIB.title(season, grp, false).series, 'Chernobyl (2019)', 'flach auch bei sichtbarer Sammelzeile mit Serie');
+  // Ordner, die keine Staffel sind, und Sammelzeilen bleiben unter ihrem Namen (bereinigt)
+  assert.deepStrictEqual(LIB.title(row({path: '/video2/Serien/1923 (2022) {tvdb-416491}', name: '1923 (2022) {tvdb-416491}', group: true}), new Set(), true), {series: '', name: '1923 (2022)', up: '/video2/Serien'});
+  assert.strictEqual(LIB.title(row({path: '/video2/Filme/Alien (1979)', name: 'Alien (1979)'}), new Set(), true).series, '');
+  for (const n of ['Season 01', 'Season 1', 'Staffel 2', 'S03', 'Series 4', 'Specials', 'Extras']) assert.ok(LIB.seasonLike(n), n);
+  for (const n of ['Season', '1923 (2022)', 'Seasoned', 'Alien']) assert.ok(!LIB.seasonLike(n), n);
+  assert.strictEqual(LIB.clean('The Lost Room (2006) {tvdb-79637}'), 'The Lost Room (2006)');
+  assert.strictEqual(LIB.clean('Film [imdb-tt123] HD'), 'Film HD');
+  assert.strictEqual(LIB.nf(15360), '15.360');
+});
 console.log('library: ' + n + ' Tests ok');

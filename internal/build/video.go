@@ -328,9 +328,6 @@ func BuildVideo(info *ffmpeg.Info, o VideoOpts, ov Overrides, in, out string) (*
 		}
 		args = append(args, enargs...)
 	}
-	if o.Container == "mkv" {
-		args = append(args, "-map", "0:t?", "-c:t", "copy") // fonts for styled subtitles
-	}
 
 	// --- audio ---
 	var audio []ffmpeg.Stream
@@ -462,6 +459,12 @@ func BuildVideo(info *ffmpeg.Info, o VideoOpts, ov Overrides, in, out string) (*
 			plan.Warnings = append(plan.Warnings, fmt.Sprintf("Untertitel #%d ist „Forced“ – Plex erkennt das nur in MKV-Dateien", s.Index))
 		}
 		n++
+	}
+
+	if o.Container == "mkv" {
+		// Schriften für gestaltete Untertitel. Als LETZTE Spur: stehen Anhänge vor einer kopierten Tonspur, lehnt der Matroska-Muxer von
+		// ffmpeg 6.1 deren Pakete ab („Received a packet for an attachment stream“) und die Umwandlung bricht nach 0 Bildern ab.
+		args = append(args, "-map", "0:t?", "-c:t", "copy")
 	}
 
 	muxer := "matroska"
