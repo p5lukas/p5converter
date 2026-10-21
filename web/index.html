@@ -75,12 +75,18 @@
         <div class="btns">
           <button id="addFiles">+ Dateien</button>
           <button id="addFolder">+ Ordner</button>
-          <button id="scanFolder" class="hidden" title="Einen Ordner rekursiv prüfen und zeigen, bei welchen Ordnern sich das Umwandeln lohnt"><span data-ic="chip"></span> Ordner prüfen …</button>
           <button id="clearFiles" class="ghost">Leeren</button>
         </div>
         <details id="cvFileDetails" class="cvfd"><summary>Liste der Dateien</summary><div id="fileList" class="files"></div></details>
       </div>
     </div>
+    <section class="cvcard hidden" id="cvScanHelp">
+      <div class="cvchead"><span class="cvico" data-ic="chip"></span><h2 data-info="libScan">Tipps: Wo lohnt sich das Umwandeln?</h2></div>
+      <div class="cvcbody">
+        <p class="scanhelp">Das Programm schaut in einen Ordner (mit allen Unterordnern) und zeigt dir, <b>welche Ordner sich zum Umwandeln eher lohnen</b>, zum Beispiel wegen eines älteren Codecs oder sehr großer Dateien. Es wird nichts verändert, und du siehst nur ganze Ordner, nie einzelne Dateien.</p>
+        <div class="btns"><button id="scanFolder" title="Einen Ordner rekursiv untersuchen und zeigen, bei welchen Ordnern sich das Umwandeln lohnt"><span data-ic="chip"></span> Ordner untersuchen …</button></div>
+      </div>
+    </section>
     <section class="cvcard hidden" id="cvScan" aria-live="polite"></section>
     <div id="cvRules" class="cvstep hidden"></div>
     <div id="cvHow" class="cvstep hidden"></div>

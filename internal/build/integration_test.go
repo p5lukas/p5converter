@@ -194,3 +194,63 @@ func TestTrackEditsRealFile(t *testing.T) {
 		t.Errorf("Untertitel: %+v", s[0])
 	}
 }
+
+// Dateien mit Anhängen (Schriften für ASS-Untertitel): der Anhang kommt als letzte Spur, sonst lehnt der Matroska-Muxer von ffmpeg 6.1
+// die kopierten Tonspuren ab und die Umwandlung bricht nach 0 Bildern ab. Regression (Chernobyl, ASS mit Schrift).
+func TestAttachmentsDoNotBreakMuxing(t *testing.T) {
+	tl := tools(t)
+	dir := t.TempDir()
+	font := filepath.Join(dir, "font.ttf")
+	os.WriteFile(font, []byte("kein echter Font, nur Bytes"), 0o644)
+	src := filepath.Join(dir, "att.mkv")
+	run(t, tl, "-f", "lavfi", "-i", "testsrc2=s=320x180:r=25:d=2", "-f", "lavfi", "-i", "sine=f=440:d=2", "-f", "lavfi", "-i", "sine=f=880:d=2",
+		"-map", "0", "-map", "1", "-map", "2", "-c:v", "libx264", "-c:a", "ac3", "-attach", font, "-metadata:s:t", "mimetype=application/x-truetype-font", src)
+	info, err := tl.Probe(context.Background(), src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, o := range map[string]VideoOpts{
+		"Video kopieren, Ton kopieren": {Codec: "copy", Container: "mkv", AudioMode: "copy", SubMode: "copy"},
+		"x264, Ton kopieren":           {Codec: "h264", Backend: "cpu", CRF: 30, Preset: "ultrafast", Container: "mkv", AudioMode: "copy", SubMode: "copy"},
+		"x264, Ton umwandeln":          {Codec: "h264", Backend: "cpu", CRF: 30, Preset: "ultrafast", Container: "mkv", AudioMode: "encode", AudioCodec: "eac3", AudioKbps: 256, SubMode: "copy"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if o.Codec == "h264" && !tl.Encoders()["libx264"] {
+				t.Skip("libx264 fehlt")
+			}
+			out := filepath.Join(dir, strings.ReplaceAll(name, " ", "_")+".mkv")
+			p, err := BuildVideo(info, o, Overrides{}, src, out)
+			if err != nil {
+				t.Fatal(err)
+			}
+			last := ""
+			for i, a := range p.Args {
+				if a == "-map" && i+1 < len(p.Args) {
+					last = p.Args[i+1]
+				}
+			}
+			if last != "0:t?" {
+				t.Errorf("Anhänge müssen die letzte Spur sein, die letzte Map ist %q: %v", last, p.Args)
+			}
+			if o, err := exec.Command(tl.FFmpeg, p.Args...).CombinedOutput(); err != nil {
+				t.Fatalf("ffmpeg: %v\n%s", err, o)
+			}
+			got, err := tl.Probe(context.Background(), out)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var att, aud int
+			for _, s := range got.Streams {
+				switch s.Type {
+				case "attachment":
+					att++
+				case "audio":
+					aud++
+				}
+			}
+			if att != 1 || aud != 2 {
+				t.Errorf("Ausgabe: %d Anhänge, %d Tonspuren (erwartet 1 und 2)", att, aud)
+			}
+		})
+	}
+}

@@ -1,5 +1,17 @@
 [
   {
+    "id": "attachments-fix-1",
+    "version": "0.3.5",
+    "title": "Fehler bei Dateien mit Schriftarten behoben",
+    "text": "MKV-Dateien mit eingebetteten Schriften (typisch bei ASS-Untertiteln, z. B. Chernobyl) brachen beim Umwandeln mit „Conversion failed“ ab. Das ist behoben: Anhänge stehen jetzt als letzte Spur in der Datei."
+  },
+  {
+    "id": "scan-help-1",
+    "version": "0.3.5",
+    "title": "Wo lohnt sich das Umwandeln?",
+    "text": "Der Ordner-Scan hat in Schritt 1 eine eigene Karte mit Erklärung und dem Knopf „Ordner untersuchen“. In der Ergebnisliste steht bei Staffeln jetzt die Serie davor (z. B. Chernobyl › Season 01)."
+  },
+  {
     "id": "progress-rain-1",
     "version": "0.3.4",
     "title": "Fortschrittsbalken mit Regen",

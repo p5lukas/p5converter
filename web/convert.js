@@ -49,7 +49,7 @@ function cvLayout() {
   show('cvRules', conv && video && st === 2); show('cvHow', conv && video && st === 3);
   show('cvSentence', conv && !video); show('cvTable', conv && (!video || st === 4));
   show('presetBar', conv && (!video || st === 1));
-  show('scanFolder', conv && video); show('cvScan', conv && video && st === 1 && !!LIBUI.id);
+  show('cvScanHelp', conv && video && st === 1); show('cvScan', conv && video && st === 1 && !!LIBUI.id);
   $('#aPresets').classList.toggle('hidden', video); $('#vPresets').classList.toggle('hidden', !video);
   show('wizNav', conv && video && st < 4); show('stepnav', conv && (!video || st === 4));
 }

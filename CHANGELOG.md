@@ -1,5 +1,20 @@
 # Änderungen
 
+## 0.3.5 – 2026-10-21
+
+**Behoben: Umwandeln brach bei Dateien mit Anhängen (Schriftarten) ab**
+- MKV-Dateien mit eingebetteten Schriften (typisch bei ASS-Untertiteln, z. B. Chernobyl S01E01) scheiterten mit „Received a packet for an attachment stream“ → „Error submitting a packet to the muxer: Invalid argument“ → „Conversion failed“, nach 0 Bildern; die Rückfälle (Quick Sync lesen) halfen deshalb nie. Ursache: die Anhänge (`-map 0:t?`) standen **vor** den kopierten Tonspuren, das lehnt der Matroska-Muxer von ffmpeg 6.1 ab. Jetzt stehen sie als **letzte Spur**; Regressionstest mit echter ffmpeg-Datei (Anhang, Ton kopieren und umwandeln, Video kopieren und kodieren)
+
+**Neu: „Wo lohnt sich das Umwandeln?“ (vorher „Ordner prüfen“)**
+- In Schritt 1 (Video) gibt es eine **eigene Karte** unter den Dateien: Überschrift „Tipps: Wo lohnt sich das Umwandeln?“, zwei Sätze Erklärung (schaut in einen Ordner samt Unterordnern, zeigt, welche Ordner sich eher lohnen; verändert nichts; nur ganze Ordner) und der Knopf **„Ordner untersuchen …“**. Der alte Knopf in der Dateien-Karte entfällt; das Ergebnis heißt „Ergebnis: Wo lohnt sich das Umwandeln?“
+
+**Geändert: Ergebnisliste verständlicher**
+- Staffelordner (Season 01, Staffel 2, Specials …) zeigen jetzt die **Serie davor: „Chernobyl (2019) › Season 01“**, auch in der Liste nach Bitrate oder Größe; im Ordnerbaum nur, wenn die Sammelzeile der Serie nicht direkt darüber steht (bisher fehlte der Serienname bei Serien mit nur einer Staffel, außer im Tooltip). Zusätze wie `{tvdb-123}` fallen in der Anzeige weg (Tooltip: voller Pfad)
+- In der flachen Liste steht der Ort („in Serien“); eine **Erklärzeile** über der Liste sagt, was die Zeilen und die grünen/grauen Kärtchen bedeuten; Zahlen mit Tausenderpunkt (15.360 Dateien); auf dem Handy brechen die Kartenüberschriften um
+
+**Intern**
+- `TestAttachmentsDoNotBreakMuxing`; Node-Test für Anzeigenamen (`LIB.title`, `seasonLike`, `clean`, `nf`); `ui-check-library.js` prüft Erklär-Karte, Serie › Staffel, Tooltip und Erklärzeile
+
 ## 0.3.4 – 2026-10-21
 
 **Neu: Fortschrittsbalken mit Matrix-Regen**
