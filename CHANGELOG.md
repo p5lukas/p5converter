@@ -17,6 +17,9 @@
 - **Untertitel-Regeln entfernt:** keine Regeln „Wenn der Untertitel … → entfernen“ mehr in Einstellungen → Regeln, in Schritt 2 und in den Details, und der Vorschlag „Bild-Untertitel entfernen“ ist weg. Untertitel entscheidest du je Datei oder Gruppe (Schritt 4) und über „Meine Sprach-Wünsche“; Regeln für **Ton** bleiben. Bereits gespeicherte Untertitel-Regeln werden **ignoriert, aber nicht gelöscht**
 - Statt des Sterns steht für „Meine Sprach-Wünsche“ und die Einstellungsseite „Audio & Untertitel“ eine **Weltkugel** (neues Symbol `lang`); der Stern bleibt bei „Voreinstellungen“
 
+**Doku**
+- README-Bilder neu (Startseite mit Regen-Balken, Kontrolle & Start, Verlauf mit Warteschlange, Handy), englische Kurzfassung und Windows-Abschnitt aktualisiert, Release-Text ohne veralteten Hinweis auf eine fehlende Windows-App
+
 **Intern**
 - Hilfen `keepView`, `syncChildren`, `reconcileCards` (`web/app.js`); `LIB.sourceFacts/sourceLine/convertHint` mit Node-Tests; neue UI-Prüfungen `ui-check-historyscroll.js` (Details, Scrollstand, Auswahl, Seitenposition, Kopieren) und `ui-check-source.js`; `ui-check-rules.js` prüft, dass gespeicherte Untertitel-Regeln ignoriert und erhalten bleiben
 
