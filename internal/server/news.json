@@ -1,5 +1,23 @@
 [
   {
+    "id": "history-stable-1",
+    "version": "0.3.6",
+    "title": "Verlauf bleibt ruhig, Befehl und Log lassen sich kopieren",
+    "text": "Geöffnete Details im Verlauf und in der Warteschlange schließen sich nicht mehr von selbst, der Scrollstand bleibt erhalten und die Seite wandert nicht mehr. Bei „ffmpeg-Befehl und Log“ gibt es jetzt Knöpfe zum Kopieren."
+  },
+  {
+    "id": "source-overview-1",
+    "version": "0.3.6",
+    "title": "Übersicht der Quelldateien",
+    "text": "In den Schritten „Regeln“ und „Wie umwandeln?“ zeigt eine Zeile, was du hast (Codec, Auflösung, Ton, Untertitel). In Schritt 3 gibt es dazu einen Hinweis an der Codec-Wahl, zum Beispiel „Deine Quelle: H.264 → H.265 spart meist Platz“."
+  },
+  {
+    "id": "subtitle-rules-removed-1",
+    "version": "0.3.6",
+    "title": "Keine Untertitel-Regeln mehr",
+    "text": "Untertitel entscheidest du je Datei oder Gruppe und über „Meine Sprach-Wünsche“. Die Regeln für Untertitel und der Vorschlag „Bild-Untertitel entfernen“ sind weg; Regeln für Tonspuren bleiben. Gespeicherte Untertitel-Regeln werden ignoriert, aber nicht gelöscht."
+  },
+  {
     "id": "attachments-fix-1",
     "version": "0.3.5",
     "title": "Fehler bei Dateien mit Schriftarten behoben",

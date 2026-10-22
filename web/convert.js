@@ -45,6 +45,7 @@ const cvSigText = info => { const g = TP.signature(info); return 'Ton: ' + (g.au
 function cvLayout() {
   const conv = S.step === 'convert', video = S.world === 'video', st = S.vstep, show = (id, on) => { const e = $('#' + id); if (e) e.classList.toggle('hidden', !on); };
   show('cvStepper', conv && video); show('cvHead', conv && video);
+  show('cvSource', conv && video && (st === 2 || st === 3) && S.files.video.length > 0);
   show('cvFiles', conv && (!video || st === 1));
   show('cvRules', conv && video && st === 2); show('cvHow', conv && video && st === 3);
   show('cvSentence', conv && !video); show('cvTable', conv && (!video || st === 4));
@@ -489,7 +490,7 @@ function cvRulesView(items) {
   const card = (cls, ico, title, info, body) => h('section', {class: 'cvcard sec-' + cls}, cvCardHead(ico, title, info), h('div', {class: 'cvcbody'}, body));
   const sug = trkRuleSuggestions(items);
   const r = trkRules();
-  return [card('prefs', 'star', 'Meine Sprach-Wünsche', 'trkPrefs', trkPrefLine()),
+  return [card('prefs', 'lang', 'Meine Sprach-Wünsche', 'trkPrefs', trkPrefLine()),
     card('rules', 'shield', 'Voreingestellte Regeln', 'trkGlobal', trkGlobalRules(items, false)),
     sug,
     card('own', 'edit', 'Eigene Regeln für diesen Lauf', 'trkRules', [h('p', {class: 'muted small'}, 'Gelten nur jetzt (und in Voreinstellungen, die du speicherst). Sie laufen von oben nach unten, die erste passende Regel gewinnt; eigene Regeln gehen den voreingestellten voraus. Eigene Änderungen an einzelnen Spuren gehen immer vor.'),
@@ -514,7 +515,7 @@ function cvSentenceText(n) {
 function cvHowStep(files) {
   const codec = $('#vCodec').value, copy = codec === 'copy', r = resolveBackend(), hw = !copy && r.id !== 'cpu', custom = $('#outMode').value === 'custom', n = files.length;
   const hwTile = cvTile('hw', 'chip', 'Hardware', 'tileHw', copy ? 'Kein Umwandeln' : cvHwText(), copy ? 'Das Video wird nur neu verpackt, nichts wird neu berechnet. Sehr schnell, kein Qualitätsverlust.' : hw ? 'Schnell, die CPU bleibt frei.' : 'Die CPU rechnet: beste Qualität je Dateigröße, aber langsam.',
-    [h('div', {class: 'tgrp'}, h('span', {class: 'lt'}, 'Video'), cvPills('vCodec', CV_CODEC, 'Video-Codec')),
+    [h('div', {class: 'tgrp'}, h('span', {class: 'lt'}, 'Video'), cvPills('vCodec', CV_CODEC, 'Video-Codec'), h('span', {class: 'small cvhint hidden', id: 'cvCodecHint'})),
       copy ? null : h('div', {class: 'tgrp'}, h('span', {class: 'lt'}, 'Encoder'), cvPills('vBackend', {auto: 'Automatisch'}, 'Encoder', true)),
       hw ? h('label', {class: 'check'}, cvCheck('vHwDec'), h('span', {}, 'Hardware-Decoding nutzen (fällt bei Fehler automatisch zurück)')) : null]);
   const destTile = cvTile('dest', 'disk', 'Speichern', 'tileDest', custom ? ($('#outDir').value.trim() ? cvDestText().replace(/^./, c => c.toUpperCase()) : 'Eigener Ordner fehlt noch') : 'Neben der Quelle', custom ? 'Alles landet im gewählten Ordner.' : 'Gleicher Ordner wie das Original, neuer Name.',
@@ -528,6 +529,42 @@ function cvHowStep(files) {
     [cvOpt('vfTracks', 'Spuren & Größe', vfTime('video', 'tracks')[0]), cvOpt('vfDecode', 'Komplett durchlesen (Decode-Test)', vfTime('video', 'decode')[0]),
       cvOpt('deleteSource', 'Original danach löschen', 'unwiderruflich, kein Papierkorb', true)]);
   fill($('#cvHow'), h('div', {class: 'cvtiles'}, hwTile, destTile, chkTile), h('div', {class: 'cvresult'}, icon('check'), h('span', {id: 'cvResultText'}, n ? cvSentenceText(n) : 'Noch keine Dateien gewählt.')));
+}
+
+// ---------- Übersicht der Quelldateien (Schritte „Regeln“ und „Wie umwandeln?“) ----------
+// Eine Zeile unter der Schrittleiste (Dateien, Größe, Codec, Auflösung, Ton, Untertitel); ein Klick zeigt jede Datei. In Schritt 3 steht zusätzlich ein Hinweis
+// an der Codec-Wahl („Deine Quelle: H.264 → H.265 spart meist Platz“). Nur Fakten und Hinweise, keine Schätzung der Ersparnis.
+let cvSrcSeq = 0;
+const cvShortName = s => codecTxt(s).replace(/ \(.*\)$/, '');
+async function cvSourceUpdate(files) {
+  const my = ++cvSrcSeq, el = $('#cvSource');
+  if (!el || S.world !== 'video' || !(S.vstep === 2 || S.vstep === 3) || !files.length) return;
+  const have = f => TRK.probe[f.path] && TRK.probe[f.path].__v;
+  if (files.some(f => !have(f) && !TRK.bad.has(f.path))) {
+    fill(el, h('span', {class: 'muted small'}, 'Lese die Dateien …'));
+    await trkLoadAll(files);
+    if (my !== cvSrcSeq || S.world !== 'video' || !(S.vstep === 2 || S.vstep === 3)) return;
+  }
+  const read = files.filter(have).map(f => ({f, info: TRK.probe[f.path].__v, size: f.size}));
+  if (!read.length) { fill(el); return; }
+  const facts = LIB.sourceFacts(read, {audio: cvShortName, sub: cvShortName});
+  const unread = files.length - read.length;
+  const one = ({f, info}) => {
+    const v = (info.streams || []).find(x => x.type === 'video' && !x.attachedPic), a = (info.streams || []).filter(x => x.type === 'audio'), sb = (info.streams || []).filter(x => x.type === 'subtitle');
+    return h('div', {class: 'cvsrcfile'}, h('span', {class: 'n', title: f.path}, f.rel || f.path.split(/[\\/]/).pop()),
+      h('span', {class: 'muted small'}, [v ? LIB.codecName(v.codec) + (v.height ? ' ' + v.height + 'p' : '') + (v.bitDepth > 8 ? ' ' + v.bitDepth + ' Bit' : '') : 'kein Video',
+        'Ton: ' + (a.map(x => cvShortName(x) + (chTxt(x.channels) ? ' ' + chTxt(x.channels) : '')).join(', ') || 'keiner'),
+        'Untertitel: ' + (sb.map(cvShortName).join(', ') || 'keine'), f.size ? fmtSize(f.size) : ''].filter(Boolean).join(' · ')));
+  };
+  fill(el, h('details', {class: 'cvsrc', open: !!CV.srcOpen, ontoggle: ev => { CV.srcOpen = ev.target.open; }},
+    h('summary', {}, h('span', {class: 'cvico'}, icon('file')), h('span', {class: 'cvsrctxt'}, LIB.sourceLine(facts) + (unread ? ' · ' + unread + (unread === 1 ? ' Datei nicht lesbar' : ' Dateien nicht lesbar') : '')), h('span', {class: 'muted small cvsrcmore'}, 'Liste')),
+    h('div', {class: 'cvsrclist'}, read.map(one))));
+  const hint = $('#cvCodecHint');
+  if (hint) {
+    const t = S.vstep === 3 ? LIB.convertHint(facts, $('#vCodec').value) : null;
+    hint.className = 'small cvhint' + (t ? ' ' + (t.tone || 'plain') : ' hidden');
+    fill(hint, t ? [icon(t.tone === 'warn' ? 'warn' : 'info'), ' ', t.text] : null);
+  }
 }
 
 // ---------- Leisten unten ----------
@@ -573,7 +610,7 @@ async function cvRenderNow() {
   cvFilesPanel(files);
   if (!video) cvSentence(files);
   if (video && st === 1) { cvBarWiz(files, null); cvPopFill(); return; }
-  if (video && st === 3) { cvHowStep(files); cvBarWiz(files, null); cvPopFill(); return; }
+  if (video && st === 3) { cvHowStep(files); cvBarWiz(files, null); cvPopFill(); cvSourceUpdate(files); return; }
   const target = video && st === 2 ? $('#cvRules') : box;
   const title = h('div', {class: 'cvempty', id: 'trkProgress'}, 'Lese die Dateien …');
   if (!files.length) {
@@ -593,7 +630,7 @@ async function cvRenderNow() {
   CV.bad = bad;
   if (!items.length) { fill(target, cvWarnings(files, null, []), h('div', {class: 'cvempty'}, 'Keine der Dateien ließ sich lesen.')); if (video && st === 2) cvBarWiz(files, null); else cvBar(files, null); return; }
   if (my !== cvSeq) return;
-  if (video && st === 2) { fill(target, cvRulesView(items)); cvBarWiz(files, items); cvPopFill(); return; }
+  if (video && st === 2) { fill(target, cvRulesView(items)); cvBarWiz(files, items); cvPopFill(); cvSourceUpdate(files); return; }
   fill(box, video ? cvVideoTable(items) : cvAudioTable(items));
   cvBar(files, items);
   cvPopFill();

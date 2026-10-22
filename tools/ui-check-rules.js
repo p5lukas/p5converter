@@ -25,10 +25,15 @@ const putSettings = async mut => { const s = await settings(); mut(s); await fet
     let s = await settings();
     ok(s.trackRules.audio.length === 1 && s.trackRules.audio[0].codec === 'dts' && s.trackRules.audio[0].to === 'eac3' && s.trackRules.audio[0].kbps === 256, name + ': Regel nicht auf dem Server gespeichert: ' + JSON.stringify(s.trackRules));
     ok(/gedeckelt/.test(await p.textContent('#viewSettings .trkrule')), name + ': Hinweis auf den 640er-Deckel fehlt');
-    await p.click('#viewSettings button:has-text("+ Regel für Untertitel")'); await p.waitForTimeout(600);
-    ok((await settings()).trackRules.sub.length === 1, name + ': Untertitel-Regel nicht gespeichert');
+    // Untertitel-Regeln gibt es nicht mehr (0.3.6): kein Knopf, kein Abschnitt; eine früher gespeicherte Regel wird ignoriert, aber nicht gelöscht
+    ok(await p.locator('#viewSettings button:has-text("Regel für Untertitel")').count() === 0 && await p.locator('#viewSettings h4:has-text("Untertitel")').count() === 0, name + ': die Seite „Regeln“ bietet noch Untertitel-Regeln an');
+    await putSettings(x => { x.trackRules.sub = [{kind: 'image', action: 'drop'}]; });
+    await p.reload(); await p.waitForTimeout(1300);
+    ok(await p.locator('#viewSettings .trkrule').count() === 1 && !/Bild-Untertitel/.test(await p.textContent('#viewSettings')), name + ': eine gespeicherte Untertitel-Regel darf nicht angezeigt werden');
+    await p.click('#viewSettings button:has-text("+ Regel für Ton")'); await p.waitForTimeout(700);
+    ok((await settings()).trackRules.sub.length === 1 && (await settings()).trackRules.audio.length === 2, name + ': die gespeicherte Untertitel-Regel muss beim Speichern erhalten bleiben: ' + JSON.stringify((await settings()).trackRules));
     await p.locator('#viewSettings .trkrule').nth(1).locator('button[title="Regel entfernen"]').click(); await p.waitForTimeout(600);
-    ok((await settings()).trackRules.sub.length === 0, name + ': Untertitel-Regel nicht entfernt');
+    ok((await settings()).trackRules.audio.length === 1, name + ': Ton-Regel nicht entfernt');
     ok(await ov() <= 0, name + ': Überlauf auf der Seite „Regeln“ ' + await ov() + 'px');
     await p.screenshot({path: `${L.SHOTS}/p5c-rules-${name}-1-seite.png`, fullPage: true});
     await p.reload(); await p.waitForTimeout(1300);

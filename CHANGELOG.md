@@ -1,5 +1,25 @@
 # Änderungen
 
+## 0.3.6 – 2026-10-22
+
+**Behoben: Verlauf und Warteschlange**
+- **Geöffnete Details bleiben offen:** „ffmpeg-Befehl und Log“ schloss sich im Verlauf sofort wieder (die Liste wurde alle 3 Sekunden komplett neu aufgebaut, das innere Fenster merkte sich seinen Zustand nicht). Jetzt bleiben unveränderte Einträge als Knoten stehen: offene Details, der Scrollstand in den Textfeldern und eine **Textauswahl** bleiben erhalten (Kopieren und Ansehen sind möglich); Gleiches gilt für die Karten der Warteschlange (Kopf und Balken werden laufend aktualisiert, die Details nur bei neuem Log)
+- **Die Seite wanderte von selbst weiter:** nachgestellt (Scrollposition 500 → 379 → 327 px, während Aufträge liefen und fertig wurden): Warteschlange und Liste änderten ihre Höhe über dem sichtbaren Teil, der Browser rückte die Seite mit dem Scroll-Anker nach. Jetzt merkt sich die Seite das erste sichtbare Element und hält es nach jedem Neuzeichnen an derselben Stelle (in allen Browsern gleich, auch Safari)
+
+**Neu: Kopieren-Knöpfe**
+- Bei „ffmpeg-Befehl und Log“ (Verlauf) und in den Details der Warteschlange: **Befehl kopieren**, **Log kopieren**, **Alles kopieren**; mit Ausweg ohne Zwischenablage-Schnittstelle (z. B. über `http` im LAN)
+
+**Neu: Übersicht der Quelldateien in den Schritten „Regeln“ und „Wie umwandeln?“**
+- Eine Zeile unter der Schrittleiste: Dateien, Größe, Video-Codec, Auflösung, Bit-Tiefe, Ton- und Untertitelformate („6 Dateien · 25,6 GB · Video: H.264 · 1080p · Ton: DTS-HD MA ×5 · Untertitel: SRT, ASS“); ein Klick zeigt jede Datei. Nur Fakten
+- In Schritt 3 steht an der Codec-Wahl ein **Hinweis zur Quelle**: „Deine Quelle: H.264 → H.265. Das spart meist Platz.“ bzw. „Deine Quelle ist schon H.265. Neu kodieren spart kaum Platz …“, ohne Schätzung der Ersparnis
+
+**Geändert**
+- **Untertitel-Regeln entfernt:** keine Regeln „Wenn der Untertitel … → entfernen“ mehr in Einstellungen → Regeln, in Schritt 2 und in den Details, und der Vorschlag „Bild-Untertitel entfernen“ ist weg. Untertitel entscheidest du je Datei oder Gruppe (Schritt 4) und über „Meine Sprach-Wünsche“; Regeln für **Ton** bleiben. Bereits gespeicherte Untertitel-Regeln werden **ignoriert, aber nicht gelöscht**
+- Statt des Sterns steht für „Meine Sprach-Wünsche“ und die Einstellungsseite „Audio & Untertitel“ eine **Weltkugel** (neues Symbol `lang`); der Stern bleibt bei „Voreinstellungen“
+
+**Intern**
+- Hilfen `keepView`, `syncChildren`, `reconcileCards` (`web/app.js`); `LIB.sourceFacts/sourceLine/convertHint` mit Node-Tests; neue UI-Prüfungen `ui-check-historyscroll.js` (Details, Scrollstand, Auswahl, Seitenposition, Kopieren) und `ui-check-source.js`; `ui-check-rules.js` prüft, dass gespeicherte Untertitel-Regeln ignoriert und erhalten bleiben
+
 ## 0.3.5 – 2026-10-21
 
 **Behoben: Umwandeln brach bei Dateien mit Anhängen (Schriftarten) ab**

@@ -60,6 +60,67 @@ const LIB = (() => {
     return {series: clean(a[a.length - 2]), name, up: parentDir(parent)};
   }
 
+
+  // ---------- Quelle der Dateien (Schritte „Regeln“ und „Wie umwandeln?“) ----------
+  // list: [{info, size}] (info wie von /api/info: streams mit type, codec, height, bitDepth); name: {audio(s), sub(s)} liefern Kurznamen
+  function sourceFacts(list, name) {
+    name = name || {};
+    const an = name.audio || (s => String(s.codec).toUpperCase()), sn = name.sub || an;
+    const f = {files: list.length, bytes: 0, v: {}, heights: [], ten: 0, a: {}, s: {}, img: 0};
+    for (const {info, size} of list) {
+      f.bytes += size || info.size || 0;
+      const vs = (info.streams || []).find(x => x.type === 'video' && !x.attachedPic), vc = vs ? vs.codec : '?';
+      f.v[vc] = (f.v[vc] || 0) + 1;
+      if (vs && vs.height) f.heights.push(vs.height);
+      if (vs && vs.bitDepth > 8) f.ten++;
+      const as = new Set(), ss = new Set();
+      let img = false;
+      for (const x of info.streams || []) {
+        if (x.type === 'audio') as.add(an(x));
+        else if (x.type === 'subtitle') { ss.add(sn(x)); if (['hdmv_pgs_subtitle', 'dvd_subtitle', 'dvb_subtitle', 'xsub'].includes(x.codec)) img = true; }
+      }
+      as.forEach(k => { f.a[k] = (f.a[k] || 0) + 1; }); ss.forEach(k => { f.s[k] = (f.s[k] || 0) + 1; });
+      if (img) f.img++;
+    }
+    return f;
+  }
+  // „H.264 ×3 · H.265 ×2“; wenn alle Dateien dasselbe haben, steht nur der Name
+  const mixAll = (map, total, label) => {
+    const e = Object.entries(map || {}).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).map(([k, n]) => [label ? label(k) : k, n]);
+    return e.length === 1 && e[0][1] === total ? e[0][0] : e.map(([k, n]) => k + ' ×' + n).join(', ');
+  };
+  function sourceLine(f) {
+    const parts = [num(f.files, 'Datei', 'Dateien'), fmtSizeLib(f.bytes)];
+    parts.push('Video: ' + mixAll(f.v, f.files, codecName));
+    const hs = f.heights.length ? [Math.min(...f.heights), Math.max(...f.heights)] : null;
+    if (hs) parts.push(hs[0] === hs[1] ? hs[0] + 'p' : hs[0] + 'p–' + hs[1] + 'p');
+    if (f.ten) parts.push(f.ten === f.files ? '10 Bit' : f.ten + '× 10 Bit');
+    parts.push('Ton: ' + (Object.keys(f.a).length ? mixAll(f.a, f.files) : 'keiner'));
+    parts.push('Untertitel: ' + (Object.keys(f.s).length ? mixAll(f.s, f.files) : 'keine'));
+    return parts.join(' · ');
+  }
+  const fmtSizeLib = b => { const u = ['B', 'KB', 'MB', 'GB', 'TB']; let i = 0, v = b; while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; } return v.toFixed(i > 1 ? 1 : 0).replace('.', ',') + ' ' + u[i]; };
+  // Hinweis zur Quelle an der Codec-Wahl in Schritt „Wie umwandeln?“: nur Fakten und Hinweise, keine Schätzung der Ersparnis. → {text, tone} oder null
+  function convertHint(f, target) {
+    if (!f || !f.files) return null;
+    const n = f.files, names = mixAll(f.v, n, codecName), known = Object.entries(f.v).filter(([c]) => c !== '?');
+    if (!known.length) return null;
+    const nNew = known.filter(([c]) => MODERN.includes(c)).reduce((a, [, k]) => a + k, 0), nOld = known.reduce((a, [, k]) => a + k, 0) - nNew;
+    const T = {hevc: 'H.265', av1: 'AV1', h264: 'H.264', vp9: 'VP9'}[target];
+    if (target === 'copy') return {text: 'Das Video bleibt, wie es ist (' + names + '): es wird nur neu verpackt. Geändert werden höchstens Tonspuren und Untertitel nach deinen Regeln.', tone: ''};
+    if (target === 'hevc' || target === 'av1') {
+      if (nNew === n && known.length === 1 && known[0][0] === target) return {text: 'Deine Quelle ist schon ' + T + '. Neu kodieren spart kaum Platz, kostet Zeit und etwas Qualität: eher „Kopieren“ wählen.', tone: 'warn'};
+      if (nNew === n) return {text: 'Deine Quelle ist schon ' + names + ' (modern). Mit ' + T + ' sparst du hier kaum Platz.', tone: 'warn'};
+      if (nOld === n) return {text: 'Deine Quelle: ' + names + ' → ' + T + '. Das spart meist Platz.', tone: 'good'};
+      return {text: 'Deine Quelle: ' + names + '. Bei den ' + num(nOld, 'Datei', 'Dateien') + ' mit älterem Codec spart ' + T + ' meist Platz, die übrigen sind schon modern.', tone: 'good'};
+    }
+    if (target === 'h264') {
+      if (nNew > 0) return {text: 'Deine Quelle: ' + names + '. H.264 läuft fast überall, wird aus H.265/AV1 aber meist größer.', tone: 'warn'};
+      return {text: 'Deine Quelle: ' + names + '. H.264 läuft fast überall; Platz sparst du eher mit H.265.', tone: ''};
+    }
+    return null;
+  }
+
   // Reihenfolge: „tree“ = wie im Dateibaum (Sammelordner vor ihren Ordnern), sonst flach nach Größe, Bitrate oder Name
   function sortRows(rows, key) {
     const r = rows.slice();
@@ -68,7 +129,7 @@ const LIB = (() => {
     else if (key === 'name') r.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()) || a.path.localeCompare(b.path));
     return r;
   }
-  return {hints, worth, mix, sortRows, codecName, mbit, highLimit, nf, seasonLike, clean, title, FILTERS, FILTER_DEFAULT, filterIds, matches, filterCounts};
+  return {hints, worth, mix, sortRows, codecName, mbit, highLimit, nf, seasonLike, clean, title, sourceFacts, sourceLine, convertHint, FILTERS, FILTER_DEFAULT, filterIds, matches, filterCounts};
 })();
 if (typeof module !== 'undefined') module.exports = LIB;
 

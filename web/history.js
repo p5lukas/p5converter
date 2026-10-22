@@ -13,7 +13,7 @@ const fmtDateTime = d => { const x = new Date(d); return x.toLocaleDateString('d
 async function historyPage() {
   const root = $('#historyBody');
   stopHistory();
-  const st = {kind: 'all', items: [], max: 100, persistent: true, q: '', status: 'all', range: 'all', open: new Set()};
+  const st = {kind: 'all', items: [], max: 100, persistent: true, q: '', status: 'all', range: 'all', open: new Set(), openLog: new Set(), cache: new Map()};
   const list = h('div', {class: 'histlist'}), count = h('span', {class: 'muted small'}), chips = h('div', {class: 'lvlchips'}),
     q = h('input', {type: 'search', placeholder: 'Dateiname, Ordner, Meldung …', autocomplete: 'off'}),
     range = h('select', {onchange: () => { st.range = range.value; render(); }}, HIST_RANGE.map(r => h('option', {value: r[0]}, r[1]))),
@@ -45,12 +45,31 @@ async function historyPage() {
         checks,
         (e.warnings || []).map(w => h('div', {class: 'warn'}, w)),
         e.error ? h('div', {style: 'color:var(--bad)'}, e.error) : null,
-        e.cmd ? h('details', {}, h('summary', {}, 'ffmpeg-Befehl und Log'), h('pre', {}, e.cmd), h('pre', {}, (e.log || []).join('\n'))) : null));
+        e.cmd ? h('details', {open: st.openLog.has(e.id), ontoggle: ev => { ev.stopPropagation(); ev.target.open ? st.openLog.add(e.id) : st.openLog.delete(e.id); }},
+          h('summary', {}, 'ffmpeg-Befehl und Log'),
+          h('div', {class: 'copyrow'},
+            h('button', {type: 'button', class: 'small ghost', onclick: () => copyText(e.cmd)}, icon('copy'), ' Befehl kopieren'),
+            h('button', {type: 'button', class: 'small ghost', onclick: () => copyText((e.log || []).join('\n'))}, icon('copy'), ' Log kopieren'),
+            h('button', {type: 'button', class: 'small ghost', onclick: () => copyText(e.cmd + '\n\n' + (e.log || []).join('\n'))}, icon('copy'), ' Alles kopieren')),
+          h('pre', {}, e.cmd), h('pre', {}, (e.log || []).join('\n'))) : null));
     return det;
   }
   function render() {
     const rows = visible();
-    fill(list, rows.length ? rows.map(entry) : h('div', {class: 'empty', style: 'padding:24px'}, st.items.length ? 'Keine Einträge für diesen Filter.' : 'Es wurde noch nichts umgewandelt.'));
+    keepView(() => {
+      if (!rows.length) { st.cache.clear(); fill(list, h('div', {class: 'empty', style: 'padding:24px'}, st.items.length ? 'Keine Einträge für diesen Filter.' : 'Es wurde noch nichts umgewandelt.')); return; }
+      // Einträge, die sich nicht geändert haben, bleiben als Knoten stehen (geöffnete Details, Scrollstand und Textauswahl bleiben erhalten)
+      const next = new Map();
+      const els = rows.map(e => {
+        const sig = JSON.stringify(e), old = st.cache.get(e.id);
+        if (old && old.sig === sig) { next.set(e.id, old); return old.el; }
+        const el = entry(e);
+        if (old) { const pos = [...old.el.querySelectorAll('pre')].map(x => x.scrollTop); requestAnimationFrame(() => el.querySelectorAll('pre').forEach((x, i) => { if (pos[i]) x.scrollTop = pos[i]; })); }
+        next.set(e.id, {sig, el}); return el;
+      });
+      st.cache = next;
+      syncChildren(list, els);
+    });
     count.textContent = `${rows.length} von ${st.items.length} Einträgen (es bleiben die letzten ${st.max} je Art: Video und Audio)`;
     const n = k => st.items.filter(e => e.status === k).length;
     fill(chips, h('button', {type: 'button', class: 'lvl-chip all' + (st.status === 'all' ? ' on' : ''), onclick: () => { st.status = 'all'; render(); }}, 'Alle', h('small', {}, st.items.length)),
