@@ -104,7 +104,7 @@ function describePreset(p) {
       if (v.vBackend && v.vBackend !== 'auto') o.push(v.vBackend);
     }
     if (v.vContainer) o.push(String(v.vContainer).toUpperCase());
-    try { const r = JSON.parse(v.vTrkRules || '{}'); const n = (r.audio || []).length + (r.sub || []).length; if (n) o.push(n + (n === 1 ? ' Regel für Spuren' : ' Regeln für Spuren')); } catch (e) { /* ignorieren */ }
+    try { const r = JSON.parse(v.vTrkRules || '{}'); const n = (r.audio || []).length; if (n) o.push(n + (n === 1 ? ' Regel für Spuren' : ' Regeln für Spuren')); } catch (e) { /* ignorieren */ }
   } else {
     o.push(AFMT_NAMES[v.aFormat] || 'Audio');
     if (v.aFormat === 'flac') o.push('Stufe ' + (v.aFlac ?? 5));
@@ -159,8 +159,8 @@ const SET_GROUPS = [
   {id: 'general', icon: 'gear', title: 'Allgemein', sub: 'Startansicht, Zielordner, parallele Aufträge'},
   {id: 'presets', icon: 'star', title: 'Voreinstellungen', sub: 'Vorschläge anlegen und ordnen'},
   {id: 'hardware', icon: 'bolt', title: 'Hardware', sub: 'Encoder, Erkennung, Diagnose'},
-  {id: 'tracks', icon: 'star', title: 'Audio & Untertitel', sub: 'Sprachen und Standard-Spuren'},
-  {id: 'rules', icon: 'edit', title: 'Regeln', sub: 'Allgemeine Regeln für Ton und Untertitel'},
+  {id: 'tracks', icon: 'lang', title: 'Audio & Untertitel', sub: 'Sprachen und Standard-Spuren'},
+  {id: 'rules', icon: 'edit', title: 'Regeln', sub: 'Allgemeine Regeln für Tonspuren'},
   {id: 'auth', icon: 'lock', title: 'Anmeldung', sub: 'Passwort und Benutzer'},
   {id: 'about', icon: 'info', title: 'Info', sub: 'Version, Neuigkeiten, Speicherort'},
 ];
@@ -255,12 +255,12 @@ function pageGeneral() {
     row('Neuigkeiten', check(c.showNews, v => saveCfg(x => { x.showNews = v; }), 'Hinweis „Neuigkeiten“ bei neuer Version zeigen')));
 }
 
-// --- Regeln: allgemeine Regeln für Ton und Untertitel (Video), für alle Geräte auf dem Server ---
+// --- Regeln: allgemeine Regeln für Tonspuren (Video), für alle Geräte auf dem Server. Untertitel entscheidest du je Datei (Regeln dafür gibt es seit 0.3.6 nicht mehr; gespeicherte bleiben unangetastet und werden ignoriert) ---
 function pageRules() {
   const r = JSON.parse(JSON.stringify(cfg().trackRules || {})); r.audio = r.audio || []; r.sub = r.sub || [];
   const save = () => saveCfg(x => { x.trackRules = {audio: r.audio, sub: r.sub}; }, false);
   return h('div', {}, h('h2', {}, 'Regeln', infoBtn('setRules')),
-    h('p', {class: 'muted'}, 'Allgemeine Regeln für Tonspuren und Untertitel bei Videos, zum Beispiel „DTS → E-AC-3, 256 kbit/s je Stereo-Paar“ oder „Bild-Untertitel entfernen“. Sie liegen auf dem Server und gelten für alle Geräte. Beim Konvertieren erscheinen sie im Schritt „Regeln“ als voreingestellte Regeln; dort lässt sich jede für den jeweiligen Lauf abwählen.'),
+    h('p', {class: 'muted'}, 'Allgemeine Regeln für Tonspuren bei Videos, zum Beispiel „DTS → E-AC-3, 256 kbit/s je Stereo-Paar“. Untertitel entscheidest du je Datei oder Gruppe in der Kontrolle (Schritt 4); welche Sprachen du behalten willst, steht unter „Audio & Untertitel“. Sie liegen auf dem Server und gelten für alle Geräte. Beim Konvertieren erscheinen sie im Schritt „Regeln“ als voreingestellte Regeln; dort lässt sich jede für den jeweiligen Lauf abwählen.'),
     h('div', {class: 'trkrules open'}, trkRulesBody(r, save, () => renderSettings(), false)),
     h('p', {class: 'muted small'}, 'Die Regeln laufen von oben nach unten, die erste passende gewinnt. Die Bitrate gilt je Stereo-Paar: eine 5.1-Spur bekommt automatisch mehr (Wert × Kanäle ÷ 2), höchstens aber 640 kbit/s. Mehr kann der Encoder bei AC-3 und E-AC-3 nicht.'));
 }

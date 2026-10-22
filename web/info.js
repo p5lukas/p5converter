@@ -109,7 +109,7 @@ const INFO = {
     <p class="ex">Hinweis: In MP4 gehen Bild-Untertitel (Blu-ray/PGS, DVD) nicht – nimm dafür MKV.</p>`},
   trkRules: {t: 'Regeln nach Format', b: `<p>Damit wandelst du nur bestimmte Spuren um oder entfernst sie, statt alle Spuren gleich zu behandeln. Die Regeln laufen <b>von oben nach unten</b>, die <b>erste passende</b> gewinnt. Deine eigenen Änderungen an einer Spur gehen immer vor.</p>
     <p class="ex">Beispiel: „DTS → umwandeln in AC-3 192 kbit/s je Stereo-Paar“. Alle anderen Tonspuren bleiben unverändert (oder folgen „Alle übrigen Tonspuren“). Mit „Surround“ oder „Stereo“ grenzt du nach Kanälen ein.</p>
-    <p>Bei Untertiteln unterscheidet das Programm Bild-Untertitel (PGS, VobSub, DVB: groß, nicht überall abspielbar) und Text-Untertitel (SRT, ASS).</p>
+    <p>Für Untertitel gibt es keine Regeln: Du entscheidest sie je Datei oder Gruppe in der Kontrolle (Schritt 4), die Sprachen legst du unter „Audio &amp; Untertitel“ fest. Bild-Untertitel (PGS, VobSub, DVB) sind groß und nicht überall abspielbar, deshalb steht das dort als Hinweis, entfernt wird nichts von selbst.</p>
     <p>Die Regeln lassen sich als Voreinstellung speichern (Diskette im Ablauf). Das Programm schlägt Regeln vor, wenn es passende Spuren in deinen Dateien findet (z. B. DTS).</p>`},
   trkViews: {t: 'Gruppen, Tabelle, Einzelne Dateien', b: `<ul><li><b>Gruppen:</b> Dateien mit denselben Sprachen sind zusammengefasst (z. B. eine ganze Staffel). Ein Haken bei einer Sprache gilt für die ganze Gruppe. Abweichende Dateien stehen in eigenen, markierten Gruppen. Jede Gruppe zeigt, was passieren wird.</li>
     <li><b>Tabelle:</b> Alle Dateien als Zeilen, alle Sprachen als Spalten, mit Häkchen. Der Haken in der Spaltenüberschrift gilt für alle Dateien.</li>
@@ -189,7 +189,7 @@ const INFO = {
     <li><b>Schon klein:</b> Neukodieren spart hier kaum Platz.</li></ul>
     <p>Die Hinweise stehen oben als <b>Kärtchen</b> und lassen sich einzeln an- und abwählen. Ein Ordner erscheint, sobald <b>mindestens ein</b> gewählter Hinweis zutrifft. Wenn du zum Beispiel nur „Hohe Bitrate“ anlässt, siehst du nur diese Ordner, nach Bitrate sortiert.</p>
     <p>„Ordner übernehmen“ legt den ganzen Ordner mit allen Unterordnern in Schritt 1 ab.</p>`},
-  setRules: {t: 'Regeln', b: `<p>Allgemeine Regeln für Tonspuren und Untertitel von Videos, auf dem Server gespeichert und für alle Geräte gültig. Beim Konvertieren erscheinen sie als voreingestellte Regeln, jede lässt sich je Lauf abwählen.</p>
+  setRules: {t: 'Regeln', b: `<p>Allgemeine Regeln für Tonspuren von Videos, auf dem Server gespeichert und für alle Geräte gültig. Beim Konvertieren erscheinen sie als voreingestellte Regeln, jede lässt sich je Lauf abwählen.</p>
     <p>Die Regeln laufen von oben nach unten, die erste passende gewinnt. Beispiel: „DTS → umwandeln in E-AC-3 mit 256 kbit/s je Stereo-Paar“.</p>
     <p class="ex">E-AC-3 (und AC-3) schafft höchstens 640 kbit/s. Bei 5.1 ergeben 256 je Stereo-Paar rechnerisch 768; das Programm deckelt dann auf 640 und zeigt „Maximum“.</p>`},
 };

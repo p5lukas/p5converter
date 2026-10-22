@@ -12,7 +12,7 @@ Ein SoundConverter-Klon mit zusätzlichem Video-Teil, gebaut für ganze Serien-S
 ![Docker](https://img.shields.io/badge/Docker-ghcr.io%2Fp5lukas%2Fp5converter-00ff5a?logo=docker&logoColor=white&labelColor=0a1a0f)
 ![Unraid](https://img.shields.io/badge/Unraid-Template-00ff5a?labelColor=0a1a0f)
 ![Windows](https://img.shields.io/badge/Windows-Vorabversion-ffcc00?labelColor=0a1a0f)
-![Version](https://img.shields.io/badge/Version-0.3.5-00ff5a?labelColor=0a1a0f)
+![Version](https://img.shields.io/badge/Version-0.3.6-00ff5a?labelColor=0a1a0f)
 ![Lizenz](https://img.shields.io/badge/Lizenz-MIT-00ff5a?labelColor=0a1a0f)
 
 <img src="docs/images/start.png" alt="Startseite mit laufendem Auftrag" width="900">
@@ -29,9 +29,9 @@ Ein SoundConverter-Klon mit zusätzlichem Video-Teil, gebaut für ganze Serien-S
 ## Auf einen Blick
 * **Startseite mit zwei Kacheln:** Video (grün) oder Audio (orange); Video läuft in **vier Schritten** (Dateien, Regeln, Wie umwandeln?, Kontrolle & Start), dazu Voreinstellungen und Umbenennen mit Live-Vorschau
 * **Hardware-Encoding** (Quick Sync, NVENC, AMF, VAAPI) mit sichtbarer Bestätigung, ob Schreiben und Lesen wirklich auf der Hardware laufen
-* **Audio & Untertitel für ganze Staffeln:** Gruppen nach Sprachen, Regeln nach Format, Sprach-Wünsche, Forced-Erkennung
+* **Audio & Untertitel für ganze Staffeln:** Gruppen nach Sprachen, Regeln für Tonspuren nach Format, Sprach-Wünsche, Forced-Erkennung
 * **Kontrolle nach dem Konvertieren:** Spuren, Laufzeit, Größe und auf Wunsch ein kompletter Decode-Test, bevor ein Original gelöscht wird
-* **Warteschlange verwalten** (Reihenfolge ändern, anhalten, pausieren; überlebt einen Neustart) und **„Wo lohnt sich das Umwandeln?“** (Schritt 1, eigene Karte mit Erklärung und Knopf „Ordner untersuchen“): zeigt ordnerweise, wo sich das Umwandeln eher lohnt (nur Fakten, keine Schätzung; die Hinweis-Kärtchen lassen sich als Filter an- und abwählen, ein Merker macht den zweiten Durchlauf schnell); laufende Aufträge zeigen einen dicken **Regen-Fortschrittsbalken**, und **„Verwerfen“** in der Fußleiste bricht den Ablauf ab
+* **Warteschlange verwalten** (Reihenfolge ändern, anhalten, pausieren; überlebt einen Neustart) und **„Wo lohnt sich das Umwandeln?“** (Schritt 1, eigene Karte mit Erklärung und Knopf „Ordner untersuchen“): zeigt ordnerweise, wo sich das Umwandeln eher lohnt (nur Fakten, keine Schätzung; die Hinweis-Kärtchen lassen sich als Filter an- und abwählen, ein Merker macht den zweiten Durchlauf schnell); laufende Aufträge zeigen einen dicken **Regen-Fortschrittsbalken**, und **„Verwerfen“** in der Fußleiste bricht den Ablauf ab; in den Schritten 2 und 3 zeigt eine **Übersicht der Quelldateien** (Codec, Auflösung, Ton, Untertitel), was man hat, samt Hinweis zur Codec-Wahl; Verlauf und Warteschlange behalten geöffnete Details, und Befehl und Log lassen sich **kopieren**
 * **Verlauf** der letzten 100 Aufträge je Art, Video und Audio in einer Liste (mit CSV-Export), **gewonnener Platz**, Live-Auslastung
 * **Handy und Tablet:** als Web-App auf dem Home-Bildschirm nutzbar
 
@@ -122,7 +122,7 @@ Zielordner mit Struktur oder Namensmuster (`{artist}/{album}/{track} - {title}`)
 ### Einstellungen, Voreinstellungen, Anmeldung
 * **Zahnrad** oben rechts (am Handy als Liste mit Gruppen): Allgemein, Voreinstellungen, Hardware, Audio & Untertitel, Regeln, Anmeldung, Info
 * **Voreinstellungen** (Audio und Video): Knopf „Als Voreinstellung speichern“ (Diskette) neben „Konvertierung starten“; in den Einstellungen umbenennen, sortieren, duplizieren, löschen, „Vorschlag“ an/aus und „Werte“ zum Bearbeiten
-* **Regeln**: allgemeine Regeln für Ton und Untertitel (Codec → umwandeln/entfernen, Bitrate je Stereo-Paar, E-AC-3 höchstens 640 kbit/s), gespeichert in `/config` für alle Geräte
+* **Regeln**: allgemeine Regeln für Tonspuren (Codec → umwandeln/entfernen, Bitrate je Stereo-Paar, E-AC-3 höchstens 640 kbit/s), gespeichert in `/config` für alle Geräte
 * **Anmeldung** wie bei p5assets: im Browser anlegen, „Angemeldet bleiben (30 Tage)“, Spaßmeldung nach falschem Passwort (abschaltbar), Passwort nur als Hash; vergessen: `docker exec -it p5converter p5converter auth reset`, `P5_AUTH_RESET=1` oder `/config/auth.json` löschen
 
 ### Logs

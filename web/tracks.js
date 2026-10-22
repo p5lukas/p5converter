@@ -62,20 +62,20 @@ const fileLabel = f => f.rel || f.path.split(/[\\/]/).pop();
 // „off“ = Schlüssel der allgemeinen Regeln (Einstellungen → Regeln), die für diesen Lauf abgewählt sind.
 function trkRules() {
   let r = {}; try { r = JSON.parse($('#vTrkRules').value || '{}') || {}; } catch (e) { r = {}; }
-  return {audio: Array.isArray(r.audio) ? r.audio : [], sub: Array.isArray(r.sub) ? r.sub : [], usePrefs: r.usePrefs !== false, off: Array.isArray(r.off) ? r.off : []};
+  return {audio: Array.isArray(r.audio) ? r.audio : [], sub: [] /* Untertitel-Regeln gibt es seit 0.3.6 nicht mehr; gespeicherte werden ignoriert */, usePrefs: r.usePrefs !== false, off: Array.isArray(r.off) ? r.off : []};
 }
 function trkRulesSave(r) {
   const o = {audio: r.audio, sub: r.sub};
   if (r.usePrefs === false) o.usePrefs = false;
   if (r.off && r.off.length) o.off = r.off;
-  $('#vTrkRules').value = (r.audio.length || r.sub.length || r.usePrefs === false || (r.off && r.off.length)) ? JSON.stringify(o) : '';
+  $('#vTrkRules').value = (r.audio.length || r.usePrefs === false || (r.off && r.off.length)) ? JSON.stringify(o) : '';
   saveSettings();
 }
 const trkRuleKey = (type, x) => type === 'audio' ? ['a', x.codec || 'any', x.ch || 'any', x.action || 'copy', x.to || '', x.kbps || ''].join('/') : ['s', x.kind || 'any', x.action || 'copy'].join('/');
 // allgemeine Regeln aus den Einstellungen: [{type, rule, key, on}] (on = für diesen Lauf nicht abgewählt)
 function trkGlobalList() {
   const g = cfg().trackRules || {}, off = new Set(trkRules().off);
-  return [...(g.audio || []).map(rule => ({type: 'audio', rule})), ...(g.sub || []).map(rule => ({type: 'sub', rule}))].map(e => { e.key = trkRuleKey(e.type, e.rule); e.on = !off.has(e.key); return e; });
+  return [...(g.audio || []).map(rule => ({type: 'audio', rule})), ].map(e => { e.key = trkRuleKey(e.type, e.rule); e.on = !off.has(e.key); return e; });
 }
 const trkPrefs = () => { const p = cfg().trackPrefs || {}; return {audioKeep: p.audioKeep || [], subKeep: p.subKeep || [], audioDefault: p.audioDefault || [], subDefault: p.subDefault || []}; };
 const trkHasPrefs = () => { const p = trkPrefs(); return !!(p.audioKeep.length || p.subKeep.length || p.audioDefault.length || p.subDefault.length); };
@@ -463,16 +463,12 @@ function trkRuleSuggestions(all) {
   const r = trkRules(), g = trkGlobalList(), out = [];
   const count = fn => all.filter(x => x.info.streams.some(fn)).length;
   const hasAudioRule = codec => [...r.audio, ...g.filter(e => e.type === 'audio' && e.on).map(e => e.rule)].some(x => x.codec === codec || x.codec === 'any');
-  const hasSubImgRule = () => [...r.sub, ...g.filter(e => e.type === 'sub' && e.on).map(e => e.rule)].some(x => x.kind === 'image' || x.kind === 'any');
   const nDts = count(s => s.type === 'audio' && ['dts', 'dtshd'].includes(TP.codecKey(s)));
   if (nDts && !hasAudioRule('dts') && !hasAudioRule('dtshd')) out.push({text: `${nDts} ${nDts === 1 ? 'Datei hat' : 'Dateien haben'} DTS-Tonspuren. Viele Fernseher und Player können DTS nicht. Alle DTS-Spuren in E-AC-3 (Dolby Digital Plus, 256 kbit/s je Stereo-Paar) umwandeln, den Rest unverändert lassen?`,
     label: 'DTS → E-AC-3', type: 'audio', rule: {codec: 'dts', ch: 'any', action: 'encode', to: 'eac3', kbps: 256}});
   const nTh = count(s => s.type === 'audio' && TP.codecKey(s) === 'truehd');
   if (nTh && !hasAudioRule('truehd')) out.push({text: `${nTh} ${nTh === 1 ? 'Datei hat' : 'Dateien haben'} TrueHD-Tonspuren (sehr groß). Mit E-AC-3 wären sie deutlich kleiner und überall abspielbar.`,
     label: 'TrueHD → E-AC-3', type: 'audio', rule: {codec: 'truehd', ch: 'any', action: 'encode', to: 'eac3', kbps: 256}});
-  const nImg = count(s => s.type === 'subtitle' && TP.subKind(s) === 'image');
-  if (nImg && !hasSubImgRule()) out.push({text: `${nImg} ${nImg === 1 ? 'Datei hat' : 'Dateien haben'} Bild-Untertitel (PGS/VobSub). Sie sind groß und manche Player zeigen sie nicht. Bild-Untertitel entfernen?`,
-    label: 'Bild-Untertitel entfernen', type: 'sub', rule: {kind: 'image', action: 'drop'}});
   return out.length ? h('div', {class: 'trkhints'}, h('div', {class: 'trkhintshead'}, icon('bolt'), ' Vorschläge für Regeln'),
     out.map(x => h('div', {class: 'trkhint2'}, h('span', {}, x.text),
       h('span', {class: 'btns'}, h('button', {type: 'button', class: 'small', title: 'Die Regel gilt nur für diesen Lauf', onclick: () => trkAddRule(x.type, x.rule, false)}, 'Regel: ' + x.label),
@@ -515,21 +511,14 @@ function trkRulesBody(r, save, redraw, withModes) {
       onchange: ev => change(() => { x.kbps = +ev.target.value > 0 ? +ev.target.value : undefined; })}), ' kbit/s je Stereo-Paar') : null,
     x.action === 'encode' && x.to !== 'flac' && (x.kbps || 0) * 3 > 640 ? h('span', {class: 'rtxt small'}, '5.1 wird dabei auf höchstens 640 kbit/s gedeckelt') : null,
     ctl(r.audio, i)));
-  const subRows = r.sub.map((x, i) => h('div', {class: 'trkrule'},
-    h('span', {class: 'rn'}, i + 1),
-    h('span', {class: 'rtxt'}, 'Wenn der Untertitel'), sel(TP.SUB_KINDS, x.kind || 'any', v => change(() => { x.kind = v; }), 'Art'),
-    h('span', {class: 'rtxt'}, 'ist →'), sel([['copy', 'behalten'], ['drop', 'entfernen']], x.action || 'copy', v => change(() => { x.action = v; }), 'Aktion'),
-    ctl(r.sub, i)));
   return [h('h4', {}, 'Ton'), audioRows.length ? audioRows : h('p', {class: 'muted small'}, 'Noch keine Regel.'),
     h('div', {class: 'btns'}, h('button', {type: 'button', class: 'small', onclick: () => change(() => r.audio.push(NEW_AUDIO_RULE()))}, '+ Regel für Ton')),
     withModes ? h('div', {class: 'grid2', style: 'margin-top:12px'}, $('#vAudioModeRow'), $('#vAudioCodecRow')) : null, withModes ? $('#vAudioHint') : null,
-    h('h4', {}, 'Untertitel'), subRows.length ? subRows : h('p', {class: 'muted small'}, 'Noch keine Regel.'),
-    h('div', {class: 'btns'}, h('button', {type: 'button', class: 'small', onclick: () => change(() => r.sub.push({kind: 'image', action: 'drop'}))}, '+ Regel für Untertitel')),
-    withModes ? h('div', {class: 'grid2', style: 'margin-top:12px'}, $('#vSubModeRow')) : null];
+    withModes ? [h('h4', {}, 'Untertitel'), h('div', {class: 'grid2'}, $('#vSubModeRow'))] : null];
 }
 // Regeln dieses Laufs (Fenster Details → Audio & Untertitel und Schritt „Regeln“)
 function trkRulesEditor(withModes, openAlways) {
-  const r = trkRules(), n = r.audio.length + r.sub.length;
+  const r = trkRules(), n = r.audio.length;
   const open = openAlways || TRK.rulesOpen || n;
   return h('details', {class: 'trkrules', open: !!open, ontoggle: ev => { TRK.rulesOpen = ev.target.open; }},
     h('summary', {}, 'Eigene Regeln für diesen Lauf ', h('span', {class: 'muted small'}, n ? '(' + n + ' aktiv)' : '(keine – alles bleibt unverändert)'), ' ', infoBtn('trkRules')),

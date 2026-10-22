@@ -424,12 +424,49 @@ function restoreAsk() {
 }
 // Abzeichen „Video“ / „Audio“ (Audio in Orange) in Warteschlange und Verlauf
 const kindBadge = k => `<span class="kindbadge ${k}">${esc(W(k).name)}</span>`;
-function renderQueue() {
+// Warteschlange und Verlauf werden regelmäßig neu gezeichnet. Damit sich dabei weder der Scrollstand noch geöffnete Details ändern:
+// (1) unveränderte Teile bleiben als DOM-Knoten stehen (syncChildren / reconcileCards), (2) keepView rückt die Seite nach dem Zeichnen so zurecht,
+// dass das erste sichtbare Element an derselben Stelle bleibt (der Scroll-Anker der Browser ist dafür nicht verlässlich, Safari hat keinen).
+function keepView(fn) {
+  let anchor = null, top = 0;
+  if (window.scrollY > 0) {
+    for (const el of document.querySelectorAll('#queue .job, .histentry')) { const r = el.getBoundingClientRect(); if (r.bottom > 24) { anchor = el; top = r.top; break; } }
+  }
+  fn();
+  if (anchor && anchor.isConnected) { const d = anchor.getBoundingClientRect().top - top; if (Math.abs(d) > 0.5) window.scrollBy(0, d); }
+}
+// Kinder von parent in die Reihenfolge von els bringen, ohne bereits richtig stehende Knoten anzufassen (sonst gingen Scrollstand und Auswahl darin verloren)
+function syncChildren(parent, els) {
+  els.forEach((el, i) => { if (parent.children[i] !== el) parent.insertBefore(el, parent.children[i] || null); });
+  while (parent.children.length > els.length) parent.lastElementChild.remove();
+}
+// Karten der Warteschlange: je Auftrag ein fester Knoten mit zwei Teilen: .jvol (Kopf, Balken, Zahlen: ändert sich laufend) und .jdet (Details: nur bei neuem Log)
+function reconcileCards(box, cards) {
+  if (!box._cards) { box.textContent = ''; box._cards = new Map(); }
+  const cache = box._cards, seen = new Set(); let prev = null;
+  for (const c of cards) {
+    seen.add(c.id);
+    let e = cache.get(c.id);
+    if (!e) { const el = document.createElement('div'); el.innerHTML = '<div class="jvol"></div><div class="jdet"></div>'; e = {el, cls: null, vol: null, det: null}; cache.set(c.id, e); }
+    if (e.cls !== c.cls) { e.el.className = c.cls; e.cls = c.cls; }
+    if (e.vol !== c.vol) { e.el.firstElementChild.innerHTML = c.vol; e.vol = c.vol; }
+    if (e.det !== c.det) {
+      const d = e.el.lastElementChild, pos = [...d.querySelectorAll('pre')].map(x => x.scrollTop);
+      d.innerHTML = c.det; d.querySelectorAll('pre').forEach((x, i) => { if (pos[i]) x.scrollTop = pos[i]; }); e.det = c.det;
+    }
+    const ref = prev ? prev.nextElementSibling : box.firstElementChild;
+    if (e.el !== ref) box.insertBefore(e.el, ref);
+    prev = e.el;
+  }
+  for (const [id, e] of cache) if (!seen.has(id)) { e.el.remove(); cache.delete(id); }
+}
+function renderQueue() { keepView(renderQueueNow); }
+function renderQueueNow() {
   renderPauseUI();
   // die Warteschlange zeigt nur laufende und wartende Aufträge; beendete stehen darunter im Verlauf
   const q = $('#queue'), mine = S.jobs.filter(j => j.status === 'queued' || j.status === 'running');
-  if (!mine.length) { q.innerHTML = '<div class="empty" style="margin-top:8px">Keine laufenden oder wartenden Aufträge. Beendete Aufträge stehen unten im Verlauf.</div>'; return; }
-  q.innerHTML = mine.map(j => { // in der Reihenfolge, in der sie dran kommen (oben: läuft bzw. als Nächstes)
+  if (!mine.length) { q._cards = null; q.innerHTML = '<div class="empty" style="margin-top:8px">Keine laufenden oder wartenden Aufträge. Beendete Aufträge stehen unten im Verlauf.</div>'; return; }
+  reconcileCards(q, mine.map(j => { // in der Reihenfolge, in der sie dran kommen (oben: läuft bzw. als Nächstes)
     const meta = [];
     if (j.status === 'running') {
       if (j.speed) meta.push('Speed ' + esc(j.speed));
@@ -444,19 +481,21 @@ function renderQueue() {
     const mv = j.status === 'queued' ? `<span class="qmove"><button class="small ghost" data-mv="${j.id}" data-how="top" title="An den Anfang der Warteschlange" aria-label="An den Anfang">Zuerst</button><button class="small ghost" data-mv="${j.id}" data-how="up" title="Eine Stelle nach vorn" aria-label="Nach vorn">${ic('up')}</button><button class="small ghost" data-mv="${j.id}" data-how="down" title="Eine Stelle nach hinten" aria-label="Nach hinten"><span class="flip">${ic('up')}</span></button><button class="small ghost" data-hold="${j.id}" data-on="${j.held ? 0 : 1}" title="${j.held ? 'Wieder zur Warteschlange freigeben' : 'Diesen Auftrag anhalten: er startet erst, wenn du ihn freigibst'}">${j.held ? 'Freigeben' : 'Anhalten'}</button></span>` : '';
     const act = mv + ((j.status === 'queued' || j.status === 'running') ? `<button class="small ghost" data-cancel="${j.id}" title="Bricht diesen Auftrag ab und löscht die unfertige Datei. Die Quelldatei bleibt unberührt.">Abbrechen</button>` : '');
     const note = j.status === 'done' && (j.hwDecodeFallback || (j.warnings || []).length);
-    return `<div class="job ${j.status}${note ? ' note' : ''}"><div class="job-h">${kindBadge(j.kind)}<span class="n" title="${esc(j.input)}">${esc(j.name)}</span>${encoderBadge(j)}${decoderBadge(j)}${statusChip(j)}${act}</div>
+    return {id: j.id, cls: `job ${j.status}${note ? ' note' : ''}`, vol: `<div class="job-h">${kindBadge(j.kind)}<span class="n" title="${esc(j.input)}">${esc(j.name)}</span>${encoderBadge(j)}${decoderBadge(j)}${statusChip(j)}${act}</div>
       <div class="bar"><i style="width:${j.progress.toFixed(1)}%"></i></div>
       <div class="job-m"><span>${j.progress.toFixed(1)} %</span>${meta.map(m => `<span>${m}</span>`).join('')}</div>
       ${j.error && j.status === 'error' ? `<div class="small" style="color:var(--bad)">${esc(j.error)}</div>` : ''}
-      <details data-id="${j.id}" ${openDetails.has(j.id) ? 'open' : ''}><summary>Details</summary>
+`, det: `<details data-id="${j.id}" ${openDetails.has(j.id) ? 'open' : ''}><summary>Details</summary>
         <div class="small muted">Ziel: ${esc(j.output || '–')}</div>
         ${(j.attempts || []).length ? `<div class="small muted">Frühere Versuche:<br>${j.attempts.map(a => esc(a)).join('<br>')}</div>` : ''}
         ${(j.mapLines || []).length ? `<pre>${esc(j.mapLines.join('\n'))}</pre>` : ''}
-        <pre>${esc(j.cmd || '')}</pre><pre>${esc((j.log || []).slice(-25).join('\n'))}</pre></details></div>`;
-  }).join('');
+        <div class="copyrow"><button type="button" class="small ghost" data-copy="cmd" data-id="${j.id}">Befehl kopieren</button><button type="button" class="small ghost" data-copy="log" data-id="${j.id}">Log kopieren</button></div>
+        <pre>${esc(j.cmd || '')}</pre><pre>${esc((j.log || []).slice(-25).join('\n'))}</pre></details>`};
+  }));
   $$('#queue [data-cancel]').forEach(b => b.onclick = () => api('/api/jobs/' + b.dataset.cancel + '/cancel', {}).then(poll));
   $$('#queue [data-mv]').forEach(b => b.onclick = () => api('/api/jobs/' + b.dataset.mv + '/move', {how: b.dataset.how}).then(poll).catch(e => toast(e.message, 'bad')));
   $$('#queue [data-hold]').forEach(b => b.onclick = () => api('/api/jobs/' + b.dataset.hold + '/hold', {on: b.dataset.on === '1'}).then(poll));
+  $$('#queue [data-copy]').forEach(b => b.onclick = () => { const j = S.jobs.find(x => x.id === b.dataset.id); if (j) copyText(b.dataset.copy === 'cmd' ? (j.cmd || '') : (j.log || []).join('\n')); });
   $$('#queue details').forEach(d => d.ontoggle = () => d.open ? openDetails.add(d.dataset.id) : openDetails.delete(d.dataset.id));
 }
 // Auslastungsanzeige: die Elemente bleiben bestehen und werden nur aktualisiert, damit die Balken sichtbar gleiten

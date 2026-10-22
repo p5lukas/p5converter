@@ -68,4 +68,31 @@ t('Anzeigename: Serie vor Staffelordnern, ohne {tvdb-…}', () => {
   assert.strictEqual(LIB.clean('Film [imdb-tt123] HD'), 'Film HD');
   assert.strictEqual(LIB.nf(15360), '15.360');
 });
+t('Quelle der Dateien und Hinweis zur Codec-Wahl', () => {
+  const vid = (codec, h, depth) => ({type: 'video', codec, height: h, bitDepth: depth});
+  const aud = (codec, profile) => ({type: 'audio', codec, profile, channels: 6});
+  const sub = codec => ({type: 'subtitle', codec});
+  const nm = {audio: s => s.codec === 'dts' && /MA/.test(s.profile || '') ? 'DTS-HD MA' : s.codec.toUpperCase(), sub: s => s.codec === 'subrip' ? 'SRT' : s.codec.toUpperCase()};
+  const list = [1, 2, 3].map(() => ({size: 5e9, info: {streams: [vid('h264', 1080, 8), aud('dts', 'DTS-HD MA'), aud('ac3'), sub('subrip'), sub('ass')]}}));
+  const f = LIB.sourceFacts(list, nm);
+  assert.strictEqual(f.files, 3); assert.strictEqual(f.v.h264, 3); assert.strictEqual(f.a['DTS-HD MA'], 3); assert.strictEqual(f.s.SRT, 3);
+  const line = LIB.sourceLine(f);
+  assert.ok(/^3 Dateien · 14[,.]\d GB · Video: H\.264 · 1080p · Ton: DTS-HD MA, AC3 ×3|^3 Dateien · 14,0 GB/.test(line) || /3 Dateien · .* GB · Video: H\.264 · 1080p · Ton: .*DTS-HD MA ×3.* · Untertitel: .*SRT ×3/.test(line), line);
+  assert.ok(!/H\.264 ×3/.test(line), 'gleiche Codecs: ohne ×n');
+  // gemischt, mehrere Höhen, 10 Bit
+  const mix = LIB.sourceFacts([{size: 1e9, info: {streams: [vid('h264', 720, 8), aud('aac')]}}, {size: 1e9, info: {streams: [vid('hevc', 1080, 10), aud('aac')]}}], nm);
+  const ml = LIB.sourceLine(mix);
+  assert.ok(/Video: H\.264 ×1, H\.265 ×1|Video: H\.265 ×1, H\.264 ×1/.test(ml) && /720p–1080p/.test(ml) && /1× 10 Bit/.test(ml) && /Untertitel: keine/.test(ml), ml);
+  // Hinweise
+  const old = LIB.sourceFacts([{size: 1, info: {streams: [vid('h264', 1080, 8)]}}, {size: 1, info: {streams: [vid('mpeg4', 480, 8)]}}]);
+  assert.strictEqual(LIB.convertHint(old, 'hevc').tone, 'good'); assert.ok(/spart meist Platz/.test(LIB.convertHint(old, 'hevc').text));
+  const modern = LIB.sourceFacts([{size: 1, info: {streams: [vid('hevc', 1080, 10)]}}]);
+  assert.strictEqual(LIB.convertHint(modern, 'hevc').tone, 'warn'); assert.ok(/schon H\.265/.test(LIB.convertHint(modern, 'hevc').text));
+  assert.ok(/schon hevc|schon H\.265|modern/.test(LIB.convertHint(modern, 'av1').text) || LIB.convertHint(modern, 'av1').tone === 'warn');
+  const mixed = LIB.sourceFacts([{size: 1, info: {streams: [vid('h264', 1080, 8)]}}, {size: 1, info: {streams: [vid('hevc', 1080, 10)]}}]);
+  assert.ok(/1 Datei mit älterem Codec/.test(LIB.convertHint(mixed, 'hevc').text), LIB.convertHint(mixed, 'hevc').text);
+  assert.strictEqual(LIB.convertHint(modern, 'h264').tone, 'warn'); assert.strictEqual(LIB.convertHint(old, 'h264').tone, '');
+  assert.ok(/nur neu verpackt/.test(LIB.convertHint(old, 'copy').text)); assert.strictEqual(LIB.convertHint(old, 'vp9'), null); assert.strictEqual(LIB.convertHint(LIB.sourceFacts([]), 'hevc'), null);
+  assert.ok(!/GB|MB|Prozent|%/.test(LIB.convertHint(old, 'hevc').text), 'keine Schätzung der Ersparnis');
+});
 console.log('library: ' + n + ' Tests ok');

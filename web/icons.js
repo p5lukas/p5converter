@@ -34,6 +34,7 @@ const IC = {
   sync: '<path d="M20 11a8 8 0 0 0-14-4M4 4v4h4M4 13a8 8 0 0 0 14 4M20 20v-4h-4"/>',
   history: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   back: '<path d="M10 6l-6 6 6 6M4 12h16"/>',
+  lang: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3.2 3.2 3.2 14.8 0 18M12 3c-3.2 3.2-3.2 14.8 0 18"/>', // Weltkugel: Sprachen
   close: '<path d="M6 6l12 12M18 6L6 18"/>',
   reset: '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/>',
   rename: '<path d="M4 7h10M4 12h6M4 17h10"/><path d="M15 17l1-4 5-5 3 3-5 5z" transform="translate(-2 1) scale(.9)"/>',
