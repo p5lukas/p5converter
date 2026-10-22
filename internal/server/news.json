@@ -1,44 +1,368 @@
 [
-  {"id": "convert-1", "version": "0.3.0", "title": "Alles in einer Ansicht: Vorher → Nachher", "text": "Statt sechs Schritten gibt es jetzt eine Ansicht: oben die Dateien, darunter ein Satz zum Antippen (Hardware, Ziel, Prüfen) und die Tabelle „Vorher → Nachher“ mit jeder Spur. Jede Zeile lässt sich direkt ändern. Dateien mit gleichem Aufbau sind eine Gruppe; abweichende Gruppen musst du kontrollieren, danach übernimmt das Programm deine Entscheidungen bei gleichen Spuren. Das Funkel-Zeichen markiert nur, was das Programm selbst erkannt oder angepasst hat. Weitere Einstellungen findest du unter „Details“."},
-  {"id": "quality-2", "version": "0.3.0", "title": "Qualität in Stufen", "text": "Statt einer CRF-Zahl wählst du Sehr gut, Gut, Normal oder Klein; das Programm rechnet je Encoder (CPU, Quick Sync, NVIDIA, AMD/VAAPI) in die passende Zahl um, weil dieselbe Zahl bei jedem Encoder etwas anderes bedeutet. Unter „Erweitert“ siehst und änderst du die echte Zahl. Die Stufen sind Startwerte, nicht auf deiner Hardware gemessen."},
-  {"id": "v020-1", "version": "0.2.0", "title": "Version 0.2.0: Forced-Erkennung und schneller", "text": "Kleine Untertitel-Spuren, die viel kürzer sind als die vollständige Spur derselben Sprache, erkennt das Programm als wahrscheinliche Forced-Untertitel (erzwungene Untertitel) und schlägt vor, sie zu markieren; mit dem Wunsch „Deutsch (Forced)“ ist der erkannte Untertitel gleich vorausgewählt. Die Oberfläche lädt schneller (Zwischenspeicher und Komprimierung) und bleibt auch bei großen Staffeln flüssig; die Kopfzeile am Handy ist kompakter."},
-  {"id": "home-1", "version": "0.1.7", "title": "Aufgeräumte Startseite", "text": "„Konvertieren“, „Umbenennen“ und „Verlauf“ sitzen in der Kopfzeile. Die Schritt-Reiter erscheinen erst im Assistenten. Oben steht der aktuelle Auftrag („Datei 4 von 13“ mit Fortschritt und Hardware-Haken) oder „Gerade nichts los“. Hardware und Gewonnener Platz sind gleich groß. Die Warteschlange findest du jetzt im Verlauf."},
-  {"id": "tracks-3", "version": "0.1.6", "title": "Audio & Untertitel: Gruppen, Tabelle, Regeln", "text": "Der Schritt ist neu gebaut: Dateien mit denselben Sprachen sind zu Gruppen zusammengefasst (ideal für eine ganze Staffel), eine Tabelle zeigt alle Dateien mit Haken je Sprache, und die Einzelansicht gibt es weiter. Neu sind Regeln nach Format (z. B. nur DTS in AC-3 umwandeln) und Sprach-Wünsche in den Einstellungen (welche Sprachen bleiben, welche Spur Standard ist, z. B. Deutsch Forced). Vor dem Start siehst du, was passiert."},
-  {"id": "encoder-pref-1", "version": "0.1.6", "title": "Bevorzugter Encoder wirkt wieder", "text": "Der „Bevorzugte Encoder“ aus Einstellungen → Hardware gilt jetzt bei „Automatisch“ im Konverter (z. B. Intel Quick Sync). Bei „Wird verwendet“ steht neben dem Encodernamen auch die Hardware."},
-  {"id": "history-1", "version": "0.1.5", "title": "Verlauf der Konvertierungen", "text": "Auf der Startseite gibt es den Knopf „Verlauf“: die letzten 100 Konvertierungen je Welt (Audio und Video getrennt) mit Ergebnis, Größe, Dauer und Prüfergebnis. Suche, Filter, Details bei Fehlern, CSV-Export und „Verlauf leeren“. Der Verlauf bleibt auch nach „Fertige entfernen“ und nach einem Neustart erhalten."},
-  {"id": "simplify-1", "version": "0.1.5", "title": "Einfacher: Ersetzen ohne Regex, kein Papierkorb", "text": "Beim Ersetzen im Dateinamen gibt es „Regex“ und „Aa“ nicht mehr: es wird genau der eingegebene Text gesucht, Groß-/Kleinschreibung ist egal. Die Schonfrist für Originale ist wieder weg; „Quelldatei löschen“ löscht nach bestandener Prüfung sofort und endgültig."},
-  {"id": "verify-1", "version": "0.1.4", "title": "Neue Datei prüfen, bevor das Original geht", "text": "Im letzten Schritt gibt es „Ergebnis prüfen & Original“: Spuren und Größe prüfen, das Ergebnis komplett durchlesen (Decode-Test) und eine Schonfrist, in der das Original erst nach einigen Tagen endgültig gelöscht wird. Neben jedem Punkt steht, wie viel länger es dauert. Fällt eine Prüfung durch, bleibt das Original liegen. Standard je Welt in Einstellungen → Allgemein."},
-  {"id": "crf-1", "version": "0.1.4", "title": "CRF-Vorschlag nach Art des Materials", "text": "Im Video-Schritt wählst du die Art des Materials (z. B. Anime, altes Material mit Korn, aktueller Film); der Regler wird mit einem passenden Startwert vorausgefüllt, mit kurzer Begründung. Anime und Zeichentrick bekommen einen niedrigeren Wert, weil Fehler auf glatten Flächen sofort auffallen. Abschaltbar in den Einstellungen."},
-  {"id": "winfix-1", "version": "0.1.3", "title": "Windows: Hardware-Anzeige und Start repariert", "text": "In der Windows-App fehlte die Hardware-Anzeige und beim Start kam eine Fehlermeldung, weil das Fenster schneller fragte als die Erkennung fertig war. Das ist behoben, „Beenden“ erscheint sofort. Für NVIDIA gibt es ein älteres ffmpeg, das mit mehr Treibern läuft, und eine verständliche Meldung, wenn der Treiber zu alt ist."},
-  {"id": "tray-1", "version": "0.1.2", "title": "Windows: Symbol im Infobereich", "text": "Die Windows-App läuft jetzt im Infobereich weiter: Das Schließen-Kreuz versteckt nur das Fenster, laufende Aufträge arbeiten weiter. Ein Klick auf das Symbol holt das Fenster zurück, „Beenden“ beendet das Programm (mit Rückfrage bei laufenden Aufträgen)."},
-  {"id": "windows-1", "version": "0.1.1", "title": "Windows-App (Test auf dev)", "text": "Für Windows gibt es eine erste Test-Version als eine einzige Datei (p5converter-setup.exe): eigenes App-Fenster mit derselben Oberfläche, ffmpeg eingebaut, Hardware wird automatisch erkannt. Sie liegt im Kanal dev (Vorabversion dev-latest auf GitHub)."},
-  {"id": "channels-1", "version": "0.1.0", "title": "Version 0.1.0 und zwei Kanäle", "text": "p5converter ist jetzt eine getestete Vorabversion (0.1.0). Neue Funktionen erscheinen zuerst im Kanal „dev“ (Image :dev) zum Testen und kommen erst danach in „latest“ (Image :latest). Für Unraid gibt es dafür eine eigene Vorlage."},
-  {"id": "tracks-2", "version": "0.0.10", "title": "Audio & Untertitel viel einfacher", "text": "Der Schritt erklärt sich jetzt selbst: Oben steht, dass nichts geändert werden muss. Jede Spur ist eine übersichtliche Karte mit Klartext (z. B. „Deutsch · Dolby Digital 5.1“), Behalten-Häkchen und „So lassen / Kleiner machen“. Titel, Sprache, Forced und Standard stehen hinter „Erweitert“. Ein Assistent gibt Tipps (nur Deutsch und Englisch behalten, Forced-Untertitel markieren, fehlende Sprache). Beim Kleinermachen sind sinnvolle Werte vorausgefüllt und die Zielbitrate wird angezeigt."},
-  {"id": "saved-2", "version": "0.0.10", "title": "Gewonnener Platz je Welt", "text": "Audio und Video haben jetzt je eine eigene Statistik – die Kachel zeigt nur die Zahlen der gewählten Welt. Mit „Zurücksetzen“ (mit Rückfrage) beginnt die Zählung dieser Welt bei 0."},
-  {"id": "news-2", "version": "0.0.10", "title": "Neuigkeiten wie bei p5assets", "text": "Nach einem Update erscheint einmal pro Version ein kurzer Hinweis mit den wichtigsten Neuerungen. Er merkt sich auf dem Server, dass du ihn gesehen hast – auf allen Geräten. Die vollständige Liste steht jederzeit unten in der Fußzeile unter „Neuigkeiten“."},
-  {"id": "unraid-2", "version": "0.0.10", "title": "GPU-Anleitung in der Unraid-Vorlage", "text": "In der Unraid-Vorlage und unter Einstellungen → Hardware steht jetzt, was für Intel Quick Sync, AMD und NVIDIA einzutragen ist: Intel/AMD brauchen nur das Gerät /dev/dri (schon eingetragen), NVIDIA zusätzlich --runtime=nvidia bei „Extra Parameters“."},
-  {"id": "tracks-1", "version": "0.0.9", "title": "Spuren einzeln einstellen", "text": "Audio und Untertitel sind jetzt ein Schritt: oben Regeln für alle Dateien (Standard: unverändert), darunter eine Tabelle mit jeder Spur. Dort änderst du Titel, Sprache und „Forced“ (so, dass Plex es erkennt), wählst Spuren ab, kodierst einzelne Tonspuren neu und überträgst alles auf alle Dateien."},
-  {"id": "reset-1", "version": "0.0.9", "title": "Alles zurücksetzen", "text": "Unten im Ablauf setzt „Zurücksetzen“ die gewählte Welt auf den Anfang zurück (Remux, keine Dateien). Laufende Aufträge bleiben unberührt."},
-  {"id": "hw-1", "version": "0.0.9", "title": "Aufgeräumte Hardware-Anzeige", "text": "Eine Zeile pro Hardware, Nutzbares zuerst, Gründe unter „Warum?“. Die Intel-Grafik zeigt „Leerlauf/aktiv“ statt einer Prozentzahl. Bei VAAPI und NVIDIA gibt es jetzt auch beim Lesen einen Haken, wenn die Hardware es bestätigt hat."},
-  {"id": "misc-1", "version": "0.0.9", "title": "Kleinere Verbesserungen", "text": "Neues Tab-Icon, Ziehen zum Aktualisieren in der Web-App, verständlichere Texte bei „Wenn Datei existiert“, „Alle auswählen/abwählen“ in Listen, kein Farbflackern mehr beim Laden, Voreinstellungen nur noch im Einstellungs-Schritt."},
-  {"id": "icon-2", "version": "0.0.8", "title": "Endgültiges App-Icon", "text": "Das Icon zeigt jetzt zwei Scheiben im Abzeichen: eine silberne Audio-CD (Audio-Welt) und eine blaue Blu-ray (Video-Welt), im selben Aufbau wie p5assets (dort ein oranger Komet). Es steht auch in Einstellungen → Info, in der README und in der Unraid-Vorlage. Auf dem iPhone/iPad die Web-App einmal vom Home-Bildschirm löschen und neu hinzufügen, damit das neue Icon erscheint."},
-  {"id": "logs-1", "version": "0.0.7", "title": "Logs wie bei p5assets", "text": "Oben in der Kopfzeile gibt es jetzt das Terminal-Symbol: Es öffnet die Log-Seite mit Dateiauswahl, Stufenfilter, Suche, Live-Ansicht, Download und „Leeren“. Neue Warnungen und Fehler zeigt ein Zähler am Symbol. Das Log (Start, Hardware, Aufträge, Anmeldung) liegt im Ordner /config/logs; Passwörter und Cookies werden nie geschrieben."},
-  {"id": "icon-1", "version": "0.0.7", "title": "Neues App-Icon", "text": "Das Icon hat jetzt denselben Aufbau wie bei p5assets (Matrix-Regen, Poster-Rahmen, p5) – mit einem kleinen Abzeichen mit zwei Pfeilen unten rechts, damit man beide Apps unterscheiden kann. Gilt auch für die Home-Bildschirm-App auf iPhone/iPad und für Unraid. Auf dem iPhone/iPad die Web-App einmal entfernen und neu hinzufügen, damit das neue Icon erscheint."},
-  {"id": "flow-1", "version": "0.0.6", "title": "Neuer Ablauf in Schritten", "text": "Übersichtlicher: Die Startseite zeigt Statistik, Hardware, gewonnenen Platz und die Warteschlange. „Konvertierung starten“ führt durch die Schritte Dateien, Ziel, Benennen, Einstellungen und Zusammenfassung (oben als Reiter anklickbar, unten mit Zurück/Weiter). Nach dem Start geht es zurück zur Startseite. Audio und Video haben jeweils passende Schritte."},
-  {"id": "flow-2", "version": "0.0.6", "title": "Umbenennen und gewonnener Platz", "text": "„Umbenennen starten“ sitzt jetzt auf der Startseite (nicht mehr in der Kopfzeile). Neu: „Gewonnener Platz“ – die Summe aus Größe vorher minus nachher aller fertigen Dateien, getrennt für Audio und Video (gespeichert in /config; zählt ab diesem Update)."},
-  {"id": "queue-1", "version": "0.0.5", "title": "Warteschlange je Welt", "text": "Audio und Video haben jetzt je eine eigene Warteschlange mit eigener Anzahl paralleler Aufträge, eigenen Zählern und eigenem „Alle abbrechen“. Ein Zähler am Welt-Knopf zeigt, wo gerade etwas läuft oder wartet."},
-  {"id": "colors-1", "version": "0.0.5", "title": "Klarere Anzeige", "text": "Grün heißt geklappt (bei „Schreiben“ und „Lesen“ jeweils mit Haken, wenn ffmpeg es bestätigt hat), gelb ist ein Hinweis oder Ausweichweg, rot ein Fehler. Die Auslastung von CPU und Videoeinheit wird jetzt dauernd live gemessen, auch im Leerlauf."},
-  {"id": "rename-2", "version": "0.0.5", "title": "Ersetzungen repariert", "text": "„+ Ersetzung“ brachte gelöschte Zeilen zurück – behoben. Namensmuster, Zusatz und Ersetzungen gelten jetzt getrennt für Audio und Video."},
-  {"id": "cancel-1", "version": "0.0.5", "title": "Aufräumen beim Abbrechen", "text": "Beim Abbrechen oder bei einem Fehler wird die unfertige Datei gelöscht, ebenso vom Auftrag neu angelegte leere Ordner. Reste eines Absturzes werden beim nächsten Start entfernt. Die Quelldatei bleibt immer unberührt."},
-  {"id": "rename-1", "version": "0.0.4", "title": "Umbenennen", "text": "Neu: Namensmuster mit Variablen (Titel, Jahr, Auflösung, Codec …) und Suchen & Ersetzen mit mehreren Regeln, direkt im Bereich „Ziel“ mit Live-Vorschau – und zusätzlich die Seite „Umbenennen“ oben, um Dateien ohne Konvertierung umzubenennen."},
-  {"id": "qsv-2", "version": "0.0.4", "title": "Quick Sync: Lesen und Schreiben", "text": "Bei Quick Sync läuft jetzt auch das Lesen der Quelldatei auf der Intel-Videoeinheit (inkl. Verkleinern und 10 Bit). Klappt ein Weg nicht, probiert das Programm automatisch den nächsten – ohne Fehlermeldung. In der Warteschlange stehen „Schreiben“ und „Lesen“ jetzt getrennt."},
-  {"id": "tpl-1", "version": "0.0.4", "title": "Unraid: Eintrag „Passwort“", "text": "Zeigt dein Container noch „Passwort (optional)“ (P5_PASSWORD), kannst du ihn mit REMOVE löschen – die Variable wird nicht mehr benutzt. Die Anmeldung legst du in den Einstellungen an."},
-  {"id": "settings-1", "version": "0.0.3", "title": "Einstellungen", "text": "Oben rechts gibt es jetzt das Zahnrad mit eigenen Einstellungen: Startansicht, Zielordner, parallele Aufträge, Farben und Namen der Welten, Hardware mit Diagnose und die Anmeldung. Alles wird auf dem Server in /config gespeichert und gilt auf allen Geräten."},
-  {"id": "presets-1", "version": "0.0.3", "title": "Voreinstellungen", "text": "Mit „Als Voreinstellung speichern“ (Diskette) neben dem Startknopf speicherst du die aktuellen Einstellungen. In den Einstellungen legst du fest, welche als Vorschlag oben erscheinen, und kannst sie umbenennen, sortieren, bearbeiten und löschen. Audio hat jetzt auch Voreinstellungen."},
-  {"id": "login-1", "version": "0.0.3", "title": "Anmeldung", "text": "Optional gibt es jetzt eine Anmeldung wie bei p5assets: Benutzername und Passwort legst du in den Einstellungen im Browser an (das Passwort in der Unraid-Vorlage entfällt). Mit Spaßmeldung nach falschem Passwort, die sich abschalten lässt."},
-  {"id": "qsv-1", "version": "0.0.3", "title": "Quick Sync auf älteren Intel-Chips", "text": "Das Image bringt jetzt auch die Intel-Media-SDK-Runtime für Chips der 8. bis 11. Generation mit (z. B. i9-9900), und die Erkennung probiert mehrere Startvarianten. In den Einstellungen unter Hardware steht eine Diagnose, die du mit einem Klick kopieren kannst. Im Unraid-Template gibt es dafür jetzt einen sichtbaren Eintrag für /dev/dri."},
-  {"id": "design-1", "version": "0.0.2", "title": "Neues Design", "text": "p5converter hat jetzt dieselbe Designlinie wie p5assets: dunkles Matrix-Theme mit Leuchteffekten. Audio und Video sind eigene Welten mit eigener Farbe und eigenem Planeten; beim Wechsel gibt es den Wurmloch-Flug. Neu ist außerdem die Übersicht oben mit Fortschrittsring, Zählern und der Live-Auslastung von CPU und GPU."},
-  {"id": "mobile-1", "version": "0.0.2", "title": "Handy und iPad", "text": "Die Oberfläche passt sich Handy und iPad an (Hoch- und Querformat) und lässt sich auf dem iPhone/iPad als Web-App zum Home-Bildschirm hinzufügen (Teilen → Zum Home-Bildschirm)."},
-  {"id": "port-1", "version": "0.0.2", "title": "Neuer Port 8787", "text": "Der Standard-Port ist jetzt 8787. Im Unraid-Template Container-Port und Mapping auf 8787 stellen (oder das aktuelle Template verwenden)."},
-  {"id": "version-1", "version": "0.0.2", "title": "Version und Neuigkeiten", "text": "Unten steht jetzt die Version mit Branch und Commit, und diese Neuigkeiten-Anzeige gibt es auch. Die Änderungen jeder Version stehen in der CHANGELOG.md."}
+  {
+    "id": "history-stable-1",
+    "version": "0.3.6",
+    "title": "Verlauf bleibt ruhig, Befehl und Log lassen sich kopieren",
+    "text": "Geöffnete Details im Verlauf und in der Warteschlange schließen sich nicht mehr von selbst, der Scrollstand bleibt erhalten und die Seite wandert nicht mehr. Bei „ffmpeg-Befehl und Log“ gibt es jetzt Knöpfe zum Kopieren."
+  },
+  {
+    "id": "source-overview-1",
+    "version": "0.3.6",
+    "title": "Übersicht der Quelldateien",
+    "text": "In den Schritten „Regeln“ und „Wie umwandeln?“ zeigt eine Zeile, was du hast (Codec, Auflösung, Ton, Untertitel). In Schritt 3 gibt es dazu einen Hinweis an der Codec-Wahl, zum Beispiel „Deine Quelle: H.264 → H.265 spart meist Platz“."
+  },
+  {
+    "id": "subtitle-rules-removed-1",
+    "version": "0.3.6",
+    "title": "Keine Untertitel-Regeln mehr",
+    "text": "Untertitel entscheidest du je Datei oder Gruppe und über „Meine Sprach-Wünsche“. Die Regeln für Untertitel und der Vorschlag „Bild-Untertitel entfernen“ sind weg; Regeln für Tonspuren bleiben. Gespeicherte Untertitel-Regeln werden ignoriert, aber nicht gelöscht."
+  },
+  {
+    "id": "attachments-fix-1",
+    "version": "0.3.5",
+    "title": "Fehler bei Dateien mit Schriftarten behoben",
+    "text": "MKV-Dateien mit eingebetteten Schriften (typisch bei ASS-Untertiteln, z. B. Chernobyl) brachen beim Umwandeln mit „Conversion failed“ ab. Das ist behoben: Anhänge stehen jetzt als letzte Spur in der Datei."
+  },
+  {
+    "id": "scan-help-1",
+    "version": "0.3.5",
+    "title": "Wo lohnt sich das Umwandeln?",
+    "text": "Der Ordner-Scan hat in Schritt 1 eine eigene Karte mit Erklärung und dem Knopf „Ordner untersuchen“. In der Ergebnisliste steht bei Staffeln jetzt die Serie davor (z. B. Chernobyl › Season 01)."
+  },
+  {
+    "id": "progress-rain-1",
+    "version": "0.3.4",
+    "title": "Fortschrittsbalken mit Regen",
+    "text": "Laufende Aufträge zeigen einen dickeren Balken, dessen Füllung aus fallenden Zeichen besteht; eine helle Kante läuft vorn mit. Abschaltbar unter Einstellungen → Allgemein → „Matrix-Regen“, aus bei „Bewegung reduzieren“."
+  },
+  {
+    "id": "discard-1",
+    "version": "0.3.4",
+    "title": "Ablauf verwerfen",
+    "text": "In der Fußleiste jedes Schritts gibt es den roten Knopf „Verwerfen“: Dateien und alle Eingaben werden zurückgesetzt, danach geht es zur Startseite. Gefragt wird nur, wenn schon etwas gewählt ist."
+  },
+  {
+    "id": "keep-structure-2",
+    "version": "0.3.4",
+    "title": "Ordnerstruktur ab dem Quellordner",
+    "text": "„Struktur beibehalten“ übernimmt die Ordner jetzt ab dem Quellordner (z. B. Serie/Season 01), egal in welchem Unterordner du die Dateien gewählt hast."
+  },
+  {
+    "id": "library-filter-1",
+    "version": "0.3.4",
+    "title": "Ordner prüfen: Filter und Merker",
+    "text": "Die Hinweise über der Liste sind Kärtchen, die du einzeln an- und abwählen kannst. Und ein zweiter Durchlauf desselben Ordners ist viel schneller: Unveränderte Dateien kommen aus einem Merker."
+  },
+  {
+    "id": "queue-manage-1",
+    "version": "0.3.3",
+    "title": "Warteschlange verwalten",
+    "text": "Wartende Aufträge lassen sich nach vorn oder hinten schieben, einzeln anhalten und wieder freigeben; die ganze Warteschlange lässt sich pausieren (laufende werden fertig, es startet kein neuer). Und sie überlebt einen Neustart des Containers: Danach fragt das Programm, ob unterbrochene Aufträge fortgesetzt werden sollen."
+  },
+  {
+    "id": "library-scan-1",
+    "version": "0.3.3",
+    "title": "Ordner prüfen: wo lohnt sich das Umwandeln?",
+    "text": "In Schritt 1 (Video) prüft „Ordner prüfen …“ einen Ordner samt Unterordnern und zeigt nur ganze Ordner mit Hinweisen: älterer Codec, hohe Bitrate, schwerer Ton, Bild-Untertitel. Keine Schätzung, nur Fakten. „Ordner übernehmen“ legt den ganzen Ordner in Schritt 1 ab."
+  },
+  {
+    "id": "name-list-1",
+    "version": "0.3.3",
+    "title": "Alle neuen Dateinamen in der Kontrolle",
+    "text": "Wenn umbenannt wird, zeigt die Kontrolle alle Dateien einzeilig als „alt → neu“; Fehler und doppelte Namen sind rot."
+  },
+  {
+    "id": "rain-1",
+    "version": "0.3.3",
+    "title": "Matrix-Regen",
+    "text": "Wenn ein Auftrag erfolgreich fertig ist, regnet es kurz über der Auftragskarte (Startseite und Verlauf). In den Einstellungen abschaltbar."
+  },
+  {
+    "id": "start-tiles-1",
+    "version": "0.3.2",
+    "title": "Start mit Kacheln: Video oder Audio",
+    "text": "Die Startseite fragt jetzt „Was möchtest du umwandeln?“ mit zwei großen Kacheln: Video (grün) und Audio (orange). Die Umschaltung in der Kopfzeile, die Welten-Farben und der Weltenübergang sind weg; es gibt eine Grundfarbe, nur Audio ist orange. Warteschlange und Verlauf sind eine gemeinsame Liste mit Abzeichen „Video“ und „Audio“."
+  },
+  {
+    "id": "wizard-1",
+    "version": "0.3.2",
+    "title": "Video in vier Schritten",
+    "text": "Dateien (zuerst der Quellordner, die Suche geht immer auch in Unterordner), Regeln, Wie umwandeln? (drei Kacheln: Hardware, Speichern, Danach prüfen) und Kontrolle & Start. Wer oben eine Voreinstellung wählt, springt direkt zur Kontrolle. Die Tabelle „Vorher → Nachher“ ist jetzt in vier Karten gegliedert (Video, Audio, Untertitel, Dateiname), und Info-Punkte erklären jeden Bereich."
+  },
+  {
+    "id": "rules-page-1",
+    "version": "0.3.2",
+    "title": "Allgemeine Regeln in den Einstellungen",
+    "text": "Unter Einstellungen → Regeln legst du einmal fest, was mit Tonspuren und Untertiteln passieren soll, zum Beispiel „DTS → E-AC-3, 256 kbit/s je Stereo-Paar“. Im Schritt „Regeln“ erscheinen sie als voreingestellte Regeln und lassen sich für jeden Lauf abwählen. E-AC-3 schafft höchstens 640 kbit/s; bei 5.1 zeigt die Tabelle dann „Maximum“ mit Erklärung."
+  },
+  {
+    "id": "codec-id-1",
+    "version": "0.3.2",
+    "title": "Spuren mit Codec-Kennung und Bitrate",
+    "text": "Statt „Dolby Digital Plus 5.1“ steht jetzt „E-AC-3 (Dolby Digital Plus) 5.1 · 640 kbit/s“: zuerst die Kennung, in Klammern der Markenname, dazu die Bitrate. Das Ziel einer umzuwandelnden Tonspur lässt sich direkt anklicken, ohne „⋯“."
+  },
+  {
+    "id": "quality-3",
+    "version": "0.3.2",
+    "title": "Qualität einfacher und sicherer",
+    "text": "„Art des Materials“ ist weg: Es gibt vier feste Stufen. Wird ein neu kodiertes Video nicht kleiner als die Quelle, schlägt die Kontrolle an und das Original bleibt erhalten; bei schon kleinen Quellen warnt ein Hinweis vorher. Außerdem behoben: Eine zweite Standard-Tonspur lässt sich wieder abwählen."
+  },
+  {
+    "id": "browser-search-1",
+    "version": "0.3.1",
+    "title": "Suche im Datei-Browser und Namen für Quellordner",
+    "text": "Im Fenster „+ Dateien“ und „+ Ordner“ gibt es jetzt ein Suchfeld: Es filtert den Ordner beim Tippen, mit „Auch in Unterordnern“ durchsucht es alles darunter (Umlaute egal: „muller“ findet „Müller“). Unter Einstellungen → Allgemein kannst du deinen Quellordnern eigene Namen geben („/video1“ → „Filme 4K“), ohne das Template zu ändern."
+  },
+  {
+    "id": "convert-1",
+    "version": "0.3.0",
+    "title": "Alles in einer Ansicht: Vorher → Nachher",
+    "text": "Statt sechs Schritten gibt es jetzt eine Ansicht: oben die Dateien, darunter ein Satz zum Antippen (Hardware, Ziel, Prüfen) und die Tabelle „Vorher → Nachher“ mit jeder Spur. Jede Zeile lässt sich direkt ändern. Dateien mit gleichem Aufbau sind eine Gruppe; abweichende Gruppen musst du kontrollieren, danach übernimmt das Programm deine Entscheidungen bei gleichen Spuren. Das Funkel-Zeichen markiert nur, was das Programm selbst erkannt oder angepasst hat. Weitere Einstellungen findest du unter „Details“."
+  },
+  {
+    "id": "quality-2",
+    "version": "0.3.0",
+    "title": "Qualität in Stufen",
+    "text": "Statt einer CRF-Zahl wählst du Sehr gut, Gut, Normal oder Klein; das Programm rechnet je Encoder (CPU, Quick Sync, NVIDIA, AMD/VAAPI) in die passende Zahl um, weil dieselbe Zahl bei jedem Encoder etwas anderes bedeutet. Unter „Erweitert“ siehst und änderst du die echte Zahl. Die Stufen sind Startwerte, nicht auf deiner Hardware gemessen."
+  },
+  {
+    "id": "v020-1",
+    "version": "0.2.0",
+    "title": "Version 0.2.0: Forced-Erkennung und schneller",
+    "text": "Kleine Untertitel-Spuren, die viel kürzer sind als die vollständige Spur derselben Sprache, erkennt das Programm als wahrscheinliche Forced-Untertitel (erzwungene Untertitel) und schlägt vor, sie zu markieren; mit dem Wunsch „Deutsch (Forced)“ ist der erkannte Untertitel gleich vorausgewählt. Die Oberfläche lädt schneller (Zwischenspeicher und Komprimierung) und bleibt auch bei großen Staffeln flüssig; die Kopfzeile am Handy ist kompakter."
+  },
+  {
+    "id": "home-1",
+    "version": "0.1.7",
+    "title": "Aufgeräumte Startseite",
+    "text": "„Konvertieren“, „Umbenennen“ und „Verlauf“ sitzen in der Kopfzeile. Die Schritt-Reiter erscheinen erst im Assistenten. Oben steht der aktuelle Auftrag („Datei 4 von 13“ mit Fortschritt und Hardware-Haken) oder „Gerade nichts los“. Hardware und Gewonnener Platz sind gleich groß. Die Warteschlange findest du jetzt im Verlauf."
+  },
+  {
+    "id": "tracks-3",
+    "version": "0.1.6",
+    "title": "Audio & Untertitel: Gruppen, Tabelle, Regeln",
+    "text": "Der Schritt ist neu gebaut: Dateien mit denselben Sprachen sind zu Gruppen zusammengefasst (ideal für eine ganze Staffel), eine Tabelle zeigt alle Dateien mit Haken je Sprache, und die Einzelansicht gibt es weiter. Neu sind Regeln nach Format (z. B. nur DTS in AC-3 umwandeln) und Sprach-Wünsche in den Einstellungen (welche Sprachen bleiben, welche Spur Standard ist, z. B. Deutsch Forced). Vor dem Start siehst du, was passiert."
+  },
+  {
+    "id": "encoder-pref-1",
+    "version": "0.1.6",
+    "title": "Bevorzugter Encoder wirkt wieder",
+    "text": "Der „Bevorzugte Encoder“ aus Einstellungen → Hardware gilt jetzt bei „Automatisch“ im Konverter (z. B. Intel Quick Sync). Bei „Wird verwendet“ steht neben dem Encodernamen auch die Hardware."
+  },
+  {
+    "id": "history-1",
+    "version": "0.1.5",
+    "title": "Verlauf der Konvertierungen",
+    "text": "Auf der Startseite gibt es den Knopf „Verlauf“: die letzten 100 Konvertierungen je Welt (Audio und Video getrennt) mit Ergebnis, Größe, Dauer und Prüfergebnis. Suche, Filter, Details bei Fehlern, CSV-Export und „Verlauf leeren“. Der Verlauf bleibt auch nach „Fertige entfernen“ und nach einem Neustart erhalten."
+  },
+  {
+    "id": "simplify-1",
+    "version": "0.1.5",
+    "title": "Einfacher: Ersetzen ohne Regex, kein Papierkorb",
+    "text": "Beim Ersetzen im Dateinamen gibt es „Regex“ und „Aa“ nicht mehr: es wird genau der eingegebene Text gesucht, Groß-/Kleinschreibung ist egal. Die Schonfrist für Originale ist wieder weg; „Quelldatei löschen“ löscht nach bestandener Prüfung sofort und endgültig."
+  },
+  {
+    "id": "verify-1",
+    "version": "0.1.4",
+    "title": "Neue Datei prüfen, bevor das Original geht",
+    "text": "Im letzten Schritt gibt es „Ergebnis prüfen & Original“: Spuren und Größe prüfen, das Ergebnis komplett durchlesen (Decode-Test) und eine Schonfrist, in der das Original erst nach einigen Tagen endgültig gelöscht wird. Neben jedem Punkt steht, wie viel länger es dauert. Fällt eine Prüfung durch, bleibt das Original liegen. Standard je Welt in Einstellungen → Allgemein."
+  },
+  {
+    "id": "crf-1",
+    "version": "0.1.4",
+    "title": "CRF-Vorschlag nach Art des Materials",
+    "text": "Im Video-Schritt wählst du die Art des Materials (z. B. Anime, altes Material mit Korn, aktueller Film); der Regler wird mit einem passenden Startwert vorausgefüllt, mit kurzer Begründung. Anime und Zeichentrick bekommen einen niedrigeren Wert, weil Fehler auf glatten Flächen sofort auffallen. Abschaltbar in den Einstellungen."
+  },
+  {
+    "id": "winfix-1",
+    "version": "0.1.3",
+    "title": "Windows: Hardware-Anzeige und Start repariert",
+    "text": "In der Windows-App fehlte die Hardware-Anzeige und beim Start kam eine Fehlermeldung, weil das Fenster schneller fragte als die Erkennung fertig war. Das ist behoben, „Beenden“ erscheint sofort. Für NVIDIA gibt es ein älteres ffmpeg, das mit mehr Treibern läuft, und eine verständliche Meldung, wenn der Treiber zu alt ist."
+  },
+  {
+    "id": "tray-1",
+    "version": "0.1.2",
+    "title": "Windows: Symbol im Infobereich",
+    "text": "Die Windows-App läuft jetzt im Infobereich weiter: Das Schließen-Kreuz versteckt nur das Fenster, laufende Aufträge arbeiten weiter. Ein Klick auf das Symbol holt das Fenster zurück, „Beenden“ beendet das Programm (mit Rückfrage bei laufenden Aufträgen)."
+  },
+  {
+    "id": "windows-1",
+    "version": "0.1.1",
+    "title": "Windows-App (Test auf dev)",
+    "text": "Für Windows gibt es eine erste Test-Version als eine einzige Datei (p5converter-setup.exe): eigenes App-Fenster mit derselben Oberfläche, ffmpeg eingebaut, Hardware wird automatisch erkannt. Sie liegt im Kanal dev (Vorabversion dev-latest auf GitHub)."
+  },
+  {
+    "id": "channels-1",
+    "version": "0.1.0",
+    "title": "Version 0.1.0 und zwei Kanäle",
+    "text": "p5converter ist jetzt eine getestete Vorabversion (0.1.0). Neue Funktionen erscheinen zuerst im Kanal „dev“ (Image :dev) zum Testen und kommen erst danach in „latest“ (Image :latest). Für Unraid gibt es dafür eine eigene Vorlage."
+  },
+  {
+    "id": "tracks-2",
+    "version": "0.0.10",
+    "title": "Audio & Untertitel viel einfacher",
+    "text": "Der Schritt erklärt sich jetzt selbst: Oben steht, dass nichts geändert werden muss. Jede Spur ist eine übersichtliche Karte mit Klartext (z. B. „Deutsch · Dolby Digital 5.1“), Behalten-Häkchen und „So lassen / Kleiner machen“. Titel, Sprache, Forced und Standard stehen hinter „Erweitert“. Ein Assistent gibt Tipps (nur Deutsch und Englisch behalten, Forced-Untertitel markieren, fehlende Sprache). Beim Kleinermachen sind sinnvolle Werte vorausgefüllt und die Zielbitrate wird angezeigt."
+  },
+  {
+    "id": "saved-2",
+    "version": "0.0.10",
+    "title": "Gewonnener Platz je Welt",
+    "text": "Audio und Video haben jetzt je eine eigene Statistik – die Kachel zeigt nur die Zahlen der gewählten Welt. Mit „Zurücksetzen“ (mit Rückfrage) beginnt die Zählung dieser Welt bei 0."
+  },
+  {
+    "id": "news-2",
+    "version": "0.0.10",
+    "title": "Neuigkeiten wie bei p5assets",
+    "text": "Nach einem Update erscheint einmal pro Version ein kurzer Hinweis mit den wichtigsten Neuerungen. Er merkt sich auf dem Server, dass du ihn gesehen hast – auf allen Geräten. Die vollständige Liste steht jederzeit unten in der Fußzeile unter „Neuigkeiten“."
+  },
+  {
+    "id": "unraid-2",
+    "version": "0.0.10",
+    "title": "GPU-Anleitung in der Unraid-Vorlage",
+    "text": "In der Unraid-Vorlage und unter Einstellungen → Hardware steht jetzt, was für Intel Quick Sync, AMD und NVIDIA einzutragen ist: Intel/AMD brauchen nur das Gerät /dev/dri (schon eingetragen), NVIDIA zusätzlich --runtime=nvidia bei „Extra Parameters“."
+  },
+  {
+    "id": "tracks-1",
+    "version": "0.0.9",
+    "title": "Spuren einzeln einstellen",
+    "text": "Audio und Untertitel sind jetzt ein Schritt: oben Regeln für alle Dateien (Standard: unverändert), darunter eine Tabelle mit jeder Spur. Dort änderst du Titel, Sprache und „Forced“ (so, dass Plex es erkennt), wählst Spuren ab, kodierst einzelne Tonspuren neu und überträgst alles auf alle Dateien."
+  },
+  {
+    "id": "reset-1",
+    "version": "0.0.9",
+    "title": "Alles zurücksetzen",
+    "text": "Unten im Ablauf setzt „Zurücksetzen“ die gewählte Welt auf den Anfang zurück (Remux, keine Dateien). Laufende Aufträge bleiben unberührt."
+  },
+  {
+    "id": "hw-1",
+    "version": "0.0.9",
+    "title": "Aufgeräumte Hardware-Anzeige",
+    "text": "Eine Zeile pro Hardware, Nutzbares zuerst, Gründe unter „Warum?“. Die Intel-Grafik zeigt „Leerlauf/aktiv“ statt einer Prozentzahl. Bei VAAPI und NVIDIA gibt es jetzt auch beim Lesen einen Haken, wenn die Hardware es bestätigt hat."
+  },
+  {
+    "id": "misc-1",
+    "version": "0.0.9",
+    "title": "Kleinere Verbesserungen",
+    "text": "Neues Tab-Icon, Ziehen zum Aktualisieren in der Web-App, verständlichere Texte bei „Wenn Datei existiert“, „Alle auswählen/abwählen“ in Listen, kein Farbflackern mehr beim Laden, Voreinstellungen nur noch im Einstellungs-Schritt."
+  },
+  {
+    "id": "icon-2",
+    "version": "0.0.8",
+    "title": "Endgültiges App-Icon",
+    "text": "Das Icon zeigt jetzt zwei Scheiben im Abzeichen: eine silberne Audio-CD (Audio-Welt) und eine blaue Blu-ray (Video-Welt), im selben Aufbau wie p5assets (dort ein oranger Komet). Es steht auch in Einstellungen → Info, in der README und in der Unraid-Vorlage. Auf dem iPhone/iPad die Web-App einmal vom Home-Bildschirm löschen und neu hinzufügen, damit das neue Icon erscheint."
+  },
+  {
+    "id": "logs-1",
+    "version": "0.0.7",
+    "title": "Logs wie bei p5assets",
+    "text": "Oben in der Kopfzeile gibt es jetzt das Terminal-Symbol: Es öffnet die Log-Seite mit Dateiauswahl, Stufenfilter, Suche, Live-Ansicht, Download und „Leeren“. Neue Warnungen und Fehler zeigt ein Zähler am Symbol. Das Log (Start, Hardware, Aufträge, Anmeldung) liegt im Ordner /config/logs; Passwörter und Cookies werden nie geschrieben."
+  },
+  {
+    "id": "icon-1",
+    "version": "0.0.7",
+    "title": "Neues App-Icon",
+    "text": "Das Icon hat jetzt denselben Aufbau wie bei p5assets (Matrix-Regen, Poster-Rahmen, p5) – mit einem kleinen Abzeichen mit zwei Pfeilen unten rechts, damit man beide Apps unterscheiden kann. Gilt auch für die Home-Bildschirm-App auf iPhone/iPad und für Unraid. Auf dem iPhone/iPad die Web-App einmal entfernen und neu hinzufügen, damit das neue Icon erscheint."
+  },
+  {
+    "id": "flow-1",
+    "version": "0.0.6",
+    "title": "Neuer Ablauf in Schritten",
+    "text": "Übersichtlicher: Die Startseite zeigt Statistik, Hardware, gewonnenen Platz und die Warteschlange. „Konvertierung starten“ führt durch die Schritte Dateien, Ziel, Benennen, Einstellungen und Zusammenfassung (oben als Reiter anklickbar, unten mit Zurück/Weiter). Nach dem Start geht es zurück zur Startseite. Audio und Video haben jeweils passende Schritte."
+  },
+  {
+    "id": "flow-2",
+    "version": "0.0.6",
+    "title": "Umbenennen und gewonnener Platz",
+    "text": "„Umbenennen starten“ sitzt jetzt auf der Startseite (nicht mehr in der Kopfzeile). Neu: „Gewonnener Platz“ – die Summe aus Größe vorher minus nachher aller fertigen Dateien, getrennt für Audio und Video (gespeichert in /config; zählt ab diesem Update)."
+  },
+  {
+    "id": "queue-1",
+    "version": "0.0.5",
+    "title": "Warteschlange je Welt",
+    "text": "Audio und Video haben jetzt je eine eigene Warteschlange mit eigener Anzahl paralleler Aufträge, eigenen Zählern und eigenem „Alle abbrechen“. Ein Zähler am Welt-Knopf zeigt, wo gerade etwas läuft oder wartet."
+  },
+  {
+    "id": "colors-1",
+    "version": "0.0.5",
+    "title": "Klarere Anzeige",
+    "text": "Grün heißt geklappt (bei „Schreiben“ und „Lesen“ jeweils mit Haken, wenn ffmpeg es bestätigt hat), gelb ist ein Hinweis oder Ausweichweg, rot ein Fehler. Die Auslastung von CPU und Videoeinheit wird jetzt dauernd live gemessen, auch im Leerlauf."
+  },
+  {
+    "id": "rename-2",
+    "version": "0.0.5",
+    "title": "Ersetzungen repariert",
+    "text": "„+ Ersetzung“ brachte gelöschte Zeilen zurück – behoben. Namensmuster, Zusatz und Ersetzungen gelten jetzt getrennt für Audio und Video."
+  },
+  {
+    "id": "cancel-1",
+    "version": "0.0.5",
+    "title": "Aufräumen beim Abbrechen",
+    "text": "Beim Abbrechen oder bei einem Fehler wird die unfertige Datei gelöscht, ebenso vom Auftrag neu angelegte leere Ordner. Reste eines Absturzes werden beim nächsten Start entfernt. Die Quelldatei bleibt immer unberührt."
+  },
+  {
+    "id": "rename-1",
+    "version": "0.0.4",
+    "title": "Umbenennen",
+    "text": "Neu: Namensmuster mit Variablen (Titel, Jahr, Auflösung, Codec …) und Suchen & Ersetzen mit mehreren Regeln, direkt im Bereich „Ziel“ mit Live-Vorschau – und zusätzlich die Seite „Umbenennen“ oben, um Dateien ohne Konvertierung umzubenennen."
+  },
+  {
+    "id": "qsv-2",
+    "version": "0.0.4",
+    "title": "Quick Sync: Lesen und Schreiben",
+    "text": "Bei Quick Sync läuft jetzt auch das Lesen der Quelldatei auf der Intel-Videoeinheit (inkl. Verkleinern und 10 Bit). Klappt ein Weg nicht, probiert das Programm automatisch den nächsten – ohne Fehlermeldung. In der Warteschlange stehen „Schreiben“ und „Lesen“ jetzt getrennt."
+  },
+  {
+    "id": "tpl-1",
+    "version": "0.0.4",
+    "title": "Unraid: Eintrag „Passwort“",
+    "text": "Zeigt dein Container noch „Passwort (optional)“ (P5_PASSWORD), kannst du ihn mit REMOVE löschen – die Variable wird nicht mehr benutzt. Die Anmeldung legst du in den Einstellungen an."
+  },
+  {
+    "id": "settings-1",
+    "version": "0.0.3",
+    "title": "Einstellungen",
+    "text": "Oben rechts gibt es jetzt das Zahnrad mit eigenen Einstellungen: Startansicht, Zielordner, parallele Aufträge, Farben und Namen der Welten, Hardware mit Diagnose und die Anmeldung. Alles wird auf dem Server in /config gespeichert und gilt auf allen Geräten."
+  },
+  {
+    "id": "presets-1",
+    "version": "0.0.3",
+    "title": "Voreinstellungen",
+    "text": "Mit „Als Voreinstellung speichern“ (Diskette) neben dem Startknopf speicherst du die aktuellen Einstellungen. In den Einstellungen legst du fest, welche als Vorschlag oben erscheinen, und kannst sie umbenennen, sortieren, bearbeiten und löschen. Audio hat jetzt auch Voreinstellungen."
+  },
+  {
+    "id": "login-1",
+    "version": "0.0.3",
+    "title": "Anmeldung",
+    "text": "Optional gibt es jetzt eine Anmeldung wie bei p5assets: Benutzername und Passwort legst du in den Einstellungen im Browser an (das Passwort in der Unraid-Vorlage entfällt). Mit Spaßmeldung nach falschem Passwort, die sich abschalten lässt."
+  },
+  {
+    "id": "qsv-1",
+    "version": "0.0.3",
+    "title": "Quick Sync auf älteren Intel-Chips",
+    "text": "Das Image bringt jetzt auch die Intel-Media-SDK-Runtime für Chips der 8. bis 11. Generation mit (z. B. i9-9900), und die Erkennung probiert mehrere Startvarianten. In den Einstellungen unter Hardware steht eine Diagnose, die du mit einem Klick kopieren kannst. Im Unraid-Template gibt es dafür jetzt einen sichtbaren Eintrag für /dev/dri."
+  },
+  {
+    "id": "design-1",
+    "version": "0.0.2",
+    "title": "Neues Design",
+    "text": "p5converter hat jetzt dieselbe Designlinie wie p5assets: dunkles Matrix-Theme mit Leuchteffekten. Audio und Video sind eigene Welten mit eigener Farbe und eigenem Planeten; beim Wechsel gibt es den Wurmloch-Flug. Neu ist außerdem die Übersicht oben mit Fortschrittsring, Zählern und der Live-Auslastung von CPU und GPU."
+  },
+  {
+    "id": "mobile-1",
+    "version": "0.0.2",
+    "title": "Handy und iPad",
+    "text": "Die Oberfläche passt sich Handy und iPad an (Hoch- und Querformat) und lässt sich auf dem iPhone/iPad als Web-App zum Home-Bildschirm hinzufügen (Teilen → Zum Home-Bildschirm)."
+  },
+  {
+    "id": "port-1",
+    "version": "0.0.2",
+    "title": "Neuer Port 8787",
+    "text": "Der Standard-Port ist jetzt 8787. Im Unraid-Template Container-Port und Mapping auf 8787 stellen (oder das aktuelle Template verwenden)."
+  },
+  {
+    "id": "version-1",
+    "version": "0.0.2",
+    "title": "Version und Neuigkeiten",
+    "text": "Unten steht jetzt die Version mit Branch und Commit, und diese Neuigkeiten-Anzeige gibt es auch. Die Änderungen jeder Version stehen in der CHANGELOG.md."
+  }
 ]

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -362,7 +363,7 @@ func TestSettingsEndpoint(t *testing.T) {
 		t.Fatalf("Standard: %+v", got)
 	}
 	got.Settings.Concurrency = 3
-	got.Settings.Worlds["video"] = config.World{Name: "Filme", Hue: 205}
+	got.Settings.TrackRules.Audio = []config.AudioRule{{Codec: "dts", Ch: "any", Action: "encode", To: "eac3", Kbps: 256}}
 	got.Settings.Presets[0].Name = "Mein Archiv"
 	if r, _ := doJSON(t, c, "PUT", ts.URL+"/api/settings", got.Settings); r.StatusCode != 200 {
 		t.Fatalf("PUT: %d", r.StatusCode)
@@ -370,12 +371,12 @@ func TestSettingsEndpoint(t *testing.T) {
 	if s.Jobs.Concurrency("video") != 3 {
 		t.Errorf("parallele Aufträge nicht übernommen: %d", s.Jobs.Concurrency("video"))
 	}
-	if now := s.Settings.Get(); now.Worlds["video"].Name != "Filme" || now.Presets[0].Name != "Mein Archiv" {
-		t.Errorf("nicht gespeichert: %+v", now.Worlds)
+	if now := s.Settings.Get(); len(now.TrackRules.Audio) != 1 || now.TrackRules.Audio[0].To != "eac3" || now.Presets[0].Name != "Mein Archiv" {
+		t.Errorf("nicht gespeichert: %+v", now.TrackRules)
 	}
-	got.Settings.Worlds["video"] = config.World{Name: "Filme", Hue: 999}
+	got.Settings.TrackRules.Audio = []config.AudioRule{{Codec: "dts", Action: "encode", To: "wav"}}
 	if r, m := doJSON(t, c, "PUT", ts.URL+"/api/settings", got.Settings); r.StatusCode != 400 {
-		t.Errorf("ungültiger Farbton: %d %v", r.StatusCode, m)
+		t.Errorf("ungültige Regel: %d %v", r.StatusCode, m)
 	}
 }
 
@@ -692,7 +693,7 @@ func TestVerifyThenDelete(t *testing.T) {
 	}
 }
 
-// Verlauf: jeder beendete Auftrag landet je Welt im Verlauf, die Liste überlebt „Fertige entfernen“, CSV und Leeren je Welt.
+// Verlauf: jeder beendete Auftrag landet im Verlauf (je Art oder gemeinsam), die Liste überlebt „Fertige entfernen“, CSV und Leeren je Art.
 func TestHistory(t *testing.T) {
 	root := t.TempDir()
 	s, ts := newTestServer(t, []string{root})
@@ -729,7 +730,7 @@ func TestHistory(t *testing.T) {
 		t.Errorf("neuester Eintrag zuerst (Fehler erwartet): %v", st)
 	}
 	if v := get("/api/history?kind=video")["items"].([]any); len(v) != 0 {
-		t.Errorf("Video-Verlauf muss leer sein (Welten getrennt): %v", v)
+		t.Errorf("Video-Verlauf muss leer sein (Arten getrennt): %v", v)
 	}
 	resp, _ := http.Get(ts.URL + "/api/history.csv?kind=audio")
 	b, _ := io.ReadAll(resp.Body)
@@ -742,12 +743,23 @@ func TestHistory(t *testing.T) {
 	if len(get("/api/history?kind=audio")["items"].([]any)) != 2 {
 		t.Error("Leeren von Video darf Audio nicht berühren")
 	}
+	// eine gemeinsame Liste für beide Arten (ohne kind oder mit kind=all), „alle“ leert beide
+	if all := get("/api/history")["items"].([]any); len(all) != 2 {
+		t.Errorf("gemeinsame Liste: %d Einträge statt 2", len(all))
+	}
+	if all := get("/api/history?kind=all")["items"].([]any); len(all) != 2 {
+		t.Errorf("kind=all: %d Einträge statt 2", len(all))
+	}
+	post(t, ts, "/api/history/clear", map[string]any{"kind": "all"}, nil)
+	if len(get("/api/history?kind=all")["items"].([]any)) != 0 {
+		t.Error("kind=all leert nicht beide Arten")
+	}
 	post(t, ts, "/api/history/clear", map[string]any{"kind": "audio"}, nil)
 	if len(get("/api/history?kind=audio")["items"].([]any)) != 0 {
 		t.Error("Audio-Verlauf nicht geleert")
 	}
 	if r, _ := http.Get(ts.URL + "/api/history?kind=x"); r.StatusCode != 400 {
-		t.Error("ungültige Welt muss abgelehnt werden")
+		t.Error("ungültige Art muss abgelehnt werden")
 	}
 }
 
@@ -794,5 +806,191 @@ func TestStaticETagAndGzip(t *testing.T) {
 	}
 	if get("/index.html", nil).Code != 200 || get("/", nil).Code != 200 {
 		t.Error("Startseite")
+	}
+}
+
+func TestBrowseSearch(t *testing.T) {
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "Filme", "Müller Serie", "Staffel 1")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	os.MkdirAll(filepath.Join(dir, ".versteckt", "Müller"), 0o755)
+	for _, f := range []string{filepath.Join(sub, "Mueller S01E01.mkv"), filepath.Join(sub, "notizen müller.txt"), filepath.Join(dir, "Filme", "andere.mp3"), filepath.Join(dir, ".versteckt", "Müller", "x.mkv")} {
+		os.WriteFile(f, []byte("x"), 0o644)
+	}
+	_, ts := newTestServer(t, []string{dir})
+	get := func(q string) (int, struct {
+		Hits []struct {
+			Name, Path string
+			Dir        bool
+			Media      string
+		}
+		Truncated bool
+	}) {
+		var out struct {
+			Hits []struct {
+				Name, Path string
+				Dir        bool
+				Media      string
+			}
+			Truncated bool
+		}
+		resp, err := http.Get(ts.URL + "/api/fs/search?" + q)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		json.NewDecoder(resp.Body).Decode(&out)
+		return resp.StatusCode, out
+	}
+	code, r := get("path=" + url.QueryEscape(dir) + "&q=MUELLER")
+	if code != 200 || len(r.Hits) != 2 {
+		t.Fatalf("Suche „MUELLER“ (ä = a, Groß/Klein egal): %d %+v", code, r)
+	}
+	if !r.Hits[0].Dir || r.Hits[0].Name != "Filme/Müller Serie" || r.Hits[1].Media != "video" || !strings.HasSuffix(r.Hits[1].Path, "Mueller S01E01.mkv") {
+		t.Errorf("Treffer: %+v", r.Hits)
+	}
+	for _, h := range r.Hits {
+		if strings.Contains(h.Path, ".versteckt") || strings.HasSuffix(h.Path, ".txt") {
+			t.Errorf("versteckter Ordner oder Nicht-Medium im Ergebnis: %s", h.Path)
+		}
+	}
+	if _, r = get("path=" + url.QueryEscape(dir) + "&q=muller"); len(r.Hits) != 1 || !r.Hits[0].Dir {
+		t.Errorf("auch „muller“ (ohne Umlaut) findet Müller (den Ordner, nicht „Mueller“): %+v", r.Hits)
+	}
+	if _, r = get("q=staffel&dirs=1"); len(r.Hits) != 1 || !r.Hits[0].Dir {
+		t.Errorf("ohne path suchen alle erlaubten Wurzeln, dirs=1 nur Ordner: %+v", r.Hits)
+	}
+	if code, _ = get("q=a"); code != 400 {
+		t.Errorf("zu kurze Suche: %d", code)
+	}
+	if code, _ = get("path=/etc&q=passwd"); code != 403 {
+		t.Errorf("fremder Pfad: %d", code)
+	}
+	if _, r = get("path=" + url.QueryEscape(dir) + "&q=gibtesnicht"); len(r.Hits) != 0 {
+		t.Errorf("Suche ohne Treffer: %+v", r.Hits)
+	}
+}
+
+// Warteschlange verwalten über die API: pausieren, einen Auftrag anhalten und verschieben, fortsetzen; der Stand steht in /api/state.
+func TestQueueAPI(t *testing.T) {
+	root := t.TempDir()
+	s, ts := newTestServer(t, []string{root})
+	src := filepath.Join(root, "song.wav")
+	if out, err := exec.Command("ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "sine=f=440:d=1", src).CombinedOutput(); err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	state := func() map[string]any {
+		resp, err := http.Get(ts.URL + "/api/state")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		var m map[string]any
+		json.NewDecoder(resp.Body).Decode(&m)
+		return m
+	}
+	post(t, ts, "/api/queue/pause", map[string]any{"on": true}, nil)
+	if state()["paused"] != true {
+		t.Fatal("Warteschlange nicht pausiert")
+	}
+	var ids []string
+	for i := 0; i < 2; i++ {
+		var r struct{ IDs []string }
+		resp := post(t, ts, "/api/jobs", map[string]any{"kind": "audio", "items": []map[string]string{{"path": src}},
+			"output": map[string]any{"dir": filepath.Join(root, "o"), "structure": "flat", "exists": "rename"}, "audio": map[string]any{"format": "mp3", "mode": "vbr", "quality": 4}}, nil)
+		json.NewDecoder(resp.Body).Decode(&r)
+		resp.Body.Close()
+		ids = append(ids, r.IDs...)
+	}
+	time.Sleep(300 * time.Millisecond)
+	for _, j := range s.Jobs.Snapshot() {
+		if j.Status != "queued" {
+			t.Fatalf("pausiert, aber %s ist %s", j.ID, j.Status)
+		}
+	}
+	if r := post(t, ts, "/api/jobs/"+ids[1]+"/move", map[string]any{"how": "top"}, nil); r.StatusCode != 200 {
+		t.Errorf("move: %d", r.StatusCode)
+	}
+	if r := post(t, ts, "/api/jobs/"+ids[1]+"/move", map[string]any{"how": "top"}, nil); r.StatusCode != 400 {
+		t.Errorf("erneut nach oben muss abgelehnt werden: %d", r.StatusCode)
+	}
+	post(t, ts, "/api/jobs/"+ids[0]+"/hold", map[string]any{"on": true}, nil)
+	post(t, ts, "/api/queue/pause", map[string]any{"on": false}, nil)
+	waitDone(t, s, 1)
+	time.Sleep(500 * time.Millisecond)
+	held := ""
+	for _, j := range s.Jobs.Snapshot() {
+		if j.Held {
+			held = j.ID
+			if j.Status != "queued" {
+				t.Errorf("angehaltener Auftrag lief trotzdem: %s", j.Status)
+			}
+		}
+	}
+	if held != ids[0] {
+		t.Errorf("angehaltener Auftrag: %q, erwartet %s", held, ids[0])
+	}
+	post(t, ts, "/api/jobs/"+ids[0]+"/hold", map[string]any{"on": false}, nil)
+	waitDone(t, s, 2)
+	if r := post(t, ts, "/api/queue/restore", map[string]any{"action": "x"}, nil); r.StatusCode != 400 {
+		t.Error("ungültige Aktion muss abgelehnt werden")
+	}
+}
+
+// Neustart-fest: Aufträge einer unterbrochenen Sitzung stehen in queue.json, warten auf die Entscheidung und laufen nach „fortsetzen“.
+func TestQueueRestoreAPI(t *testing.T) {
+	tl, err := ffmpeg.Locate("")
+	if err != nil {
+		t.Skip("ffmpeg nicht installiert")
+	}
+	root, cfgDir := t.TempDir(), t.TempDir()
+	src := filepath.Join(root, "song.wav")
+	if out, err := exec.Command("ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "sine=f=440:d=1", src).CombinedOutput(); err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	req := map[string]any{"kind": "audio", "items": []map[string]string{{"path": src}},
+		"output": map[string]any{"dir": filepath.Join(root, "o"), "structure": "flat", "exists": "rename"}, "audio": map[string]any{"format": "mp3", "mode": "vbr", "quality": 4}}
+	b, _ := json.Marshal(map[string]any{"jobs": []any{req}})
+	os.WriteFile(filepath.Join(cfgDir, "queue.json"), b, 0o644)
+	s := New(version.Get(), tl, []string{root}, 2, cfgDir)
+	ts := httptest.NewServer(s.Handler())
+	defer ts.Close()
+	state := func() map[string]any {
+		resp, err := http.Get(ts.URL + "/api/state")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		var m map[string]any
+		json.NewDecoder(resp.Body).Decode(&m)
+		return m
+	}
+	rs, _ := state()["restorable"].(map[string]any)
+	if rs["count"] != float64(1) || rs["audio"] != float64(1) {
+		t.Fatalf("wartende Aufträge: %v", rs)
+	}
+	if len(s.Jobs.Snapshot()) != 0 {
+		t.Fatal("vor der Entscheidung darf nichts starten")
+	}
+	r := post(t, ts, "/api/queue/restore", map[string]any{"action": "resume"}, nil)
+	var got struct{ Resumed int }
+	json.NewDecoder(r.Body).Decode(&got)
+	if got.Resumed != 1 {
+		t.Fatalf("fortgesetzt: %d", got.Resumed)
+	}
+	waitDone(t, s, 1)
+	if rs, _ := state()["restorable"].(map[string]any); rs["count"] != float64(0) {
+		t.Errorf("danach darf nichts mehr wartend sein: %v", rs)
+	}
+	// verwerfen
+	os.WriteFile(filepath.Join(cfgDir, "queue.json"), b, 0o644)
+	s2 := New(version.Get(), tl, []string{root}, 2, cfgDir)
+	ts2 := httptest.NewServer(s2.Handler())
+	defer ts2.Close()
+	post(t, ts2, "/api/queue/restore", map[string]any{"action": "discard"}, nil)
+	if s2.Jobs.Restorable()["count"] != 0 || len(s2.Jobs.Snapshot()) != 0 {
+		t.Error("Verwerfen startet nichts und leert die Liste")
 	}
 }

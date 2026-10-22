@@ -1,14 +1,15 @@
-/* p5converter – Matrix-Theme (gleiche Designlinie wie p5assets). Die Akzentfarbe kommt von der aktiven Welt (Audio/Video). */
+/* p5converter – Matrix-Theme (gleiche Designlinie wie p5assets). Eine Grundfarbe (p5-Grün); nur Audio ist orange (Audio-Kachel, Audio-Ablauf, Audio-Karte). */
 :root{--h:140;--sat:100%;--lit:50%;--warn:#ffd24a;--bad:#ff4d5e;--r:6px;
   --mono:ui-monospace,"JetBrains Mono","Fira Code","SF Mono",Menlo,Consolas,"Liberation Mono",monospace;color-scheme:dark}
-/* Die ganze Palette leitet sich aus dem Farbton --h der aktiven Welt ab */
-:root{
+/* Die ganze Palette leitet sich aus dem Farbton --h ab; .hue-audio und data-kind=audio schalten auf Orange um (die Formeln stehen für beide Selektoren) */
+:root,.hue-audio,.kindtile.audio{
   --bg:hsl(var(--h) 80% 2%);--panel:hsl(var(--h) 70% 5%);--panel2:hsl(var(--h) 66% 8%);--line:hsl(var(--h) 50% 27%);
   --text:hsl(var(--h) var(--sat) 91%);--muted:hsl(var(--h) 30% 62%);--accent:hsl(var(--h) var(--sat) var(--lit));--ok:var(--accent);
   --on-accent:hsl(var(--h) var(--sat) 6%);--faint:hsl(var(--h) 38% 38%);--faint2:hsl(var(--h) 42% 30%);
   --glow:color-mix(in srgb,var(--accent) 45%,transparent);--dim:color-mix(in srgb,var(--accent) 14%,transparent);
   --sat-top:env(safe-area-inset-top,0px);--sat-bottom:env(safe-area-inset-bottom,0px);
 }
+.hue-audio,.kindtile.audio,:root[data-kind=audio]{--h:35;--sat:90%;--lit:56%}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 var(--mono)}
@@ -63,15 +64,6 @@ header.top{position:sticky;top:0;z-index:20;background:hsl(var(--h) 80% 2% / .97
 .logomark{width:34px;height:34px;border:2px solid var(--accent);border-radius:8px;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:16px;letter-spacing:-1px;color:var(--accent);box-shadow:0 0 10px var(--dim);flex:none}
 .logo u{text-decoration:none;animation:blink 1.1s steps(1) infinite}
 @keyframes blink{50%{opacity:0}}
-.worlds{display:flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
-.worlds button{background:transparent;border:0;border-radius:0;padding:7px 16px;color:var(--muted);border-right:1px solid var(--line);display:flex;gap:8px;align-items:center;box-shadow:none}
-.worlds button:last-child{border-right:0}
-.worlds .planet{flex:none;opacity:.7;transition:.2s}
-.worlds button.on .planet{opacity:1;transform:scale(1.18)}
-.worlds button:hover .planet{opacity:1}
-.worlds button.on{background:color-mix(in srgb,var(--c) 16%,transparent);color:var(--c);text-shadow:0 0 10px var(--c)}
-.worlds button:hover:not(.on){color:var(--text)}
-.dot{position:absolute;top:3px;right:3px;width:8px;height:8px;border-radius:50%;background:var(--bad);box-shadow:0 0 8px var(--bad)}
 main{max-width:1500px;margin:auto;padding:22px;padding-bottom:calc(22px + var(--sat-bottom))}
 
 /* ---------- Übersicht ---------- */
@@ -171,13 +163,6 @@ button.info:hover,button.info.on{background:var(--accent);color:var(--on-accent)
 #foot button.lnk{min-height:0!important;font:inherit;vertical-align:baseline;cursor:pointer}
 #foot a:hover,#foot button.lnk:hover{color:var(--accent);border-color:var(--accent)}
 
-/* ---------- Weltwechsel ---------- */
-.worldfx{position:fixed;inset:0;z-index:800;background:#000;pointer-events:all;animation:wfx 1.3s ease forwards}
-@keyframes wfx{0%{opacity:0}20%{opacity:1}76%{opacity:1}100%{opacity:0}}
-.worldfx canvas{position:absolute;inset:0;width:100%;height:100%}
-.wfplanet{position:absolute;left:50%;top:50%;width:min(34vmin,250px);aspect-ratio:1;transform:translate(-50%,-50%) scale(.04);opacity:0;animation:wfplanet 1.3s cubic-bezier(.2,.7,.3,1) forwards}
-.wfplanet svg{width:100%;height:100%;filter:drop-shadow(0 0 30px var(--c)) drop-shadow(0 0 80px var(--c))!important}
-@keyframes wfplanet{0%,30%{transform:translate(-50%,-50%) scale(.04);opacity:0}78%{transform:translate(-50%,-50%) scale(1);opacity:1}100%{transform:translate(-50%,-50%) scale(1.5);opacity:0}}
 
 /* ---------- Kompaktere Breiten ---------- */
 @media(max-width:1280px){.top .lbl{display:none}}
@@ -188,7 +173,6 @@ button.info:hover,button.info.on{background:var(--accent);color:var(--on-accent)
 @media(max-width:700px){
   .top .in{padding:8px 14px;gap:8px}
   .logo{font-size:17px}
-  .worlds{order:3;width:100%}.worlds button{flex:1;justify-content:center;padding:6px 12px}.worlds .planet{width:22px;height:22px}
   main{padding:14px;padding-bottom:calc(14px + var(--sat-bottom))}
   .hero{grid-template-columns:1fr;justify-items:center;text-align:center;padding:16px;gap:16px}
   .stats{justify-content:center;gap:14px 16px}.stat b{font-size:22px}.stat span{font-size:11px;letter-spacing:.03em}
@@ -228,7 +212,7 @@ button.info:hover,button.info.on{background:var(--accent);color:var(--on-accent)
   dialog,.dlg{max-height:100dvh;height:100dvh}
 }
 @media(display-mode:standalone){body{overscroll-behavior-y:none}}
-@media(prefers-reduced-motion:reduce){.worldfx{animation-duration:.01s}.logo u{animation:none}.bar>i,.progress i{transition:none}}
+@media(prefers-reduced-motion:reduce){.logo u{animation:none}.bar>i,.progress i{transition:none}}
 
 /* ---------- Einstellungen ---------- */
 #viewSettings{max-width:1500px;margin:auto;padding:22px;padding-bottom:calc(22px + var(--sat-bottom))}
@@ -249,11 +233,6 @@ button.info:hover,button.info.on{background:var(--accent);color:var(--on-accent)
 .setc .row input{flex:1}
 .banner{border:1px solid var(--line);border-radius:var(--r);padding:10px 14px;margin:0 0 14px;background:var(--panel2)}
 .banner.warn{border-color:#ffd24a88;color:var(--warn)}
-.worldcard{border:1px solid var(--line);border-radius:var(--r);padding:14px;margin:14px 0;background:var(--panel2)}
-.wchead{display:flex;gap:10px;align-items:center;margin-bottom:12px}.wchead input{flex:1}
-.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
-.swatch{flex-direction:column;gap:4px;padding:8px 6px;font-size:12px;color:var(--muted);justify-content:center}
-.swatch.on{border-color:var(--accent);color:var(--accent);background:var(--dim);box-shadow:0 0 14px var(--dim)}
 .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.tabs button.on{border-color:var(--accent);color:var(--accent);background:var(--dim)}
 .plist{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
 .prow{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;background:var(--panel2)}
@@ -278,7 +257,7 @@ button.danger:hover{border-color:var(--bad);color:var(--bad);box-shadow:0 0 14px
 .startbar button{white-space:nowrap}
 
 /* ---------- Anmeldung ---------- */
-body.loginmode header .tb,body.loginmode .worlds,body.loginmode #ffver{display:none}
+body.loginmode header .tb,body.loginmode #ffver{display:none}
 .login{min-height:calc(100dvh - 90px);display:grid;place-items:center;padding:calc(var(--sat-top) + 20px) 16px 20px}
 .logincard{width:min(420px,100%);background:var(--panel);border:1px solid var(--accent);border-radius:10px;padding:28px;box-shadow:0 0 40px var(--dim)}
 .logincard .logo{margin-bottom:14px}
@@ -301,7 +280,7 @@ body.loginmode header .tb,body.loginmode .worlds,body.loginmode #ffver{display:n
   .startbar button.big{padding:10px 14px;font-size:14px}
   .pact{width:100%}
 }
-@media(hover:none){.setnav button,.mitem{min-height:44px}.swatch{min-height:64px}}
+@media(hover:none){.setnav button,.mitem{min-height:44px}}
 
 /* Symbole (einfarbig, Theme-Farbe) */
 .icw{display:inline-flex;align-items:center;vertical-align:middle}
@@ -340,8 +319,6 @@ button.small .ic,.blist .ic{width:1.3em;height:1.3em}
   #viewRename{padding:14px}
 }
 .presets .ic{width:1.35em;height:1.35em}
-.qworld{color:var(--muted);font-weight:400;margin-left:8px}
-.wbadge{margin-left:8px;min-width:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:var(--bg);font-size:11px;font-weight:700;line-height:18px;text-align:center}
 
 /* Auftragskarten: grün = geklappt, gelb = Hinweis/Ausweichweg/abgebrochen, rot = Fehler */
 .job.done{border-color:var(--ok)}
@@ -422,7 +399,9 @@ button.danger{color:var(--bad);border-color:#ff4d5e66}
 #existsHint{display:block;margin-top:6px;line-height:1.4;text-transform:none;letter-spacing:0}
 #existsHint.warn{color:var(--warn)}
 .presetnote{flex-basis:100%}
-#resetAll .ic{width:1.1em;height:1.1em}
+#resetAll .ic,#wizDiscard .ic{width:1.1em;height:1.1em}
+button.discard{border-color:color-mix(in srgb,var(--bad) 65%,transparent);color:var(--bad)}
+button.discard:hover{border-color:var(--bad);color:var(--bad);box-shadow:0 0 14px #ff4d5e33,inset 0 0 10px #ff4d5e22}
 #resetDlg p{margin:0}
 
 .trkintro{margin:0 0 6px;line-height:1.55}
@@ -509,6 +488,9 @@ select.inl{display:inline-block;width:auto;min-width:8.5em;margin:0 4px;padding:
 .histentry .hmeta{flex:1 1 100%}
 .histentry .hdet{margin:10px 0 2px;display:flex;flex-direction:column;gap:4px;overflow-wrap:anywhere}
 .histentry .hdet .okc{color:var(--good)}
+.copyrow{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.copyrow .ic{width:1em;height:1em;vertical-align:-.12em}
+#viewHistory{overflow-anchor:none}
 .histentry pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:260px;overflow:auto}
 
 /* Audio & Untertitel: Sprach-Wünsche, Regeln, Ansichten (Gruppen / Tabelle / Einzelne Dateien) */
@@ -744,3 +726,201 @@ dialog.sheet .dlg{height:100%;max-height:100dvh;padding:calc(14px + var(--sat-to
 
 .stepnav .lbl5{display:none}
 @media(max-width:700px){.stepnav .lbl4{display:none}.stepnav .lbl5{display:inline}.stepnav #start{padding:10px 12px}}
+
+/* Datei-Browser: Suche, Anzeigenamen der Quellordner */
+.bsearch{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.bsearch input[type=search]{flex:1 1 220px;width:auto}
+.bsearch label.check{margin:0}
+#bWhere:empty{display:none}
+.bi small{margin-left:6px}
+.rootnames{display:grid;gap:8px}
+.rootname{display:grid;grid-template-columns:minmax(80px,160px) 1fr;gap:10px;align-items:center}
+@media(max-width:700px){.rootname{grid-template-columns:1fr}.bsearch input[type=search]{flex:1 1 100%}}
+
+/* ===== 0.3.2: Startkacheln, Schrittleiste, Karten, Kacheln „Wie umwandeln?“ ===== */
+.pagehead{margin:0 0 16px}
+.pagehead h1,.cvhead h1{margin:0;font-size:24px;color:var(--text);display:flex;align-items:center;gap:2px}
+.pagehead p,.cvhead p{margin:4px 0 0;max-width:80ch}
+.starttiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:0 0 20px}
+.kindtile{display:grid;grid-template-columns:auto 1fr;grid-template-areas:"ico title" "ico sub" "res res" "go go";gap:4px 16px;align-items:center;text-align:left;padding:22px;border-radius:14px;background:var(--panel);border:1px solid var(--line);box-shadow:0 0 20px var(--dim);color:var(--text);min-width:0}
+.kindtile:hover{border-color:var(--accent);box-shadow:0 0 28px var(--glow)}
+.kindtile .kico{grid-area:ico;width:58px;height:58px;border-radius:14px;border:1px solid var(--accent);background:var(--dim);color:var(--accent);display:grid;place-items:center;box-shadow:0 0 16px var(--dim)}
+.kindtile .kico .ic{width:30px;height:30px}
+.kindtile .kt{grid-area:title;font-size:24px;font-weight:700;color:var(--accent);text-shadow:0 0 12px var(--glow);align-self:end}
+.kindtile .ksub{grid-area:sub;color:var(--muted);font-size:13px;line-height:1.45;align-self:start}
+.kindtile .kresume{grid-area:res;margin-top:10px;font-size:13px;color:var(--text);border-top:1px dashed var(--line);padding-top:8px}
+.kindtile .kgo{grid-area:go;margin-top:12px;justify-self:start;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);border-radius:var(--r);padding:8px 18px;font-weight:700}
+.savedcols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.savedcol{min-width:0;display:flex;flex-direction:column;gap:2px}
+.savedcol .kname{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:4px}
+.savedcol.audio .kname{color:hsl(35 90% 58%)}
+.savedcol.audio .savedbig.good{color:hsl(35 90% 62%)}
+.savedcol .savedreset{align-self:flex-start;margin-top:8px}
+.kindbadge{display:inline-block;border-radius:4px;padding:0 8px;margin-right:8px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border:1px solid hsl(140 100% 50% / .55);color:hsl(140 100% 55%);background:hsl(140 100% 50% / .09);vertical-align:1px;white-space:nowrap}
+.kindbadge.audio{border-color:hsl(35 90% 56% / .6);color:hsl(35 90% 60%);background:hsl(35 90% 56% / .1)}
+@media(max-width:700px){
+  .starttiles{grid-template-columns:1fr}
+  .kindtile{padding:16px;grid-template-columns:auto 1fr;gap:4px 12px}.kindtile .kt{font-size:21px}.kindtile .kico{width:48px;height:48px}.kindtile .kico .ic{width:25px;height:25px}
+  .savedcols{grid-template-columns:1fr}
+  .pagehead h1,.cvhead h1{font-size:20px}
+}
+
+/* Schrittleiste */
+.stepper{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.stp{display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:5px 14px 5px 6px;color:var(--muted);font-size:13px;background:transparent}
+.stp i{font-style:normal;width:24px;height:24px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:12px;flex:none}
+.stp i .ic{width:14px;height:14px}
+.stp.done{color:var(--text)}.stp.done i{border-color:var(--accent);color:var(--accent)}
+.stp.on{border-color:var(--accent);color:var(--accent);background:var(--dim);font-weight:700;box-shadow:0 0 14px var(--dim)}.stp.on i{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.stepper .sep{width:22px;height:1px;background:var(--line);flex:none}
+.cvhead{margin:2px 0 2px}
+@media(max-width:700px){
+  .stepper{gap:6px;flex-wrap:nowrap}
+  .stp{padding:5px;gap:6px;min-width:0}.stp:not(.on) .stn{display:none}.stp.on{flex:1 1 auto;min-width:0}.stp .stn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .stepper .sep{width:8px}
+}
+
+/* Karten (Dateien, Regeln, Kontrolle, Kacheln) */
+.cvcard{background:var(--panel);border:1px solid color-mix(in srgb,var(--accent) 50%,var(--line));border-radius:14px;box-shadow:0 0 18px color-mix(in srgb,var(--accent) 9%,transparent);overflow:hidden;min-width:0}
+.cvchead{display:flex;gap:12px;align-items:center;padding:10px 14px;background:color-mix(in srgb,var(--accent) 9%,var(--panel2));border-bottom:1px solid color-mix(in srgb,var(--accent) 32%,var(--line));min-width:0}
+.cvchead h2{margin:0;font-size:15px;color:var(--accent);text-shadow:0 0 10px var(--glow);display:flex;align-items:center;flex:none}
+.cvico{width:34px;height:34px;border-radius:9px;border:1px solid var(--accent);display:grid;place-items:center;color:var(--accent);background:var(--dim);flex:none}
+.cvico .ic{width:20px;height:20px}
+.cvsum{margin-left:auto;text-align:right;min-width:0;overflow-wrap:anywhere}
+.cvcbody{padding:14px 16px;display:grid;gap:12px;min-width:0}
+.cvcard .cvgrid{border:0;border-radius:0;background:transparent}
+.cvcard .cvr:last-child{border-bottom:0}
+.cvtable{display:grid;gap:14px;min-width:0}
+.cvtable>.cvempty{padding:26px 8px}
+.cvcols{display:grid;grid-template-columns:130px minmax(0,1fr) 30px minmax(0,1.45fr);gap:0 10px;padding:0 15px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.cvstep{display:grid;gap:14px;min-width:0}
+.cvfiles .cvsum b{color:var(--text)}
+.cvfiles .btns{margin-top:2px}
+.rootbtns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.rootbtns:empty{display:none}
+.rootbtn{padding:9px 14px;border-radius:10px;gap:10px;border-color:var(--accent);background:var(--dim);color:var(--accent);font-weight:700}
+.rootbtn small{font-weight:400;font-size:11px}
+.rootbtn .ic{width:1.4em;height:1.4em}
+.cvlow{border:1px solid #ffd24a88;border-radius:var(--r);padding:8px 10px;color:var(--warn);background:rgba(255,210,74,.06);line-height:1.45;margin-top:6px}
+.cvlow .ic{margin-right:4px}
+.cvcols,.cvlegend{margin-bottom:-6px}
+
+/* Karte Audio = orange (nur sie; in der Audio-Welt ist ohnehin alles orange) */
+.cvcard.sec-audio.hue-audio{border-color:color-mix(in srgb,var(--accent) 50%,var(--line))}
+.cvcard.sec-audio .cvgrid{background:transparent}
+.sec-audio .cvact.copy{color:var(--text)}
+
+/* Kacheln Wie umwandeln? */
+.cvtiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}
+.cvtile .tbig{font-size:21px;font-weight:700;color:var(--accent);text-shadow:0 0 12px var(--glow);line-height:1.2;overflow-wrap:anywhere}
+.tgrp{display:grid;gap:6px;min-width:0}
+.tgrp>.lt{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.pills{display:flex;gap:6px;flex-wrap:wrap}
+.pill{border:1px solid var(--line);border-radius:999px;padding:5px 13px;font-size:13px;color:var(--muted);background:transparent}
+.pill.on{border-color:var(--accent);color:var(--accent);background:var(--dim);font-weight:700}
+.pill:disabled{opacity:.4}
+.opt{flex-direction:row;align-items:flex-start;gap:10px;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:13px;color:var(--text);text-transform:none;letter-spacing:normal;cursor:pointer}
+.opt:before{content:none}
+.opt>span{display:grid;gap:1px}.opt b{font-weight:600}.opt small{font-size:11.5px}
+.opt.on{border-color:var(--accent);background:var(--dim)}
+.opt.bad b{color:var(--bad)}.opt.bad.on{border-color:var(--bad);background:rgba(255,77,94,.1)}
+.opt input{margin-top:2px}
+.cvresult{display:flex;gap:10px;align-items:center;border:1px solid var(--accent);border-radius:12px;padding:12px 16px;background:var(--panel2);box-shadow:0 0 22px var(--dim);line-height:1.5}
+.cvresult .ic{width:1.5em;height:1.5em;color:var(--accent);flex:none}
+@media(max-width:1000px){.cvtiles{grid-template-columns:1fr}}
+
+/* allgemeine Regeln (Schritt Regeln, Details, Einstellungen) */
+.trkglobal{display:grid;gap:8px}
+.trkghead{display:flex;align-items:center;gap:6px}
+.trkgrule{margin:0;padding:8px 10px;border:1px solid var(--line);border-radius:10px;flex-wrap:wrap}
+.trkgrule .trkgtxt{flex:1;min-width:200px}
+.trkgrule.off .trkgtxt{opacity:.55;text-decoration:line-through}
+.trkrules.open{border:0;padding:0}
+.trkrules p.cap,.cvencf .cap{color:var(--warn)}
+.cvencf{display:grid;gap:8px}
+button.cvenc{background:transparent}
+.cvpop-b .cvencf{min-width:0}
+
+/* Leiste unten in den Schritten 1 bis 3 */
+#wizNav .spacer{flex:1}
+#wizNav #wizInfo{flex:1 1 300px;min-width:180px;font-size:12.5px;line-height:1.4;overflow-wrap:anywhere}
+@media(max-width:700px){
+  #wizNav{gap:6px}#wizNav #wizInfo{order:-1;flex:1 1 100%}#wizNav .spacer{display:none}#wizNav #wizNext{flex:1 1 auto;justify-content:center;padding:10px 12px}#wizNav #wizBack{flex:0 0 auto}
+  #wizNav #wizDiscard .lbl2{display:inline}
+}
+.cvcbody h4{margin:6px 0 0;font-size:13px}
+.cvcbody .trkrule:first-of-type{border-top:0}
+.cvhead h1{display:block}.cvhead h1 button.info{vertical-align:middle}
+@media(max-width:700px){.cvcols{display:none}.cvcols,.cvlegend{margin-bottom:0}}
+
+/* ===== 0.3.3: Namensliste, Warteschlange verwalten, Bibliothek-Scan, Matrix-Regen ===== */
+/* alle neuen Dateinamen einzeilig (Karte „Dateiname“ in der Kontrolle) */
+.cvnamelist{max-height:min(46vh,340px);overflow:auto;border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent);padding:8px 14px 10px;font-size:13px}
+.cvnlh{margin-bottom:4px}
+.cvnl{display:grid;grid-template-columns:minmax(0,1fr) 18px minmax(0,1fr);gap:0 8px;align-items:baseline;line-height:1.7}
+.cvnl .o,.cvnl .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.cvnl .o{color:var(--muted)}.cvnl .ar{color:var(--accent);text-align:center}
+.cvnl.bad .n{color:var(--bad)}.cvnlh .bad{color:var(--bad)}
+@media(max-width:700px){.cvnamelist{padding:8px 12px 10px;font-size:11.5px}.cvnl{grid-template-columns:minmax(0,1fr) 14px minmax(0,1fr);gap:0 4px}}
+
+/* Warteschlange: verschieben, anhalten, pausieren */
+.qmove{display:inline-flex;gap:2px;flex-wrap:wrap}
+.qmove button{padding:2px 8px}
+.qmove .flip{display:inline-flex;transform:rotate(180deg)}
+#pauseQueue.on{border-color:var(--warn);color:var(--warn);background:rgba(255,210,74,.08)}
+#queuePaused{margin:10px 0 0}
+.jn-pause{display:inline-block;margin-bottom:6px;padding:1px 10px;border:1px solid var(--warn);color:var(--warn);border-radius:999px;font-size:12px;font-weight:700}
+#restoreDlg p{margin:0}
+@media(max-width:700px),(max-height:520px){
+  #restoreDlg,#restoreDlg .dlg{height:auto}
+  #restoreDlg{margin:auto;width:min(94vw,440px);max-width:94vw;height:fit-content;max-height:90dvh;border:1px solid var(--accent);border-radius:10px}
+}
+
+/* Bibliothek-Scan */
+#cvScan .cvchead button{margin-left:6px}
+@media(max-width:700px){.cvchead{flex-wrap:wrap;gap:6px 10px}.cvchead h2{flex:1 1 0;min-width:0;font-size:14px;line-height:1.3}.cvchead .cvsum{flex:1 1 100%;order:3;overflow-wrap:anywhere}#cvScan .cvchead button{margin-left:0}}
+.libprog .bar{margin:4px 0}
+.liberctl{display:flex;gap:10px 16px;align-items:center;flex-wrap:wrap}
+.liberctl select{width:auto;padding:4px 26px 4px 8px}
+.liblist{display:grid;gap:6px;max-height:min(60vh,520px);overflow:auto;padding-right:2px}
+.librow{display:flex;flex-direction:row;align-items:flex-start;gap:10px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:0 0 0 calc(var(--d,0) * 14px);text-transform:none;letter-spacing:normal;color:var(--text);font-size:13px;cursor:pointer;background:var(--panel2)}
+.librow:before{content:none}
+.librow.on{border-color:var(--accent);background:var(--dim)}
+.librow.group{border-style:dashed}
+.librow input{margin-top:3px}
+.libmain{display:grid;gap:3px;min-width:0;flex:1}
+.libname{display:flex;gap:6px;align-items:center;flex-wrap:wrap;overflow-wrap:anywhere}
+.libname .ic{color:var(--accent)}
+.cvsource{margin:0 0 12px}
+details.cvsrc{border:1px solid color-mix(in srgb,var(--accent) 32%,var(--line));border-radius:var(--r);background:color-mix(in srgb,var(--accent) 5%,var(--panel))}
+details.cvsrc>summary{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;list-style:none;font-size:13px}
+details.cvsrc>summary::-webkit-details-marker{display:none}
+.cvsrctxt{flex:1;min-width:0;overflow-wrap:anywhere;line-height:1.45}
+.cvsrcmore:after{content:" ▾"}details.cvsrc[open] .cvsrcmore:after{content:" ▴"}
+.cvsrclist{border-top:1px solid var(--line);padding:6px 14px 10px;display:flex;flex-direction:column;gap:6px;max-height:260px;overflow:auto}
+.cvsrcfile{display:flex;flex-direction:column;gap:1px}.cvsrcfile .n{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cvhint{display:block;margin-top:8px;line-height:1.45}.cvhint.good{color:var(--accent)}.cvhint.warn{color:var(--warn)}.cvhint.plain{color:var(--muted)}
+.cvhint .ic{width:1em;height:1em;vertical-align:-.12em}
+.scanhelp{margin:0 0 10px;font-size:13.5px;line-height:1.5}
+.liblegend{margin:2px 0 6px}
+.libpar{color:var(--muted);font-weight:600}
+.libsep{color:var(--faint);margin:0 2px}
+.libfilters{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 2px}
+button.libfil{font:inherit;font-size:12px;cursor:pointer;padding:5px 11px;border-radius:999px;background:transparent;color:var(--muted);border:1px solid var(--line);box-shadow:none}
+button.libfil.on{color:var(--accent);border-color:var(--accent);background:var(--dim);text-shadow:0 0 8px var(--glow)}
+button.libfil:not(.on){opacity:.75}
+button.libfil:disabled{opacity:.4;cursor:default}
+.libhints{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+.libfoot{margin-top:2px;align-items:center}
+.libfoot button.primary{padding:9px 16px}
+.libfacts{overflow-wrap:anywhere}
+@media(max-width:700px){.librow{margin-left:calc(var(--d,0) * 8px)}}
+
+/* Matrix-Regen: durchsichtige Fläche über einer Karte */
+.rainhost{position:relative}
+canvas.rain{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;border-radius:inherit;z-index:3}
+@media(prefers-reduced-motion:reduce){canvas.rain{display:none}}
+/* Fortschrittsbalken mit Regen: dicker, die Füllung ist dunkel und trägt den Regen (Canvas), die helle Kante läuft vorn mit */
+.bar.rain{position:relative;height:22px;border-radius:4px;border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);background:color-mix(in srgb,var(--accent) 7%,var(--bg))}
+.bar.rain>i{background:color-mix(in srgb,var(--accent) 18%,transparent);box-shadow:0 0 12px var(--dim)}
+canvas.rainbar{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}

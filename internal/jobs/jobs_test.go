@@ -41,6 +41,25 @@ func TestOutputPathPatternAndRules(t *testing.T) {
 	}
 }
 
+func TestOutputPathKeepStructure(t *testing.T) {
+	info := &ffmpeg.Info{Streams: []ffmpeg.Stream{{Type: "video", Codec: "h264", Height: 1080}}}
+	j := &Job{Kind: "video", item: Item{Path: "/video2/Show/Season 01/a.mkv", Rel: "Show/Season 01/a.mkv"}, req: &Request{
+		Video:  build.VideoOpts{Codec: "hevc", Container: "mkv"},
+		Output: OutputOpts{Dir: "/out", Structure: "keep"}}}
+	if got := outputPath(j, info); got != filepath.FromSlash("/out/Show/Season 01/a.mkv") {
+		t.Errorf("Struktur: %q", got)
+	}
+	// ein Muster mit Unterordnern ersetzt die Struktur statt sie zu verdoppeln
+	j.req.Output.Pattern = "Serien/{filename}"
+	if got := outputPath(j, info); got != filepath.FromSlash("/out/Serien/a.mkv") {
+		t.Errorf("Muster mit Ordner: %q", got)
+	}
+	j.req.Output.Structure = "flat"
+	if got := outputPath(j, info); got != filepath.FromSlash("/out/Serien/a.mkv") {
+		t.Errorf("flach: %q", got)
+	}
+}
+
 // A fake ffmpeg that refuses everything with hardware decoding: the job must quietly fall through
 // the Quick Sync variants to software decoding and end up "done" without a leftover error.
 func TestHWDecodeFallbackIsQuiet(t *testing.T) {

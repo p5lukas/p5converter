@@ -18,12 +18,11 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
     const ov = async () => p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     eq(name, 'Neuigkeiten nicht in der Kopfzeile', await p.locator('header.top #newsBtn').count(), 0);
     eq(name, 'Neuigkeiten in der Fußzeile', await p.locator('#footNews').count(), 1);
-    await L.setWorld(p, 'video');
     // Hardware-Kachel: eine Zeile je Hardware, Gründe eingeklappt
     eq(name, 'Hardware-Zeilen', (await p.locator('#hwList > .hw, #hwList > details.hwoff').count()) > 0, true);
     eq(name, 'Gründe eingeklappt', await p.locator('#hwList details[open]').count(), 0);
     await p.screenshot({ path: `${L.SHOTS}/t-${name}-0-start.png`, fullPage: true });
-    await p.click('#startFlow'); await p.waitForTimeout(300);
+    await L.enter(p, 'video');
     await L.addFile(p, 'multi.mkv'); await L.addFile(p, 'multi2.mkv');
     await L.goStep(p, 'dest');
     await p.selectOption('#exists', 'overwrite'); await p.waitForTimeout(100);
@@ -31,6 +30,17 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
     await p.screenshot({ path: `${L.SHOTS}/t-${name}-1-dest.png` });
     await p.selectOption('#exists', 'rename');
     await L.goStep(p, 'name');
+    // Namensliste: nur wenn umbenannt wird, dann alle Dateien einzeilig („alt → neu“)
+    eq(name, 'ohne Umbenennen keine Namensliste', await p.locator('.cvnamelist').count(), 0);
+    await p.fill('#pattern', '{filename} [X]'); await p.waitForTimeout(300);
+    await L.goStep(p, 'summary'); await p.waitForSelector('.cvnamelist .cvnl', {timeout: 8000}); await p.waitForTimeout(500);
+    eq(name, 'Namensliste: eine Zeile je Datei (2)', await p.locator('.cvnamelist .cvnl').count(), 2);
+    const nl = (await p.locator('.cvnamelist').textContent()).replace(/\s+/g, ' ');
+    if (!/multi\.mkv.*multi \[X\]\.mkv/.test(nl) || !/multi2\.mkv.*multi2 \[X\]\.mkv/.test(nl)) errs.push(name + ': Namensliste „alt → neu“ unerwartet: ' + nl);
+    eq(name, 'Namensliste einzeilig (Ellipse, keine Umbrüche)', await p.evaluate(() => [...document.querySelectorAll('.cvnamelist .cvnl')].every(r => r.getBoundingClientRect().height < 40)), true);
+    if (await ov() > 0) errs.push(`${name}: Überlauf mit Namensliste: ${await ov()}px`);
+    await p.screenshot({ path: `${L.SHOTS}/t-${name}-1b-namensliste.png`, fullPage: true });
+    await L.goStep(p, 'name'); await p.fill('#pattern', ''); await p.waitForTimeout(200);
     await L.goStep(p, 'video');
     await L.goStep(p, 'tracks');
     await p.waitForSelector('.trkviews'); await p.click('.trkviews button:has-text("Einzelne Dateien")'); await p.waitForSelector('#trackEditor .trkcard');
@@ -47,7 +57,7 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
     const expand = async i => { if (!(await card(i).locator('.trkadv').count())) { await card(i).locator('.trkmore').click(); await p.waitForTimeout(150); } };
     // Titel der 1. Tonspur, 2. Tonspur automatisch, 1. Untertitel Forced (alles unter „Erweitert“)
     await expand(0); await card(0).locator('.trkadv input:not([type])').first().fill('Deutsch Stereo'); await card(0).locator('.trkadv input:not([type])').first().dispatchEvent('change'); await p.waitForTimeout(200);
-    await expand(1); await card(1).locator('.trkadv input[type=radio]').check(); await p.waitForTimeout(200);
+    await expand(1); await card(1).locator('.trkadv input[type=checkbox]').first().check(); await p.waitForTimeout(200);
     await expand(2); await card(2).locator('.trkadv input[type=checkbox]').first().check(); await p.waitForTimeout(200);
     eq(name, 'bearbeitete Karten markiert', await p.locator('#trackEditor .trkcard.edited').count() >= 3, true);
     // Neu kodieren: Empfehlung und Zielbitrate sichtbar
@@ -60,7 +70,7 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
     eq(name, 'Änderungen auf 2. Datei übertragen', await p.locator('#trackEditor .trkcard.edited').count() >= 3, true);
     // Zusammenfassung nennt die Änderung
     await L.goStep(p, 'summary');
-    await p.waitForTimeout(600); await p.click('#cvFileDetails summary'); await p.waitForTimeout(200);
+    await p.click('#cvStepper [data-step=files]'); await p.waitForTimeout(600); await p.click('#cvFileDetails summary'); await p.waitForTimeout(200);
     eq(name, 'beide Dateien melden geänderte Spuren', await p.locator('#fileList [data-tr]').count(), 2);
     // nur Desktop: wirklich konvertieren und das Ergebnis prüfen
     if (name === 'desktop') {
@@ -79,7 +89,7 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
       }
     }
     // Assistent: Datei mit mehreren Sprachen und einem Forced-Untertitel ohne Markierung
-    await L.goStep(p, 'files'); await p.click('#clearFiles'); await L.addFile(p, 'hint.mkv'); await L.goStep(p, 'tracks'); await p.waitForSelector('.trkviews'); await p.click('.trkviews button:has-text("Einzelne Dateien")'); await p.waitForSelector('#trackEditor .trkcard');
+    await L.goStep(p, 'files'); await p.click('#cvStepper [data-step=files]'); await p.waitForTimeout(300); await p.click('#clearFiles'); await L.addFile(p, 'hint.mkv'); await L.goStep(p, 'tracks'); await p.waitForSelector('.trkviews'); await p.click('.trkviews button:has-text("Einzelne Dateien")'); await p.waitForSelector('#trackEditor .trkcard');
     const hintTxt = await p.textContent('#trackEditor .trkhints');
     if (!/Nur Deutsch und Englisch behalten/.test(hintTxt) || !/Als Forced markieren/.test(hintTxt)) errs.push(name + ': Assistent-Hinweise fehlen: ' + hintTxt);
     await p.screenshot({ path: `${L.SHOTS}/t-${name}-3b-hints.png`, fullPage: true });
@@ -87,7 +97,7 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
     eq(name, 'Forced-Hinweis erledigt', /Als Forced markieren/.test(await p.textContent('#trackEditor')), false);
     while (await p.getByRole('button', { name: 'Nur Deutsch und Englisch behalten' }).count()) { await p.getByRole('button', { name: 'Nur Deutsch und Englisch behalten' }).first().click(); await p.waitForTimeout(300); }
     eq(name, 'Fremdsprachen entfernt (1 Ton + 2 Untertitel)', await p.locator('#trackEditor .trkcard.off').count(), 3);
-    await L.goStep(p, 'files'); await p.click('#clearFiles'); await L.addFile(p, 'long.mkv');
+    await L.goStep(p, 'files'); await p.click('#cvStepper [data-step=files]'); await p.waitForTimeout(300); await p.click('#clearFiles'); await L.addFile(p, 'long.mkv'); await L.toCheck(p);
     // Alles zurücksetzen
     await p.click('#resetAll'); await p.waitForTimeout(250);
     eq(name, 'Rücksetz-Dialog offen', await p.isVisible('#resetDlg'), true);

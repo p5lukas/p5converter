@@ -179,6 +179,9 @@ func (t Tools) Probe(ctx context.Context, path string) (*Info, error) {
 			Width: s.Width, Height: s.Height, PixFmt: s.PixFmt, BitRate: atoi(s.BitRate),
 			SampleRate: int(atoi(s.SampleRate)), Default: s.Disposition["default"] == 1, Forced: s.Disposition["forced"] == 1,
 			AttachedPic: s.Disposition["attached_pic"] == 1}
+		if st.BitRate == 0 {
+			st.BitRate = statTag(tags, "bps") // MKV: mkvmerge writes the bitrate as a tag (BPS), ffprobe leaves bit_rate empty
+		}
 		if st.Type == "subtitle" {
 			st.Frames, st.Bytes = statTag(tags, "number_of_frames"), statTag(tags, "number_of_bytes")
 		}

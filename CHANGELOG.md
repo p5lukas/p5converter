@@ -1,5 +1,140 @@
 # Änderungen
 
+## 0.3.6 – 2026-10-22
+
+**Behoben: Verlauf und Warteschlange**
+- **Geöffnete Details bleiben offen:** „ffmpeg-Befehl und Log“ schloss sich im Verlauf sofort wieder (die Liste wurde alle 3 Sekunden komplett neu aufgebaut, das innere Fenster merkte sich seinen Zustand nicht). Jetzt bleiben unveränderte Einträge als Knoten stehen: offene Details, der Scrollstand in den Textfeldern und eine **Textauswahl** bleiben erhalten (Kopieren und Ansehen sind möglich); Gleiches gilt für die Karten der Warteschlange (Kopf und Balken werden laufend aktualisiert, die Details nur bei neuem Log)
+- **Die Seite wanderte von selbst weiter:** nachgestellt (Scrollposition 500 → 379 → 327 px, während Aufträge liefen und fertig wurden): Warteschlange und Liste änderten ihre Höhe über dem sichtbaren Teil, der Browser rückte die Seite mit dem Scroll-Anker nach. Jetzt merkt sich die Seite das erste sichtbare Element und hält es nach jedem Neuzeichnen an derselben Stelle (in allen Browsern gleich, auch Safari)
+
+**Neu: Kopieren-Knöpfe**
+- Bei „ffmpeg-Befehl und Log“ (Verlauf) und in den Details der Warteschlange: **Befehl kopieren**, **Log kopieren**, **Alles kopieren**; mit Ausweg ohne Zwischenablage-Schnittstelle (z. B. über `http` im LAN)
+
+**Neu: Übersicht der Quelldateien in den Schritten „Regeln“ und „Wie umwandeln?“**
+- Eine Zeile unter der Schrittleiste: Dateien, Größe, Video-Codec, Auflösung, Bit-Tiefe, Ton- und Untertitelformate („6 Dateien · 25,6 GB · Video: H.264 · 1080p · Ton: DTS-HD MA ×5 · Untertitel: SRT, ASS“); ein Klick zeigt jede Datei. Nur Fakten
+- In Schritt 3 steht an der Codec-Wahl ein **Hinweis zur Quelle**: „Deine Quelle: H.264 → H.265. Das spart meist Platz.“ bzw. „Deine Quelle ist schon H.265. Neu kodieren spart kaum Platz …“, ohne Schätzung der Ersparnis
+
+**Geändert**
+- **Untertitel-Regeln entfernt:** keine Regeln „Wenn der Untertitel … → entfernen“ mehr in Einstellungen → Regeln, in Schritt 2 und in den Details, und der Vorschlag „Bild-Untertitel entfernen“ ist weg. Untertitel entscheidest du je Datei oder Gruppe (Schritt 4) und über „Meine Sprach-Wünsche“; Regeln für **Ton** bleiben. Bereits gespeicherte Untertitel-Regeln werden **ignoriert, aber nicht gelöscht**
+- Statt des Sterns steht für „Meine Sprach-Wünsche“ und die Einstellungsseite „Audio & Untertitel“ eine **Weltkugel** (neues Symbol `lang`); der Stern bleibt bei „Voreinstellungen“
+
+**Doku**
+- README-Bilder neu (Startseite mit Regen-Balken, Kontrolle & Start, Verlauf mit Warteschlange, Handy), englische Kurzfassung und Windows-Abschnitt aktualisiert, Release-Text ohne veralteten Hinweis auf eine fehlende Windows-App
+
+**Intern**
+- Hilfen `keepView`, `syncChildren`, `reconcileCards` (`web/app.js`); `LIB.sourceFacts/sourceLine/convertHint` mit Node-Tests; neue UI-Prüfungen `ui-check-historyscroll.js` (Details, Scrollstand, Auswahl, Seitenposition, Kopieren) und `ui-check-source.js`; `ui-check-rules.js` prüft, dass gespeicherte Untertitel-Regeln ignoriert und erhalten bleiben
+
+## 0.3.5 – 2026-10-21
+
+**Behoben: Umwandeln brach bei Dateien mit Anhängen (Schriftarten) ab**
+- MKV-Dateien mit eingebetteten Schriften (typisch bei ASS-Untertiteln, z. B. Chernobyl S01E01) scheiterten mit „Received a packet for an attachment stream“ → „Error submitting a packet to the muxer: Invalid argument“ → „Conversion failed“, nach 0 Bildern; die Rückfälle (Quick Sync lesen) halfen deshalb nie. Ursache: die Anhänge (`-map 0:t?`) standen **vor** den kopierten Tonspuren, das lehnt der Matroska-Muxer von ffmpeg 6.1 ab. Jetzt stehen sie als **letzte Spur**; Regressionstest mit echter ffmpeg-Datei (Anhang, Ton kopieren und umwandeln, Video kopieren und kodieren)
+
+**Neu: „Wo lohnt sich das Umwandeln?“ (vorher „Ordner prüfen“)**
+- In Schritt 1 (Video) gibt es eine **eigene Karte** unter den Dateien: Überschrift „Tipps: Wo lohnt sich das Umwandeln?“, zwei Sätze Erklärung (schaut in einen Ordner samt Unterordnern, zeigt, welche Ordner sich eher lohnen; verändert nichts; nur ganze Ordner) und der Knopf **„Ordner untersuchen …“**. Der alte Knopf in der Dateien-Karte entfällt; das Ergebnis heißt „Ergebnis: Wo lohnt sich das Umwandeln?“
+
+**Geändert: Ergebnisliste verständlicher**
+- Staffelordner (Season 01, Staffel 2, Specials …) zeigen jetzt die **Serie davor: „Chernobyl (2019) › Season 01“**, auch in der Liste nach Bitrate oder Größe; im Ordnerbaum nur, wenn die Sammelzeile der Serie nicht direkt darüber steht (bisher fehlte der Serienname bei Serien mit nur einer Staffel, außer im Tooltip). Zusätze wie `{tvdb-123}` fallen in der Anzeige weg (Tooltip: voller Pfad)
+- In der flachen Liste steht der Ort („in Serien“); eine **Erklärzeile** über der Liste sagt, was die Zeilen und die grünen/grauen Kärtchen bedeuten; Zahlen mit Tausenderpunkt (15.360 Dateien); auf dem Handy brechen die Kartenüberschriften um
+
+**Intern**
+- `TestAttachmentsDoNotBreakMuxing`; Node-Test für Anzeigenamen (`LIB.title`, `seasonLike`, `clean`, `nf`); `ui-check-library.js` prüft Erklär-Karte, Serie › Staffel, Tooltip und Erklärzeile
+
+## 0.3.4 – 2026-10-21
+
+**Neu: Fortschrittsbalken mit Matrix-Regen**
+- Laufende Aufträge zeigen einen **dickeren Balken (22 px statt 6 px)**, dessen Füllung aus dichtem, fallendem Regen besteht; eine helle Kante läuft vorn mit („Regenfront“). Auf der Startseite (aktueller Auftrag) und im Verlauf (jede laufende Karte). Dazu bleibt der Regen bei erfolgreich fertigem Auftrag
+- Abschaltbar über „Matrix-Regen“; aus bei „Bewegung reduzieren“ und im versteckten Tab; fertige, fehlerhafte und wartende Aufträge haben den normalen Balken; höchstens 6 Balken werden gleichzeitig gezeichnet, nur sichtbare
+
+**Neu: „Verwerfen“ in der Fußleiste (Wizard sauber beenden)**
+- In jedem Schritt (Video 1–4 und Audio) steht in der Fußleiste ein roter Knopf **„✕ Verwerfen“**: er setzt Dateien, Schritt, Regeln, Ziel und Einstellungen dieser Art zurück und führt zur Startseite. Eine Rückfrage kommt nur, wenn schon etwas gewählt ist („Abbrechen und verwerfen?“ mit „Weitermachen“ / „Verwerfen“); ohne Auswahl geht es sofort zur Startseite. Der frühere Knopf „Zurücksetzen“ in Schritt 4 ist dieser Knopf; „Startseite“ lässt die Auswahl wie bisher stehen
+
+**Geändert: Ordnerstruktur im Ziel ab dem Quellordner**
+- „Struktur beibehalten“ rechnet jetzt ab dem **Quellordner (Wurzel, z. B. `/video2`)** statt ab dem im Datei-Browser geöffneten Ordner: aus `/video2/The Lost Room (2006) {tvdb-79637}/Season 01/Datei.mkv` wird im Ziel `The Lost Room (2006) {tvdb-79637}/Season 01/Datei.mkv`, egal ob einzelne Dateien, `Season 01`, die Serie oder „Diesen Ordner (rekursiv)“ gewählt wurde. Ohne Quellordner (Desktop-App) bleibt es beim Elternordner der Auswahl
+- Enthält das Namensmuster selbst Unterordner (z. B. `Serien/…`), **ersetzen** sie die beibehaltene Struktur, damit keine Ordner doppelt entstehen
+
+**Neu: Ordner prüfen – Hinweise als Filter, schneller beim zweiten Mal**
+- Die Hinweise stehen als **Kärtchen** über der Liste (Älterer Codec, Hohe Bitrate, Schwerer Ton / DTS, Bild-Untertitel, Schon klein, je mit Zähler) und lassen sich einzeln an- und abwählen; ein Ordner erscheint, wenn **mindestens ein** gewählter Hinweis zutrifft („Schon klein“ ist standardmäßig aus). Nur „Hohe Bitrate“ gewählt: nach Bitrate sortiert (solange nicht von Hand sortiert)
+- **Merker:** was `ffprobe` über eine Datei gefunden hat, wird mit Größe und Änderungsdatum in `/config/library-cache.json` gemerkt. Ein zweiter Durchlauf liest nur neue oder geänderte Dateien (Anzeige „N von M Dateien kamen aus dem Merker“), gelöschte Dateien werden vergessen; die Ergebnisse sind dieselben Fakten. Ein schnelleres `ffprobe` (kleinere Analyse-Grenzen) wurde **nicht** eingebaut: ohne echte DTS-HD-Dateien lässt sich nicht beweisen, dass die Ergebnisse gleich bleiben
+
+**Intern**
+- `internal/server/library_cache.go`, `relFrom`/`rootOf` in `server.go`; Tests: `TestScanRelFromRoot`, `TestScanRelWithoutRoots`, `TestOutputPathKeepStructure`, `TestLibraryScanCache`, Filter in `tools/test-library.js`; UI-Prüfungen `ui-check-discard.js`, `ui-check-rainbar.js`, Filter und Merker in `ui-check-library.js`
+
+## 0.3.3 – 2026-10-20
+
+**Neu: Warteschlange verwalten**
+- **Reihenfolge ändern:** bei wartenden Aufträgen „Zuerst“, nach vorn und nach hinten (je Art). Die Warteschlange steht jetzt in der Reihenfolge, in der die Aufträge drankommen (oben: läuft oder kommt als Nächstes), nicht mehr „neueste oben“
+- **Anhalten und freigeben** je wartendem Auftrag (er startet erst nach „Freigeben“) und **„Pausieren“ für die ganze Warteschlange**: laufende Aufträge werden fertig, es startet kein neuer; Hinweis im Verlauf und auf der Startseite
+- **Neustart-fest:** wartende und laufende Aufträge stehen in `queue.json` (in `/config`). Nach einem Neustart des Containers fragt das Programm einmal: **„N Aufträge wurden unterbrochen – fortsetzen?“**; unfertige Zieldateien sind schon gelöscht, die Quellen unberührt. Bis zur Entscheidung bleiben sie in der Datei
+
+**Neu: Ordner prüfen („Was lohnt sich?“), nur Video, nur ordnerweise**
+- In Schritt 1 gibt es den Knopf **„Ordner prüfen …“**: ein Ordner wird rekursiv im Hintergrund gelesen (ffprobe, zwei Dateien gleichzeitig, mit Fortschritt und Abbruch) und als **Liste von Ordnern** gezeigt, **nie einzelne Dateien**: je Ordner Dateien, Größe, Codec-Mix, Ø Bitrate, Höhe und **Hinweise** (älterer Codec, hohe Bitrate, schwerer Ton DTS-HD/TrueHD, DTS, Bild-Untertitel, „schon klein“). Über mehreren Ordnern steht eine Sammelzeile („ganzer Ordner · 2 Ordner“, z. B. eine ganze Serie). **Keine Schätzung der Ersparnis**
+- „Nur Ordner mit Hinweisen“ (Standard), Sortierung (Ordnerbaum, Größe, Bitrate, Name); „Ordner übernehmen“ legt den ganzen Ordner rekursiv in Schritt 1 ab (schon vorhandene Dateien doppeln sich nicht)
+
+**Neu: alle neuen Dateinamen einzeilig in der Kontrolle**
+- Wird umbenannt (Namensmuster, Zusatz oder Ersetzung), zeigt die Karte „Dateiname“ alle Dateien einzeilig als „alt → neu“ (lange Namen gekürzt, voller Name als Tooltip, scrollbar); Fehler und doppelte Namen sind rot. Ohne Umbenennen bleibt es bei „bleibt“. Gilt für Video und Audio
+
+**Neu: Matrix-Regen**
+- Ein kurzer Regen (etwa eine Sekunde) läuft über die Karte des aktuellen Auftrags auf der Startseite bzw. über die Warteschlange im Verlauf, wenn ein Auftrag **erfolgreich** beendet ist (Kontrolle bestanden). Abschaltbar unter Einstellungen → Allgemein → „Matrix-Regen“; bei „Bewegung reduzieren“ und bei Fehlern gibt es keinen
+
+**Behoben**
+- Die Seite „Audio & Untertitel“ in den Einstellungen stürzte bei frischen Einstellungen ab (leere Listen kamen als `null`); neue Tests
+
+**Intern**
+- Neu: `internal/jobs/queue.go` (mit Tests), `internal/server/library.go` (mit Tests), `web/library.js`, `web/rain.js`, `noRain` in den Einstellungen, Verlauf `kind=all`; neue UI-Prüfungen `ui-check-library.js`, `ui-check-queue.js`, `ui-check-rain.js`, Node-Test `tools/test-library.js`
+
+## 0.3.2 – 2026-10-20
+
+**Neu: Startseite mit zwei Kacheln statt „Welten“**
+- Die Startseite fragt **„Was möchtest du umwandeln?“** mit den Kacheln **Video** (grün) und **Audio** (orange). Die Umschaltung in der Kopfzeile, der Weltenübergang, die Seite „Welten & Farben“ und die Einstellung „Startansicht“ sind **weg**; es gibt eine Grundfarbe (p5-Grün), nur der Audio-Bereich ist orange
+- **Warteschlange und Verlauf sind eine gemeinsame Liste** mit Abzeichen „Video“/„Audio“; „Alle abbrechen“ gilt für beide, „Parallel“ gibt es je Art. „Gewonnener Platz“ zeigt Video und Audio nebeneinander, getrennt gezählt und getrennt zurücksetzbar. Eine begonnene Auswahl zeigt die Kachel als „weiter“
+
+**Neu: geführter Ablauf für Video in vier Schritten**
+- **1 Dateien:** zuerst der **Quellordner** (Knöpfe mit den Anzeigenamen, z. B. „Filme 4K“; der Datei-Browser öffnet gleich dort). Die **Suche durchsucht immer auch alle Unterordner** (ab 2 Zeichen, ohne Haken). Hier stehen auch die Voreinstellungen: wer eine wählt, **springt direkt zur Kontrolle**
+- **2 Regeln:** die **voreingestellten Regeln** (siehe unten) mit Haken je Regel und „betrifft N Dateien“, Sprach-Wünsche, Regel-Vorschläge zu den gewählten Dateien („Regel: DTS → E-AC-3“ nur für diesen Lauf oder „Immer anwenden“) und eigene Regeln für diesen Lauf
+- **3 Wie umwandeln?:** drei Kacheln **Hardware** (Video-Codec und Encoder als Pillen), **Speichern** (Ort, Struktur, „Wenn die Datei schon da ist“) und **Danach prüfen** (Kästchen mit Erklärung, „Original danach löschen“ rot), darunter die Zusammenfassung als Satz
+- **4 Kontrolle & Start:** die Tabelle „Vorher → Nachher“ mit Startleiste. Oben eine **Schrittleiste** (am Handy nur der aktuelle Schritt beschriftet); alle Schritte lassen sich anklicken, die Auswahl bleibt erhalten
+- Audio bleibt eine einzige Ansicht (Dateien, Satz, Tabelle), jetzt komplett orange
+
+**Neu: Tabelle in vier Karten**
+- **Video** (Video, Container, Qualität), **Audio** (alle Tonspuren, orange), **Untertitel** und **Dateiname** sind eigene Karten mit Symbol, Titel und Kurzfassung („3 Tonspuren · 2 umgewandelt“)
+- **Info-Punkte (i)** an Schritten, Karten, Zeilen, Kacheln und Gruppen (Texte in `web/info.js`; neu u. a. Stufen, Funkel-Markierung, Gruppen, Kontrolle)
+
+**Neu: Einstellungen → Regeln**
+- Allgemeine Regeln für Ton und Untertitel (z. B. „DTS → E-AC-3, 256 kbit/s je Stereo-Paar“, „Bild-Untertitel entfernen“) mit demselben Editor, **auf dem Server in `/config`**, für alle Geräte. Im Ablauf erscheinen sie als voreingestellte Regeln und lassen sich je Lauf abwählen (die Abwahl wandert mit in Voreinstellungen). Hinweis: die Bitrate gilt je Stereo-Paar, **E-AC-3/AC-3 höchstens 640 kbit/s**; bei 5.1 zeigt die Tabelle „Maximum“ mit Erklärung der Rechnung
+
+**Neu: Codec-Kennung mit Bitrate**
+- Spuren heißen jetzt **„Englisch · E-AC-3 (Dolby Digital Plus) 5.1 · 640 kbit/s“** (Kennung zuerst, Markenname in Klammern, bei AAC/FLAC/Opus/MP3 nur einmal; DTS-HD MA/HRA, TrueHD, PGS/VobSub/SRT/ASS sinngemäß). Die Bitrate liest das Programm bei MKV auch aus dem Tag `BPS`, wenn ffprobe sie nicht meldet
+
+**Geändert: Qualität einfacher und sicherer**
+- **„Art des Materials“ ist gestrichen.** Es bleiben die vier festen Stufen (x265 auf der CPU: 17 / 20 / 23 / 27) und der Regler unter „Erweitert“; die Abzüge für Anime, Korn und kleine Auflösung entfallen (sie konnten z. B. CRF 14 ergeben und die Datei größer als die Quelle machen). Die Einstellung „Qualität nach Material“ ist entfernt
+- **Schutz vor größerem Ergebnis:** wird ein neu kodiertes Video **nicht kleiner** als die Quelle, schlägt die Kontrolle an („Ergebnis ist größer als die Quelle (112 %) …, wähle eine kleinere Stufe“), und das **Original wird nie gelöscht**
+- **Hinweis vorher:** ist die Quelle schon klein (unter etwa 4 Mbit/s bei 1080p), steht in der Zeile „Qualität“ ein Hinweis, dass Neukodieren kaum Platz spart
+
+**Geändert**
+- Ziel einer umzuwandelnden Tonspur („→ E-AC-3 … 640 kbit/s“) ist **direkt anklickbar**: kleines Fenster für Format und Bitrate, ohne „⋯“
+- Regel-Vorschläge nennen jetzt E-AC-3 mit 256 kbit/s je Stereo-Paar (statt AC-3 192)
+
+**Behoben**
+- **Standard-Tonspur:** eine zweite Spur ließ sich als Standard markieren, aber nicht wieder abwählen (beide zeigten „Standard“). Jetzt gibt es höchstens eine; ein Klick auf eine andere setzt sie und nimmt allen übrigen den Standard (auch dem aus der Quelldatei oder der Rangliste), ein Klick auf die gesetzte nimmt die eigene Wahl zurück
+
+**Intern**
+- Neu: `trackRules` in den Einstellungen (mit Prüfung und Tests), Verlauf `kind=all`, `checkBigger` in der Kontrolle, `web/planets.js` entfernt; neue UI-Prüfung `tools/ui-check-rules.js`; die UI-Prüfungen laufen durch die vier Schritte
+
+## 0.3.1 – 2026-10-19
+
+**Neu: Suche im Datei-Browser** („+ Dateien“, „+ Ordner“, Zielordner)
+- **Suchfeld** im Fenster: ohne Haken filtert es beim Tippen die Einträge des aktuellen Ordners („3 von 12“); „Alle auswählen“ gilt dann nur für die Treffer
+- **„Auch in Unterordnern“:** sucht ab 2 Zeichen im ganzen Ordner darunter (in der Liste der Quellordner in allen), zeigt den Pfad der Treffer, Dateien lassen sich direkt abhaken und hinzufügen, ein Ordner öffnet sich per Klick. Beim Wählen von Ordnern werden nur Ordner gefunden. Höchstens 300 Treffer, versteckte Ordner werden übersprungen
+- Groß/Klein ist egal, **Umlaute dürfen so oder so getippt werden** („muller“ und „mueller“ finden „Müller“)
+
+**Neu: Anzeigenamen für Quellordner** (Einstellungen → Allgemein → „Namen der Quellordner“)
+- Statt `/video1` steht im Datei-Browser z. B. **„Filme 4K“** (der echte Pfad bleibt als kleiner Zusatz und im Pfadfeld); „Angezeigt als: …“ zeigt den Namen auch in Unterordnern, der Satz „gespeichert …“ nutzt ihn für den Zielordner. Das Template muss dafür nicht geändert werden
+
+**Geändert**
+- Im Datei-Browser führt „hoch“ in einem Quellordner jetzt zur Liste aller Quellordner (vorher war der Knopf dort gesperrt)
+
+**Intern**
+- Neu: `/api/fs/search` (`internal/server/fssearch.go`, mit Tests), `rootNames` in den Einstellungen (mit Test); neue UI-Prüfung `tools/ui-check-browser.js`
+
 ## 0.3.0 – 2026-10-19
 
 **Neu: eine Ansicht statt sechs Schritte („Konvertieren“)**

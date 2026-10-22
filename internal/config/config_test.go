@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -14,18 +15,19 @@ func TestDefaultsPersistAndReload(t *testing.T) {
 		t.Fatalf("persistent=%v existed=%v", st.Persistent(), st.Existed())
 	}
 	s := st.Get()
-	if len(s.Presets) != 2 || s.Worlds["video"].Hue != 270 {
+	if len(s.Presets) != 2 || !s.HWDecode || len(s.TrackRules.Audio) != 0 {
 		t.Fatalf("Standardwerte: %+v", s)
 	}
-	s.Worlds["audio"] = World{Name: "Musik", Hue: 205}
+	s.DefaultOutDir = "/output"
+	s.TrackRules.Audio = append(s.TrackRules.Audio, AudioRule{Codec: "dts", Ch: "any", Action: "encode", To: "eac3", Kbps: 256})
 	s.Presets = append(s.Presets, Preset{Name: "Meins", World: "video", Suggest: true, Values: map[string]any{"vCodec": "hevc", "vCrf": 19.0, "vQuality": "good", "evil": "x"}})
 	if _, err := st.Put(s); err != nil {
 		t.Fatal(err)
 	}
 	st2 := Open(dir) // reload from disk
 	got := st2.Get()
-	if !st2.Existed() || got.Worlds["audio"].Name != "Musik" || got.Worlds["audio"].Hue != 205 {
-		t.Errorf("nicht gespeichert: %+v", got.Worlds)
+	if !st2.Existed() || got.DefaultOutDir != "/output" || len(got.TrackRules.Audio) != 1 || got.TrackRules.Audio[0].To != "eac3" || got.TrackRules.Audio[0].Kbps != 256 {
+		t.Errorf("nicht gespeichert: %+v", got)
 	}
 	last := got.Presets[len(got.Presets)-1]
 	if last.Name != "Meins" || last.ID == "" || last.Values["vCrf"] != 19.0 || last.Values["vQuality"] != "good" {
@@ -39,8 +41,12 @@ func TestDefaultsPersistAndReload(t *testing.T) {
 func TestValidateRejects(t *testing.T) {
 	base := Defaults()
 	cases := map[string]func(s *Settings){
-		"hue":         func(s *Settings) { w := s.Worlds["audio"]; w.Hue = 400; s.Worlds["audio"] = w },
-		"name leer":   func(s *Settings) { w := s.Worlds["audio"]; w.Name = "  "; s.Worlds["audio"] = w },
+		"regel codec": func(s *Settings) { s.TrackRules.Audio = []AudioRule{{Codec: "xyz", Action: "drop"}} },
+		"regel ziel":  func(s *Settings) { s.TrackRules.Audio = []AudioRule{{Codec: "dts", Action: "encode", To: "wav"}} },
+		"regel kbps": func(s *Settings) {
+			s.TrackRules.Audio = []AudioRule{{Codec: "dts", Action: "encode", To: "ac3", Kbps: 900}}
+		},
+		"regel sub":   func(s *Settings) { s.TrackRules.Sub = []SubRule{{Kind: "image", Action: "encode"}} },
 		"parallel":    func(s *Settings) { s.Concurrency = 99 },
 		"preset name": func(s *Settings) { s.Presets[0].Name = "" },
 		"preset welt": func(s *Settings) { s.Presets[0].World = "x" },
@@ -86,7 +92,7 @@ func TestDuplicateIDsGetNewOnes(t *testing.T) {
 
 func TestVerifyDefaults(t *testing.T) {
 	// Einstellungen aus der Zeit vor 0.1.4 haben kein "verify": A und B an
-	out, err := Validate(Settings{Worlds: Defaults().Worlds, WorldOrder: []string{"audio", "video"}, StartWorld: "last", PreferredBackend: "auto"})
+	out, err := Validate(Settings{PreferredBackend: "auto"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,5 +146,73 @@ func TestTrackPrefsCleanedAndLimited(t *testing.T) {
 	got, err := Validate(p)
 	if err != nil || got.Presets[0].Values["vTrkRules"] == nil || got.Presets[0].Values["bogus"] != nil {
 		t.Errorf("vTrkRules muss in Voreinstellungen erlaubt sein: %+v %v", got.Presets, err)
+	}
+}
+
+func TestRootNames(t *testing.T) {
+	dir := t.TempDir()
+	st := Open(dir)
+	s := st.Get()
+	s.RootNames = map[string]string{"/video1": "  Filme 4K ", "/video2": "", "": "x", "/audio1": "Musik"}
+	if _, err := st.Put(s); err != nil {
+		t.Fatal(err)
+	}
+	got := Open(dir).Get().RootNames
+	if len(got) != 2 || got["/video1"] != "Filme 4K" || got["/audio1"] != "Musik" {
+		t.Errorf("Anzeigenamen: %v", got)
+	}
+	s.RootNames = map[string]string{"/video1": strings.Repeat("x", 41)}
+	if _, err := st.Put(s); err == nil {
+		t.Error("zu langer Name wurde akzeptiert")
+	}
+}
+
+// Regeln: leere Felder bekommen Standardwerte, bei „kopieren/entfernen“ bleibt kein Ziel stehen; alte Einstellungen mit Welten-Feldern laden weiter.
+func TestTrackRulesCleaned(t *testing.T) {
+	out, err := Validate(Settings{PreferredBackend: "auto",
+		TrackRules: TrackRules{Audio: []AudioRule{{Action: "drop", To: "ac3", Kbps: 200}, {Codec: "truehd", Action: "encode", To: "ac3"}}, Sub: []SubRule{{Action: "drop"}}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := out.TrackRules.Audio
+	if a[0].Codec != "any" || a[0].Ch != "any" || a[0].To != "" || a[0].Kbps != 0 || a[1].Kbps != 0 || out.TrackRules.Sub[0].Kind != "any" {
+		t.Errorf("Regeln: %+v", out.TrackRules)
+	}
+	var old Settings
+	if err := json.Unmarshal([]byte(`{"worlds":{"audio":{"name":"x","hue":140}},"worldOrder":["video","audio"],"startWorld":"video","noCrfSuggest":true,"preferredBackend":"auto"}`), &old); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Validate(old); err != nil {
+		t.Errorf("alte Einstellungen müssen ladbar bleiben: %v", err)
+	}
+	if out.TrackRules.Audio == nil {
+		t.Error("nil-Liste")
+	}
+}
+
+// Frische Einstellungen schicken leere Listen statt null (die Oberfläche ruft .slice() darauf auf).
+func TestDefaultsHaveNoNullLists(t *testing.T) {
+	b, _ := json.Marshal(Open(t.TempDir()).Get())
+	for _, k := range []string{`"audioKeep":null`, `"subKeep":null`, `"audioDefault":null`, `"subDefault":null`, `"trackRules":{"audio":null`} {
+		if strings.Contains(string(b), k) {
+			t.Errorf("null statt leerer Liste: %s", k)
+		}
+	}
+}
+
+// Der Matrix-Regen ist standardmäßig an (noRain = false) und lässt sich ausschalten; das Feld bleibt gespeichert.
+func TestNoRainDefaultAndSaved(t *testing.T) {
+	dir := t.TempDir()
+	st := Open(dir)
+	if st.Get().NoRain {
+		t.Fatal("Regen sollte standardmäßig an sein")
+	}
+	s := st.Get()
+	s.NoRain = true
+	if _, err := st.Put(s); err != nil {
+		t.Fatal(err)
+	}
+	if !Open(dir).Get().NoRain {
+		t.Error("noRain nicht gespeichert")
 	}
 }

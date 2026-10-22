@@ -35,8 +35,11 @@ func historyEntry(j jobs.Job) history.Entry {
 
 func historyKind(w http.ResponseWriter, r *http.Request) (string, bool) {
 	k := r.URL.Query().Get("kind")
-	if k != "audio" && k != "video" {
-		httpErr(w, 400, "kind muss audio oder video sein")
+	if k == "" {
+		k = "all"
+	}
+	if k != "audio" && k != "video" && k != "all" {
+		httpErr(w, 400, "kind muss audio, video oder all sein")
 		return "", false
 	}
 	return k, true
@@ -54,8 +57,8 @@ func (s *Server) historyClear(w http.ResponseWriter, r *http.Request) {
 	var b struct {
 		Kind string `json:"kind"`
 	}
-	if json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&b) != nil || (b.Kind != "audio" && b.Kind != "video") {
-		httpErr(w, 400, "kind muss audio oder video sein")
+	if json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&b) != nil || (b.Kind != "audio" && b.Kind != "video" && b.Kind != "all") {
+		httpErr(w, 400, "kind muss audio, video oder all sein")
 		return
 	}
 	s.History.Clear(b.Kind)

@@ -52,6 +52,8 @@ type Server struct {
 	uiOnce      sync.Once
 	enc         map[string]bool
 	ffver       string
+	lib         libraryScans
+	libCache    *libCache // Merker des Ordner-Scans
 }
 
 func New(build version.Info, t ffmpeg.Tools, roots []string, concurrency int, configDir string) *Server {
@@ -73,6 +75,11 @@ func New(build version.Info, t ffmpeg.Tools, roots []string, concurrency int, co
 	}
 	if s.Settings.Persistent() { // unfinished .part files of a crashed run are removed at start
 		s.Jobs.SetPartialLog(filepath.Join(configDir, "partials.json"))
+		s.Jobs.SetQueueFile(filepath.Join(configDir, "queue.json")) // jobs of an interrupted run wait for the user's decision
+	}
+	s.libCache = openLibCache("")
+	if s.Settings.Persistent() {
+		s.libCache = openLibCache(filepath.Join(configDir, "library-cache.json"))
 	}
 	s.enc = t.Encoders()
 	s.ffver = t.Version()
@@ -118,6 +125,30 @@ func (s *Server) allowed(p string) bool {
 	return false
 }
 
+// rootOf liefert den Quellordner (Wurzel), unter dem p liegt; ohne Wurzeln (Desktop-App) oder außerhalb: "".
+func (s *Server) rootOf(p string) string {
+	p = filepath.Clean(p)
+	best := ""
+	for _, r := range s.Roots {
+		r = filepath.Clean(r)
+		if (p == r || strings.HasPrefix(p, r+string(filepath.Separator))) && len(r) > len(best) {
+			best = r
+		}
+	}
+	return best
+}
+
+// relFrom: Pfad des Ziels bei „Struktur beibehalten“, ab dem Quellordner (Wurzel) gerechnet; ohne Wurzel ab dem Elternordner der gewählten Auswahl.
+func (s *Server) relFrom(fp, picked string) string {
+	if root := s.rootOf(fp); root != "" {
+		if rel, err := filepath.Rel(root, fp); err == nil {
+			return filepath.ToSlash(rel)
+		}
+	}
+	rel, _ := filepath.Rel(filepath.Dir(picked), fp)
+	return filepath.ToSlash(rel)
+}
+
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	sub, _ := fs.Sub(web.FS, ".")
@@ -141,7 +172,11 @@ func (s *Server) Handler() http.Handler {
 		writeJSON(w, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("GET /api/fs", s.browse)
+	mux.HandleFunc("GET /api/fs/search", s.browseSearch)
 	mux.HandleFunc("POST /api/scan", s.scan)
+	mux.HandleFunc("POST /api/library/scan", s.libraryStart)
+	mux.HandleFunc("GET /api/library/scan/{id}", s.libraryGet)
+	mux.HandleFunc("POST /api/library/scan/{id}/cancel", s.libraryCancel)
 	mux.HandleFunc("GET /api/probe", s.probe)
 	mux.HandleFunc("POST /api/jobs", s.submit)
 	mux.HandleFunc("GET /api/state", s.state)
@@ -155,6 +190,43 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/jobs/{id}/cancel", func(w http.ResponseWriter, r *http.Request) {
 		s.Jobs.Cancel(r.PathValue("id"))
 		writeJSON(w, map[string]bool{"ok": true})
+	})
+	mux.HandleFunc("POST /api/jobs/{id}/move", func(w http.ResponseWriter, r *http.Request) {
+		var b struct{ How string }
+		json.NewDecoder(r.Body).Decode(&b)
+		if !s.Jobs.Move(r.PathValue("id"), b.How) {
+			httpErr(w, 400, "Der Auftrag lässt sich nicht verschieben")
+			return
+		}
+		writeJSON(w, map[string]bool{"ok": true})
+	})
+	mux.HandleFunc("POST /api/jobs/{id}/hold", func(w http.ResponseWriter, r *http.Request) {
+		var b struct{ On bool }
+		json.NewDecoder(r.Body).Decode(&b)
+		s.Jobs.Hold(r.PathValue("id"), b.On)
+		writeJSON(w, map[string]bool{"ok": true})
+	})
+	mux.HandleFunc("POST /api/queue/pause", func(w http.ResponseWriter, r *http.Request) {
+		var b struct{ On bool }
+		json.NewDecoder(r.Body).Decode(&b)
+		s.Jobs.Pause(b.On)
+		logs.Get("jobs").Infof("Warteschlange %s", map[bool]string{true: "pausiert (laufende Aufträge werden fertig, es startet kein neuer)", false: "fortgesetzt"}[b.On])
+		writeJSON(w, map[string]bool{"ok": true})
+	})
+	mux.HandleFunc("POST /api/queue/restore", func(w http.ResponseWriter, r *http.Request) {
+		var b struct{ Action string }
+		json.NewDecoder(r.Body).Decode(&b)
+		switch b.Action {
+		case "resume":
+			n := s.Jobs.Restore()
+			logs.Get("jobs").Infof("%d unterbrochene(r) Auftrag/Aufträge fortgesetzt", n)
+			writeJSON(w, map[string]int{"resumed": n})
+		case "discard":
+			s.Jobs.DiscardRestorable()
+			writeJSON(w, map[string]int{"resumed": 0})
+		default:
+			httpErr(w, 400, "action muss resume oder discard sein")
+		}
 	})
 	mux.HandleFunc("POST /api/jobs/cancel-all", func(w http.ResponseWriter, r *http.Request) {
 		var b struct{ Kind string }
@@ -403,10 +475,9 @@ func (s *Server) scan(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		if !st.IsDir() {
-			files = append(files, scanFile{p, filepath.Base(p), st.Size()})
+			files = append(files, scanFile{p, s.relFrom(p, p), st.Size()})
 			continue
 		}
-		base := filepath.Base(p)
 		filepath.WalkDir(p, func(fp string, d fs.DirEntry, err error) error {
 			if err != nil || len(files) > 20000 {
 				return nil
@@ -418,12 +489,11 @@ func (s *Server) scan(w http.ResponseWriter, r *http.Request) {
 				return nil
 			}
 			if k := mediaKind(d.Name()); k == b.Kind || (b.Kind == "media" && k != "") {
-				rel, _ := filepath.Rel(p, fp)
 				var size int64
 				if inf, err := d.Info(); err == nil {
 					size = inf.Size()
 				}
-				files = append(files, scanFile{fp, filepath.ToSlash(filepath.Join(base, rel)), size})
+				files = append(files, scanFile{fp, s.relFrom(fp, p), size})
 			}
 			return nil
 		})
@@ -528,6 +598,7 @@ func (s *Server) state(w http.ResponseWriter, r *http.Request) {
 	s.uiOnce.Do(func() { logs.Get("app").Infof("Oberfläche verbunden (%s)", shortUA(r.UserAgent())) })
 	writeJSON(w, map[string]any{
 		"jobs": s.Jobs.Snapshot(), "finished": s.Jobs.Finished(), "stats": s.Sampler.Latest(), "concurrency": s.concurrencies(), "saved": s.Stats.Get(),
+		"paused": s.Jobs.Paused(), "restorable": s.Jobs.Restorable(),
 	})
 }
 
@@ -774,7 +845,7 @@ func (s *Server) statsReset(w http.ResponseWriter, r *http.Request) {
 		Kind string `json:"kind"`
 	}
 	if json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<12)).Decode(&body) != nil || (body.Kind != "audio" && body.Kind != "video") {
-		http.Error(w, `{"error":"Welt fehlt (audio oder video)"}`, 400)
+		http.Error(w, `{"error":"Art fehlt (audio oder video)"}`, 400)
 		return
 	}
 	s.Stats.Reset(body.Kind)

@@ -1,4 +1,4 @@
-// Prüft: Ersetzungen (hinzufügen/löschen/alle löschen/neu hinzufügen), Audio/Video getrennt, Warteschlange je Welt,
+// Prüft: Ersetzungen (hinzufügen/löschen/alle löschen/neu hinzufügen), Audio/Video getrennt (Namensmuster je Art), gemeinsamer Verlauf mit Abzeichen,
 // Auslastungsanzeige – in allen Ansichten. Aufruf: INDIR=/tmp/media SHOTS=/tmp/shots node tools/ui-check-world.js (Server auf :8787;
 // vorher je einen Audio- und einen Video-Auftrag einreihen)
 const L = require('./ui-lib');
@@ -14,7 +14,8 @@ const L = require('./ui-lib');
     await p.goto(L.url); await p.waitForTimeout(1200);
     const rows = () => p.locator('#ruleRows .rulerow').count();
     // --- Video: drei Ersetzungen, alle löschen, eine neu ---
-    await L.setWorld(p, 'video'); await L.goStep(p, 'name');
+    const withFile = async () => { await L.enter(p, 'video'); if (!(await p.locator('#fileList .file').count())) await L.addFile(p, 'long.mkv'); await L.goStep(p, 'name'); };
+    await withFile();
     for (let i = 0; i < 3; i++) { await p.click('#addRule'); await p.fill(`#ruleRows .rulerow >> nth=${i} >> input >> nth=0`, 'v' + i); }
     eq(name, 'Video: 3 Zeilen', await rows(), 3);
     while (await rows()) await p.click('#ruleRows .rulerow >> nth=0 >> button');
@@ -24,18 +25,18 @@ const L = require('./ui-lib');
     eq(name, 'Video: Feld leer', await p.inputValue('#ruleRows .rulerow input >> nth=0'), '');
     await p.fill('#ruleRows .rulerow input >> nth=0', 'nurvideo'); await p.fill('#pattern', '{res}');
     // --- Audio ist unabhängig ---
-    await L.setWorld(p, 'audio'); await L.goStep(p, 'name');
+    await L.enter(p, 'audio'); await L.goStep(p, 'name');
     eq(name, 'Audio: keine Ersetzungen aus Video', await rows(), 0);
     eq(name, 'Audio: Muster getrennt', await p.inputValue('#pattern'), '');
     await p.click('#addRule'); await p.fill('#ruleRows .rulerow input >> nth=0', 'nuraudio'); await p.fill('#pattern', '{artist}');
-    await L.setWorld(p, 'video'); await L.goStep(p, 'name');
+    await L.enter(p, 'video'); await L.goStep(p, 'name');
     eq(name, 'Video: zurück, 1 Zeile', await rows(), 1);
     eq(name, 'Video: Wert erhalten', await p.inputValue('#ruleRows .rulerow input >> nth=0'), 'nurvideo');
     eq(name, 'Video: Muster erhalten', await p.inputValue('#pattern'), '{res}');
     // Neuladen: Zustand bleibt je Welt
-    await p.reload(); await p.waitForTimeout(1500); await L.goStep(p, 'name');
+    await p.reload(); await p.waitForTimeout(1500); await withFile();
     eq(name, 'nach Neuladen (Video) 1 Zeile', await rows(), 1);
-    await L.setWorld(p, 'audio'); await L.goStep(p, 'name');
+    await L.enter(p, 'audio'); await L.goStep(p, 'name');
     eq(name, 'nach Neuladen (Audio) Wert', await p.inputValue('#ruleRows .rulerow input >> nth=0'), 'nuraudio');
     // --- Verlauf je Welt (Seite „Verlauf“, Welten strikt getrennt) ---
     // je Welt ein kurzer Auftrag, damit beide Verläufe Einträge haben (unabhängig vom Zustand des Servers)
@@ -49,12 +50,9 @@ const L = require('./ui-lib');
     await L.goStep(p, 'start');
     await p.click('#startHistory'); await p.waitForTimeout(1000);
     const listed = async () => (await p.locator('.histentry').allTextContents()).join('|');
-    const aq = await listed();
-    if (/long\.mkv|Show/.test(aq)) errs.push(name + ': Audio-Verlauf zeigt Video-Aufträge: ' + aq);
-    if (!(await p.locator('.histentry').count())) errs.push(name + ': Audio-Verlauf leer');
-    await p.click('[data-world=video]'); await p.waitForTimeout(3800);
-    const vq = await listed();
-    if (/a\.mp3/.test(vq)) errs.push(name + ': Video-Verlauf zeigt Audio-Aufträge: ' + vq);
+    const all = await listed();
+    if (!/a\.mp3/.test(all) || !/hint\.mkv/.test(all)) errs.push(name + ': gemeinsamer Verlauf zeigt nicht beide Arten: ' + all);
+    if (!(await p.locator('.histentry .kindbadge.audio').count()) || !(await p.locator('.histentry .kindbadge.video').count())) errs.push(name + ': Abzeichen Video/Audio im Verlauf fehlen');
     await p.screenshot({ path: `${L.SHOTS}/wd-${name}-history.png`, fullPage: true });
     await p.click('#histBack'); await p.waitForTimeout(500);
     if (!(await p.locator('#monitor .meter').count())) errs.push(name + ': keine Auslastungsanzeige');

@@ -45,3 +45,23 @@ func TestMemoryOnlyAndUnknownKind(t *testing.T) {
 		t.Error("ohne /config nur im Arbeitsspeicher, unbekannte Welt wird ignoriert")
 	}
 }
+
+// „Alle“ mischt beide Arten, neueste zuerst; Leeren von „alle“ betrifft beide.
+func TestAllKindsMergedAndCleared(t *testing.T) {
+	s := Open(t.TempDir(), true)
+	now := time.Now()
+	s.Add(Entry{ID: "v1", Kind: "video", Status: "done", Ended: now.Add(-3 * time.Minute)})
+	s.Add(Entry{ID: "a1", Kind: "audio", Status: "done", Ended: now.Add(-2 * time.Minute)})
+	s.Add(Entry{ID: "v2", Kind: "video", Status: "error", Ended: now.Add(-1 * time.Minute)})
+	l := s.List("all")
+	if len(l) != 3 || l[0].ID != "v2" || l[1].ID != "a1" || l[2].ID != "v1" {
+		t.Fatalf("Reihenfolge: %+v", l)
+	}
+	if len(s.List("")) != 3 {
+		t.Error("leer = alle")
+	}
+	s.Clear("all")
+	if len(s.List("all")) != 0 {
+		t.Error("alle leeren")
+	}
+}

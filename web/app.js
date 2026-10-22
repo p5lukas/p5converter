@@ -14,16 +14,16 @@ const api = async (url, body, method) => {
 const fmtSize = n => n > 1e9 ? (n / 1e9).toFixed(2) + ' GB' : n > 1e6 ? (n / 1e6).toFixed(1) + ' MB' : n > 1e3 ? (n / 1e3).toFixed(0) + ' KB' : (n || 0) + ' B';
 const fmtTime = s => { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s % 60).padStart(2, '0'); };
 
-const S = {step: 'start', world: 'audio', files: {audio: [], video: []}, info: null, jobs: [], stats: null};
+const S = {step: 'start', vstep: 1, world: 'video', files: {audio: [], video: []}, info: null, jobs: [], stats: null};
 const BACKEND_ORDER = ['qsv', 'nvenc', 'amf', 'vaapi', 'cpu'];
 const CODEC_LABEL = {h264: 'H.264', hevc: 'H.265', av1: 'AV1', vp9: 'VP9'};
 const SWENC = {h264: 'libx264', hevc: 'libx265', av1: 'libsvtav1', vp9: 'libvpx-vp9'};
 
 // ---------- persisted settings ----------
 const FIELDS = ['outMode', 'outDir', 'outStruct', 'exists', 'aFormat', 'aMode', 'aQuality', 'aBitrate', 'aFlac', 'aWav', 'aRate', 'aCh',
-  'vContainer', 'vCodec', 'vBackend', 'vCrf', 'vQuality', 'vPreset', 'vDepth', 'vHeight', 'vAudioMode', 'vAudioCodec', 'vAudioKbps', 'vSubMode', 'vTrkRules', 'vMaterial'];
-const CHECKS = ['aCover', 'vHwDec']; // „Quelldatei löschen“ wird bewusst NICHT gemerkt (verify.js, je Welt, nur für diesen Besuch)
-// Namensmuster, Zusatz und Ersetzungen gehören je Welt (Audio und Video getrennt)
+  'vContainer', 'vCodec', 'vBackend', 'vCrf', 'vQuality', 'vPreset', 'vDepth', 'vHeight', 'vAudioMode', 'vAudioCodec', 'vAudioKbps', 'vSubMode', 'vTrkRules'];
+const CHECKS = ['aCover', 'vHwDec']; // „Quelldatei löschen“ wird bewusst NICHT gemerkt (verify.js, je Art, nur für diesen Besuch)
+// Namensmuster, Zusatz und Ersetzungen gehören je Art (Audio und Video getrennt)
 const NAME_FIELDS = ['pattern', 'suffix', 'renRules'];
 const NAME_EMPTY = {pattern: '', suffix: '', renRules: '[]'};
 S.name = {audio: {...NAME_EMPTY}, video: {...NAME_EMPTY}};
@@ -47,51 +47,34 @@ function loadSettings() {
   } catch (e) {}
 }
 
-// ---------- worlds ----------
-// Welten: jede hat ihre Farbe (Farbton) und ihren Planeten, wie bei p5assets (Themes in planets.js).
-// Namen, Farben und Reihenfolge kommen aus den Einstellungen (settings.js: W(), worldOrder()).
-function applyTheme(w) {
-  const hue = W(w).hue, t = themeOf(hue), root = document.documentElement.style;
-  root.setProperty('--h', hue); root.setProperty('--sat', t.sat + '%'); root.setProperty('--lit', t.lit + '%');
-  try { localStorage.setItem('p5hue', hue); localStorage.setItem('p5theme', JSON.stringify({h: hue, sat: t.sat, lit: t.lit})); } catch (e) {}
-  $$('#worlds button').forEach(b => {
-    const wh = W(b.dataset.world).hue, wt = themeOf(wh);
-    b.style.setProperty('--c', `hsl(${wh} ${wt.sat}% ${wt.lit}%)`);
-    const slot = b.querySelector('.pl');
-    if (slot) slot.replaceChildren(planetSvg(wh, 22));
-  });
-  const meta = document.querySelector('meta[name=theme-color]');
-  if (meta) meta.content = `hsl(${hue} 80% 2%)`;
+// ---------- Art (Video oder Audio) ----------
+// Die Art wird auf der Startseite gewählt. Video ist grün, Audio orange (nur Audio-Kachel und Audio-Ablauf); die Startseite und alle anderen Seiten sind grün.
+function applyKindTheme() {
+  const inFlow = S.step !== 'start' && !$('#viewMain').classList.contains('hidden');
+  if (inFlow) document.documentElement.dataset.kind = S.world; else delete document.documentElement.dataset.kind;
 }
-function worldFx(w) {
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const hue = W(w).hue, t = themeOf(hue), ms = 1300;
-  const fx = document.createElement('div'); fx.className = 'worldfx';
-  fx.style.setProperty('--c', `hsl(${hue} ${t.sat}% ${t.lit}%)`);
-  const cv = document.createElement('canvas'), pl = document.createElement('div');
-  pl.className = 'wfplanet'; pl.appendChild(planetSvg(hue, 200));
-  fx.append(cv, pl); document.body.appendChild(fx);
-  runWormhole(cv, hue, ms);
-  setTimeout(() => fx.remove(), ms + 60);
-}
-function setWorld(w, animate) {
-  if (animate && w !== S.world) worldFx(w);
+function setWorld(w) {
   if (S.nameFor && S.nameFor !== w) stashName(S.nameFor);
   if (S.nameFor !== w) showName(w);
   if (S.vfFor && S.vfFor !== w) vfStash(S.vfFor);
   if (S.vfFor !== w) vfShow(w);
   S.world = w;
-  $$('#worlds button').forEach(b => b.classList.toggle('on', b.dataset.world === w));
-  // Der Farbwechsel passiert mitten im Flug (dunkler Bildschirm), damit nichts flackert
-  setTimeout(() => { applyTheme(w); }, animate ? 380 : 0);
   renderFiles();
   refreshAudioUI();
   refreshVideoUI();
   renderStartInfo();
   syncNameUI();
-  renderConc(); renderQueue(); renderHero(); renderHistBadge(); renderWorldBadges(); renderSaved();
-  S.step = 'start'; applySteps();
+  renderQueue(); renderHero(); renderHistBadge(); renderSaved(); renderStartTiles();
   saveSettings();
+}
+// Startseite: Kachel Video oder Audio gewählt → in den Ablauf dieser Art
+function enterKind(w) {
+  if (w !== S.world) setWorld(w);
+  if (location.hash) location.hash = '';
+  S.step = 'convert';
+  if (w === 'video' && !S.files.video.length) S.vstep = 1;
+  applySteps(); cvRender();
+  window.scrollTo(0, 0);
 }
 
 // ---------- audio UI ----------
@@ -167,7 +150,7 @@ function refreshVideoUI() {
 
   const r = resolveBackend();
   const hw = !copy && r.id !== 'cpu';
-  ['#vBackendRow', '#vCrfRow', '#vMatRow', '#vCrfAdvice', '#vPresetRow', '#vDepthRow', '#vHeightRow', '#vHwDecRow'].forEach(s => $(s).classList.toggle('hidden', copy));
+  ['#vBackendRow', '#vCrfRow', '#vCrfAdvice', '#vPresetRow', '#vDepthRow', '#vHeightRow', '#vHwDecRow'].forEach(s => $(s).classList.toggle('hidden', copy));
   $('#vHwDecRow').classList.toggle('hidden', !hw);
   const container = $('#vContainer').value;
   const resolvedEl = $('#vResolved');
@@ -255,31 +238,71 @@ function addScanned(files) {
 }
 
 // ---------- server file browser ----------
-let B = {path: '', sel: new Set(), mode: 'files', resolve: null};
+// Suche: ab 2 Zeichen sucht das Feld immer auch in allen Unterordnern (Server, /api/fs/search); bei einem Zeichen filtert es nur die Einträge des Ordners.
+// Umlaute dürfen so oder so getippt werden (muller / mueller finden Müller). Wurzelordner zeigen ihren Anzeigenamen aus den Einstellungen.
+let B = {path: '', sel: new Set(), mode: 'files', resolve: null, entries: [], roots: false, q: '', found: null, seq: 0};
+const bJoin = (p, n) => p.replace(/[\\/]$/, '') + (p.includes('\\') ? '\\' : '/') + n;
+const fU = t => String(t).toLowerCase().replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/ß/g, 'ss');
+const fE = t => String(t).toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss');
+const bMatch = (name, q) => fU(name).includes(fU(q)) || fE(name).includes(fE(q));
+const rootNameOf = path => (cfg().rootNames || {})[path] || '';
+// Pfad mit dem Anzeigenamen der Wurzel: „/video1/Filme/x“ → „Filme 4K/Filme/x“ (die längste passende Wurzel gewinnt)
+function pathLabel(p) {
+  const names = cfg().rootNames || {};
+  const root = Object.keys(names).filter(r => { const t = r.replace(/[\\/]$/, ''); return p === r || p === t || p.startsWith(t + '/') || p.startsWith(t + '\\'); }).sort((x, y) => y.length - x.length)[0];
+  return root ? names[root] + p.slice(root.replace(/[\\/]$/, '').length) : p;
+}
+function renderBrowser() {
+  const q = B.q.trim();
+  let rows;
+  if (B.found) rows = B.found.map(x => ({name: x.name, full: x.path, dir: x.dir, size: x.size, media: x.media}));
+  else {
+    rows = B.entries.map(e => ({name: B.roots ? (rootNameOf(e.name) || e.name) : e.name, sub: B.roots && rootNameOf(e.name) ? e.name : '', full: B.roots ? e.name : bJoin(B.path, e.name), dir: e.dir, size: e.size, media: e.media}));
+    if (q) rows = rows.filter(r => bMatch(r.name + ' ' + (r.sub || ''), q));
+  }
+  $('#bList').innerHTML = rows.map((r, i) => `<div class="bi" data-i="${i}">
+    ${r.dir ? ic('folder') : (B.mode === 'files' ? `<input type="checkbox" data-c="${i}" ${B.sel.has(r.full) ? 'checked' : ''}>` : '')}
+    <span>${esc(r.name)}${r.sub ? ` <small class="muted">${esc(r.sub)}</small>` : ''}</span><span class="sz">${r.dir ? '' : (r.media === 'video' ? ic('play') + ' ' : '♪ ') + fmtSize(r.size)}</span></div>`).join('')
+    || `<div class="empty">${q ? 'Nichts gefunden' : 'Leer'}</div>`;
+  $$('#bList .bi').forEach(row => {
+    const r = rows[+row.dataset.i];
+    row.onclick = ev => {
+      if (r.dir) { B.q = ''; B.found = null; $('#bSearch').value = ''; browseTo(r.full); return; }
+      if (B.mode !== 'files') return;
+      const cb = row.querySelector('input');
+      if (ev.target !== cb) cb.checked = !cb.checked;
+      cb.checked ? B.sel.add(r.full) : B.sel.delete(r.full);
+      $('#bCount').textContent = B.sel.size + ' ausgewählt';
+    };
+  });
+  if (!B.found) $('#bInfo').textContent = q ? rows.length + ' von ' + B.entries.length : '';
+}
+let bTimer = 0;
+function bSearchUpdate() {
+  B.q = $('#bSearch').value; clearTimeout(bTimer);
+  const q = B.q.trim();
+  if (q.length < 2) { B.found = null; $('#bInfo').textContent = ''; renderBrowser(); return; }
+  const my = ++B.seq; $('#bInfo').textContent = 'Suche …';
+  bTimer = setTimeout(async () => {
+    try {
+      const r = await api('/api/fs/search?path=' + encodeURIComponent(B.path) + '&q=' + encodeURIComponent(q) + (B.mode === 'dir' ? '&dirs=1' : ''));
+      if (my !== B.seq) return;
+      B.found = r.hits; renderBrowser();
+      $('#bInfo').textContent = r.hits.length + (r.hits.length === 1 ? ' Treffer' : ' Treffer') + (r.truncated ? ' (nur die ersten, bitte genauer suchen)' : '');
+    } catch (e) { if (my === B.seq) { B.found = null; $('#bInfo').textContent = e.message; renderBrowser(); } }
+  }, 300);
+}
 async function browseTo(path) {
   try {
     const d = await api('/api/fs?path=' + encodeURIComponent(path));
-    B.path = d.path; B.parent = d.parent; B.sel.clear();
-    $('#bPath').value = d.path;
-    $('#bUp').disabled = !d.parent && !d.roots;
+    B.path = d.path; B.parent = d.parent; B.sel.clear(); B.entries = d.entries; B.roots = !!d.roots; B.found = null; B.q = ''; B.seq++;
+    $('#bSearch').value = ''; $('#bPath').value = d.path;
+    const where = d.path ? pathLabel(d.path) : '';
+    $('#bWhere').textContent = where && where !== d.path ? 'Angezeigt als: ' + where : '';
+    $('#bUp').disabled = !!d.roots || (!d.parent && !((S.info && S.info.roots) || []).length); // in einem Wurzelordner führt „hoch“ zur Liste aller Wurzelordner
     $('#bDrives').innerHTML = (d.drives || []).map(x => `<button type="button" class="small" data-d="${esc(x)}">${esc(x)}</button>`).join(' ');
     $$('#bDrives [data-d]').forEach(b => b.onclick = () => browseTo(b.dataset.d));
-    const kindOK = e => B.mode === 'dir' ? false : true;
-    $('#bList').innerHTML = d.entries.map((e, i) => `<div class="bi" data-i="${i}">
-      ${e.dir ? ic('folder') : (B.mode === 'files' ? `<input type="checkbox" data-c="${i}">` : '')}
-      <span>${esc(e.name)}</span><span class="sz">${e.dir ? '' : (e.media === 'video' ? ic('play') + ' ' : '♪ ') + fmtSize(e.size)}</span></div>`).join('') || '<div class="empty">Leer</div>';
-    $$('#bList .bi').forEach(row => {
-      const e = d.entries[+row.dataset.i];
-      row.onclick = ev => {
-        if (e.dir) { browseTo(d.roots ? e.name : d.path.replace(/[\\/]$/, '') + (d.path.includes('\\') ? '\\' : '/') + e.name); return; }
-        if (B.mode !== 'files') return;
-        const cb = row.querySelector('input');
-        if (ev.target !== cb) cb.checked = !cb.checked;
-        const full = d.path.replace(/[\\/]$/, '') + (d.path.includes('\\') ? '\\' : '/') + e.name;
-        cb.checked ? B.sel.add(full) : B.sel.delete(full);
-        $('#bCount').textContent = B.sel.size + ' ausgewählt';
-      };
-    });
+    renderBrowser();
     $('#bCount').textContent = '';
   } catch (e) { $('#bList').innerHTML = `<div class="empty warn">${esc(e.message)}</div>`; }
 }
@@ -293,6 +316,13 @@ function openBrowser(mode, start) {
   return new Promise(res => B.resolve = res);
 }
 function closeBrowser(v) { $('#browser').close(); if (B.resolve) B.resolve(v); B.resolve = null; }
+
+// Dateien aus dem Browser holen (start = Ordner, in dem er aufgeht, z. B. ein Quellordner)
+async function pickFrom(start) {
+  const r = await openBrowser('files', start); if (!r) return;
+  if (r.dir) S.lastDir = r.dir;
+  const d = await api('/api/scan', {paths: r.paths, kind: S.world}); addScanned(d.files);
+}
 
 // ---------- Toasts ----------
 function toast(msg, kind) {
@@ -338,7 +368,8 @@ async function start() {
   try {
     const r = await api('/api/jobs', req);
     toast(r.ids.length + (r.ids.length === 1 ? ' Auftrag eingereiht.' : ' Aufträge eingereiht.'), 'ok');
-    files.length = 0; renderFiles(); saveSettings(); poll(); showStep('start');
+    files.length = 0; if (kind === 'video') { S.vstep = 1; S.rulesSeen = false; S.presetSkip = false; }
+    renderFiles(); saveSettings(); poll(); renderStartTiles(); showStep('start');
   } catch (e) { toast(e.message, 'bad'); }
 }
 
@@ -346,6 +377,8 @@ async function start() {
 const openDetails = new Set();
 function statusChip(j) {
   if (j.status === 'running' && j.phase === 'check') return '<span class="chip acc" title="Die neue Datei ist fertig und wird jetzt geprüft.">prüfe Ergebnis …</span>';
+  if (j.status === 'queued' && j.held) return '<span class="chip warn" title="Dieser Auftrag ist angehalten und startet erst, wenn du ihn freigibst.">angehalten</span>';
+  if (j.status === 'queued' && S.paused) return '<span class="chip warn" title="Die Warteschlange ist pausiert.">pausiert</span>';
   const m = {queued: ['wartet', ''], running: ['läuft', 'acc'], done: ['fertig', 'ok'], error: ['Fehler', 'err'], canceled: ['abgebrochen', 'warn'], skipped: ['übersprungen', 'warn']}[j.status];
   return `<span class="chip ${m[1]}">${m[0]}</span>`;
 }
@@ -374,12 +407,66 @@ function decoderBadge(j) {
   }
   return `<span class="chip ${j.hwDecodeFallback ? 'warn' : ''}" title="Die Quelldatei wird auf der CPU gelesen${j.hwDecodeFallback ? ' (Hardware ging bei dieser Datei nicht)' : ' (so eingestellt)'}. Das Ergebnis ist gleich gut, nur die CPU hat mehr zu tun.">Lesen: CPU</span>`;
 }
-function renderQueue() {
+// Warteschlange pausieren/fortsetzen: Knopf und Hinweis im Verlauf
+function renderPauseUI() {
+  const b = $('#pauseQueue'); if (!b) return;
+  b.textContent = S.paused ? 'Fortsetzen' : 'Pausieren'; b.classList.toggle('on', !!S.paused);
+  b.title = S.paused ? 'Die Warteschlange fortsetzen' : 'Die Warteschlange pausieren: laufende Aufträge werden fertig, es startet kein neuer';
+  $('#queuePaused').classList.toggle('hidden', !S.paused);
+}
+// unterbrochene Aufträge aus dem letzten Lauf (Neustart des Containers): einmal fragen
+function restoreAsk() {
+  const n = (S.restorable && S.restorable.count) || 0;
+  if (!n || S.restoreShown || $('#restoreDlg').open) return;
+  S.restoreShown = true;
+  $('#restoreText').textContent = n + (n === 1 ? ' Auftrag wurde' : ' Aufträge wurden') + ' beim letzten Beenden unterbrochen (' + (S.restorable.video ? S.restorable.video + ' Video' : '') + (S.restorable.video && S.restorable.audio ? ', ' : '') + (S.restorable.audio ? S.restorable.audio + ' Audio' : '') + '). Fortsetzen? Unfertige Zieldateien sind schon gelöscht, die Quelldateien sind unberührt.';
+  $('#restoreDlg').showModal();
+}
+// Abzeichen „Video“ / „Audio“ (Audio in Orange) in Warteschlange und Verlauf
+const kindBadge = k => `<span class="kindbadge ${k}">${esc(W(k).name)}</span>`;
+// Warteschlange und Verlauf werden regelmäßig neu gezeichnet. Damit sich dabei weder der Scrollstand noch geöffnete Details ändern:
+// (1) unveränderte Teile bleiben als DOM-Knoten stehen (syncChildren / reconcileCards), (2) keepView rückt die Seite nach dem Zeichnen so zurecht,
+// dass das erste sichtbare Element an derselben Stelle bleibt (der Scroll-Anker der Browser ist dafür nicht verlässlich, Safari hat keinen).
+function keepView(fn) {
+  let anchor = null, top = 0;
+  if (window.scrollY > 0) {
+    for (const el of document.querySelectorAll('#queue .job, .histentry')) { const r = el.getBoundingClientRect(); if (r.bottom > 24) { anchor = el; top = r.top; break; } }
+  }
+  fn();
+  if (anchor && anchor.isConnected) { const d = anchor.getBoundingClientRect().top - top; if (Math.abs(d) > 0.5) window.scrollBy(0, d); }
+}
+// Kinder von parent in die Reihenfolge von els bringen, ohne bereits richtig stehende Knoten anzufassen (sonst gingen Scrollstand und Auswahl darin verloren)
+function syncChildren(parent, els) {
+  els.forEach((el, i) => { if (parent.children[i] !== el) parent.insertBefore(el, parent.children[i] || null); });
+  while (parent.children.length > els.length) parent.lastElementChild.remove();
+}
+// Karten der Warteschlange: je Auftrag ein fester Knoten mit zwei Teilen: .jvol (Kopf, Balken, Zahlen: ändert sich laufend) und .jdet (Details: nur bei neuem Log)
+function reconcileCards(box, cards) {
+  if (!box._cards) { box.textContent = ''; box._cards = new Map(); }
+  const cache = box._cards, seen = new Set(); let prev = null;
+  for (const c of cards) {
+    seen.add(c.id);
+    let e = cache.get(c.id);
+    if (!e) { const el = document.createElement('div'); el.innerHTML = '<div class="jvol"></div><div class="jdet"></div>'; e = {el, cls: null, vol: null, det: null}; cache.set(c.id, e); }
+    if (e.cls !== c.cls) { e.el.className = c.cls; e.cls = c.cls; }
+    if (e.vol !== c.vol) { e.el.firstElementChild.innerHTML = c.vol; e.vol = c.vol; }
+    if (e.det !== c.det) {
+      const d = e.el.lastElementChild, pos = [...d.querySelectorAll('pre')].map(x => x.scrollTop);
+      d.innerHTML = c.det; d.querySelectorAll('pre').forEach((x, i) => { if (pos[i]) x.scrollTop = pos[i]; }); e.det = c.det;
+    }
+    const ref = prev ? prev.nextElementSibling : box.firstElementChild;
+    if (e.el !== ref) box.insertBefore(e.el, ref);
+    prev = e.el;
+  }
+  for (const [id, e] of cache) if (!seen.has(id)) { e.el.remove(); cache.delete(id); }
+}
+function renderQueue() { keepView(renderQueueNow); }
+function renderQueueNow() {
+  renderPauseUI();
   // die Warteschlange zeigt nur laufende und wartende Aufträge; beendete stehen darunter im Verlauf
-  const q = $('#queue'), mine = S.jobs.filter(j => j.kind === S.world && (j.status === 'queued' || j.status === 'running'));
-  $('#queueWorld').textContent = '· ' + W(S.world).name;
-  if (!mine.length) { q.innerHTML = '<div class="empty" style="margin-top:8px">Keine laufenden oder wartenden Aufträge in ' + esc(W(S.world).name) + '. Beendete Aufträge stehen unten im Verlauf.</div>'; return; }
-  q.innerHTML = mine.slice().reverse().map(j => {
+  const q = $('#queue'), mine = S.jobs.filter(j => j.status === 'queued' || j.status === 'running');
+  if (!mine.length) { q._cards = null; q.innerHTML = '<div class="empty" style="margin-top:8px">Keine laufenden oder wartenden Aufträge. Beendete Aufträge stehen unten im Verlauf.</div>'; return; }
+  reconcileCards(q, mine.map(j => { // in der Reihenfolge, in der sie dran kommen (oben: läuft bzw. als Nächstes)
     const meta = [];
     if (j.status === 'running') {
       if (j.speed) meta.push('Speed ' + esc(j.speed));
@@ -391,19 +478,24 @@ function renderQueue() {
     if (j.hwDecodeFallback && j.status !== 'error') meta.push('<span class="muted">Lesen per Hardware ging bei dieser Datei nicht – die CPU liest, geschrieben wird trotzdem in Hardware</span>');
     if (j.status === 'done' && (j.checks || []).length && !j.checkFailed) meta.push('<span class="okc" title="' + esc(j.checks.map(c => c.note).join(' · ')) + '">✓ geprüft: ' + esc(j.checks.map(c => c.note.replace(/ \(.*$/, '')).join(' · ')) + '</span>');
     (j.warnings || []).forEach(w => meta.push('<span class="warn">' + esc(w) + '</span>'));
-    const act = (j.status === 'queued' || j.status === 'running') ? `<button class="small ghost" data-cancel="${j.id}" title="Bricht diesen Auftrag ab und löscht die unfertige Datei. Die Quelldatei bleibt unberührt.">Abbrechen</button>` : '';
+    const mv = j.status === 'queued' ? `<span class="qmove"><button class="small ghost" data-mv="${j.id}" data-how="top" title="An den Anfang der Warteschlange" aria-label="An den Anfang">Zuerst</button><button class="small ghost" data-mv="${j.id}" data-how="up" title="Eine Stelle nach vorn" aria-label="Nach vorn">${ic('up')}</button><button class="small ghost" data-mv="${j.id}" data-how="down" title="Eine Stelle nach hinten" aria-label="Nach hinten"><span class="flip">${ic('up')}</span></button><button class="small ghost" data-hold="${j.id}" data-on="${j.held ? 0 : 1}" title="${j.held ? 'Wieder zur Warteschlange freigeben' : 'Diesen Auftrag anhalten: er startet erst, wenn du ihn freigibst'}">${j.held ? 'Freigeben' : 'Anhalten'}</button></span>` : '';
+    const act = mv + ((j.status === 'queued' || j.status === 'running') ? `<button class="small ghost" data-cancel="${j.id}" title="Bricht diesen Auftrag ab und löscht die unfertige Datei. Die Quelldatei bleibt unberührt.">Abbrechen</button>` : '');
     const note = j.status === 'done' && (j.hwDecodeFallback || (j.warnings || []).length);
-    return `<div class="job ${j.status}${note ? ' note' : ''}"><div class="job-h"><span class="n" title="${esc(j.input)}">${esc(j.name)}</span>${encoderBadge(j)}${decoderBadge(j)}${statusChip(j)}${act}</div>
+    return {id: j.id, cls: `job ${j.status}${note ? ' note' : ''}`, vol: `<div class="job-h">${kindBadge(j.kind)}<span class="n" title="${esc(j.input)}">${esc(j.name)}</span>${encoderBadge(j)}${decoderBadge(j)}${statusChip(j)}${act}</div>
       <div class="bar"><i style="width:${j.progress.toFixed(1)}%"></i></div>
       <div class="job-m"><span>${j.progress.toFixed(1)} %</span>${meta.map(m => `<span>${m}</span>`).join('')}</div>
       ${j.error && j.status === 'error' ? `<div class="small" style="color:var(--bad)">${esc(j.error)}</div>` : ''}
-      <details data-id="${j.id}" ${openDetails.has(j.id) ? 'open' : ''}><summary>Details</summary>
+`, det: `<details data-id="${j.id}" ${openDetails.has(j.id) ? 'open' : ''}><summary>Details</summary>
         <div class="small muted">Ziel: ${esc(j.output || '–')}</div>
         ${(j.attempts || []).length ? `<div class="small muted">Frühere Versuche:<br>${j.attempts.map(a => esc(a)).join('<br>')}</div>` : ''}
         ${(j.mapLines || []).length ? `<pre>${esc(j.mapLines.join('\n'))}</pre>` : ''}
-        <pre>${esc(j.cmd || '')}</pre><pre>${esc((j.log || []).slice(-25).join('\n'))}</pre></details></div>`;
-  }).join('');
+        <div class="copyrow"><button type="button" class="small ghost" data-copy="cmd" data-id="${j.id}">Befehl kopieren</button><button type="button" class="small ghost" data-copy="log" data-id="${j.id}">Log kopieren</button></div>
+        <pre>${esc(j.cmd || '')}</pre><pre>${esc((j.log || []).slice(-25).join('\n'))}</pre></details>`};
+  }));
   $$('#queue [data-cancel]').forEach(b => b.onclick = () => api('/api/jobs/' + b.dataset.cancel + '/cancel', {}).then(poll));
+  $$('#queue [data-mv]').forEach(b => b.onclick = () => api('/api/jobs/' + b.dataset.mv + '/move', {how: b.dataset.how}).then(poll).catch(e => toast(e.message, 'bad')));
+  $$('#queue [data-hold]').forEach(b => b.onclick = () => api('/api/jobs/' + b.dataset.hold + '/hold', {on: b.dataset.on === '1'}).then(poll));
+  $$('#queue [data-copy]').forEach(b => b.onclick = () => { const j = S.jobs.find(x => x.id === b.dataset.id); if (j) copyText(b.dataset.copy === 'cmd' ? (j.cmd || '') : (j.log || []).join('\n')); });
   $$('#queue details').forEach(d => d.ontoggle = () => d.open ? openDetails.add(d.dataset.id) : openDetails.delete(d.dataset.id));
 }
 // Auslastungsanzeige: die Elemente bleiben bestehen und werden nur aktualisiert, damit die Balken sichtbar gleiten
@@ -458,10 +550,10 @@ function renderMonitor() {
   }
   [...box.children].forEach(c => { if (!keep.includes(c.dataset.m)) c.remove(); });
 }
-// Aufträge einer Welt, die zum aktuellen Durchlauf gehören: alle, deren Zeitraum (angelegt → beendet) sich mit den noch aktiven überlappt.
+// Aufträge, die zum aktuellen Durchlauf gehören: alle, deren Zeitraum (angelegt → beendet) sich mit den noch aktiven überlappt.
 // So zählt „Datei 4 von 13“ nur den laufenden Durchlauf, auch nach dem Neuladen der Seite (die Zeiten kommen vom Server).
-function currentBatch(world) {
-  const mine = S.jobs.filter(j => j.kind === world).slice().sort((a, b) => new Date(a.created) - new Date(b.created));
+function currentBatch() {
+  const mine = S.jobs.slice().sort((a, b) => new Date(a.created) - new Date(b.created));
   const now = Date.now(), end = j => (j.status === 'queued' || j.status === 'running') ? now : new Date(j.ended).getTime() || now;
   let comps = [], cur = null;
   mine.forEach(j => {
@@ -474,12 +566,12 @@ function currentBatch(world) {
 // Kopfbereich der Startseite: der aktuelle Auftrag („Datei 4 von 13“, Fortschritt, Hardware mit Haken) oder „Gerade nichts los“
 function renderHero() {
   const box = $('#jobNow'); if (!box) return;
-  const batch = currentBatch(S.world), total = batch.length;
+  const batch = currentBatch(), total = batch.length;
   const running = batch.filter(j => j.status === 'running').sort((a, b) => new Date(a.started) - new Date(b.started));
   const cur = running[0] || batch.find(j => j.status === 'queued');
   if (!cur) {
     box.className = 'jobnow idle';
-    box.innerHTML = '<div class="jn-title">Gerade nichts los</div><div class="muted small">Mit „Konvertieren“ oben startest du einen neuen Auftrag. Laufende Aufträge erscheinen hier; beendete stehen im Verlauf.</div>';
+    box.innerHTML = (S.paused ? '<div class="jn-pause">Warteschlange pausiert</div>' : '') + '<div class="jn-title">Gerade nichts los</div><div class="muted small">Wähle oben Video oder Audio, um einen neuen Auftrag zu starten. Laufende Aufträge erscheinen hier; beendete stehen im Verlauf.</div>';
     return;
   }
   const finished = batch.filter(j => !(j.status === 'queued' || j.status === 'running')).length;
@@ -488,30 +580,25 @@ function renderHero() {
   const meta = [];
   if (cur.status === 'running') { if (cur.speed) meta.push('Speed ' + esc(cur.speed)); if (cur.fps) meta.push(cur.fps.toFixed(0) + ' fps'); if (cur.eta) meta.push('noch ' + fmtTime(cur.eta)); }
   box.className = 'jobnow';
-  box.innerHTML = `<div class="jn-title">Datei ${pos} von ${total}${running.length > 1 ? ` <span class="muted small">(${running.length} laufen parallel)</span>` : ''}</div>
+  box.innerHTML = `${S.paused ? '<div class="jn-pause">Warteschlange pausiert: laufende Aufträge werden fertig, es startet kein neuer</div>' : ''}<div class="jn-title">Datei ${pos} von ${total}${running.length > 1 ? ` <span class="muted small">(${running.length} laufen parallel)</span>` : ''}</div>
     <div class="jn-name" title="${esc(cur.input)}">${esc(cur.name)}</div>
     <div class="bar"><i style="width:${cur.progress.toFixed(1)}%"></i></div>
     <div class="job-m"><span>${cur.progress.toFixed(1)} %</span>${meta.map(m => `<span>${m}</span>`).join('')}</div>
     <div class="jn-chips">${statusChip(cur)}${encoderBadge(cur)}${decoderBadge(cur)}</div>
     ${total > 1 ? `<div class="jn-all"><span class="muted small">Gesamt ${overall} %</span><div class="bar thin"><i style="width:${overall}%"></i></div></div>` : ''}`;
 }
-// Zähler am Verlauf-Knopf: laufende und wartende Aufträge der gewählten Welt
+// Zähler am Verlauf-Knopf: laufende und wartende Aufträge (Video und Audio)
 function renderHistBadge() {
-  const n = S.jobs.filter(j => j.kind === S.world && (j.status === 'running' || j.status === 'queued')).length;
+  const n = S.jobs.filter(j => j.status === 'running' || j.status === 'queued').length;
   const el = $('#histBadge'); if (!el) return;
   el.textContent = n || ''; el.classList.toggle('hidden', !n);
   $('#startHistory').title = n ? `Verlauf und Warteschlange (${n} ${n === 1 ? 'Auftrag läuft oder wartet' : 'Aufträge laufen oder warten'})` : 'Verlauf und Warteschlange';
 }
-// „Parallel“ gilt für die gerade gewählte Welt; an den Welt-Knöpfen zeigt ein Zähler, wo etwas läuft oder wartet
+// „Parallel“ gilt je Art (Video und Audio haben je eine eigene Warteschlange)
 function renderConc() {
-  if (S.conc && document.activeElement !== $('#conc')) $('#conc').value = S.conc[S.world];
-}
-function renderWorldBadges() {
-  $$('#worlds button').forEach(b => {
-    const n = S.jobs.filter(j => j.kind === b.dataset.world && (j.status === 'running' || j.status === 'queued')).length;
-    const el = b.querySelector('.wbadge');
-    if (el) { el.textContent = n; el.classList.toggle('hidden', !n || b.dataset.world === S.world); }
-  });
+  if (!S.conc) return;
+  if (document.activeElement !== $('#concV')) $('#concV').value = S.conc.video;
+  if (document.activeElement !== $('#concA')) $('#concA').value = S.conc.audio;
 }
 let polling = false;
 async function poll() {
@@ -520,11 +607,11 @@ async function poll() {
   polling = true;
   try {
     const d = await api('/api/state');
-    S.jobs = d.jobs; S.stats = d.stats; S.conc = d.concurrency;
+    S.jobs = d.jobs; S.stats = d.stats; S.conc = d.concurrency; S.paused = !!d.paused; S.restorable = d.restorable || {count: 0};
     const savedChanged = JSON.stringify(S.saved) !== JSON.stringify(d.saved); S.saved = d.saved; if (savedChanged) renderSaved();
-    renderConc(); renderWorldBadges();
+    renderConc();
     const fin = d.finished !== undefined ? d.finished : S.jobs.filter(j => !(j.status === 'queued' || j.status === 'running')).length;
-    renderQueue(); renderMonitor(); renderHero(); renderHistBadge();
+    renderQueue(); renderMonitor(); renderHero(); renderHistBadge(); renderStartTiles(); restoreAsk(); rainOnDone(S.jobs); rainBarsSync();
     if (S.histFin !== undefined && fin !== S.histFin && typeof S.histReload === 'function') S.histReload(); // ein Auftrag ist beendet: Verlauf sofort neu laden
     S.histFin = fin;
   } catch (e) {} finally { polling = false; }
@@ -670,11 +757,7 @@ function wire() {
   window.addEventListener('hashchange', route);
   [...FIELDS, ...CHECKS].forEach(f => $('#' + f).addEventListener('input', () => { refreshAudioUI(); refreshVideoUI(); saveSettings(); refreshNamePreview(); if (typeof cvRender === 'function') cvRender(); }));
   $('#outMode').addEventListener('input', outModeUI);
-  $('#addFiles').onclick = async () => {
-    const r = await openBrowser('files', S.lastDir); if (!r) return;
-    if (r.dir) S.lastDir = r.dir;
-    const d = await api('/api/scan', {paths: r.paths, kind: S.world}); addScanned(d.files);
-  };
+  $('#addFiles').onclick = () => pickFrom(S.lastDir);
   $('#addFolder').onclick = async () => {
     const r = await openBrowser('dir', S.lastDir); if (!r) return;
     S.lastDir = r.dir;
@@ -685,6 +768,8 @@ function wire() {
   $('#bUp').onclick = () => browseTo(B.parent || '');
   $('#bGo').onclick = () => browseTo($('#bPath').value);
   $('#bPath').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); browseTo($('#bPath').value); } };
+  $('#bSearch').addEventListener('input', bSearchUpdate);
+  $('#bSearch').onkeydown = e => { if (e.key === 'Enter') e.preventDefault(); };
   $('#bCancel').onclick = () => closeBrowser(null);
   $('#browser').addEventListener('cancel', () => { if (B.resolve) B.resolve(null); B.resolve = null; });
   const bAll = on => { $$('#bList input[type=checkbox]').forEach(cb => { if (cb.checked !== on) cb.closest('.bi').click(); }); };
@@ -699,9 +784,14 @@ function wire() {
     document.body.innerHTML = '<div style="padding:60px;text-align:center;font:18px system-ui">p5converter wurde beendet.<br><br><small>Du kannst dieses Fenster schließen. Zum Neustart das Programm erneut öffnen.</small></div>';
     S.stopped = true;
   };
-  $('#cancelAll').onclick = () => api('/api/jobs/cancel-all', {kind: S.world}).then(poll);
+  $('#cancelAll').onclick = () => api('/api/jobs/cancel-all', {kind: ''}).then(poll);
   $('#histBack').onclick = () => { location.hash = ''; };
-  $('#conc').onchange = () => api('/api/concurrency', {kind: S.world, n: +$('#conc').value});
+  $('#pauseQueue').onclick = () => api('/api/queue/pause', {on: !S.paused}).then(poll);
+  $('#restoreYes').onclick = () => { $('#restoreDlg').close(); api('/api/queue/restore', {action: 'resume'}).then(r => { toast(r.resumed + (r.resumed === 1 ? ' Auftrag' : ' Aufträge') + ' fortgesetzt', 'ok'); poll(); }).catch(e => toast(e.message, 'bad')); };
+  $('#restoreNo').onclick = () => { $('#restoreDlg').close(); api('/api/queue/restore', {action: 'discard'}).then(() => toast('Unterbrochene Aufträge verworfen', 'ok')).catch(e => toast(e.message, 'bad')); };
+  $('#scanFolder').onclick = libPick;
+  $('#concV').onchange = () => api('/api/concurrency', {kind: 'video', n: +$('#concV').value});
+  $('#concA').onchange = () => api('/api/concurrency', {kind: 'audio', n: +$('#concA').value});
   wireVerify(); wireCrf(); wireConvert();
   $('#hwRedetect').onclick = async () => { await api('/api/hw/detect', {}); S.info.hw.done = false; S.info.hw.backends = []; renderHwCard(); setTimeout(loadInfo, 800); };
 }
@@ -723,13 +813,11 @@ function applyDefaultsFromCfg() {
 
 async function startApp() {
   S.cfg = await api('/api/settings');
-  captureDefaults(); loadSettings(); decorateInfo(); wire(); renderWorldNav();
+  captureDefaults(); loadSettings(); decorateInfo(); wire();
   await loadInfo();
   applyDefaultsFromCfg();
-  const sw = cfg().startWorld;
-  if (sw === 'audio' || sw === 'video') S.world = sw;
-  if (!worldOrder().includes(S.world)) S.world = worldOrder()[0];
-  outModeUI(); setWorld(S.world, false); renderPresetChips(); renderHero();
+  if (S.world !== 'audio' && S.world !== 'video') S.world = 'video';
+  outModeUI(); setWorld(S.world); renderPresetChips(); renderHero(); applySteps();
   if (cfg().showNews !== false) loadNews();
   if (!S.cfg.persistent) toast('Einstellungen werden nicht dauerhaft gespeichert (Pfad /config fehlt).', 'bad');
   poll(); S.pollTimer = setInterval(poll, 1000);

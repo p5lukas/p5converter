@@ -15,21 +15,12 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="p5converter">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<script>
-// Weltfarbe vor dem ersten Zeichnen setzen (sonst blitzt kurz das Standard-Grün auf, bis die Einstellungen geladen sind)
-try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { var r = document.documentElement.style; r.setProperty('--h', t.h); r.setProperty('--sat', t.sat + '%'); r.setProperty('--lit', t.lit + '%'); } } catch (e) {}
-</script>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header class="top"><div class="in">
   <a class="logo" href="/"><i class="logomark">p5</i><span>converter<u>_</u></span></a>
-  <nav class="worlds" id="worlds">
-    <button data-world="audio" class="on"><span class="pl"></span><span class="wl">Audio</span></button>
-    <button data-world="video"><span class="pl"></span><span class="wl">Video</span></button>
-  </nav>
   <div class="hactions">
-    <button id="startFlow" class="tb primary" title="Konvertierung starten" aria-label="Konvertierung starten"><span data-ic="play"></span><span class="hl"> Konvertieren</span></button>
     <button id="startRename" class="tb" title="Umbenennen starten" aria-label="Umbenennen starten"><span data-ic="rename"></span><span class="hl"> Umbenennen</span></button>
     <button id="startHistory" class="tb" title="Verlauf und Warteschlange" aria-label="Verlauf und Warteschlange"><span data-ic="history"></span><span class="hl"> Verlauf</span><span class="lbadge hbadge" id="histBadge"></span></button>
   </div>
@@ -44,18 +35,20 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
 <main id="viewMain">
   <div id="editBanner" class="editbanner hidden"></div>
 
-  <!-- Schritt: Start -->
+  <!-- Startseite: Was umwandeln? (Video oder Audio), laufender Auftrag, gewonnener Platz, Hardware -->
   <section class="stepsec" data-step="start">
-  <section class="hero" id="hero">
-    <div class="jobnow" id="jobNow"></div>
-    <div id="monitor" class="monitor"></div>
-  </section>
+    <div class="pagehead"><h1>Was möchtest du umwandeln?</h1><p class="muted">Wähle eine Art. Danach führt dich das Programm Schritt für Schritt durch die Auswahl.</p></div>
+    <div class="starttiles" id="startTiles"></div>
+    <section class="hero" id="hero">
+      <div class="jobnow" id="jobNow"></div>
+      <div id="monitor" class="monitor"></div>
+    </section>
     <div class="startcols">
       <div class="panel" id="savedCard">
-        <div class="panel-h"><h2 data-info="savedInfo">Gewonnener Platz</h2><button id="savedReset" class="small ghost hidden" title="Zählung dieser Welt auf 0 setzen">Zurücksetzen</button></div>
-        <div id="savedBody"></div>
+        <div class="panel-h"><h2 data-info="savedInfo">Gewonnener Platz</h2></div>
+        <div id="savedBody" class="savedcols"></div>
       </div>
-      <div class="panel hidden" id="hwCard" data-world="video">
+      <div class="panel" id="hwCard">
       <div class="panel-h"><h2 data-info="hwInfo">Hardware</h2><button id="hwRedetect" class="small">Neu erkennen</button></div>
       <div id="hwList"></div>
       <div id="hwGpus" class="muted small"></div>
@@ -63,7 +56,7 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
     </div>
   </section>
 
-  <!-- Konvertieren: eine Ansicht (Dateien, Satz, Tabelle „Vorher → Nachher“, Startleiste) -->
+  <!-- Konvertieren: Video in vier Schritten (Dateien, Regeln, Wie umwandeln?, Kontrolle & Start), Audio in einer Ansicht -->
   <section class="stepsec hidden" data-step="convert" id="convertView">
     <div class="cvtop">
       <button id="cvHome" class="ghost" type="button"><span data-ic="back"></span> Startseite</button>
@@ -73,23 +66,44 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
         <div class="presets hidden" id="vPresets"></div>
       </div>
     </div>
-    <div class="panel cvfiles" id="cvFiles">
-      <div class="panel-h"><h2>Dateien</h2>
+    <nav class="stepper hidden" id="cvStepper" aria-label="Schritte"></nav>
+    <div class="cvhead hidden" id="cvHead"></div>
+    <div class="cvsource hidden" id="cvSource" aria-live="polite"></div>
+    <div class="cvcard cvfiles" id="cvFiles">
+      <div class="cvchead"><span class="cvico" data-ic="folder"></span><h2 data-info="stepFiles">Dateien</h2><span class="cvsum muted small" id="fileSummary"></span></div>
+      <div class="cvcbody">
+        <div id="rootBtns" class="rootbtns"></div>
         <div class="btns">
           <button id="addFiles">+ Dateien</button>
           <button id="addFolder">+ Ordner</button>
           <button id="clearFiles" class="ghost">Leeren</button>
         </div>
+        <details id="cvFileDetails" class="cvfd"><summary>Liste der Dateien</summary><div id="fileList" class="files"></div></details>
       </div>
-      <div id="fileSummary" class="cvfsum"></div>
-      <details id="cvFileDetails" class="cvfd"><summary>Liste der Dateien</summary><div id="fileList" class="files"></div></details>
     </div>
+    <section class="cvcard hidden" id="cvScanHelp">
+      <div class="cvchead"><span class="cvico" data-ic="chip"></span><h2 data-info="libScan">Tipps: Wo lohnt sich das Umwandeln?</h2></div>
+      <div class="cvcbody">
+        <p class="scanhelp">Das Programm schaut in einen Ordner (mit allen Unterordnern) und zeigt dir, <b>welche Ordner sich zum Umwandeln eher lohnen</b>, zum Beispiel wegen eines älteren Codecs oder sehr großer Dateien. Es wird nichts verändert, und du siehst nur ganze Ordner, nie einzelne Dateien.</p>
+        <div class="btns"><button id="scanFolder" title="Einen Ordner rekursiv untersuchen und zeigen, bei welchen Ordnern sich das Umwandeln lohnt"><span data-ic="chip"></span> Ordner untersuchen …</button></div>
+      </div>
+    </section>
+    <section class="cvcard hidden" id="cvScan" aria-live="polite"></section>
+    <div id="cvRules" class="cvstep hidden"></div>
+    <div id="cvHow" class="cvstep hidden"></div>
     <div class="panel cvsentence" id="cvSentence"></div>
-    <div class="panel cvtable" id="cvTable"></div>
+    <div class="cvtable" id="cvTable"></div>
   </section>
 
+  <div class="stepnav hidden" id="wizNav">
+    <button id="wizBack" class="ghost"><span data-ic="back"></span> Zurück</button>
+    <button id="wizDiscard" class="ghost discard" title="Abbrechen: Dateien und alle Eingaben verwerfen, zurück zur Startseite"><span data-ic="close"></span><span class="lbl2"> Verwerfen</span></button>
+    <span id="wizInfo" class="small muted"></span>
+    <span class="spacer"></span>
+    <button id="wizNext" class="primary big">Weiter →</button>
+  </div>
   <div class="stepnav hidden" id="stepnav">
-    <button id="resetAll" class="ghost" title="Alle Eingaben dieser Welt auf den Anfang zurücksetzen"><span data-ic="reset"></span><span class="lbl2"> Zurücksetzen</span></button>
+    <button id="resetAll" class="ghost discard" title="Abbrechen: Dateien und alle Eingaben verwerfen, zurück zur Startseite"><span data-ic="close"></span><span class="lbl2"> Verwerfen</span></button>
     <span id="startInfo" class="small muted"></span>
     <span class="spacer"></span>
     <button id="detailsBtn" title="Weitere Einstellungen: Ziel, Namen, Video, Spuren, Prüfen"><span data-ic="gear"></span><span class="lbl3"> Details</span></button>
@@ -125,12 +139,15 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
 <main id="viewHistory" class="hidden">
   <div class="sethead"><button class="ghost" id="histBack"><span data-ic="back"></span> Zur Startseite</button><h1 id="histTitle">Verlauf</h1></div>
     <div class="panel" id="queuePanel">
-      <div class="panel-h"><h2>Warteschlange <span id="queueWorld" class="qworld"></span></h2>
+      <div class="panel-h"><h2>Warteschlange</h2>
         <div class="btns">
-          <label class="inline small">Parallel <select id="conc"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
-          <button id="cancelAll" class="small ghost" title="Bricht alle Aufträge dieser Welt ab und löscht unfertige Dateien. Quelldateien bleiben unberührt.">Alle abbrechen</button>
+          <label class="inline small">Parallel · Video <select id="concV"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
+          <label class="inline small">Audio <select id="concA"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
+          <button id="pauseQueue" class="small">Pausieren</button>
+          <button id="cancelAll" class="small ghost" title="Bricht alle laufenden und wartenden Aufträge ab und löscht unfertige Dateien. Quelldateien bleiben unberührt.">Alle abbrechen</button>
         </div>
       </div>
+      <div id="queuePaused" class="banner warn hidden">Die Warteschlange ist pausiert: laufende Aufträge werden fertig, es startet kein neuer. Mit „Fortsetzen“ geht es weiter.</div>
       <div id="queue"></div>
     </div>
   <div id="historyBody"></div>
@@ -253,13 +270,6 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
           <input type="range" id="vCrf" min="10" max="40" value="22">
           <span class="muted small" id="vCrfHint"></span>
         </label>
-        <label id="vMatRow">Art des Materials
-          <select id="vMaterial">
-            <option value="standard">Standard (Film/Serie)</option><option value="modern">Aktueller Film (Blockbuster)</option>
-            <option value="grain">Altes Material / mit Filmkorn</option><option value="anime">Anime</option>
-            <option value="cartoon">Zeichentrick</option><option value="home">Heimvideo / Handyvideo</option>
-          </select>
-        </label>
         <div id="vCrfAdvice" class="crfadvice"><span class="small" id="vCrfWhy"></span></div>
         <label id="vPresetRow">Geschwindigkeit
           <select id="vPreset"><option value="slow">Langsam (beste Kompression)</option><option value="medium" selected>Mittel</option><option value="fast">Schnell</option><option value="veryfast">Sehr schnell</option></select>
@@ -314,6 +324,14 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
   </div>
 </dialog>
 
+<dialog id="restoreDlg">
+  <form method="dialog" class="dlg">
+    <h2><span data-ic="history"></span> Unterbrochene Aufträge</h2>
+    <p id="restoreText"></p>
+    <div class="dlg-f"><button type="button" id="restoreNo" class="ghost">Verwerfen</button><button type="button" id="restoreYes" class="primary">Fortsetzen</button></div>
+  </form>
+</dialog>
+
 <dialog id="presetDlg">
   <form method="dialog" class="dlg" id="presetForm">
     <h2><span data-ic="floppy"></span> Als Voreinstellung speichern</h2>
@@ -347,7 +365,12 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
       <input id="bPath">
       <button type="button" id="bGo" class="small">Gehe</button>
     </div>
+    <div id="bWhere" class="muted small"></div>
     <div id="bDrives" class="small"></div>
+    <div class="bsearch">
+      <input id="bSearch" type="search" placeholder="Suchen, auch in Unterordnern (ab 2 Zeichen) …" autocomplete="off" spellcheck="false" aria-label="Im Ordner suchen">
+      <span id="bInfo" class="muted small"></span>
+    </div>
     <div id="bList" class="blist"></div>
     <div class="dlg-f">
       <span class="btns"><button type="button" id="bAll" class="small">Alle auswählen</button><button type="button" id="bNone" class="small">Alle abwählen</button><span id="bCount" class="muted small"></span></span>
@@ -371,15 +394,14 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
 
 <dialog id="resetDlg">
   <form method="dialog" class="dlg">
-    <h2><span data-ic="reset"></span> Alles zurücksetzen?</h2>
+    <h2><span data-ic="close"></span> Abbrechen und verwerfen?</h2>
     <p id="resetText"></p>
     <p class="muted small">Laufende Aufträge, Einstellungen und Voreinstellungen bleiben unberührt.</p>
-    <div class="dlg-f"><button type="button" id="resetNo" class="ghost">Abbrechen</button><button type="button" id="resetYes" class="primary">Zurücksetzen</button></div>
+    <div class="dlg-f"><button type="button" id="resetNo" class="ghost">Weitermachen</button><button type="button" id="resetYes" class="primary">Verwerfen</button></div>
   </form>
 </dialog>
 
 <script src="icons.js"></script>
-<script src="planets.js"></script>
 <script src="info.js"></script>
 <script src="rename.js"></script>
 <script src="flow.js"></script>
@@ -389,6 +411,8 @@ try { var t = JSON.parse(localStorage.getItem('p5theme') || 'null'); if (t) { va
 <script src="quality.js"></script>
 <script src="crf.js"></script>
 <script src="convert.js"></script>
+<script src="library.js"></script>
+<script src="rain.js"></script>
 <script src="logs.js"></script>
 <script src="history.js"></script>
 <script src="settings.js"></script>
