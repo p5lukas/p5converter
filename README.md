@@ -21,10 +21,12 @@ Ein SoundConverter-Klon mit zusätzlichem Video-Teil, gebaut für ganze Serien-S
 
 </div>
 
-> *English in short:* p5converter is a self-hosted web UI (single Go binary + ffmpeg) to convert audio and video. It supports
-> Intel Quick Sync, NVIDIA NVENC, AMD AMF and VAAPI, per-track audio/subtitle rules for whole seasons (e.g. DTS → E-AC-3, keep only German/English,
-> forced-subtitle detection), quality in four steps (translated per encoder, with the real number under "Erweitert"), one before/after table instead of wizard steps, a post-conversion check (tracks, length, full decode) before originals are touched, a
-> conversion history, renaming, and a Windows app. Docker image: `ghcr.io/p5lukas/p5converter:latest` (stable) or `:dev`, default port 8787.
+> *English in short:* p5converter is a self-hosted web UI (single Go binary + ffmpeg) to convert audio and video. The home page offers two tiles (video, audio);
+> video runs in four steps (files, rules, how to convert, check & start). It supports Intel Quick Sync, NVIDIA NVENC, AMD AMF and VAAPI, per-track audio rules and
+> per-file subtitle choices for whole seasons (e.g. DTS → E-AC-3, keep only German/English, forced-subtitle detection), quality in four steps (translated per encoder,
+> with the real number under "Erweitert"), a before/after table, a post-conversion check (tracks, length, full decode) before originals are touched, a manageable queue
+> (reorder, hold, pause, survives a restart), a folder scan that shows where converting is likely to pay off, a conversion history, renaming, and a Windows app.
+> Docker image: `ghcr.io/p5lukas/p5converter:latest` (stable) or `:dev`, default port 8787.
 
 ## Auf einen Blick
 * **Startseite mit zwei Kacheln:** Video (grün) oder Audio (orange); Video läuft in **vier Schritten** (Dateien, Regeln, Wie umwandeln?, Kontrolle & Start), dazu Voreinstellungen und Umbenennen mit Live-Vorschau
@@ -49,7 +51,7 @@ Ein SoundConverter-Klon mit zusätzlichem Video-Teil, gebaut für ganze Serien-S
 Gleicher Aufbau wie bei **p5assets** (Matrix-Regen, Poster-Rahmen, „p5“); das Abzeichen unten rechts unterscheidet die Apps: bei p5converter **silberne Audio-CD + blaue Blu-ray** (Audio und Video), bei p5assets ein oranger Komet. Dateien: `web/icon*.png`, `web/apple-touch-icon.png` (iPhone/iPad-Web-App), `unraid/icon.png`; Quelle und Erzeugung: `tools/icons/` (`make_icons.py converter <Ordner>`).
 
 ## Windows (Vorabversion)
-**Eine Datei:** `p5converter-setup.exe` aus der [neuesten Vorabversion](https://github.com/p5lukas/p5converter/releases) (`v0.2.0` usw.; der laufende Entwicklungsstand liegt in [`dev-latest`](https://github.com/p5lukas/p5converter/releases/tag/dev-latest)) laden und starten. Windows meldet beim ersten Start einmal „Unbekannter Herausgeber“ (die Datei ist nicht mit einem Zertifikat signiert): **Weitere Informationen → Trotzdem ausführen**. Danach durchklicken – fertig. Der Installer richtet sich nur für dein Konto ein (keine Administrator-Abfrage), enthält Programm und ffmpeg und legt ein Startmenü-Symbol an (Desktop-Symbol und Autostart optional).
+**Eine Datei:** `p5converter-setup.exe` aus der [neuesten Vorabversion](https://github.com/p5lukas/p5converter/releases) (zurzeit `v0.3.6`; der laufende Entwicklungsstand liegt in [`dev-latest`](https://github.com/p5lukas/p5converter/releases/tag/dev-latest)) laden und starten. Windows meldet beim ersten Start einmal „Unbekannter Herausgeber“ (die Datei ist nicht mit einem Zertifikat signiert): **Weitere Informationen → Trotzdem ausführen**. Danach durchklicken – fertig. Der Installer richtet sich nur für dein Konto ein (keine Administrator-Abfrage), enthält Programm und ffmpeg und legt ein Startmenü-Symbol an (Desktop-Symbol und Autostart optional).
 * Die Oberfläche öffnet in einem **eigenen Fenster** (Microsoft Edge WebView2, in Windows 11 und aktuellem Windows 10 schon vorhanden; sonst richtet der Installer es ein) und sieht genauso aus wie im Browser.
 * **Hardware wird automatisch erkannt:** Intel Quick Sync, NVIDIA NVENC und AMD AMF (jeweils mit aktuellem Grafiktreiber), sonst rechnet die CPU. Ist ein NVIDIA-Treiber zu alt für NVENC, steht unter Einstellungen → Hardware → „Warum?“ in Klartext, welche Version fehlt – dann den Treiber aktualisieren.
 * Einstellungen und Logs liegen in `%APPDATA%\p5converter`.
