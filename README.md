@@ -12,7 +12,7 @@ Ein SoundConverter-Klon mit zusätzlichem Video-Teil, gebaut für ganze Serien-S
 ![Docker](https://img.shields.io/badge/Docker-ghcr.io%2Fp5lukas%2Fp5converter-00ff5a?logo=docker&logoColor=white&labelColor=0a1a0f)
 ![Unraid](https://img.shields.io/badge/Unraid-Template-00ff5a?labelColor=0a1a0f)
 ![Windows](https://img.shields.io/badge/Windows-Vorabversion-ffcc00?labelColor=0a1a0f)
-![Version](https://img.shields.io/badge/Version-0.3.6-00ff5a?labelColor=0a1a0f)
+![Version](https://img.shields.io/badge/Version-0.3.7-00ff5a?labelColor=0a1a0f)
 ![Lizenz](https://img.shields.io/badge/Lizenz-MIT-00ff5a?labelColor=0a1a0f)
 
 <img src="docs/images/start.png" alt="Startseite mit laufendem Auftrag" width="900">
@@ -51,12 +51,12 @@ Ein SoundConverter-Klon mit zusätzlichem Video-Teil, gebaut für ganze Serien-S
 Gleicher Aufbau wie bei **p5assets** (Matrix-Regen, Poster-Rahmen, „p5“); das Abzeichen unten rechts unterscheidet die Apps: bei p5converter **silberne Audio-CD + blaue Blu-ray** (Audio und Video), bei p5assets ein oranger Komet. Dateien: `web/icon*.png`, `web/apple-touch-icon.png` (iPhone/iPad-Web-App), `unraid/icon.png`; Quelle und Erzeugung: `tools/icons/` (`make_icons.py converter <Ordner>`).
 
 ## Windows (Vorabversion)
-**Eine Datei:** `p5converter-setup.exe` aus der [neuesten Vorabversion](https://github.com/p5lukas/p5converter/releases) (zurzeit `v0.3.6`; der laufende Entwicklungsstand liegt in [`dev-latest`](https://github.com/p5lukas/p5converter/releases/tag/dev-latest)) laden und starten. Windows meldet beim ersten Start einmal „Unbekannter Herausgeber“ (die Datei ist nicht mit einem Zertifikat signiert): **Weitere Informationen → Trotzdem ausführen**. Danach durchklicken – fertig. Der Installer richtet sich nur für dein Konto ein (keine Administrator-Abfrage), enthält Programm und ffmpeg und legt ein Startmenü-Symbol an (Desktop-Symbol und Autostart optional).
+**Eine Datei:** `p5converter-setup.exe` aus der [neuesten Vorabversion](https://github.com/p5lukas/p5converter/releases) (der laufende Entwicklungsstand liegt in [`dev-latest`](https://github.com/p5lukas/p5converter/releases/tag/dev-latest)) laden und starten. Windows meldet beim ersten Start einmal „Unbekannter Herausgeber“ (die Datei ist nicht mit einem Zertifikat signiert): **Weitere Informationen → Trotzdem ausführen**. Danach durchklicken – fertig. Der Installer richtet sich nur für dein Konto ein (keine Administrator-Abfrage), enthält Programm und ffmpeg und legt ein Startmenü-Symbol an (Desktop-Symbol und Autostart optional).
 * Die Oberfläche öffnet in einem **eigenen Fenster** (Microsoft Edge WebView2, in Windows 11 und aktuellem Windows 10 schon vorhanden; sonst richtet der Installer es ein) und sieht genauso aus wie im Browser.
 * **Hardware wird automatisch erkannt:** Intel Quick Sync, NVIDIA NVENC und AMD AMF (jeweils mit aktuellem Grafiktreiber), sonst rechnet die CPU. Ist ein NVIDIA-Treiber zu alt für NVENC, steht unter Einstellungen → Hardware → „Warum?“ in Klartext, welche Version fehlt – dann den Treiber aktualisieren.
 * Einstellungen und Logs liegen in `%APPDATA%\p5converter`.
 * **Symbol im Infobereich (Tray):** Das Schließen-Kreuz versteckt nur das Fenster, p5converter und laufende Aufträge laufen weiter. Klick auf das Symbol (oder ein zweiter Start) zeigt das Fenster wieder; **Beenden** über das Symbol oder den Knopf „Beenden“ in der Oberfläche.
-* Die Datei hängt an jeder Versions-Vorabversion (`vX.Y.Z` von `main`, `vX.Y.Z-dev` von `dev`); in `dev-latest` liegt immer der aktuelle Stand von `dev`.
+* Die Datei hängt an jedem Release (`vX.Y.Z`, gebaut von `main`); in `dev-latest` liegt immer der aktuelle Stand von `dev`. Mit zwei Grafikeinheiten (z. B. Intel + NVIDIA) probiert die Hardware-Erkennung die Adapter durch, damit auch das **Lesen** mit Quick Sync klappt (Diagnose unter Einstellungen → Hardware).
 
 ## Kanäle: `:latest` und `:dev`
 | Image | Branch | Wofür |

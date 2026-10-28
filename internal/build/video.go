@@ -26,13 +26,15 @@ type VideoOpts struct {
 	AV1Aom       bool   `json:"av1Aom"` // use libaom instead of SVT-AV1 on cpu
 	// HWInit are extra ffmpeg input options found by the hardware detection (e.g. Quick Sync via a VAAPI device).
 	// Set by the server, never by the client.
-	HWInit     []string `json:"-"`
-	AudioMode  string   `json:"audioMode"` // copy | encode
-	AudioCodec string   `json:"audioCodec"`
-	AudioKbps  int      `json:"audioKbps"` // per stereo pair
-	AudioLangs []string `json:"audioLangs"`
-	SubMode    string   `json:"subMode"` // copy | none
-	SubLangs   []string `json:"subLangs"`
+	HWInit []string `json:"-"`
+	// HWDecodeInit: Geräteoptionen nur für das Lesen mit Quick Sync (Windows: der Adapter, der beim Test geklappt hat); ersetzt dann HWInit.
+	HWDecodeInit []string `json:"-"`
+	AudioMode    string   `json:"audioMode"` // copy | encode
+	AudioCodec   string   `json:"audioCodec"`
+	AudioKbps    int      `json:"audioKbps"` // per stereo pair
+	AudioLangs   []string `json:"audioLangs"`
+	SubMode      string   `json:"subMode"` // copy | none
+	SubLangs     []string `json:"subLangs"`
 }
 
 // TrackEdit is what the person decided for ONE track of one file (key: absolute stream index).
@@ -159,7 +161,11 @@ func BuildVideo(info *ffmpeg.Info, o VideoOpts, ov Overrides, in, out string) (*
 
 	// --- device / hardware decode (input options) ---
 	if hw {
-		args = append(args, o.HWInit...)
+		devInit := o.HWInit
+		if o.HWDecode && o.Backend == "qsv" && len(o.HWDecodeInit) > 0 {
+			devInit = o.HWDecodeInit
+		}
+		args = append(args, devInit...)
 		if o.Backend == "vaapi" {
 			dev := o.VaapiDevice
 			if dev == "" {
@@ -171,7 +177,7 @@ func BuildVideo(info *ffmpeg.Info, o VideoOpts, ov Overrides, in, out string) (*
 			switch o.Backend {
 			case "qsv":
 				args = append(args, "-hwaccel", "qsv", "-hwaccel_output_format", "qsv")
-				if len(o.HWInit) > 0 {
+				if len(devInit) > 0 {
 					args = append(args, "-hwaccel_device", "hw")
 				}
 			case "nvenc":

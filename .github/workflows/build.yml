@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release-Version ohne v (z. B. 0.0.1) – baut Image :<version> und erstellt Tag + GitHub-Release"
+        description: "Release-Version ohne v (z. B. 0.3.7), nur auf main – baut Image :<version> und erstellt Tag + Release (Text aus dem CHANGELOG, mit der Windows-exe)"
         required: false
         default: ""
 
@@ -25,11 +25,12 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20 # ein hängender Schritt (z. B. apt) soll nach Minuten scheitern, nicht nach Stunden
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with: { go-version: "1.24" }
-      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: sudo apt-get -o DPkg::Lock::Timeout=120 -o Acquire::Retries=3 update && sudo apt-get -o DPkg::Lock::Timeout=120 -o Acquire::Retries=3 install -y ffmpeg
       - run: go vet ./...
       - run: go test -race ./...
       - name: Logik von Audio und Untertitel (Node)
@@ -40,6 +41,7 @@ jobs:
   docker:
     needs: test
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -95,6 +97,7 @@ jobs:
   windows:
     needs: test
     runs-on: windows-latest
+    timeout-minutes: 40
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -214,27 +217,40 @@ jobs:
           gh release delete dev-latest -R ${{ github.repository }} --cleanup-tag -y 2>$null
           gh release create dev-latest build/out/p5converter-setup.exe -R ${{ github.repository }} --target ${{ github.sha }} --prerelease --title "p5converter Windows (dev-latest)" --notes-file windows/dev-latest-notes.md
 
+  # Eine Version, ein Release (wie bei p5assets): nur von main (Tag v* oder von Hand mit Version). Der Text kommt aus dem CHANGELOG (alle Versionen seit dem
+  # letzten Release, neueste zuerst), keine automatische Liste der Pull Requests. Zum Testen von dev gibt es nur „dev-latest“ (Windows-exe).
   release:
     needs: docker
-    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.version != '')
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.version != '' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
+      - name: Release-Text aus dem CHANGELOG
+        run: |
+          tag="${{ inputs.version != '' && format('v{0}', inputs.version) || github.ref_name }}"
+          ver="${tag#v}"
+          # letztes veröffentlichtes Release vX.Y.Z (ohne dev-latest) = Ausgangspunkt für „seit“
+          prev="$(gh release list -R ${{ github.repository }} --limit 100 --json tagName --jq '.[].tagName' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | grep -vx "$tag" | sed 's/^v//' | sort -V | tail -1 || true)"
+          sh tools/release-notes.sh "$ver" "$prev" > release-notes.md
+          echo "TAG=$tag" >> "$GITHUB_ENV"
+          cat release-notes.md
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.version != '' && format('v{0}', inputs.version) || github.ref_name }}
+          tag_name: ${{ env.TAG }}
           target_commitish: ${{ github.sha }}
-          name: p5converter ${{ inputs.version != '' && format('v{0}', inputs.version) || github.ref_name }}
-          body_path: .github/release-body.md
-          generate_release_notes: true
-          prerelease: ${{ startsWith(inputs.version != '' && format('v{0}', inputs.version) || github.ref_name, 'v0.') }}
+          name: ${{ env.TAG }}
+          body_path: release-notes.md
+          generate_release_notes: false
+          prerelease: ${{ startsWith(env.TAG, 'v0.') }}
           files: |
             unraid/p5converter.xml
 
-  # Zu jeder Versions-Vorabversion (z. B. v0.2.0 von main und v0.2.0-dev von dev) kommt die Windows-setup.exe als Anhang dazu
+  # Zu jedem Release (z. B. v0.3.7 von main) kommt die Windows-setup.exe als Anhang dazu
   release-windows:
     needs: [windows, release]
-    if: (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main') && github.event_name == 'workflow_dispatch' && inputs.version != ''
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.version != ''
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}

@@ -1,5 +1,17 @@
 [
   {
+    "id": "win-qsv-decode-1",
+    "version": "0.3.7",
+    "title": "Windows: Quick Sync auch beim Lesen",
+    "text": "Auf PCs mit Intel- und NVIDIA-Grafik probiert die Hardware-Erkennung jetzt die Adapter durch, damit Quick Sync auch das Lesen übernimmt. Klappt es nicht, liest die CPU gleich von Anfang an. Unter Einstellungen → Hardware → Diagnose steht, was geklappt hat."
+  },
+  {
+    "id": "fewer-warnings-1",
+    "version": "0.3.7",
+    "title": "Weniger Warnungen im Log",
+    "text": "Eine nicht nutzbare Hardware (zum Beispiel AMD AMF ohne AMD-Grafik) ist nur noch eine Info, wenn gar keine passende Grafikeinheit da ist. Der gelbe Log-Knopf meldet sich dadurch seltener grundlos."
+  },
+  {
     "id": "history-stable-1",
     "version": "0.3.6",
     "title": "Verlauf bleibt ruhig, Befehl und Log lassen sich kopieren",
