@@ -1,5 +1,27 @@
 # Änderungen
 
+## 0.3.7 – 2026-10-28
+
+**Behoben: Windows, Quick Sync „Lesen“ bei Intel + NVIDIA im selben PC**
+- Auf einem PC mit zwei Grafikeinheiten (Log: RTX 3050 + Intel UHD 770) scheiterte das Lesen mit Quick Sync bei jedem Auftrag („Hardware device setup failed for decoder“, danach zwei Fehlversuche, dann las die CPU). Ursache (vermutet, aus dem Code und dem Log): ohne Angabe öffnet ffmpeg für das Lesen den Direct3D-Adapter 0, und das ist hier nicht die Intel-Einheit; das Schreiben fand die Intel-Einheit selbst
+- Die Hardware-Erkennung testet unter Windows jetzt auch das **Lesen**: Standard-Adapter, dann Direct3D-11-Adapter 0 bis 3 (mit einem kleinen Testvideo); der erste Weg, der klappt, wird für die Aufträge übernommen. Klappt keiner, liest die CPU gleich von Anfang an (keine Fehlversuche mehr, „Lesen: CPU“). Unter Linux/Docker und macOS ändert sich nichts. Die Diagnose (Einstellungen → Hardware → „Diagnose“ und „Diagnose kopieren“) zeigt jede Probe mit der ffmpeg-Meldung und „Lesen: <Adapter>“
+- **Nur mit einem Windows-PC mit Intel + NVIDIA prüfbar:** ein neues Log bzw. die kopierte Diagnose zeigt, welcher Adapter geklappt hat. In der Sandbox sind die Befehle und die Auswahl mit einem ffmpeg-Ersatz getestet
+
+**Geändert: weniger Warnungen im Log**
+- „AMD AMF nicht nutzbar“ (und ähnlich NVIDIA/Intel) steht nur noch als **Warnung** (gelber Knopf), wenn eine passende Grafikeinheit da ist; ohne AMD-Grafik ist es eine Info. Kann das Programm die Grafikeinheiten nicht ermitteln (z. B. im Container), bleibt es bei der Warnung
+
+**Geändert: Releases aufgeräumt (wie bei p5assets)**
+- **Eine Version, ein Release:** `vX.Y.Z` von `main` (mit Windows-exe und Unraid-Vorlage). Es gibt keine `vX.Y.Z-dev`-Releases mehr; zum Testen von `dev` bleibt `dev-latest`
+- Der **Release-Text kommt aus dem CHANGELOG** (alle Versionen seit dem letzten Release, neueste zuerst, `tools/release-notes.sh`) mit einer kurzen Download-Zeile, statt einer langen Standardbeschreibung plus automatischer Liste der Pull Requests
+- Neuer Workflow `tidy-releases` (nur von Hand, mit Bestätigung „ja“): löscht die alten `-dev`-Releases samt Tags und schreibt die Texte der vorhandenen Releases neu
+- `build.yml`: Zeitgrenzen für die Jobs und `apt` mit Wiederholung/Sperr-Wartezeit, damit ein hängender Schritt (zweimal beim Installieren von ffmpeg erlebt) nach Minuten scheitert statt nach Stunden
+
+**Doku**
+- Reste des Wortes „Videowelt“ in Texten entfernt
+
+**Intern**
+- `hw.qsvDecodeVariantsFor`, `Detector.detectQSVDecodeFor`, `hw.MaybePresent`, `useDetected` (Server), `VideoOpts.HWDecodeInit`; Tests mit ffmpeg-Ersatz (`TestDetectQSVDecodePicksWorkingAdapter` u. a.)
+
 ## 0.3.6 – 2026-10-22
 
 **Behoben: Verlauf und Warteschlange**

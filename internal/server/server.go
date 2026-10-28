@@ -568,7 +568,7 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 				if req.Video.Backend == "vaapi" && req.Video.VaapiDevice == "" {
 					req.Video.VaapiDevice = b.Device
 				}
-				req.Video.HWInit = b.Init // e.g. Quick Sync started via a VAAPI device
+				useDetected(&req.Video, b)
 			}
 		}
 		if !ok {
@@ -807,6 +807,19 @@ func (s *Server) authDisable(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, s.authStateOf(r))
 }
 
+// useDetected übernimmt aus der Hardware-Erkennung, was ein Auftrag braucht: die Geräteoptionen des Encoders (z. B. Quick Sync über ein VAAPI-Gerät) und
+// für Quick Sync (Windows) den beim Test gefundenen Lese-Adapter; klappt dort kein Weg zum Hardware-Lesen, liest gleich die CPU (statt zweier Fehlversuche je Datei).
+func useDetected(v *build.VideoOpts, b hw.Backend) {
+	v.HWInit = b.Init
+	if b.ID == "qsv" {
+		if b.DecodeTested && !b.DecodeOK {
+			v.HWDecode = false
+		} else {
+			v.HWDecodeInit = b.DecodeInit
+		}
+	}
+}
+
 // logHardware writes the result of the hardware detection into the log.
 func logHardware(res hw.Result) {
 	l := logs.Get("hw")
@@ -820,6 +833,8 @@ func logHardware(res hw.Result) {
 		sort.Strings(ok)
 		if len(ok) > 0 {
 			l.Infof("%s nutzbar (%s)%s", b.Label, strings.Join(ok, ", "), map[bool]string{true: ", Start: " + b.Variant, false: ""}[b.Variant != ""])
+		} else if b.ID != "cpu" && b.Compiled && !hw.MaybePresent(res.GPUs, b.ID) {
+			l.Infof("%s nicht nutzbar (keine passende Grafikeinheit gefunden): %s", b.Label, b.Detail) // kein Grund zur Warnung
 		} else if b.ID != "cpu" && b.Compiled {
 			l.Warnf("%s nicht nutzbar: %s", b.Label, b.Detail)
 		} else if b.ID != "cpu" {

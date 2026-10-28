@@ -1,5 +1,5 @@
 'use strict';
-/* Details → „Audio & Untertitel“ (Videowelt; die Tabelle in der Konvertieren-Ansicht arbeitet mit denselben Daten). Alles bleibt unverändert (Passthrough), solange man nichts festlegt.
+/* Details → „Audio & Untertitel“ (Video; die Tabelle in der Konvertieren-Ansicht arbeitet mit denselben Daten). Alles bleibt unverändert (Passthrough), solange man nichts festlegt.
    Drei Ansichten: „Gruppen“ (Dateien mit gleichen Sprachen zusammengefasst, eine Entscheidung je Gruppe), „Tabelle“ (alle Dateien × Sprachen mit Häkchen)
    und „Einzelne Dateien“ (Spurkarten mit Erweitert). Darüber: Regeln nach Codec (z. B. nur DTS umwandeln) und die Sprach-Wünsche aus den Einstellungen.
    Berechnet wird alles in web/trkplan.js (reine Logik, mit Node getestet). Eigene Änderungen je Datei: f.tracks = {streamIndex: {…}} (gehen vor),

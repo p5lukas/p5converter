@@ -118,7 +118,7 @@ const INFO = {
     <ul><li><b>Behalten:</b> andere Sprachen werden entfernt (leer = nichts entfernen). Hat eine Datei keine deiner Sprachen, bleibt sie unverändert.</li>
     <li><b>Standard:</b> eine Rangliste. Die erste Sprache, die in der Datei vorkommt, wird zur Spur, die der Player automatisch startet (z. B. Deutsch, sonst Englisch).</li>
     <li><b>Forced:</b> „Deutsch (Forced)“ heißt: der erzwungene Untertitel, der nur bei fremdsprachigen Stellen erscheint.</li></ul>
-    <p>Reihenfolge ändern: ziehen oder ▲ ▼. Die Wünsche gelten für die Videowelt.</p>`},
+    <p>Reihenfolge ändern: ziehen oder ▲ ▼. Die Wünsche gelten für Video.</p>`},
   vAudioTracks: {t: 'Audiospuren', b: `<p>Regeln für den Ton in <b>allen</b> Dateien. Standard ist „Passthrough“: Alle Tonspuren bleiben unverändert. Einzelne Spuren änderst du unten in der Tabelle.</p>`},
   vSubTracks: {t: 'Untertitel', b: `<p>Regeln für die Untertitel in <b>allen</b> Dateien. Standard ist „Passthrough“: Alle Untertitel bleiben unverändert.</p>`},
   trkTable: {t: 'Spuren dieser Datei', b: `<p>Jede Ton- und Untertitelspur der gewählten Datei als Karte. Was du hier änderst, gilt nur für diese Datei – oder mit „Auf alle Dateien anwenden“ für alle.</p>

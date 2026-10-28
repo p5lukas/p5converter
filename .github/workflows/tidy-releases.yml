@@ -1,0 +1,47 @@
+name: tidy-releases
+
+# Einmaliges Aufräumen der Releases (nur von Hand und nur mit Bestätigung):
+#  1. alle Releases vX.Y.Z-dev samt Tag löschen (seit 0.3.7 gibt es für dev nur noch „dev-latest“)
+#  2. den Text und Titel jedes Releases vX.Y.Z aus dem CHANGELOG neu schreiben (Downloads nur, soweit am Release vorhanden)
+# Die Dateien (Windows-exe, Unraid-Vorlage) und die Releases vX.Y.Z selbst bleiben.
+on:
+  workflow_dispatch:
+    inputs:
+      bestaetigung:
+        description: 'Zum Ausführen "ja" eintragen (löscht Releases *-dev samt Tags und schreibt die Texte der Releases neu)'
+        required: true
+        default: "nein"
+
+permissions:
+  contents: write
+
+jobs:
+  tidy:
+    if: inputs.bestaetigung == 'ja'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Releases *-dev löschen
+        run: |
+          for t in $(gh release list -R ${{ github.repository }} --limit 200 --json tagName --jq '.[].tagName' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+-dev$' || true); do
+            echo "lösche $t"
+            gh release delete "$t" -R ${{ github.repository }} --cleanup-tag -y
+          done
+      - name: Texte der Releases neu schreiben
+        run: |
+          prev=""
+          for t in $(gh release list -R ${{ github.repository }} --limit 200 --json tagName --jq '.[].tagName' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V); do
+            ver="${t#v}"
+            export ASSETS="$(gh release view "$t" -R ${{ github.repository }} --json assets --jq '[.assets[].name] | join(" ")')"
+            if grep -q "^## $ver " CHANGELOG.md; then
+              sh tools/release-notes.sh "$ver" "$prev" > notes.md
+              gh release edit "$t" -R ${{ github.repository }} --notes-file notes.md --title "$t"
+              echo "Text von $t neu geschrieben"
+            else
+              echo "kein CHANGELOG-Abschnitt für $ver, $t bleibt unverändert"
+            fi
+            prev="$ver"
+          done
