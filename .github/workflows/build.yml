@@ -215,7 +215,7 @@ jobs:
         shell: pwsh
         run: |
           gh release delete dev-latest -R ${{ github.repository }} --cleanup-tag -y 2>$null
-          gh release create dev-latest build/out/p5converter-setup.exe -R ${{ github.repository }} --target ${{ github.sha }} --prerelease --title "p5converter Windows (dev-latest)" --notes-file windows/dev-latest-notes.md
+          gh release create dev-latest build/out/p5converter-setup.exe -R ${{ github.repository }} --target ${{ github.sha }} --prerelease --title "Windows-Testversion (dev) – wird laufend ersetzt" --notes-file windows/dev-latest-notes.md
 
   # Eine Version, ein Release (wie bei p5assets): nur von main (Tag v* oder von Hand mit Version). Der Text kommt aus dem CHANGELOG (alle Versionen seit dem
   # letzten Release, neueste zuerst), keine automatische Liste der Pull Requests. Zum Testen von dev gibt es nur „dev-latest“ (Windows-exe).
