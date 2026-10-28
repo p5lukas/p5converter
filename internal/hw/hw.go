@@ -3,6 +3,7 @@ package hw
 
 import (
 	"context"
+	"fmt"
 	"github.com/p5lukas/p5converter/internal/proc"
 	"os"
 	"os/exec"
@@ -30,6 +31,13 @@ type Backend struct {
 	// the same options are used for real conversions.
 	Init    []string `json:"init,omitempty"`
 	Variant string   `json:"variant,omitempty"` // human readable name of the start variant that worked
+	// Quick Sync Lesen (Hardware-Decoding): nur unter Windows getestet. Mit zwei Grafikeinheiten (z. B. NVIDIA + Intel) öffnet ffmpeg
+	// für das Lesen sonst den Direct3D-Adapter 0, und das ist nicht die Intel-Einheit. DecodeTested: der Test lief; DecodeOK: ein Weg klappt;
+	// DecodeInit: die Geräteoptionen dafür (leer = es geht ohne); DecodeVariant: Name für die Diagnose.
+	DecodeTested  bool     `json:"decodeTested,omitempty"`
+	DecodeOK      bool     `json:"decodeOk,omitempty"`
+	DecodeInit    []string `json:"decodeInit,omitempty"`
+	DecodeVariant string   `json:"decodeVariant,omitempty"`
 }
 
 // DiagLine is one raw test result, shown in the "Diagnose" section of the UI.
@@ -125,6 +133,55 @@ func qsvVariantsFor(goos string, nodes []string) []variant {
 	return v
 }
 
+// MaybePresent sagt, ob zum Backend eine passende Grafikeinheit in der Liste steht (Hersteller im Namen). Ist die Liste leer (nicht ermittelbar,
+// z. B. im Container), gilt „vielleicht“ = true. So wird „AMD AMF nicht nutzbar“ auf einem PC ohne AMD-Grafik nicht als Warnung gemeldet.
+func MaybePresent(gpus []string, backend string) bool {
+	if len(gpus) == 0 {
+		return true
+	}
+	words := map[string][]string{
+		"qsv":   {"intel"},
+		"nvenc": {"nvidia", "geforce", "quadro", "rtx", "gtx", "tesla"},
+		"amf":   {"amd", "radeon", "ati "},
+		"vaapi": {"intel", "amd", "radeon"},
+	}[backend]
+	if words == nil {
+		return true
+	}
+	for _, g := range gpus {
+		l := strings.ToLower(g)
+		for _, w := range words {
+			if strings.Contains(l, w) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// qsvDecodeVariantsFor: Wege, Quick Sync zum Lesen (Hardware-Decoding) zu öffnen. Nur Windows: dort wählt ffmpeg ohne Angabe den Direct3D-Adapter 0,
+// bei Rechnern mit mehreren Grafikeinheiten ist die Intel-Einheit oft ein anderer Adapter; deshalb werden die ersten Adapter nacheinander probiert.
+func qsvDecodeVariantsFor(goos string) []variant {
+	if goos != "windows" {
+		return nil
+	}
+	v := []variant{{"Standard-Adapter", nil}}
+	for n := 0; n < 4; n++ {
+		v = append(v, variant{fmt.Sprintf("Direct3D-11-Adapter %d", n), []string{"-init_hw_device", fmt.Sprintf("qsv=hw:hw_any,child_device=%d,child_device_type=d3d11va", n)}})
+	}
+	return v
+}
+
+// qsvDecodeArgs: ffmpeg-Eingabeoptionen zum Lesen mit Quick Sync (wie in internal/build): hwaccel + Frames auf der Grafikeinheit, bei eigenem Gerät dessen Name „hw“.
+func qsvDecodeArgs(init []string) []string {
+	a := append([]string{}, init...)
+	a = append(a, "-hwaccel", "qsv", "-hwaccel_output_format", "qsv")
+	if len(init) > 0 {
+		a = append(a, "-hwaccel_device", "hw")
+	}
+	return a
+}
+
 // Detect runs test encodes. Safe to call repeatedly.
 func (d *Detector) Detect() {
 	start := time.Now()
@@ -207,6 +264,7 @@ func (d *Detector) Detect() {
 				backs = append(backs, b)
 				continue
 			}
+			d.detectQSVDecode(b, enc, addDiag)
 		}
 		backs = append(backs, b)
 		for _, c := range codecs {
@@ -265,6 +323,59 @@ func (d *Detector) Detect() {
 	d.mu.Lock()
 	d.res = res
 	d.mu.Unlock()
+}
+
+// detectQSVDecode testet unter Windows, ob und wie Quick Sync Videos lesen (decodieren) kann, und merkt sich den ersten Weg, der klappt.
+// Ohne Testvideo (kein libx264) oder auf anderen Systemen bleibt es bei „nicht getestet“ (das Verhalten bleibt wie bisher).
+func (d *Detector) detectQSVDecode(b *Backend, enc map[string]bool, addDiag func(DiagLine)) {
+	d.detectQSVDecodeFor(runtime.GOOS, b, enc, addDiag)
+}
+
+func (d *Detector) detectQSVDecodeFor(goos string, b *Backend, enc map[string]bool, addDiag func(DiagLine)) {
+	vars := qsvDecodeVariantsFor(goos)
+	if len(vars) == 0 || !enc["libx264"] {
+		return
+	}
+	dir, err := os.MkdirTemp("", "p5c-hw")
+	if err != nil {
+		return
+	}
+	defer os.RemoveAll(dir)
+	sample := filepath.Join(dir, "probe.mkv")
+	if ok, _ := d.run(20*time.Second, "-hide_banner", "-v", "error", "-nostdin", "-f", "lavfi", "-i", "color=c=black:s=640x360:r=25:d=1",
+		"-c:v", "libx264", "-pix_fmt", "yuv420p", "-y", sample); !ok {
+		return
+	}
+	b.DecodeTested = true
+	for _, v := range vars {
+		ok, msg := d.run(20*time.Second, append(append([]string{"-hide_banner", "-v", "error", "-nostdin"}, qsvDecodeArgs(v.init)...),
+			"-i", sample, "-frames:v", "5", "-f", "null", "-")...)
+		addDiag(DiagLine{"qsv", "Lesen", false, v.name, ok, msg})
+		if ok {
+			b.DecodeOK, b.DecodeInit, b.DecodeVariant = true, v.init, v.name
+			return
+		}
+	}
+}
+
+// run startet ffmpeg mit Zeitgrenze; bei einem Fehler kommen die wichtigsten Zeilen der Ausgabe (ohne Speicheradressen) zurück.
+func (d *Detector) run(timeout time.Duration, args ...string) (bool, string) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	out, err := proc.CommandContext(ctx, d.tools.FFmpeg, args...).CombinedOutput()
+	if err != nil {
+		var keep []string
+		for _, l := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+			if l = strings.TrimSpace(l); l != "" && !strings.Contains(l, "Nothing was written") {
+				keep = append(keep, addrRe.ReplaceAllString(l, ""))
+			}
+		}
+		if len(keep) > 4 {
+			keep = keep[:4]
+		}
+		return false, strings.Join(keep, " | ")
+	}
+	return true, ""
 }
 
 func (d *Detector) test(backend, device, encoder string, ten bool, init []string) (bool, string) {

@@ -222,3 +222,38 @@ func TestVaapiAndNvencDecodeChains(t *testing.T) {
 		}
 	}
 }
+
+// Quick Sync Lesen unter Windows mit zwei Grafikeinheiten: der beim Test gefundene Adapter ersetzt die Geräteoptionen des Schreibens, aber nur für das
+// Hardware-Lesen; beim Lesen mit der CPU bleibt es bei den Optionen für das Schreiben.
+func TestQSVDecodeUsesDetectedAdapter(t *testing.T) {
+	enc := []string{"-init_hw_device", "qsv=hw"}
+	dec := []string{"-init_hw_device", "qsv=hw:hw_any,child_device=1,child_device_type=d3d11va"}
+	o := VideoOpts{Codec: "hevc", Backend: "qsv", CRF: 20, HWDecode: true, BitDepth: 8, HWInit: enc, HWDecodeInit: dec}
+	p, err := BuildVideo(sample(), o, Overrides{}, "in.mkv", "out.part")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := join(p.Args)
+	if !strings.Contains(s, "child_device=1,child_device_type=d3d11va") || strings.Contains(s, "-init_hw_device qsv=hw ") ||
+		!strings.Contains(s, "-hwaccel qsv") || !strings.Contains(s, "-hwaccel_device hw") {
+		t.Errorf("Lesen mit Adapter 1:%s", s)
+	}
+	// Lesen mit der CPU: nur die Optionen für das Schreiben, kein Adapter für das Lesen
+	o.HWDecode = false
+	p, _ = BuildVideo(sample(), o, Overrides{}, "in.mkv", "out.part")
+	s = join(p.Args)
+	if strings.Contains(s, "child_device") || !strings.Contains(s, "-init_hw_device qsv=hw") || strings.Contains(s, "-hwaccel") {
+		t.Errorf("Lesen mit der CPU:%s", s)
+	}
+	// ohne eigenen Lese-Adapter bleibt alles wie bisher
+	o.HWDecode, o.HWDecodeInit = true, nil
+	p, _ = BuildVideo(sample(), o, Overrides{}, "in.mkv", "out.part")
+	if s = join(p.Args); strings.Contains(s, "child_device") || !strings.Contains(s, "-hwaccel_device hw") {
+		t.Errorf("ohne Lese-Adapter:%s", s)
+	}
+	// nur bei Quick Sync (NVENC bleibt unberührt)
+	p, _ = BuildVideo(sample(), VideoOpts{Codec: "hevc", Backend: "nvenc", CRF: 20, HWDecode: true, BitDepth: 8, HWDecodeInit: dec}, Overrides{}, "in.mkv", "out.part")
+	if strings.Contains(join(p.Args), "child_device") {
+		t.Errorf("NVENC darf den Lese-Adapter nicht bekommen:%s", join(p.Args))
+	}
+}

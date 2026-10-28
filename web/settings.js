@@ -312,7 +312,7 @@ async function restoreDefaultPresets() {
   } catch (e) { toast(e.message, 'bad'); }
 }
 
-// --- Audio & Untertitel: Sprach-Wünsche (nur Videowelt) ---
+// --- Audio & Untertitel: Sprach-Wünsche (nur Video) ---
 // Gemeinsame Auswahlliste: Sprachen aus LANGS; bei Untertiteln zusätzlich „(Forced)“ je Sprache (Wert „ger:forced“)
 function langOptions(withForced) {
   const o = [];
@@ -353,7 +353,7 @@ function pageTracks() {
   const subName = x => langName(x.lang) + (x.forced ? ' (Forced)' : '') + ' (' + x.lang + ')';
   const section = (title, hint, body) => h('div', {class: 'prefsec'}, h('h3', {}, title), h('p', {class: 'muted small'}, hint), body);
   return h('div', {}, h('h2', {}, 'Audio & Untertitel', infoBtn('trkPrefs')),
-    h('p', {class: 'muted'}, 'Gilt für die Videowelt. In der Tabelle „Vorher → Nachher“ wendet das Programm das automatisch an (mit Funkel-Zeichen markiert): was entfernt wird und welche Spur Standard ist. Jeden Vorschlag kannst du dort ändern oder mit „rückgängig“ zurücknehmen.'),
+    h('p', {class: 'muted'}, 'Gilt für Video. In der Tabelle „Vorher → Nachher“ wendet das Programm das automatisch an (mit Funkel-Zeichen markiert): was entfernt wird und welche Spur Standard ist. Jeden Vorschlag kannst du dort ändern oder mit „rückgängig“ zurücknehmen.'),
     section('Ton: Sprachen behalten', 'Spuren in anderen Sprachen werden entfernt. Leer = alle behalten. Spuren ohne Sprachangabe bleiben immer. Hat eine Datei keine dieser Sprachen, wird nichts entfernt.',
       rankList(p.audioKeep.slice(), nameOf, v => save('audioKeep', v), 'plain', 'Sprache hinzufügen')),
     section('Ton: Standard-Spur', 'Diese Tonspur startet automatisch. Reihenfolge = Priorität: die erste Sprache, die in der Datei vorkommt, gewinnt (z. B. Deutsch, sonst Englisch). Kommentar-Spuren werden übersprungen.',
@@ -403,7 +403,7 @@ function buildDiagText(hw) {
   const l = ['p5converter ' + ((S.info && S.info.build && S.info.build.version) || ''), (S.info && S.info.ffmpeg) || ''];
   l.push('Grafik-/Videoeinheiten: ' + ((hw.gpus || []).join(', ') || '-'), 'Render-Geräte: ' + ((hw.renderNodes || []).join(', ') || '-'));
   (hw.vainfo || []).forEach(v => l.push('vainfo ' + v.node + ': ' + (v.driver || v.error || '-') + ' | Encode: ' + ((v.encode || []).join(', ') || '-')));
-  (hw.backends || []).forEach(b => l.push(`[${b.id}] ${Object.keys(b.codecs || {}).filter(k => b.codecs[k]).join(',') || 'nicht nutzbar'}${b.variant ? ' via ' + b.variant : ''}${b.detail ? ' – ' + b.detail : ''}`));
+  (hw.backends || []).forEach(b => l.push(`[${b.id}] ${Object.keys(b.codecs || {}).filter(k => b.codecs[k]).join(',') || 'nicht nutzbar'}${b.variant ? ' via ' + b.variant : ''}${b.decodeTested ? ' · Lesen: ' + (b.decodeOk ? (b.decodeVariant || 'ok') : 'nicht möglich (die CPU liest)') : ''}${b.detail ? ' – ' + b.detail : ''}`));
   (hw.diag || []).forEach(d => l.push(`${d.backend} ${d.codec}${d.ten ? ' 10b' : ''} ${d.variant || ''}: ${d.ok ? 'ok' : 'FEHLER ' + (d.msg || '')}`));
   return l.join('\n');
 }
