@@ -36,7 +36,8 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
     await p.screenshot({ path: `${L.SHOTS}/t-${name}-1-dest.png`, fullPage: true });
     await nc.locator('.pill:has-text("Beide behalten")').click(); await p.waitForTimeout(200);
     // Namensliste: nur wenn umbenannt wird, dann alle Dateien einzeilig („alt → neu“)
-    eq(name, 'ohne Umbenennen keine Namensliste', await p.locator('.cvnamelist').count(), 0);
+    await p.waitForSelector('.cvnamelist .cvnl', {timeout: 8000});
+    eq(name, 'ohne Umbenennen steht die Dateiliste trotzdem unter den Feldern (2 Zeilen, „behalten ihren Namen“)', (await p.locator('.cvnamelist .cvnl').count()) + '/' + /behalten ihren Namen/.test(await p.textContent('.cvnamelist')), '2/true');
     await p.evaluate(() => cvSet('pattern', '{filename} [X]')); await p.evaluate(() => cvRender()); await p.waitForSelector('.cvnamelist .cvnl', {timeout: 8000}); await p.waitForTimeout(500);
     eq(name, 'Namensliste: eine Zeile je Datei (2)', await p.locator('.cvnamelist .cvnl').count(), 2);
     const nl = (await p.locator('.cvnamelist').textContent()).replace(/\s+/g, ' ');

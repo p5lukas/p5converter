@@ -1,5 +1,19 @@
 # Änderungen
 
+## 0.4.1 – 2026-10-29
+
+**Behoben: Voreinstellung bearbeiten**
+- „Bearbeiten“ (Einstellungen → Voreinstellungen) verlangte, Dateien zu wählen (die Seite sprang ohne Dateien zurück zu Schritt 1). Jetzt öffnet sich ein Fenster mit **allen Einstellungen auf einer Seite** (Auswahllisten mit Hinweis, Name der Kachel); es braucht keine Dateien. Nicht abgefragte Werte der Voreinstellung (Dateiname, Muster, Ersetzungen) bleiben erhalten
+
+**Geändert: Assistent fragt alles**
+- Der Assistent „Neue Voreinstellung“ stellt jetzt alle Einstellungen aus **Video, Ton und Untertitel**: Format (H.265, H.264, AV1, VP9, nur neu verpacken), Container, Qualität, Geschwindigkeit, Encoder (Automatisch, CPU, erkannte Grafikeinheiten), Auflösung, Bit-Tiefe, Ton unverändert/kleiner machen (mit Format und Bitrate), Untertitel behalten/entfernen und Sprach-Regeln. Fragen, die nicht passen (z. B. Qualität beim bloßen Neu-Verpacken), entfallen. „Geschwindigkeit“ und „Encoder“ sind jetzt getrennte Fragen; „Langsam“ ist vorgeschlagen
+
+**Geändert: Dateiliste unter den Namensfeldern**
+- In „Name & Ziel“ stehen die Dateien (alt → neu) jetzt **immer** direkt unter den Namensfeldern, auch bevor etwas umbenannt wird („behalten ihren Namen“), damit man sieht, was man ändern kann
+
+**Tests**
+- `ui-check-settings.js` (Bearbeiten ohne Dateien), `ui-check-wizard.js`, `ui-check-tracks.js` angepasst
+
 ## 0.4.0 – 2026-10-29
 
 **Neu: einfachere Oberfläche (zwei Schritte, Karten)**

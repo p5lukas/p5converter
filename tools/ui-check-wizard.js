@@ -1,4 +1,4 @@
-// Prüfregel: Voreinstellungs-Assistent (fünf Fragen, Kachel auf der Startseite, nur Video) und Probeclip (CPU) in allen Ansichten.
+// Prüfregel: Voreinstellungs-Assistent (Fragen, Kachel auf der Startseite, nur Video) und Probeclip (CPU) in allen Ansichten.
 // Voraussetzung: INDIR enthält long.mkv, Wurzelordner INDIR und OUTDIR; frischer Server. Aufruf: INDIR=/tmp/media OUTDIR=/tmp/out SHOTS=/tmp/shots node tools/ui-check-wizard.js
 const L = require('./ui-lib');
 const fails = [];
@@ -15,9 +15,9 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     const tag = 'Test ' + name;
     await p.click('text=Neue Voreinstellung'); await p.waitForTimeout(400);
     ok(await p.isVisible('#wizDlg') && await inside('#wizDlg'), name + ': Assistent nicht sichtbar oder ragt heraus');
-    ok(/Frage 1 von 5/.test(await p.textContent('#wizBox')), name + ': „Frage 1 von 5“ fehlt');
+    ok(/Frage 1 von 10/.test(await p.textContent('#wizBox')), name + ': „Frage 1 von 10“ fehlt');
     await p.screenshot({path: `${L.SHOTS}/p5c-wiz-${name}-1.png`});
-    for (let i = 0; i < 5; i++) { await p.click("#wizGo"); await p.waitForTimeout(150); }
+    while (await p.locator('#wizGo').count()) { await p.click('#wizGo'); await p.waitForTimeout(120); }
     ok(/Passt das so/.test(await p.textContent('#wizBox')), name + ': Zusammenfassung fehlt');
     await p.fill('#wizName', tag); await p.screenshot({path: `${L.SHOTS}/p5c-wiz-${name}-2.png`});
     await p.click('#wizSave'); await p.waitForTimeout(800);

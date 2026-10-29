@@ -1,5 +1,23 @@
 [
   {
+    "id": "preset-edit-1",
+    "version": "0.4.1",
+    "title": "Voreinstellung bearbeiten – ohne Dateien",
+    "text": "Einstellungen → Voreinstellungen → „Bearbeiten“ öffnet jetzt alle Einstellungen auf einer Seite als Auswahllisten. Du musst keine Dateien mehr wählen."
+  },
+  {
+    "id": "wizard-all-1",
+    "version": "0.4.1",
+    "title": "Assistent fragt alles",
+    "text": "Der Assistent „Neue Voreinstellung“ fragt jetzt alle Einstellungen aus Video, Ton und Untertitel ab: Format, Container, Qualität, Geschwindigkeit, Encoder, Auflösung, Bit-Tiefe, Ton umwandeln (Format, Bitrate), Untertitel und Sprach-Regeln."
+  },
+  {
+    "id": "namelist-1",
+    "version": "0.4.1",
+    "title": "Dateiliste unter den Namensfeldern",
+    "text": "In „Name & Ziel“ stehen die Dateien jetzt immer direkt unter den Namensfeldern (alt → neu), auch bevor etwas umbenannt wird. So siehst du, was du ändern kannst."
+  },
+  {
     "id": "ui-simple-1",
     "version": "0.4.0",
     "title": "Einfacher: zwei Schritte, alles in Karten",

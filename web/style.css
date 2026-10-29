@@ -976,3 +976,10 @@ dialog.clipdlg{width:min(980px,100vw)}
 .libgain{margin-left:auto;align-self:center;white-space:nowrap;font-size:13px;color:var(--muted);text-align:right;padding-left:10px}
 .libgain.good{color:var(--accent);font-weight:700}
 @media(max-width:700px){.libgain{flex:1 0 100%;text-align:left;padding:4px 0 0 28px;margin-left:0}}
+
+/* Voreinstellung bearbeiten: alle Einstellungen auf einer Seite */
+.wizform{display:grid;gap:14px}
+.wizgrp{display:grid;gap:10px;border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--panel)}
+.wizgrp h3{margin:0;font-size:14px;color:var(--accent);letter-spacing:.06em;text-transform:uppercase}
+.wizfield{display:grid;gap:4px}.wizfield label{display:grid;gap:4px}.wizfield select{width:100%}.wizfield small{font-size:12.5px;line-height:1.4}
+dialog.wizdlg .wizbox{overflow-y:auto;max-height:100dvh}

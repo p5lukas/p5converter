@@ -51,7 +51,7 @@ function renderStartPresets() {
   const box = $('#startPresets'); if (!box) return;
   const list = cfg().presets.filter(p => p.world === 'video' && p.suggest);
   fill(box, list.map(p => h('button', {type: 'button', class: 'pbtn', 'data-preset': p.id, title: describePreset(p), onclick: () => startWithPreset(p)}, h('b', {}, p.name), h('small', {}, describePreset(p)))),
-    h('button', {type: 'button', class: 'pbtn new' + (list.length ? '' : ' first'), id: 'wizStart', onclick: openWizard}, h('b', {}, list.length ? '+ Neue Voreinstellung' : 'Erste Voreinstellung einrichten'), h('small', {}, 'kurzer Assistent, ' + WIZ_COUNT + ' Fragen')));
+    h('button', {type: 'button', class: 'pbtn new' + (list.length ? '' : ' first'), id: 'wizStart', onclick: openWizard}, h('b', {}, list.length ? '+ Neue Voreinstellung' : 'Erste Voreinstellung einrichten'), h('small', {}, 'Assistent mit allen Einstellungen')));
 }
 function renderStartTiles() {
   renderStartPresets();

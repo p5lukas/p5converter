@@ -130,12 +130,8 @@ async function savePresetFromDialog() {
 // --- Bearbeiten einer Voreinstellung im Konverter ---
 function editPreset(id) {
   const p = cfg().presets.find(x => x.id === id); if (!p) return;
-  S.editPreset = id;
-  enterKind(p.world);
-  applyPreset(p);
-  if (p.world === 'video') S.vstep = 2;
-  renderEditBanner();
-  showStep('convert');
+  if (p.world !== 'video') { enterKind(p.world); applyPreset(p); S.editPreset = id; renderEditBanner(); showStep('convert'); return; }
+  openWizard(p); // Video: alle Einstellungen auf einer Seite, ohne Dateien
 }
 function renderEditBanner() {
   const b = $('#editBanner'), p = S.editPreset && cfg().presets.find(x => x.id === S.editPreset);
@@ -280,7 +276,7 @@ function pagePresets() {
         check(p.suggest, v => saveCfg(x => { x.presets.find(q => q.id === p.id).suggest = v; }), 'Vorschlag'),
         h('button', {class: 'small', title: 'Nach oben', disabled: i === 0, onclick: () => move(p, -1)}, '↑'),
         h('button', {class: 'small', title: 'Nach unten', disabled: i === mine.length - 1, onclick: () => move(p, 1)}, '↓'),
-        h('button', {class: 'small', title: 'Werte im Konverter bearbeiten', onclick: () => editPreset(p.id)}, icon('edit'), ' Werte'),
+        h('button', {class: 'small', title: 'Alle Einstellungen der Voreinstellung bearbeiten', onclick: () => editPreset(p.id)}, icon('edit'), ' Bearbeiten'),
         h('button', {class: 'small', title: 'Duplizieren', onclick: () => saveCfg(x => { const q = x.presets.find(r => r.id === p.id); x.presets.push({...JSON.parse(JSON.stringify(q)), id: '', name: (q.name + ' Kopie').slice(0, 40)}); })}, icon('copy')),
         h('button', {class: 'small danger', title: 'Löschen', onclick: () => { if (confirm('Voreinstellung „' + p.name + '“ löschen?')) saveCfg(x => { x.presets = x.presets.filter(q => q.id !== p.id); }); }}, icon('trash'))));
   }) : h('div', {class: 'empty'}, 'Keine Voreinstellungen in dieser Art.');
