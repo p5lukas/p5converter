@@ -250,7 +250,7 @@ function cvReasons(g, ex, r) {
       forced: 'Als Forced erkannt: ' + a.text.replace(/^Wahrscheinlich Forced \(/, '').replace(/\)$/, '') + '. Passt zu deinem Wunsch.'}[a.kind];
     out.push({kind: a.kind, text, undo});
   });
-  if (r.kept && r.type === 'subtitle' && r.guess) out.push({kind: 'suggest', text: `Vorschlag: nur ${r.guess.n} statt ${r.guess.of} ${r.guess.unit} – wahrscheinlich ein Forced-Untertitel (erzwungene Untertitel).`, apply: 'Als Forced markieren',
+  if (r.kept && r.type === 'subtitle' && r.guess) out.push({kind: 'suggest', text: `Vorschlag: ${TP.guessText(r.guess)} – wahrscheinlich ein Forced-Untertitel (erzwungene Untertitel).`, apply: 'Als Forced markieren',
     do: () => cvEach(g, ord, (it, s) => trkSet(it.f, s.index, {forced: true}))});
   return out;
 }

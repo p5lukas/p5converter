@@ -55,9 +55,12 @@ const TP = (() => {
     return {drop, guard: false};
   }
 
-  /* Forced-Untertitel nach Größe erraten: Ist eine Untertitelspur in derselben Sprache viel kleiner als die größte (unter 20 %, die große hat
-     mindestens 100 Zeilen bzw. 20 KB), ist sie sehr wahrscheinlich „Forced“ (nur fremdsprachige Stellen). Nur wenn die Datei Zählwerte hat
-     (MKV-Tags von mkvmerge); sonst bleibt es leer. Ergebnis: {Spurindex: {n, of, unit}} – nur Vorschlag, nie still gesetzt. */
+  /* Forced-Untertitel erraten – nur Vorschlag, nie still gesetzt (außer der Sprach-Wunsch „… (Forced)“ verlangt es, dann Vorauswahl mit Begründung).
+     1) Nach dem Spurtitel: „Forced“, „ForcedNarrative“, „erzwungen“, „foreign parts only“ …
+     2) Nach der Größe: Ist eine Untertitelspur in derselben Sprache viel kleiner als die größte (unter 20 %, die große hat mindestens 100 Zeilen
+        bzw. 20 KB), ist sie sehr wahrscheinlich „Forced“ (nur fremdsprachige Stellen). Nur wenn die Datei Zählwerte hat (MKV-Tags von mkvmerge).
+     Ergebnis: {Spurindex: {title?} oder {n, of, unit} oder beides}. */
+  const FORCED_TITLE = /forced|erzwungen|narrative|foreign parts|nur fremd|fremdsprachig/i;
   function forcedGuess(info) {
     const out = {}, subs = (info.streams || []).filter(s => s.type === 'subtitle' && !s.attachedPic && !s.forced && !noLang(s.lang));
     const byLang = {};
@@ -70,8 +73,11 @@ const TP = (() => {
       if (val(big) < (useFrames ? 100 : 20000)) return;
       list.forEach(s => { if (s !== big && val(s) < val(big) * 0.2) out[s.index] = {n: val(s), of: val(big), unit: useFrames ? 'Zeilen' : 'Bytes'}; });
     });
+    subs.forEach(s => { if (s.title && FORCED_TITLE.test(s.title)) out[s.index] = {...(out[s.index] || {}), title: s.title}; });
     return out;
   }
+  // Begründung eines Forced-Vorschlags als Text („Titel …“ bzw. „nur 38 statt 1200 Zeilen“)
+  const guessText = g => [g.title ? `Titel „${g.title}“` : '', g.n ? `nur ${g.n} statt ${g.of} ${g.unit}` : ''].filter(Boolean).join(' und ');
 
   /* cfg: {audioRules, subRules, audioMode:'copy'|'encode', audioCodec, audioKbps, subMode:'copy'|'none', usePrefs, prefs:{audioKeep, subKeep, audioDefault, subDefault:[{lang, forced}]}}
      Ergebnis: {tracks:[{s, index, type, kept, action, codec, kbps, def, forced, lang, edit, why:[…]}], edits, guard:{audio, sub}} */
@@ -128,7 +134,7 @@ const TP = (() => {
         // ein erratener Forced-Untertitel zählt als „Forced“, wenn der Wunsch Forced verlangt (Vorauswahl, im Plan sichtbar)
         const t = keptS.find(r => normLang(r.s.lang) === normLang(e.lang) && !!(r.forced || r.guess) === !!e.forced);
         if (t) {
-          if (t.guess && !t.forced) { t.edit.forced = true; t.forced = true; t.why.push(`Wahrscheinlich Forced (${t.guess.n} statt ${t.guess.of} ${t.guess.unit})`); t.guess = null; }
+          if (t.guess && !t.forced) { t.edit.forced = true; t.forced = true; t.why.push(`Wahrscheinlich Forced (${guessText(t.guess)})`); t.guess = null; }
           setDef(t, keptS); break;
         }
       }
@@ -201,6 +207,6 @@ const TP = (() => {
     return out;
   }
 
-  return {frameKey, trackKey, sameTrack, transferEdits, ordinal, atOrdinal, autoReasons, normLang, noLang, REC_KBPS, RULE_CODECS, RULE_TARGETS, SUB_KINDS, codecKey, subKind, audioRuleMatches, subRuleMatches, describeAudioRule, describeSubRule, plan, summarize, signature, langDrops, forcedGuess};
+  return {frameKey, trackKey, sameTrack, transferEdits, ordinal, atOrdinal, autoReasons, normLang, noLang, REC_KBPS, RULE_CODECS, RULE_TARGETS, SUB_KINDS, codecKey, subKind, audioRuleMatches, subRuleMatches, describeAudioRule, describeSubRule, plan, summarize, signature, langDrops, forcedGuess, guessText, FORCED_TITLE};
 })();
 if (typeof module !== 'undefined') module.exports = TP;
