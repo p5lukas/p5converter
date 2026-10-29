@@ -1,5 +1,41 @@
 [
   {
+    "id": "ui-simple-1",
+    "version": "0.4.0",
+    "title": "Einfacher: zwei Schritte, alles in Karten",
+    "text": "Video hat nur noch zwei Schritte: Dateien wählen, dann „Konvertieren“. Dort stehen Video, Ton, Untertitel, Regeln, Name & Ziel und Prüfen als kompakte Karten, die sich an Ort und Stelle aufklappen. Das Fenster „Details“ gibt es nicht mehr. Bei „Wie Quelle“ steht jetzt, was die Quelle hat."
+  },
+  {
+    "id": "speed-visible-1",
+    "version": "0.4.0",
+    "title": "Geschwindigkeit sichtbar",
+    "text": "Qualität und Geschwindigkeit (Schnell bis Langsam) stehen nebeneinander in der Video-Karte; Encoder (CPU, NVIDIA, Intel …) ebenfalls. Erkannte Hardware bleibt voll nutzbar."
+  },
+  {
+    "id": "presets-wizard-1",
+    "version": "0.4.0",
+    "title": "Voreinstellungen nur für Video, mit Assistent",
+    "text": "Voreinstellungen erscheinen als Kacheln auf der Startseite und gelten nur für Video (Audio ist immer individuell). „+ Neue Voreinstellung“ startet einen kurzen Assistenten mit fünf Fragen."
+  },
+  {
+    "id": "clip-1",
+    "version": "0.4.0",
+    "title": "Probeclip",
+    "text": "30 Sekunden aus der Mitte mit den gewählten Einstellungen umwandeln und vergleichen: Größe, Ähnlichkeit (SSIM) und ein Bildausschnitt. So siehst du vor dem großen Lauf, was Qualität und Geschwindigkeit bringen."
+  },
+  {
+    "id": "lib-save-1",
+    "version": "0.4.0",
+    "title": "Platz sparen mit Schätzung",
+    "text": "„Ordner untersuchen“ zeigt jetzt eine grobe Ersparnis-Schätzung („≈“) je Ordner. Es ist eine Schätzung, nichts wird verändert."
+  },
+  {
+    "id": "forced-fix-1",
+    "version": "0.4.0",
+    "title": "Forced-Untertitel besser erkannt",
+    "text": "Spuren mit Titel wie „[ForcedNarrative]“ oder „Forced“ werden jetzt als Forced erkannt und gelten als Standard-Untertitel, auch wenn die Datei kein Forced-Flag hat."
+  },
+  {
     "id": "win-qsv-decode-1",
     "version": "0.3.7",
     "title": "Windows: Quick Sync auch beim Lesen",

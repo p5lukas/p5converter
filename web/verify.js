@@ -46,6 +46,6 @@ function vfCollect() {
 
 function wireVerify() {
   S.vf = {};
-  ['vfTracks', 'vfDecode', 'deleteSource'].forEach(id => $('#' + id).addEventListener('input', () => { vfStash(S.vfFor); vfUI(); }));
+  ['vfTracks', 'vfDecode', 'deleteSource'].forEach(id => $('#' + id).addEventListener('input', () => { vfStash(S.vfFor); vfUI(); if (typeof cvRender === 'function') cvRender(); }));
   $('#vCodec').addEventListener('input', vfUI);
 }

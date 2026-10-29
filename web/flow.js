@@ -1,11 +1,11 @@
 'use strict';
 /* Startseite (Kacheln Video und Audio), Wegweiser durch den Ablauf, gewonnener Platz, „Wenn Datei existiert“, Zurücksetzen.
-   Video läuft in vier Schritten (1 Dateien, 2 Regeln, 3 Wie umwandeln?, 4 Kontrolle & Start), Audio in einer Ansicht.
+   Video läuft in zwei Schritten (1 Dateien, 2 Konvertieren), Audio in einer Ansicht.
    Nutzt S, $, $$, h(), fill(), W(), api(), toast() usw. aus app.js/settings.js (nur zur Laufzeit). */
 
-// Die frühere Schritt-Folge (Dateien, Ziel, Benennen, Video, Spuren, Zusammenfassung) ist jetzt der Ablauf („convert“) plus das Fenster „Details“; alte Namen führen dorthin
+// Die frühere Schritt-Folge (Dateien, Ziel, Benennen, Video, Spuren, Zusammenfassung) ist jetzt der Ablauf („convert“) mit Karten; alte Namen führen zur passenden Karte
 const OLD_STEPS = {files: null, summary: null, dest: 'dest', name: 'dest', video: 'video', audio: 'video', tracks: 'tracks'};
-const VSTEPS = [['files', 'Dateien'], ['rules', 'Regeln'], ['how', 'Wie umwandeln?'], ['check', 'Kontrolle & Start']];
+const VSTEPS = [['files', 'Dateien'], ['check', 'Konvertieren']];
 
 // zeigt die Startseite oder den Ablauf; Voreinstellungsleiste, Schrittleiste und Startleiste passen sich an
 function applySteps() {
@@ -14,7 +14,6 @@ function applySteps() {
   document.body.dataset.vstep = S.step === 'convert' && S.world === 'video' ? S.vstep : '';
   applyKindTheme();
   if (typeof cvLayout === 'function') cvLayout();
-  if (typeof cvWorldVis === 'function') cvWorldVis();
 }
 
 function showStep(id, keepScroll) {
@@ -29,19 +28,33 @@ function showStep(id, keepScroll) {
   if (!keepScroll) window.scrollTo(0, 0);
   if (tab) openSheet(tab);
 }
-// Video: Schritt 1 bis 4
+// Video: Schritt 1 und 2
 function vGo(n) {
-  S.vstep = Math.max(1, Math.min(4, n));
+  S.vstep = Math.max(1, Math.min(2, n));
   applySteps(); cvRender();
   window.scrollTo(0, 0);
 }
 
-// ---------- Startseite: Kacheln Video und Audio ----------
+// ---------- Startseite: Voreinstellungen (nur Video), Kacheln Video und Audio ----------
+// Voreinstellungen gibt es nur für Video (Audio ist immer individuell). Ein Tipp lädt sie und führt zur Dateiwahl; „+ Neue Voreinstellung“ startet den Assistenten.
 const KIND_TILES = {
-  video: ['video', 'Video', 'Filme und Serien: Codec, Tonspuren, Untertitel und Hardware-Beschleunigung.', 'Video wählen'],
-  audio: ['audio', 'Audio', 'Musik und Hörbücher: MP3, AAC, FLAC, Opus, Samplerate und Kanäle.', 'Audio wählen'],
+  video: ['video', 'Video', 'Filme und Serien', 'Video wählen'],
+  audio: ['audio', 'Audio', 'Musik und Hörbücher', 'Audio wählen'],
 };
+function startWithPreset(p) {
+  applyPreset(p);
+  enterKind('video');
+  if (S.files.video.length) { vGo(2); toast('Voreinstellung „' + p.name + '“ geladen', 'ok'); }
+  else toast('Voreinstellung „' + p.name + '“ geladen – wähle jetzt Dateien', 'ok');
+}
+function renderStartPresets() {
+  const box = $('#startPresets'); if (!box) return;
+  const list = cfg().presets.filter(p => p.world === 'video' && p.suggest);
+  fill(box, list.map(p => h('button', {type: 'button', class: 'pbtn', 'data-preset': p.id, title: describePreset(p), onclick: () => startWithPreset(p)}, h('b', {}, p.name), h('small', {}, describePreset(p)))),
+    h('button', {type: 'button', class: 'pbtn new' + (list.length ? '' : ' first'), id: 'wizStart', onclick: openWizard}, h('b', {}, list.length ? '+ Neue Voreinstellung' : 'Erste Voreinstellung einrichten'), h('small', {}, 'kurzer Assistent, ' + WIZ_COUNT + ' Fragen')));
+}
 function renderStartTiles() {
+  renderStartPresets();
   const box = $('#startTiles'); if (!box) return;
   fill(box, ['video', 'audio'].map(k => {
     const [ico, title, sub, go] = KIND_TILES[k], n = S.files[k].length;
@@ -66,6 +79,8 @@ function savedCol(k, t) {
 function renderSaved() {
   const d = S.saved || {}, box = $('#savedBody');
   fill(box, ['video', 'audio'].map(k => savedCol(k, d[k])));
+  const ts = ['video', 'audio'].map(k => d[k]).filter(t => t && t.count), gain = ts.reduce((a, t) => a + t.in - t.out, 0), el = $('#savedSum');
+  if (el) el.textContent = ts.length ? (gain >= 0 ? '−' : '+') + fmtSize(Math.abs(gain)) + (gain >= 0 ? ' Platz gewonnen' : ' Mehrbedarf') : 'noch nichts umgewandelt';
 }
 function openSavedReset(kind) {
   S.resetKind = kind;
@@ -109,7 +124,7 @@ function resetWorld() {
   setField('vHwDec', cfg().hwDecode !== false);
   setField('outDir', cfg().defaultOutDir || ''); setField('outMode', cfg().defaultOutDir ? 'custom' : 'same');
   S.name[w] = {...NAME_EMPTY}; showName(w); vfReset(w);
-  if (w === 'video') { S.qSig = null; S.vstep = 1; S.presetSkip = false; CV.reviewed.clear(); CV.inh = {}; CV.gsel = {}; CV.open.clear(); CV.unfold.clear(); }
+  if (w === 'video') { S.qSig = null; S.vstep = 1; CV.reviewed.clear(); CV.inh = {}; CV.gsel = {}; CV.card = {}; CV.open.clear(); CV.unfold.clear(); }
   S.files[w].length = 0;
   refreshAudioUI(); refreshVideoUI(); outModeUI(); syncNameUI(); renderFiles(); renderHero(); renderStartTiles(); saveSettings();
   showStep('start');
@@ -135,8 +150,5 @@ function wireFlow() {
   $('#startRename').onclick = () => { location.hash = '#rename'; };
   $('#startHistory').onclick = () => { location.hash = '#history'; };
   $('#wizBack').onclick = () => vGo(S.vstep - 1);
-  $('#wizNext').onclick = () => {
-    if (S.vstep === 1 && S.presetSkip) { S.presetSkip = false; vGo(4); return; } // Voreinstellung gewählt: direkt zur Kontrolle
-    vGo(S.vstep + 1);
-  };
+  $('#wizNext').onclick = () => vGo(S.vstep + 1);
 }

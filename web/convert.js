@@ -1,16 +1,14 @@
 'use strict';
-/* Konvertieren in EINER Ansicht (statt sechs Schritten):
-   oben die Dateien, darunter ein Satz zum Antippen für alles, was nicht in die Tabelle passt (Hardware, Ziel, Prüfen),
-   dann die Tabelle „Vorher → Nachher“ (links die Quelle, rechts das Ergebnis, jede Zeile direkt änderbar) und unten die Startleiste.
-   Dateien mit gleichen Rahmendaten (Spuren, Sprachen, Formate) bilden eine Gruppe; eine Entscheidung gilt für die ganze Gruppe.
-   Abweichende Dateien sind eine eigene Gruppe und müssen kontrolliert werden; die Entscheidungen einer kontrollierten Gruppe werden bei gleichen
-   Spuren übernommen („Übernommen“). Das Funkel-Zeichen (SVG, kein Emoji) steht nur bei dem, was das Programm selbst erkannt oder angepasst hat (Regeln, Sprach-Wünsche,
-   Forced-Erkennung, Übernahme) – nicht bei Standardvorschlägen.
-   Der Zustand bleibt in den Feldern der Oberfläche (#vCodec, #vCrf, …; sie stecken versteckt im Fenster „Details“) und in f.tracks je Datei:
+/* Konvertieren: eine Seite mit Karten (Video, Ton, Untertitel, Regeln, Name & Ziel, Prüfen) statt vieler Schritte und einem Details-Fenster.
+   Video hat zwei Schritte: 1 Dateien, 2 Konvertieren (Audio nur die eine Ansicht). Jede Karte zeigt eine Zeile mit dem Wichtigsten und klappt an Ort
+   und Stelle auf; was das Programm selbst erkannt oder angepasst hat (Regeln, Sprach-Wünsche, Forced-Erkennung, Übernahme), ist offen und trägt das Funkel-Zeichen
+   (SVG, kein Emoji). Dateien mit gleichen Rahmendaten (Spuren, Sprachen, Formate) bilden eine Gruppe; eine Entscheidung gilt für die ganze Gruppe. Abweichende
+   Dateien sind eine eigene Gruppe und müssen kontrolliert werden; die Entscheidungen einer kontrollierten Gruppe werden bei gleichen Spuren übernommen („Übernommen“).
+   Der Zustand bleibt in den Feldern der Oberfläche (#vCodec, #vCrf, …; sie stecken versteckt in #fieldStore) und in f.tracks je Datei:
    so funktionieren Voreinstellungen, Speichern und Starten unverändert. Die Berechnung steckt in trkplan.js (TP) und quality.js (Q).
    Nutzt S, $, h(), fill(), api(), icon(), setField(), trk*() usw. aus den anderen Dateien (nur zur Laufzeit). */
 
-const CV = {tab: 'dest', gsel: {}, reviewed: new Set(), inh: {}, open: new Set(), unfold: new Set(), pop: null, qOpen: false, groups: [], bad: [], names: {}};
+const CV = {card: {}, gsel: {}, reviewed: new Set(), inh: {}, open: new Set(), unfold: new Set(), pop: null, qOpen: false, groups: [], bad: [], names: {}};
 
 // ---------- Hilfen ----------
 // Feld der Oberfläche setzen und die übliche Verarbeitung auslösen (Speichern, Vorschau, Neuzeichnen)
@@ -41,20 +39,18 @@ const cvTrackName = r => langName(r.lang) + ' · ' + trkDesc(r.s);
 const cvSigText = info => { const g = TP.signature(info); return 'Ton: ' + (g.audio.map(l => l === 'und' ? '?' : langName(l)).join(', ') || 'keiner') + ' · Untertitel: ' + (g.sub.map(l => l === 'und' ? '?' : langName(l)).join(', ') || 'keine'); };
 
 // ---------- Aufbau: welche Teile sind sichtbar? ----------
-// Audio: Dateien, Satz und Tabelle in einer Ansicht. Video: vier Schritte; die Dateien (1), Regeln (2), Kacheln „Wie umwandeln?“ (3) und die Tabelle (4) teilen sich den Platz.
+// Video: Schritt 1 (Dateien, Voreinstellungen, Ordner-Tipps) und Schritt 2 (Konvertieren). Audio: Dateien und Karten in einer Ansicht.
 function cvLayout() {
   const conv = S.step === 'convert', video = S.world === 'video', st = S.vstep, show = (id, on) => { const e = $('#' + id); if (e) e.classList.toggle('hidden', !on); };
-  show('cvStepper', conv && video); show('cvHead', conv && video);
-  show('cvSource', conv && video && (st === 2 || st === 3) && S.files.video.length > 0);
+  show('cvStepper', conv && video);
   show('cvFiles', conv && (!video || st === 1));
-  show('cvRules', conv && video && st === 2); show('cvHow', conv && video && st === 3);
-  show('cvSentence', conv && !video); show('cvTable', conv && (!video || st === 4));
-  show('presetBar', conv && (!video || st === 1));
+  show('cvTable', conv && (!video || st === 2));
+  show('presetBar', conv && video && st === 1);
   show('cvScanHelp', conv && video && st === 1); show('cvScan', conv && video && st === 1 && !!LIBUI.id);
-  $('#aPresets').classList.toggle('hidden', video); $('#vPresets').classList.toggle('hidden', !video);
-  show('wizNav', conv && video && st < 4); show('stepnav', conv && (!video || st === 4));
+  show('wizNav', conv && video && st === 1); show('stepnav', conv && (!video || st === 2));
+  const sp = $('#savePreset'); if (sp) sp.classList.toggle('hidden', !video); // Voreinstellungen gibt es nur für Video
 }
-// Schrittleiste oben: 1 Dateien · 2 Regeln · 3 Wie umwandeln? · 4 Kontrolle & Start (am Handy nur der aktuelle Schritt beschriftet)
+// Schrittleiste oben: 1 Dateien · 2 Konvertieren (am Handy nur der aktuelle Schritt beschriftet)
 function cvStepper() {
   const n = S.files.video.length;
   fill($('#cvStepper'), VSTEPS.map(([id, name], i) => {
@@ -63,37 +59,18 @@ function cvStepper() {
       title: k > 1 && !n ? 'Zuerst Dateien wählen' : name, onclick: () => vGo(k)}, h('i', {}, k < S.vstep ? icon('check') : String(k)), h('span', {class: 'stn'}, name))];
   }));
 }
-const CV_HEADS = [
-  ['Dateien wählen', 'Wähle zuerst den Quellordner, darin werden auch alle Unterordner durchsucht. Oder nimm eine Voreinstellung: dann geht es gleich zur Kontrolle.', 'stepFiles'],
-  ['Regeln', 'Was soll mit Tonspuren und Untertiteln allgemein passieren? Die voreingestellten Regeln gelten schon, jede lässt sich für diesen Lauf abwählen.', 'stepRules'],
-  ['Wie soll umgewandelt werden?', 'Hardware, Speicherort und Kontrolle. Alles lässt sich in der Kontrolle noch genauer einstellen.', 'stepHow'],
-  ['Kontrolle & Start', 'Links, wie die Dateien jetzt sind, rechts, was herauskommt. Jede Zeile lässt sich ändern.', 'stepCheck'],
-];
-function cvHeadRender() {
-  const [t, sub, key] = CV_HEADS[S.vstep - 1];
-  fill($('#cvHead'), h('h1', {}, t, infoBtn(key)), h('p', {class: 'muted'}, sub));
-}
 
-// ---------- Fenster „Details“ (die früheren Schritte: Ziel, Benennen, Video, Spuren, Prüfen) ----------
-function cvWorldVis() {
-  $$('#detailsDlg [data-world]:not(.dsec)').forEach(el => el.classList.toggle('hidden', el.dataset.world !== S.world));
-  const tv = $('#dtabVideo'); if (tv) tv.textContent = S.world === 'video' ? 'Video' : 'Audio-Einstellungen';
+// ---------- Karten: auf- und zuklappen ----------
+// Standard: offen, wenn das Programm etwas erkannt hat oder etwas Aufmerksamkeit braucht; sonst eine Zeile. Wer selbst auf- oder zuklappt, behält seine Wahl.
+const cvIsOpen = (id, dflt) => id in CV.card ? CV.card[id] : !!dflt;
+function cvToggle(id, open) { CV.card[id] = open; cvRender(); }
+function cvOpenCard(id) {
+  CV.card[id] = true; cvLayout(); cvRender();
+  setTimeout(() => { const el = document.querySelector('[data-card="' + id + '"]'); if (el) el.scrollIntoView({block: 'start', behavior: 'smooth'}); }, 120);
 }
-function detailsTabs() {
-  $$('#detailsTabs button').forEach(b => b.classList.toggle('on', b.dataset.dtab === CV.tab));
-  $$('#detailsBody .dsec').forEach(sec => sec.classList.toggle('hidden', sec.dataset.dsec !== CV.tab || !!(sec.dataset.world && sec.dataset.world !== S.world)));
-}
-function openSheet(tab) {
-  const dlg = $('#detailsDlg');
-  if (tab) CV.tab = tab;
-  if (CV.tab === 'tracks' && S.world !== 'video') CV.tab = 'dest';
-  cvClosePop(); cvWorldVis(); detailsTabs();
-  if (!dlg.open) dlg.showModal();
-  if (CV.tab === 'tracks') trkRender();
-  if (CV.tab === 'dest') syncNameUI();
-  if (CV.tab === 'video') { refreshAudioUI(); refreshVideoUI(); }
-  vfUI(); existsUI();
-}
+// frühere Reiter des Fensters „Details“ führen jetzt zur passenden Karte
+const CV_OLD_TAB = {dest: 'name', name: 'name', video: 'video', audio: 'video', tracks: 'audio', verify: 'check'};
+function openSheet(tab) { cvOpenCard(CV_OLD_TAB[tab] || 'video'); }
 
 // ---------- kleine Fenster am Satz (Popover) ----------
 function cvClosePop() {
@@ -127,44 +104,15 @@ function cvPop(anchor, title, build) {
 }
 const tok = (text, onclick, cls, title) => h('button', {type: 'button', class: 'tok' + (cls ? ' ' + cls : ''), title: title || null, onclick: ev => onclick(ev.currentTarget)}, text);
 
-// Hardware
-function cvHwText() {
-  const r = resolveBackend(), codec = $('#vCodec').value, caps = backendCaps(r.id), ok = r.id === 'cpu' || (caps && caps.codecs && caps.codecs[codec]);
-  return (r.auto ? 'Automatisch: ' : '') + (BACKEND_FULL[r.id] || r.id) + (ok && r.id !== 'cpu' ? ' ✓' : '');
-}
-function popHW() {
-  const r = resolveBackend(), codec = $('#vCodec').value, hw = r.id !== 'cpu' && codec !== 'copy';
-  return [h('label', {}, h('span', {class: 'lt'}, 'Encoder / Hardware'), cvSelect('vBackend', null, 'Encoder')),
-    h('div', {class: 'muted small'}, 'Wird verwendet: ', h('b', {}, encoderName(r.id, codec)), ' · ', BACKEND_FULL[r.id] || r.id, r.pref ? ' (bevorzugt laut Einstellungen)' : ''),
-    hw ? h('label', {class: 'check'}, cvCheck('vHwDec'), h('span', {}, 'Hardware-Decoding nutzen (fällt bei Fehler automatisch zurück)')) : null,
-    h('div', {class: 'muted small'}, 'Mehr zur Hardware: Startseite oder Einstellungen → Hardware.')];
-}
-// Ziel
+// Textbausteine für die Zusammenfassungen
 function cvDestText() {
   const custom = $('#outMode').value === 'custom', dir = $('#outDir').value.trim();
   return custom ? (dir ? 'Ordner ' + pathLabel(dir).split(/[\\/]/).filter(Boolean).slice(-2).join('/') : 'eigenem Ordner (fehlt noch)') : 'neben der Quelle';
 }
-function popDest() {
-  const custom = $('#outMode').value === 'custom';
-  return [h('label', {}, h('span', {class: 'lt'}, 'Speicherort'), cvSelect('outMode', null, 'Speicherort')),
-    custom ? h('label', {}, h('span', {class: 'lt'}, 'Ordner'), h('div', {class: 'row'}, h('input', {value: $('#outDir').value, placeholder: '/output', onchange: ev => cvSet('outDir', ev.target.value.trim())}),
-      h('button', {type: 'button', class: 'small', onclick: async () => { const r = await openBrowser('dir', $('#outDir').value); if (r) cvSet('outDir', r.dir); }}, '…'))) : null,
-    custom ? h('label', {}, h('span', {class: 'lt'}, 'Struktur'), cvSelect('outStruct', null, 'Struktur')) : null,
-    h('label', {}, h('span', {class: 'lt'}, 'Wenn Datei existiert'), cvSelect('exists', null, 'Wenn Datei existiert'), h('span', {class: 'small ' + ($('#exists').value === 'overwrite' ? 'warn' : 'muted')}, EXISTS_HINT[$('#exists').value] || ''))];
-}
-// Prüfen
 function cvCheckText() {
   const t = $('#vfTracks').checked, d = $('#vfDecode').checked, del = $('#deleteSource').checked;
   const what = t && d ? 'Spuren und Decode-Test' : t ? 'Spuren' : d ? 'Decode-Test' : 'nur Grundprüfung';
   return what + (del ? ', Original löschen' : '');
-}
-function popCheck() {
-  const w = S.world;
-  return [h('p', {class: 'muted small', style: 'margin:0'}, 'Nach dem Umwandeln wird die neue Datei immer auf Lesbarkeit und Laufzeit geprüft. Mehr dazu:'),
-    h('label', {class: 'check'}, cvCheck('vfTracks'), h('span', {}, 'Spuren & Größe prüfen')), h('div', {class: 'vfhint'}, vfTimeEl(w, 'tracks')),
-    h('label', {class: 'check'}, cvCheck('vfDecode'), h('span', {}, 'Ergebnis komplett durchlesen (Decode-Test)')), h('div', {class: 'vfhint'}, vfTimeEl(w, 'decode')),
-    h('label', {class: 'check'}, cvCheck('deleteSource'), h('span', {}, 'Quelldatei nach bestandener Prüfung löschen')),
-    h('div', {class: 'vfhint warn'}, 'Unwiderruflich: kein Papierkorb.')];
 }
 
 // ---------- Dateien ----------
@@ -179,18 +127,6 @@ function cvFilesPanel(files) {
   const tot = files.reduce((a, f) => a + (f.size || 0), 0);
   fill($('#fileSummary'), files.length ? [h('b', {}, files.length + (files.length === 1 ? ' Datei' : ' Dateien')), ' · ' + fmtSize(tot)] : 'Noch keine Dateien');
   $('#cvFileDetails').classList.toggle('hidden', !files.length);
-}
-
-// ---------- Der Satz ----------
-function cvSentence(files) {
-  const n = files.length, copy = S.world === 'video' && $('#vCodec').value === 'copy';
-  const parts = [h('span', {}, n ? (n === 1 ? 'Diese Datei wird ' : n + ' Dateien werden ') : 'Die Dateien werden ')];
-  if (S.world === 'video') {
-    parts.push(copy ? h('span', {}, 'neu verpackt (Video wird nicht neu kodiert)') : h('span', {}, 'mit ', tok(cvHwText(), a => cvPop(a, 'Hardware', popHW), '', 'Encoder und Hardware ändern'), ' umgewandelt'));
-  } else parts.push(h('span', {}, 'umgewandelt'));
-  parts.push(h('span', {}, ', gespeichert '), tok(cvDestText(), a => cvPop(a, 'Ziel', popDest), $('#outMode').value === 'custom' && !$('#outDir').value.trim() ? 'warnt' : '', 'Zielordner und „Wenn Datei existiert“'),
-    h('span', {}, ' und danach geprüft: '), tok(cvCheckText(), a => cvPop(a, 'Prüfen', popCheck), $('#deleteSource').checked ? 'warnt' : '', 'Kontrolle nach dem Umwandeln'), h('span', {}, '.'));
-  fill($('#cvSentence'), h('div', {class: 'cvsent'}, parts));
 }
 
 // ---------- Qualität (Stufen) ----------
@@ -212,10 +148,11 @@ function renderQualityControls() { const m = $('#vQualityMount'); if (m) fill(m,
 // ---------- Zeilen der Tabelle ----------
 function cvRow(label, before, after, o) {
   o = o || {};
-  return h('div', {class: 'cvr' + (o.cls ? ' ' + o.cls : ''), role: 'row'},
+  const nob = before === null; // Zeile ohne „Vorher“ (z. B. Geschwindigkeit, Encoder)
+  return h('div', {class: 'cvr' + (o.cls ? ' ' + o.cls : '') + (nob ? ' nob' : ''), role: 'row'},
     h('div', {class: 'cvk', role: 'rowheader'}, label, o.info ? infoBtn(o.info) : null),
-    h('div', {class: 'cvb'}, before),
-    h('div', {class: 'cva', 'aria-hidden': 'true'}, '→'),
+    nob ? null : h('div', {class: 'cvb'}, before),
+    nob ? null : h('div', {class: 'cva', 'aria-hidden': 'true'}, '→'),
     h('div', {class: 'cvn' + (o.ai ? ' aib' : '')}, after),
     o.extra ? h('div', {class: 'cvx'}, o.extra) : null);
 }
@@ -314,7 +251,7 @@ function cvTrackRow(g, ex, r, n) {
   const extra = [cvAiBlock(reasons),
     noLg ? h('div', {class: 'cvwarn small'}, icon('warn'), ' Die Sprache fehlt. Ohne Sprache ordnet Plex die Spur nicht richtig zu. ', h('button', {type: 'button', class: 'small', onclick: () => { CV.open.add(key); cvRender(); }}, 'Sprache festlegen')) : null,
     open ? cvTrackEditor(g, ex, r, ord) : null];
-  return cvRow((isA ? 'Ton ' : 'Untertitel ') + n, before, after, {ai: reasons.length > 0, cls: (!r.kept ? 'dropped ' : '') + (reasons.length ? 'hasai' : ''), extra: extra.flat().filter(Boolean).length ? extra : null, info: n === 1 ? (isA ? 'rowAudio' : 'rowSub') : null});
+  return cvRow((isA ? 'Ton ' : 'Untertitel ') + n, before, after, {ai: reasons.length > 0, cls: (!r.kept ? 'dropped ' : '') + (reasons.length ? 'hasai' : ''), extra: extra.flat().filter(Boolean).length ? extra : null});
 }
 
 // Dateiname: Beispiel für die erste Datei der Gruppe (vom Server berechnet)
@@ -337,18 +274,6 @@ function cvNameList(files) {
   else { fill(box, h('div', {class: 'cvnlh muted small'}, 'Namen werden berechnet …')); api('/api/rename/preview', body).then(r => { CV.names[k] = r.items || []; paint(CV.names[k]); }).catch(() => fill(box, h('div', {class: 'cvnlh bad small'}, 'Vorschau nicht möglich'))); }
   return box;
 }
-function cvNameCell(ex) {
-  const pat = $('#pattern').value.trim(), rules = cleanRules(nameRules()), suf = $('#suffix').value, plain = !pat && !rules.length && !suf;
-  const span = h('span', {class: 'cvname'}, plain ? 'bleibt' : '…');
-  if (!plain) {
-    const target = S.world === 'video' ? {codec: $('#vCodec').value, height: +$('#vHeight').value, bitDepth: +$('#vDepth').value, container: $('#vContainer').value} : {container: outExt()};
-    const body = {items: [ex.f.path], pattern: pat, replace: rules, suffix: suf, ext: outExt(), mode: 'convert', target}, k = JSON.stringify(body);
-    if (CV.names[k]) span.textContent = CV.names[k];
-    else api('/api/rename/preview', body).then(r => { const x = r.items[0]; CV.names[k] = x ? (x.error ? x.error : x.new) : ''; span.textContent = CV.names[k]; }).catch(() => { span.textContent = 'Vorschau nicht möglich'; });
-  }
-  return h('div', {class: 'cvafter'}, span, h('button', {type: 'button', class: 'small', onclick: () => openSheet('dest')}, 'ändern'));
-}
-
 // ---------- Gruppen ----------
 function cvGroups(items) {
   const map = new Map();
@@ -396,16 +321,66 @@ function cvWarnings(files, g, items) {
   return w.length ? h('div', {class: 'banner warn'}, w.map(x => h('div', {}, icon('warn'), ' ' + x))) : null;
 }
 
-// ---------- Karten der Kontrolle (Video, Audio, Untertitel, Dateiname) ----------
-// Jedes Thema ist eine eigene Karte mit Kopf (Symbol, Titel, Kurzfassung) und den Zeilen „Vorher → Nachher“. Video, Untertitel und Name sind grün, Audio ist orange.
-function cvCardHead(ico, title, info, summary) {
-  return h('div', {class: 'cvchead'}, h('span', {class: 'cvico'}, icon(ico)), h('h2', {}, title, info ? infoBtn(info) : null), summary ? h('span', {class: 'cvsum muted small'}, summary) : null);
+// ---------- Karten der Konvertieren-Seite (Video, Ton, Untertitel, Regeln, Name & Ziel, Prüfen) ----------
+// Jedes Thema ist eine Karte mit Kopf (Symbol, Titel, Kurzfassung) und aufklappbarem Inhalt. Video, Untertitel, Regeln, Name & Ziel und Prüfen sind grün, Audio ist orange.
+function cvCardHead(ico, title, info, summary, tog) {
+  const props = {class: 'cvchead' + (tog ? ' tog' : '')};
+  if (tog && !tog.open) props.onclick = ev => { if (!ev.target.closest('button, a, select, input')) cvToggle(tog.id, true); };
+  return h('div', props, h('span', {class: 'cvico'}, icon(ico)), h('h2', {}, title, info ? infoBtn(info) : null), summary ? h('span', {class: 'cvsum' + (tog && !tog.open ? '' : ' muted small')}, summary) : null,
+    tog ? h('button', {type: 'button', class: 'cvtog small ghost', 'aria-expanded': tog.open ? 'true' : 'false', title: tog.open ? 'Einklappen' : 'Aufklappen', onclick: () => cvToggle(tog.id, !tog.open)}, tog.open ? 'einklappen ▴' : 'ändern ›') : null);
 }
-function cvCard(cls, ico, title, info, summary, rows) {
-  return h('section', {class: 'cvcard sec-' + cls + (cls === 'audio' ? ' hue-audio' : ''), 'data-card': cls}, cvCardHead(ico, title, info, summary), h('div', {class: 'cvgrid', role: 'table', 'aria-label': title}, rows));
+// o: {id (aufklappbar), open (Standard), body (statt Zeilen)}
+function cvCard(cls, ico, title, info, summary, rows, o) {
+  o = o || {};
+  const open = o.id ? cvIsOpen(o.id, o.open) : true;
+  if (o.id && o.open && !(o.id in CV.card)) CV.card[o.id] = true; // was offen anfing, klappt nicht von selbst zu (z. B. nach „Als Forced markieren“)
+  return h('section', {class: 'cvcard sec-' + cls + (cls === 'audio' ? ' hue-audio' : '') + (open ? '' : ' closed'), 'data-card': o.id || cls},
+    cvCardHead(ico, title, info, summary, o.id ? {id: o.id, open} : null),
+    !open ? null : o.body ? h('div', {class: 'cvcbody'}, o.body) : h('div', {class: 'cvgrid', role: 'table', 'aria-label': title}, rows));
 }
 const cvColHead = () => h('div', {class: 'cvcols', role: 'row'}, h('div', {}, ''), h('div', {}, 'Vorher (Quelle)'), h('div', {}), h('div', {}, 'Nachher (Ergebnis)'));
+const cvShortName = s => codecTxt(s).replace(/ \(.*\)$/, '');
+// Auswahl als Pillen: die Werte kommen aus den Optionen des versteckten Felds, geändert wird über cvSet (Speichern, Vorschau und Neuzeichnen laufen wie sonst)
+function cvPills(id, labels, aria, onlyUsable) {
+  const src = $('#' + id);
+  return h('div', {class: 'pills', role: 'radiogroup', 'aria-label': aria || id}, [...src.options].filter(o => !(onlyUsable && o.disabled)).map(o => h('button', {type: 'button', role: 'radio', class: 'pill' + (o.value === src.value ? ' on' : ''), 'aria-checked': o.value === src.value ? 'true' : 'false',
+    disabled: o.disabled, title: o.disabled ? 'Nicht nutzbar' : null, onclick: () => cvSet(id, o.value)}, (labels && labels[o.value]) || o.textContent.replace(/ ✓$/, ''))));
+}
+const cvOpt = (id, title, sub, bad) => h('label', {class: 'opt' + ($('#' + id).checked ? ' on' : '') + (bad ? ' bad' : '')}, cvCheck(id), h('span', {}, h('b', {}, title), h('small', {class: 'muted'}, sub)));
+const cvNumber = (id, aria, min, max) => h('input', {type: 'number', class: 'cvnum', min, max, value: $('#' + id).value, 'aria-label': aria, onchange: ev => cvSet(id, ev.target.value)});
+const SPEED_HINT = {slow: 'kleinste Datei, dauert länger', medium: 'guter Kompromiss', fast: 'schneller, Datei etwas größer', veryfast: 'sehr schnell, Datei größer'};
 
+// ---------- Inhalt der Karten „Name & Ziel“, „Prüfen“, „Regeln“ ----------
+function cvDestBody(files) {
+  const custom = $('#outMode').value === 'custom', grp = (label, ...kids) => h('div', {class: 'tgrp'}, h('span', {class: 'lt'}, label), ...kids);
+  return [
+    grp('Speichern', cvPills('outMode', {same: 'Neben der Quelle', custom: 'Eigener Ordner …'}, 'Speicherort')),
+    custom ? h('div', {class: 'tgrp'}, h('div', {class: 'row'}, h('input', {value: $('#outDir').value, placeholder: '/output', 'aria-label': 'Zielordner', onchange: ev => cvSet('outDir', ev.target.value.trim())}),
+      h('button', {type: 'button', class: 'small', onclick: async () => { const x = await openBrowser('dir', $('#outDir').value); if (x) cvSet('outDir', x.dir); }}, '…'))) : null,
+    custom ? grp('Struktur', cvPills('outStruct', {keep: 'Ordnerstruktur beibehalten', flat: 'Alles in einen Ordner'}, 'Struktur')) : null,
+    grp('Wenn die Datei schon da ist', cvPills('exists', {rename: 'Beide behalten', skip: 'Überspringen', overwrite: 'Überschreiben'}, 'Wenn Datei existiert'),
+      h('span', {class: 'small ' + ($('#exists').value === 'overwrite' ? 'warn' : 'muted')}, EXISTS_HINT[$('#exists').value] || '')),
+    h('div', {class: 'tgrp cvnamebox', 'data-nameslot': '1'}), // #nameStore (Dateiname, Muster, Ersetzungen) wird hier eingehängt
+    cvNameList(files)];
+}
+function cvCheckBody() {
+  const w = S.world;
+  return [cvOpt('vfTracks', 'Spuren & Größe', vfTime(w, 'tracks')[0]), cvOpt('vfDecode', 'Komplett durchlesen (Decode-Test)', vfTime(w, 'decode')[0]),
+    cvOpt('deleteSource', 'Original danach löschen', 'unwiderruflich, kein Papierkorb', true),
+    h('p', {class: 'muted small'}, 'Die neue Datei wird immer auf Lesbarkeit und Laufzeit geprüft. Das Original bleibt, bis alles stimmt.')];
+}
+function cvRulesBody(items) {
+  const r = trkRules();
+  return [trkPrefLine(), trkGlobalRules(items, false),
+    h('div', {class: 'cvown'}, h('h4', {}, 'Eigene Regeln für diesen Lauf'), trkRulesBody(r, () => trkRulesSave(r), () => cvRender(), false))];
+}
+const cvRulesSummary = items => {
+
+  const r = trkRules(), n = trkGlobalList().filter(e => e.on).length + r.audio.length;
+  return (n ? n + (n === 1 ? ' Regel aktiv' : ' Regeln aktiv') : 'keine Regeln') + (trkHasPrefs() && r.usePrefs ? ' · Sprach-Wünsche an' : '');
+};
+
+// ---------- Video ----------
 function cvVideoTable(items) {
   const groups = CV.groups = cvGroups(items);
   CV.gsel.video = (groups.find(x => x.key === CV.gsel.video) || groups[0] || {}).key;
@@ -420,37 +395,57 @@ function cvVideoTable(items) {
   const gline = groups.length > 1 ? h('div', {class: 'cvgline'}, h('span', {class: 'muted small'}, g.name + ': ' + cvSigText(ex.info) + (g.n > 1 ? ' – anders aufgebaut als ' + groups[0].name + ', bitte prüfen.' : ''), infoBtn('groups')),
     CV.reviewed.has(g.key) ? h('span', {class: 'chip ok'}, '✓ kontrolliert') : h('button', {type: 'button', class: 'primary small', onclick: () => cvReview(g)}, '✓ ' + g.name + ' ist kontrolliert')) : null;
 
-  const vRows = [], aRows = [], sRows = [];
-  // Video
-  const vsrc = cvVideoStream(ex.info), vch = copy ? false : (vsrc && (CV_SRC_CODEC[vsrc.codec] || '').toLowerCase().replace(/[. ]/g, '') !== (CV_CODEC[$('#vCodec').value] || '').toLowerCase().replace(/[. ]/g, ''));
-  vRows.push(cvRow('Video', cvVideoDesc(ex.info), h('div', {class: 'cvafter'}, cvSelect('vCodec', CV_CODEC, 'Video-Codec'), copy ? h('span', {class: 'muted small'}, 'Bild wird nicht neu kodiert') : [cvSelect('vHeight', {0: 'Auflösung wie Quelle'}, 'Auflösung'), cvSelect('vDepth', null, 'Bit-Tiefe')]), {cls: vch ? 'chg' : '', info: 'rowVideo'}));
-  vRows.push(cvRow('Container', CV_FORMAT(ex.info.format), h('div', {class: 'cvafter'}, cvSelect('vContainer', {mkv: 'MKV', mp4: 'MP4'}, 'Container')), {cls: CV_FORMAT(ex.info.format) !== $('#vContainer').value.toUpperCase() ? 'chg' : '', info: 'rowContainer'}));
-  if (!copy) vRows.push(cvRow('Qualität', cvBitrate(ex.info), [qualityControl(false), cvLowHint(ex.info)], {cls: 'qrowc', info: 'rowQuality'}));
+  const vRows = [], aRows = [], sRows = [], sugEl = trkRuleSuggestions(items), nSug = trkRuleSuggestionList(items).length;
+  const vsrc = cvVideoStream(ex.info), srcH = vsrc && vsrc.height, srcD = vsrc && vsrc.bitDepth;
+  const vch = copy ? false : (vsrc && (CV_SRC_CODEC[vsrc.codec] || '').toLowerCase().replace(/[. ]/g, '') !== (CV_CODEC[$('#vCodec').value] || '').toLowerCase().replace(/[. ]/g, ''));
+  const facts = LIB.sourceFacts(items.map(it => ({f: it.f, info: it.info, size: it.f.size})), {audio: cvShortName, sub: cvShortName}), hint = copy ? null : LIB.convertHint(facts, $('#vCodec').value);
+  vRows.push(cvRow('Video', cvVideoDesc(ex.info), h('div', {class: 'cvafter'}, cvSelect('vCodec', CV_CODEC, 'Video-Codec'), copy ? h('span', {class: 'muted small'}, 'Bild wird nicht neu kodiert') :
+    [cvSelect('vHeight', {0: 'wie Quelle' + (srcH ? ' (' + srcH + 'p)' : '')}, 'Auflösung'), cvSelect('vDepth', {0: 'wie Quelle' + (srcD ? ' (' + srcD + ' Bit)' : '')}, 'Bit-Tiefe')]),
+    {cls: vch ? 'chg' : '', extra: hint ? [h('div', {class: 'small cvhint ' + (hint.tone || 'plain')}, icon(hint.tone === 'warn' ? 'warn' : 'info'), ' ', hint.text)] : null}));
+  vRows.push(cvRow('Container', CV_FORMAT(ex.info.format), h('div', {class: 'cvafter'}, cvSelect('vContainer', {mkv: 'MKV', mp4: 'MP4'}, 'Container')), {cls: CV_FORMAT(ex.info.format) !== $('#vContainer').value.toUpperCase() ? 'chg' : ''}));
+  if (!copy) {
+    const r = resolveBackend(), codec = $('#vCodec').value, avail = workingBackends(codec).map(id => BACKEND_FULL[id] || id);
+    vRows.push(cvRow('Qualität', cvBitrate(ex.info), [qualityControl(false), cvLowHint(ex.info)], {cls: 'qrowc'}));
+    vRows.push(cvRow('Geschwindigkeit', null, h('div', {class: 'cvafter'}, cvPills('vPreset', {slow: 'Langsam', medium: 'Mittel', fast: 'Schnell', veryfast: 'Sehr schnell'}, 'Geschwindigkeit'), h('span', {class: 'muted small'}, SPEED_HINT[$('#vPreset').value] || ''))));
+    vRows.push(cvRow('Probeclip', null, h('div', {class: 'cvafter'}, h('button', {type: 'button', class: 'small', id: 'clipBtn', onclick: openClip}, '30 Sekunden testen …'), h('span', {class: 'muted small'}, 'vergleicht Einstellungen an einem kurzen Ausschnitt: Größe, Bild, Tempo'))));
+    vRows.push(cvRow('Encoder', h('span', {class: 'muted small'}, avail.length ? 'Gefunden: ' + avail.join(', ') : hwResult().done ? 'keine Hardware gefunden' : 'Hardware-Erkennung läuft …'),
+      h('div', {class: 'cvafter'}, cvPills('vBackend', {auto: 'Automatisch'}, 'Encoder', true), h('span', {class: 'muted small'}, 'Wird verwendet: ', h('b', {}, encoderName(r.id, codec)), ' · ', BACKEND_FULL[r.id] || r.id, r.pref ? ' (bevorzugt laut Einstellungen)' : ''),
+        r.id !== 'cpu' ? h('label', {class: 'check'}, cvCheck('vHwDec'), h('span', {}, 'Grafikkarte auch zum Lesen nutzen (fällt bei Fehler automatisch zurück)')) : null)));
+  }
   // Ton und Untertitel
   const FOLD = 6;
   ['audio', 'subtitle'].forEach(type => {
     const rows = type === 'audio' ? aRows : sRows;
     const list = ex.plan.tracks.filter(r => r.type === type), foldKey = g.key + '#' + type, folded = list.length > FOLD && !CV.unfold.has(foldKey);
+    if (type === 'audio' && sugEl) rows.push(h('div', {class: 'cvpad'}, sugEl));
+    if (type === 'audio' && list.length) rows.push(cvRow('Alle Tonspuren', null, h('div', {class: 'cvafter'}, cvSelect('vAudioMode', {copy: 'unverändert lassen', encode: 'kleiner machen (neu kodieren)'}, 'Alle Tonspuren'),
+      $('#vAudioMode').value === 'encode' ? [cvSelect('vAudioCodec', null, 'Format'), cvNumber('vAudioKbps', 'Bitrate je Stereo-Paar', 32, 640), h('span', {class: 'muted small'}, 'kbit/s je Stereo-Paar')] : h('span', {class: 'muted small'}, 'gilt für Spuren ohne eigene Entscheidung'))));
+    if (type === 'subtitle' && list.length) rows.push(cvRow('Alle Untertitel', null, h('div', {class: 'cvafter'}, cvSelect('vSubMode', {copy: 'alle behalten', none: 'alle entfernen'}, 'Alle Untertitel'), h('span', {class: 'muted small'}, 'gilt für Spuren ohne eigene Entscheidung'))));
     (folded ? list.slice(0, FOLD) : list).forEach((r, i) => rows.push(cvTrackRow(g, ex, r, i + 1)));
     if (list.length > FOLD) rows.push(h('div', {class: 'cvmorerow'}, h('button', {type: 'button', class: 'small ghost', onclick: () => { folded ? CV.unfold.add(foldKey) : CV.unfold.delete(foldKey); cvRender(); }},
       folded ? (list.length - FOLD) + ' weitere ' + (type === 'audio' ? 'Tonspuren' : 'Untertitel') + ' anzeigen ▾' : 'Weniger anzeigen ▴')));
     if (!list.length) rows.push(cvRow(type === 'audio' ? 'Ton' : 'Untertitel', h('span', {class: 'muted'}, type === 'audio' ? 'keine Tonspur' : 'keine Untertitel'), h('span', {class: 'muted'}, '–')));
   });
-  const nRows = [cvRow('Dateiname', fileLabel(ex.f), cvNameCell(ex), {info: 'rowName'}), cvNameList(S.files.video)].filter(Boolean);
   const sumOf = (type, one, many) => {
     const list = ex.plan.tracks.filter(r => r.type === type);
     if (!list.length) return 'keine ' + many;
     const enc = list.filter(r => r.kept && r.type === 'audio' && r.action === 'encode').length, drop = list.filter(r => !r.kept).length;
-    return list.length + ' ' + (list.length === 1 ? one : many) + (enc ? ' · ' + enc + ' umgewandelt' : '') + (drop ? ' · ' + drop + ' entfernt' : '') + (!enc && !drop ? ' · bleiben unverändert' : '');
+    const def = list.find(r => r.kept && r.def), defTxt = def ? ' · Standard: ' + langName(def.lang) + (def.forced ? ' (Forced)' : '') : '';
+    return list.length + ' ' + (list.length === 1 ? one : many) + (enc ? ' · ' + enc + ' umgewandelt' : '') + (drop ? ' · ' + drop + ' entfernt' : '') + (!enc && !drop ? ' · bleiben unverändert' : '') + defTxt;
   };
-  const vsum = copy ? 'Video wird nicht neu kodiert' : (vsrc ? (CV_SRC_CODEC[vsrc.codec] || (vsrc.codec || '?').toUpperCase()) : '?') + ' → ' + CV_CODEC[$('#vCodec').value];
+  const attention = type => ex.plan.tracks.some(r => r.type === type && (r.own || r.guess || !r.kept || r.why.length || (r.kept && noLang(r.lang)))) || (type === 'audio' ? $('#vAudioMode').value !== 'copy' : $('#vSubMode').value !== 'copy');
+  const vsum = copy ? 'Video wird nicht neu kodiert' : (vsrc ? (CV_SRC_CODEC[vsrc.codec] || (vsrc.codec || '?').toUpperCase()) : '?') + ' → ' + CV_CODEC[$('#vCodec').value] + ' · ' + Q.stageName($('#vQuality').value) + ' · ' + SPEED_NAME[$('#vPreset').value] + ' · ' + (BACKEND_FULL[resolveBackend().id] || '');
   const plainName = !$('#pattern').value.trim() && !cleanRules(nameRules()).length && !$('#suffix').value;
-  const hints = S.rulesSeen ? null : trkRuleSuggestions(items);
-  return [strip, gline, cvWarnings(null, g, items), hints, cvLegend(), cvColHead(),
-    cvCard('video', 'video', 'Video', 'cardVideo', vsum, vRows), cvCard('audio', 'wave', 'Audio', 'cardAudio', sumOf('audio', 'Tonspur', 'Tonspuren'), aRows),
-    cvCard('subs', 'subs', 'Untertitel', 'cardSubs', sumOf('subtitle', 'Untertitel', 'Untertitel'), sRows), cvCard('name', 'file', 'Dateiname', 'cardName', plainName ? 'bleibt wie er ist' : 'wird angepasst', nRows)];
+  const nameSum = 'Name ' + (plainName ? 'bleibt' : 'wird angepasst') + ' · ' + cvDestText() + ' · ' + ({rename: 'Datei da: nummerieren', skip: 'Datei da: überspringen', overwrite: 'Datei da: überschreiben'}[$('#exists').value] || '');
+  return [strip, gline, cvWarnings(null, g, items), cvColHead(),
+    cvCard('video', 'video', 'Video', 'cardVideo', vsum, vRows, {id: 'video', open: true}),
+    cvCard('audio', 'wave', 'Ton', 'cardAudio', sumOf('audio', 'Tonspur', 'Tonspuren') + (nSug ? ' · ' + nSug + (nSug === 1 ? ' Vorschlag' : ' Vorschläge') : ''), aRows, {id: 'audio', open: attention('audio') || nSug > 0}),
+    cvCard('subs', 'subs', 'Untertitel', 'cardSubs', sumOf('subtitle', 'Untertitel', 'Untertitel'), sRows, {id: 'subs', open: attention('subtitle')}),
+    cvCard('rules', 'shield', 'Regeln', 'trkGlobal', cvRulesSummary(items), null, {id: 'rules', open: false, body: cvRulesBody(items)}),
+    cvCard('name', 'file', 'Name & Ziel', 'cardName', nameSum, null, {id: 'name', open: ($('#outMode').value === 'custom' && !$('#outDir').value.trim()) || $('#exists').value === 'overwrite', body: cvDestBody(S.files.video)}),
+    cvCard('check', 'shield', 'Prüfen', 'tileCheck', cvCheckText().replace(/^./, c => c.toUpperCase()), null, {id: 'check', open: $('#deleteSource').checked, body: cvCheckBody()})];
 }
-const cvLegend = () => h('div', {class: 'cvlegend muted small'}, h('span', {class: 'ai'}, h('i', {}, icon('news'))), ' = vom Programm automatisch erkannt oder angepasst', infoBtn('autoMark'), ' · jede Zeile lässt sich ändern · Einzelspuren und Namensmuster unter „Details“');
+const SPEED_NAME = {slow: 'Langsam', medium: 'Mittel', fast: 'Schnell', veryfast: 'Sehr schnell'};
 // Hinweis, wenn die Quelle schon klein ist: Neukodieren spart dann kaum Platz
 function cvLowHint(info) {
   const v = cvVideoStream(info), br = (v && v.bitRate) || (info.bitRate > 0 ? info.bitRate : 0), height = v && v.height;
@@ -458,7 +453,7 @@ function cvLowHint(info) {
   return h('div', {class: 'cvlow small'}, icon('warn'), ' Die Quelle ist schon klein (' + cvBitrate(info) + ' bei ' + height + 'p). Neu kodieren spart hier kaum Platz und kann die Datei sogar größer machen. Nimm besser „Normal“ oder „Klein“ oder lass das Video unverändert (Kopieren). Wird das Ergebnis nicht kleiner, bleibt dein Original in jedem Fall erhalten.');
 }
 
-// ---------- Tabelle Audio ----------
+// ---------- Audio ----------
 function cvAudioTable(items) {
   const ex = items[0], a = (ex.info.streams || []).find(s => s.type === 'audio'), pic = (ex.info.streams || []).some(s => s.attachedPic);
   const codecs = [...new Set(items.map(it => { const s = (it.info.streams || []).find(x => x.type === 'audio'); return s ? (CV_ACODEC[s.codec] || (s.codec || '?').toUpperCase()) : '?'; }))];
@@ -471,120 +466,33 @@ function cvAudioTable(items) {
   if (!$('#aFlacRow').classList.contains('hidden')) { const out = h('output', {}, $('#aFlac').value); qual.push(h('label', {class: 'qsl'}, h('span', {}, 'Kompression '), out, h('input', {type: 'range', min: $('#aFlac').min, max: $('#aFlac').max, value: $('#aFlac').value, 'aria-label': 'FLAC-Kompression', oninput: ev => { out.textContent = ev.target.value; }, onchange: ev => cvSet('aFlac', ev.target.value)}))); }
   if (!$('#aWavRow').classList.contains('hidden')) qual.push(cvSelect('aWav', null, 'Bit-Tiefe'));
   const rows = [
-    cvRow('Format', items.length > 1 ? h('div', {}, codecs.join(', '), h('div', {class: 'muted small'}, items.length + ' Dateien')) : bef(ex), h('div', {class: 'cvafter'}, cvSelect('aFormat', null, 'Format')), {cls: codecs.length === 1 && codecs[0] === (CV_AFMT[f] || '').split(' ')[0] ? '' : 'chg', info: 'aFormat'}),
+    cvRow('Format', items.length > 1 ? h('div', {}, codecs.join(', '), h('div', {class: 'muted small'}, items.length + ' Dateien')) : bef(ex), h('div', {class: 'cvafter'}, cvSelect('aFormat', null, 'Format')), {cls: codecs.length === 1 && codecs[0] === (CV_AFMT[f] || '').split(' ')[0] ? '' : 'chg'}),
     qual.length ? cvRow('Qualität', items.length === 1 ? (cvKbps((((ex.info.streams || []).find(q => q.type === 'audio') || {}).bitRate) || ex.info.bitRate) || '–') : 'je Datei verschieden', h('div', {class: 'cvafter'}, qual), {cls: 'chg'}) : null,
     cvRow('Samplerate', a && a.sampleRate ? a.sampleRate / 1000 + ' kHz' : '?', h('div', {class: 'cvafter'}, cvSelect('aRate', null, 'Samplerate')), {info: 'aRate'}),
     cvRow('Kanäle', a ? chTxt(a.channels) || a.channels : '?', h('div', {class: 'cvafter'}, cvSelect('aCh', null, 'Kanäle')), {info: 'aCh'}),
     !$('#aCover').parentElement.classList.contains('hidden') ? cvRow('Cover-Bild', pic ? 'vorhanden' : 'keines', h('div', {class: 'cvafter'}, h('label', {class: 'check'}, cvCheck('aCover'), h('span', {}, 'übernehmen'))), {info: 'aCover'}) : null,
-    cvRow('Dateiname', fileLabel(ex.f), cvNameCell(ex), {info: 'rowName'}),
-    cvNameList(S.files.audio),
   ].filter(Boolean);
-  return [cvWarnings(null, null, items), h('div', {class: 'cvlegend muted small'}, 'Jede Zeile lässt sich ändern · Tags (Titel, Interpret, Album …) werden immer übernommen · Namensmuster unter „Details“'),
-    cvColHead(), cvCard('audio', 'audio', 'Audio-Datei', 'cardAudioFile', items.length === 1 ? 'Vorher → Nachher' : items.length + ' Dateien', rows)];
-}
-
-// ---------- Schritt 2: Regeln (nur Video) ----------
-function cvRulesView(items) {
-  S.rulesSeen = true;
-  items.forEach(it => { it.plan = trkPlan(it.f, it.info); });
-  const card = (cls, ico, title, info, body) => h('section', {class: 'cvcard sec-' + cls}, cvCardHead(ico, title, info), h('div', {class: 'cvcbody'}, body));
-  const sug = trkRuleSuggestions(items);
-  const r = trkRules();
-  return [card('prefs', 'lang', 'Meine Sprach-Wünsche', 'trkPrefs', trkPrefLine()),
-    card('rules', 'shield', 'Voreingestellte Regeln', 'trkGlobal', trkGlobalRules(items, false)),
-    sug,
-    card('own', 'edit', 'Eigene Regeln für diesen Lauf', 'trkRules', [h('p', {class: 'muted small'}, 'Gelten nur jetzt (und in Voreinstellungen, die du speicherst). Sie laufen von oben nach unten, die erste passende Regel gewinnt; eigene Regeln gehen den voreingestellten voraus. Eigene Änderungen an einzelnen Spuren gehen immer vor.'),
-      trkRulesBody(r, () => trkRulesSave(r), () => cvRender(), false)])];
-}
-
-// ---------- Schritt 3: Wie umwandeln? (Kacheln Hardware, Speichern, Danach prüfen) ----------
-// Auswahl als Pillen: die Werte kommen aus den Optionen des versteckten Felds, geändert wird über cvSet (Speichern, Vorschau und Neuzeichnen laufen wie sonst)
-function cvPills(id, labels, aria, onlyUsable) {
-  const src = $('#' + id);
-  return h('div', {class: 'pills', role: 'radiogroup', 'aria-label': aria || id}, [...src.options].filter(o => !(onlyUsable && o.disabled)).map(o => h('button', {type: 'button', role: 'radio', class: 'pill' + (o.value === src.value ? ' on' : ''), 'aria-checked': o.value === src.value ? 'true' : 'false',
-    disabled: o.disabled, title: o.disabled ? 'Nicht nutzbar' : null, onclick: () => cvSet(id, o.value)}, (labels && labels[o.value]) || o.textContent.replace(/ ✓$/, ''))));
-}
-function cvTile(cls, ico, title, info, big, sub, body) {
-  return h('section', {class: 'cvcard cvtile sec-' + cls, 'data-tile': cls}, cvCardHead(ico, title, info), h('div', {class: 'cvcbody'}, h('div', {class: 'tbig'}, big), sub ? h('div', {class: 'muted small'}, sub) : null, body));
-}
-const cvOpt = (id, title, sub, bad) => h('label', {class: 'opt' + ($('#' + id).checked ? ' on' : '') + (bad ? ' bad' : '')}, cvCheck(id), h('span', {}, h('b', {}, title), h('small', {class: 'muted'}, sub)));
-function cvSentenceText(n) {
-  const copy = $('#vCodec').value === 'copy', del = $('#deleteSource').checked;
-  return (n === 1 ? 'Diese Datei wird ' : n + ' Dateien werden ') + (copy ? 'neu verpackt (Video wird nicht neu kodiert)' : 'mit ' + cvHwText() + ' umgewandelt') + ', gespeichert ' + cvDestText() + ' und danach geprüft: ' + cvCheckText() + '.' ;
-}
-function cvHowStep(files) {
-  const codec = $('#vCodec').value, copy = codec === 'copy', r = resolveBackend(), hw = !copy && r.id !== 'cpu', custom = $('#outMode').value === 'custom', n = files.length;
-  const hwTile = cvTile('hw', 'chip', 'Hardware', 'tileHw', copy ? 'Kein Umwandeln' : cvHwText(), copy ? 'Das Video wird nur neu verpackt, nichts wird neu berechnet. Sehr schnell, kein Qualitätsverlust.' : hw ? 'Schnell, die CPU bleibt frei.' : 'Die CPU rechnet: beste Qualität je Dateigröße, aber langsam.',
-    [h('div', {class: 'tgrp'}, h('span', {class: 'lt'}, 'Video'), cvPills('vCodec', CV_CODEC, 'Video-Codec'), h('span', {class: 'small cvhint hidden', id: 'cvCodecHint'})),
-      copy ? null : h('div', {class: 'tgrp'}, h('span', {class: 'lt'}, 'Encoder'), cvPills('vBackend', {auto: 'Automatisch'}, 'Encoder', true)),
-      hw ? h('label', {class: 'check'}, cvCheck('vHwDec'), h('span', {}, 'Hardware-Decoding nutzen (fällt bei Fehler automatisch zurück)')) : null]);
-  const destTile = cvTile('dest', 'disk', 'Speichern', 'tileDest', custom ? ($('#outDir').value.trim() ? cvDestText().replace(/^./, c => c.toUpperCase()) : 'Eigener Ordner fehlt noch') : 'Neben der Quelle', custom ? 'Alles landet im gewählten Ordner.' : 'Gleicher Ordner wie das Original, neuer Name.',
-    [h('div', {class: 'tgrp'}, h('span', {class: 'lt'}, 'Speicherort'), cvPills('outMode', {same: 'Neben der Quelle', custom: 'Eigener Ordner …'}, 'Speicherort')),
-      custom ? h('div', {class: 'tgrp'}, h('div', {class: 'row'}, h('input', {value: $('#outDir').value, placeholder: '/output', 'aria-label': 'Zielordner', onchange: ev => cvSet('outDir', ev.target.value.trim())}),
-        h('button', {type: 'button', class: 'small', onclick: async () => { const x = await openBrowser('dir', $('#outDir').value); if (x) cvSet('outDir', x.dir); }}, '…'))) : null,
-      custom ? h('div', {class: 'tgrp'}, h('span', {class: 'lt'}, 'Struktur'), cvPills('outStruct', {keep: 'Ordnerstruktur beibehalten', flat: 'Alles in einen Ordner'}, 'Struktur')) : null,
-      h('div', {class: 'tgrp'}, h('span', {class: 'lt'}, 'Wenn die Datei schon da ist'), cvPills('exists', {rename: 'Beide behalten', skip: 'Überspringen', overwrite: 'Überschreiben'}, 'Wenn Datei existiert'),
-        h('span', {class: 'small ' + ($('#exists').value === 'overwrite' ? 'warn' : 'muted')}, EXISTS_HINT[$('#exists').value] || ''))]);
-  const chkTile = cvTile('check', 'shield', 'Danach prüfen', 'tileCheck', cvCheckText().replace(/^./, c => c.toUpperCase()), 'Nach dem Umwandeln wird die neue Datei immer auf Lesbarkeit und Laufzeit geprüft. Das Original bleibt, bis alles stimmt.',
-    [cvOpt('vfTracks', 'Spuren & Größe', vfTime('video', 'tracks')[0]), cvOpt('vfDecode', 'Komplett durchlesen (Decode-Test)', vfTime('video', 'decode')[0]),
-      cvOpt('deleteSource', 'Original danach löschen', 'unwiderruflich, kein Papierkorb', true)]);
-  fill($('#cvHow'), h('div', {class: 'cvtiles'}, hwTile, destTile, chkTile), h('div', {class: 'cvresult'}, icon('check'), h('span', {id: 'cvResultText'}, n ? cvSentenceText(n) : 'Noch keine Dateien gewählt.')));
-}
-
-// ---------- Übersicht der Quelldateien (Schritte „Regeln“ und „Wie umwandeln?“) ----------
-// Eine Zeile unter der Schrittleiste (Dateien, Größe, Codec, Auflösung, Ton, Untertitel); ein Klick zeigt jede Datei. In Schritt 3 steht zusätzlich ein Hinweis
-// an der Codec-Wahl („Deine Quelle: H.264 → H.265 spart meist Platz“). Nur Fakten und Hinweise, keine Schätzung der Ersparnis.
-let cvSrcSeq = 0;
-const cvShortName = s => codecTxt(s).replace(/ \(.*\)$/, '');
-async function cvSourceUpdate(files) {
-  const my = ++cvSrcSeq, el = $('#cvSource');
-  if (!el || S.world !== 'video' || !(S.vstep === 2 || S.vstep === 3) || !files.length) return;
-  const have = f => TRK.probe[f.path] && TRK.probe[f.path].__v;
-  if (files.some(f => !have(f) && !TRK.bad.has(f.path))) {
-    fill(el, h('span', {class: 'muted small'}, 'Lese die Dateien …'));
-    await trkLoadAll(files);
-    if (my !== cvSrcSeq || S.world !== 'video' || !(S.vstep === 2 || S.vstep === 3)) return;
-  }
-  const read = files.filter(have).map(f => ({f, info: TRK.probe[f.path].__v, size: f.size}));
-  if (!read.length) { fill(el); return; }
-  const facts = LIB.sourceFacts(read, {audio: cvShortName, sub: cvShortName});
-  const unread = files.length - read.length;
-  const one = ({f, info}) => {
-    const v = (info.streams || []).find(x => x.type === 'video' && !x.attachedPic), a = (info.streams || []).filter(x => x.type === 'audio'), sb = (info.streams || []).filter(x => x.type === 'subtitle');
-    return h('div', {class: 'cvsrcfile'}, h('span', {class: 'n', title: f.path}, f.rel || f.path.split(/[\\/]/).pop()),
-      h('span', {class: 'muted small'}, [v ? LIB.codecName(v.codec) + (v.height ? ' ' + v.height + 'p' : '') + (v.bitDepth > 8 ? ' ' + v.bitDepth + ' Bit' : '') : 'kein Video',
-        'Ton: ' + (a.map(x => cvShortName(x) + (chTxt(x.channels) ? ' ' + chTxt(x.channels) : '')).join(', ') || 'keiner'),
-        'Untertitel: ' + (sb.map(cvShortName).join(', ') || 'keine'), f.size ? fmtSize(f.size) : ''].filter(Boolean).join(' · ')));
-  };
-  fill(el, h('details', {class: 'cvsrc', open: !!CV.srcOpen, ontoggle: ev => { CV.srcOpen = ev.target.open; }},
-    h('summary', {}, h('span', {class: 'cvico'}, icon('file')), h('span', {class: 'cvsrctxt'}, LIB.sourceLine(facts) + (unread ? ' · ' + unread + (unread === 1 ? ' Datei nicht lesbar' : ' Dateien nicht lesbar') : '')), h('span', {class: 'muted small cvsrcmore'}, 'Liste')),
-    h('div', {class: 'cvsrclist'}, read.map(one))));
-  const hint = $('#cvCodecHint');
-  if (hint) {
-    const t = S.vstep === 3 ? LIB.convertHint(facts, $('#vCodec').value) : null;
-    hint.className = 'small cvhint' + (t ? ' ' + (t.tone || 'plain') : ' hidden');
-    fill(hint, t ? [icon(t.tone === 'warn' ? 'warn' : 'info'), ' ', t.text] : null);
-  }
+  const plainName = !$('#pattern').value.trim() && !cleanRules(nameRules()).length && !$('#suffix').value;
+  const nameSum = 'Name ' + (plainName ? 'bleibt' : 'wird angepasst') + ' · ' + cvDestText();
+  return [cvWarnings(null, null, items), cvColHead(), cvCard('audio', 'audio', 'Audio-Datei', 'cardAudioFile', items.length === 1 ? 'Vorher → Nachher' : items.length + ' Dateien', rows),
+    cvCard('name', 'file', 'Name & Ziel', 'cardName', nameSum, null, {id: 'name', open: $('#outMode').value === 'custom' && !$('#outDir').value.trim(), body: cvDestBody(S.files.audio)}),
+    cvCard('check', 'shield', 'Prüfen', 'tileCheck', cvCheckText().replace(/^./, c => c.toUpperCase()), null, {id: 'check', open: $('#deleteSource').checked, body: cvCheckBody()})];
 }
 
 // ---------- Leisten unten ----------
-// Schritte 1 bis 3 (Video): Zurück / Weiter mit kurzer Zeile
-function cvBarWiz(files, items) {
-  const n = files.length, st = S.vstep;
-  let info = '', next = 'Weiter →', off = false;
-  if (st === 1) { info = n ? n + (n === 1 ? ' Datei' : ' Dateien') + ' · ' + fmtSize(files.reduce((a, f) => a + (f.size || 0), 0)) : 'Wähle Dateien aus'; next = S.presetSkip ? 'Weiter zur Kontrolle →' : 'Weiter zu den Regeln →'; off = !n; }
-  else if (st === 2) { info = items && items.length ? trkSumText(trkSum(items.filter(x => x.plan)), items) : ''; next = 'Weiter →'; }
-  else { info = n ? cvSentenceText(n) : ''; next = 'Weiter zur Kontrolle →'; }
-  $('#wizInfo').textContent = info;
-  $('#wizNext').textContent = next; $('#wizNext').disabled = off;
-  $('#wizBack').classList.toggle('hidden', st === 1);
+// Schritt 1 (Video): Weiter mit kurzer Zeile
+function cvBarWiz(files) {
+  const n = files.length;
+  $('#wizInfo').textContent = n ? n + (n === 1 ? ' Datei' : ' Dateien') + ' · ' + fmtSize(files.reduce((a, f) => a + (f.size || 0), 0)) : 'Wähle Dateien aus';
+  $('#wizNext').textContent = 'Weiter →'; $('#wizNext').disabled = !n;
+  $('#wizBack').classList.add('hidden');
 }
 function cvBar(files, items) {
   const n = files.length, parts = [];
   if (n) parts.push(n + (n === 1 ? ' Datei' : ' Dateien'));
   if (S.world === 'video') {
     const copy = $('#vCodec').value === 'copy';
-    parts.push(copy ? 'Remux' : CV_CODEC[$('#vCodec').value] + ' ' + Q.stageName($('#vQuality').value) + ' · ' + (BACKEND_FULL[resolveBackend().id] || ''));
+    parts.push(copy ? 'Remux' : CV_CODEC[$('#vCodec').value] + ' ' + Q.stageName($('#vQuality').value) + ' · ' + (SPEED_NAME[$('#vPreset').value] || '') + ' · ' + (BACKEND_FULL[resolveBackend().id] || ''));
     if (items && items.length) { const all = items.filter(x => x.plan); if (all.length) parts.push(trkSumText(trkSum(all), all)); }
   } else parts.push(CV_AFMT[$('#aFormat').value] || '');
   const un = cvUnreviewed();
@@ -595,6 +503,9 @@ function cvBar(files, items) {
 }
 
 // ---------- Hauptdarstellung ----------
+// #nameStore (Dateiname, Muster, Ersetzungen) ist immer im Dokument: zu Hause in #fieldStore, solange keine Karte „Name & Ziel“ offen ist
+function cvNameHome() { const st = $('#nameStore'); if (st && st.parentElement.id !== 'fieldStore') $('#fieldStore').append(st); }
+function cvNameDock(box) { const slot = box.querySelector('[data-nameslot]'); if (slot) slot.append($('#nameStore')); }
 let cvSeq = 0, cvRaf = 0;
 function cvRender() {
   if (S.step !== 'convert') return;
@@ -602,46 +513,45 @@ function cvRender() {
   cvRaf = requestAnimationFrame(cvRenderNow);
 }
 async function cvRenderNow() {
+  // nicht mitten im Tippen (Namensmuster) neu aufbauen: Das Feld würde den Fokus verlieren; bei „change“ kommt der Neuaufbau
+  const act = document.activeElement;
+  if (act && act.closest && act.closest('#nameStore') && /^(INPUT|TEXTAREA)$/.test(act.tagName)) return;
   const my = ++cvSeq, video = S.world === 'video', files = S.files[S.world], box = $('#cvTable');
   if (video && !files.length && S.vstep > 1) { S.vstep = 1; applySteps(); }
   const st = S.vstep;
   cvLayout();
-  if (video) { cvStepper(); cvHeadRender(); }
+  if (video) cvStepper();
   cvFilesPanel(files);
-  if (!video) cvSentence(files);
-  if (video && st === 1) { cvBarWiz(files, null); cvPopFill(); return; }
-  if (video && st === 3) { cvHowStep(files); cvBarWiz(files, null); cvPopFill(); cvSourceUpdate(files); return; }
-  const target = video && st === 2 ? $('#cvRules') : box;
+  if (video && st === 1) { cvNameHome(); cvBarWiz(files); cvPopFill(); return; }
   const title = h('div', {class: 'cvempty', id: 'trkProgress'}, 'Lese die Dateien …');
   if (!files.length) {
-    CV.groups = []; CV.bad = [];
-    fill(box, h('div', {class: 'cvempty big'}, 'Hier erscheint eine Tabelle: links, wie die Dateien jetzt sind, rechts, was nach dem Umwandeln herauskommt. Jede Zeile lässt sich ändern.'));
+    CV.groups = []; CV.bad = []; cvNameHome();
+    fill(box, h('div', {class: 'cvempty big'}, 'Hier erscheint, was mit den Dateien passiert, sobald du welche gewählt hast.'));
     cvBar(files, null); cvPopFill(); return;
   }
   const need = files.filter(f => !(TRK.probe[f.path] && TRK.probe[f.path].__v) && !TRK.bad.has(f.path));
   if (need.length) {
-    fill(target, title);
-    if (video && st === 2) cvBarWiz(files, null); else cvBar(files, null);
+    cvNameHome(); fill(box, title); cvBar(files, null);
     await trkLoadAll(files);
     if (my !== cvSeq) return;
   }
   const items = [], bad = [];
   files.forEach(f => { const p = TRK.probe[f.path]; if (p && p.__v) items.push({f, info: p.__v}); else bad.push(f); });
   CV.bad = bad;
-  if (!items.length) { fill(target, cvWarnings(files, null, []), h('div', {class: 'cvempty'}, 'Keine der Dateien ließ sich lesen.')); if (video && st === 2) cvBarWiz(files, null); else cvBar(files, null); return; }
+  if (!items.length) { cvNameHome(); fill(box, cvWarnings(files, null, []), h('div', {class: 'cvempty'}, 'Keine der Dateien ließ sich lesen.')); cvBar(files, null); return; }
   if (my !== cvSeq) return;
-  if (video && st === 2) { fill(target, cvRulesView(items)); cvBarWiz(files, items); cvPopFill(); cvSourceUpdate(files); return; }
+  cvNameHome();
   fill(box, video ? cvVideoTable(items) : cvAudioTable(items));
+  cvNameDock(box);
   cvBar(files, items);
   cvPopFill();
 }
 
 function wireConvert() {
-  $('#detailsBtn').onclick = () => openSheet();
-  $('#detailsClose').onclick = () => $('#detailsDlg').close();
-  $('#detailsDlg').addEventListener('close', () => { saveSettings(); cvRender(); });
-  $$('#detailsTabs [data-dtab]').forEach(b => b.onclick = () => { CV.tab = b.dataset.dtab; openSheet(); });
-  $('#detailsDlg').addEventListener('click', ev => { if (ev.target === $('#detailsDlg')) $('#detailsDlg').close(); }); // Klick auf den Hintergrund
   matchMedia('(max-width:700px)').addEventListener('change', () => { if (CV.pop) cvPopPlace(); });
   addEventListener('resize', () => { if (CV.pop) cvPopPlace(); });
+  // Namensfelder: Tabelle und Vorschau erst nach der Eingabe neu zeichnen
+  const ns = $('#nameStore');
+  ns.addEventListener('change', () => cvRender());
+  ns.addEventListener('click', ev => { if (ev.target.closest('button')) setTimeout(cvRender, 400); });
 }

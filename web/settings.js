@@ -40,7 +40,7 @@ async function saveCfg(mutate, msg) {
 // Voreinstellungen, Regeln und Anzeige neu zeichnen
 function applyCfg() {
   if (typeof refreshVideoUI === 'function' && S.info) refreshVideoUI();
-  renderPresetChips();
+  renderPresetChips(); renderStartPresets();
   renderStartInfo();
   if (!$('#viewSettings').classList.contains('hidden')) renderSettings();
 }
@@ -73,22 +73,16 @@ function applyPreset(p) {
   refreshAudioUI(); refreshVideoUI(); syncNameUI(); saveSettings();
   if (typeof cvRender === 'function') cvRender();
 }
-// Video, Schritt 1: wer eine Voreinstellung wählt, springt direkt zur Kontrolle (ohne Dateien erst nach der Dateiwahl)
+// Video, Schritt 1: wer eine Voreinstellung wählt, springt direkt zur Konvertieren-Seite (ohne Dateien erst nach der Dateiwahl: dann reicht „Weiter“)
 function presetChosen(p) {
-  if (S.step === 'convert' && p.world === 'video' && S.vstep === 1) {
-    if (S.files.video.length) { toast('Voreinstellung „' + p.name + '“ geladen – hier die Kontrolle', 'ok'); vGo(4); return; }
-    S.presetSkip = true; cvRender();
-    toast('Voreinstellung „' + p.name + '“ geladen – wähle jetzt Dateien, danach geht es direkt zur Kontrolle', 'ok'); return;
-  }
-  toast('Voreinstellung „' + p.name + '“ geladen', 'ok');
+  if (S.step === 'convert' && p.world === 'video' && S.vstep === 1 && S.files.video.length) { toast('Voreinstellung „' + p.name + '“ geladen', 'ok'); vGo(2); return; }
+  toast('Voreinstellung „' + p.name + '“ geladen' + (S.step === 'convert' && p.world === 'video' && S.vstep === 1 ? ' – wähle jetzt Dateien' : ''), 'ok');
 }
 function renderPresetChips() {
-  [['audio', '#aPresets'], ['video', '#vPresets']].forEach(([world, sel]) => {
-    const box = $(sel); if (!box) return;
-    const list = cfg().presets.filter(p => p.world === world && p.suggest);
-    fill(box, list.map(p => h('button', {title: describePreset(p), onclick: () => { applyPreset(p); presetChosen(p); }}, p.name)),
-      h('button', {class: 'ghost', title: 'Voreinstellungen verwalten', onclick: () => { location.hash = '#settings/presets'; }}, icon('gear'), list.length ? '' : ' Keine Vorschläge – Voreinstellungen verwalten'));
-  });
+  const box = $('#vPresets'); if (!box) return;
+  const list = cfg().presets.filter(p => p.world === 'video' && p.suggest); // Voreinstellungen gibt es nur für Video (Audio ist immer individuell)
+  fill(box, list.map(p => h('button', {title: describePreset(p), onclick: () => { applyPreset(p); presetChosen(p); }}, p.name)),
+    h('button', {class: 'ghost', title: 'Voreinstellungen verwalten', onclick: () => { location.hash = '#settings/presets'; }}, icon('gear'), list.length ? '' : ' Keine Vorschläge – Voreinstellungen verwalten'));
 }
 
 const CODEC_NAMES = {copy: 'Remux (Video kopieren)', h264: 'H.264', hevc: 'H.265', av1: 'AV1', vp9: 'VP9'};
@@ -98,10 +92,11 @@ function describePreset(p) {
   if (p.world === 'video') {
     o.push(CODEC_NAMES[v.vCodec] || 'Video');
     if (v.vCodec && v.vCodec !== 'copy') {
-      if (v.vCrf != null) o.push('CRF ' + v.vCrf);
+      if (v.vQuality && v.vQuality !== 'custom') o.push(Q.stageName(v.vQuality)); else if (v.vCrf != null) o.push('CRF ' + v.vCrf);
+      if (v.vPreset && SPEED_NAME[v.vPreset]) o.push(SPEED_NAME[v.vPreset]);
       if (String(v.vDepth) === '10') o.push('10 Bit');
       if (v.vHeight != null && String(v.vHeight) !== '0') o.push(v.vHeight + 'p');
-      if (v.vBackend && v.vBackend !== 'auto') o.push(v.vBackend);
+      if (v.vBackend && v.vBackend !== 'auto') o.push(v.vBackend === 'cpu' ? 'CPU' : (BACKEND_FULL[v.vBackend] || v.vBackend));
     }
     if (v.vContainer) o.push(String(v.vContainer).toUpperCase());
     try { const r = JSON.parse(v.vTrkRules || '{}'); const n = (r.audio || []).length; if (n) o.push(n + (n === 1 ? ' Regel für Spuren' : ' Regeln für Spuren')); } catch (e) { /* ignorieren */ }
@@ -138,7 +133,7 @@ function editPreset(id) {
   S.editPreset = id;
   enterKind(p.world);
   applyPreset(p);
-  if (p.world === 'video') S.vstep = 4;
+  if (p.world === 'video') S.vstep = 2;
   renderEditBanner();
   showStep('convert');
 }
@@ -179,7 +174,6 @@ function showView(v) {
   window.scrollTo(0, 0);
 }
 function route() {
-  if ($('#detailsDlg') && $('#detailsDlg').open) $('#detailsDlg').close(); // das Fenster „Details“ bleibt nicht über einer anderen Seite stehen
   const m = /^#settings(?:\/(\w+))?$/.exec(location.hash);
   if (location.hash === '#rename') { showView('rename'); renderRenamePage(); }
   else if (location.hash === '#logs') { showView('logs'); logsPage(); }
@@ -267,10 +261,8 @@ function pageRules() {
 
 // --- Voreinstellungen ---
 function pagePresets() {
-  const tab = S.presetTab || 'video';
+  const tab = 'video'; // Voreinstellungen gibt es nur für Video (Audio ist immer individuell; gespeicherte Audio-Voreinstellungen bleiben in der Konfiguration, werden aber nicht angezeigt)
   const all = cfg().presets, mine = all.filter(p => p.world === tab);
-  const tabs = h('div', {class: 'tabs'}, ['audio', 'video'].map(w => h('button', {class: w === tab ? 'on' : '', onclick: () => { S.presetTab = w; renderSettings(); }},
-    W(w).name, h('small', {}, ' ' + all.filter(p => p.world === w).length))));
   const move = (p, d) => saveCfg(x => {
     const same = x.presets.filter(q => q.world === p.world), i = same.findIndex(q => q.id === p.id), j = i + d;
     if (j < 0 || j >= same.length) return;
@@ -293,13 +285,13 @@ function pagePresets() {
         h('button', {class: 'small danger', title: 'Löschen', onclick: () => { if (confirm('Voreinstellung „' + p.name + '“ löschen?')) saveCfg(x => { x.presets = x.presets.filter(q => q.id !== p.id); }); }}, icon('trash'))));
   }) : h('div', {class: 'empty'}, 'Keine Voreinstellungen in dieser Art.');
   return h('div', {}, h('h2', {}, 'Voreinstellungen', infoBtn('setPresets')),
-    h('p', {class: 'muted'}, 'Voreinstellungen füllen alle Einstellungen von Video oder Audio mit einem Klick. Die mit „Vorschlag“ erscheinen im Konverter oben als Knöpfe.'),
-    tabs, mine.length > 1 ? h('div', {class: 'btns', style: 'margin-bottom:10px'}, h('span', {class: 'muted small'}, 'Vorschläge:'),
+    h('p', {class: 'muted'}, 'Voreinstellungen füllen alle Einstellungen für Video mit einem Klick. Die mit „Vorschlag“ erscheinen auf der Startseite als Knöpfe.'),
+    mine.length > 1 ? h('div', {class: 'btns', style: 'margin-bottom:10px'}, h('span', {class: 'muted small'}, 'Vorschläge:'),
       h('button', {class: 'small', onclick: () => saveCfg(x => x.presets.forEach(q => { if (q.world === tab) q.suggest = true; }), false)}, 'Alle auswählen'),
       h('button', {class: 'small', onclick: () => saveCfg(x => x.presets.forEach(q => { if (q.world === tab) q.suggest = false; }), false)}, 'Alle abwählen')) : null,
     h('div', {class: 'plist'}, list),
-    h('p', {class: 'muted small'}, 'Neue Voreinstellung: im Konverter die Einstellungen wählen und auf „Als Voreinstellung speichern“ (Diskette) klicken.'),
-    h('div', {class: 'btns'}, h('button', {onclick: () => enterKind(tab)}, '→ Zum Konverter'),
+    h('p', {class: 'muted small'}, 'Neue Voreinstellung: mit dem Assistenten (Startseite → „+ Neue Voreinstellung“) oder im Konverter die Einstellungen wählen und auf „Als Voreinstellung speichern“ klicken.'),
+    h('div', {class: 'btns'}, h('button', {onclick: openWizard}, '+ Neue Voreinstellung (Assistent)'), h('button', {onclick: () => enterKind(tab)}, '→ Zum Konverter'),
       h('button', {class: 'ghost', onclick: restoreDefaultPresets}, 'Standard-Voreinstellungen wiederherstellen')));
 }
 async function restoreDefaultPresets() {
