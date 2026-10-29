@@ -15,6 +15,7 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
+- [ ] **Umbenennen: Dateiliste fehlt unter den Eingaben (Nutzer 29.10.):** Beim Umbenennen stehen die Dateien nicht unter den Feldern, deshalb sieht man nicht, was man ändern kann bzw. muss. Gewünscht: die Dateiliste (mit Live-Vorschau alt → neu) direkt darunter. (Noch nicht umgesetzt; bei „leg los“ klären, ob Variante: Liste unter den Feldern.)
 - [ ] **Windows-App: Folgearbeiten** (erste Version 0.1.1 steht auf `dev`): (1) ~~Tray~~ (erledigt in 0.1.2); (2) **Prüfung durch den Nutzer** auf dem Windows-PC (Fenster, Symbol, Hardware-Erkennung, echte Konvertierung, Deinstallation); (3) Größe der `setup.exe` aus dem CI-Lauf (Zusammenfassung „Größen“) mitteilen; (4) Linux-App danach; (5) Windows erst nach Freigabe nach `main`
 - [ ] Optional: Image als multi-arch (amd64/arm64) bauen
 
