@@ -1,5 +1,5 @@
 // Prüft: Ersetzungen (hinzufügen/löschen/alle löschen/neu hinzufügen), Audio/Video getrennt (Namensmuster je Art), gemeinsamer Verlauf mit Abzeichen,
-// Auslastungsanzeige – in allen Ansichten. Aufruf: INDIR=/tmp/media SHOTS=/tmp/shots node tools/ui-check-world.js (Server auf :8787;
+// Auslastungsanzeige – in allen Ansichten. Das Namensfeld steht in der Karte „Name & Ziel“ der Konvertieren-Seite (mit Dateien). Aufruf: INDIR=/tmp/media SHOTS=/tmp/shots node tools/ui-check-world.js (Server auf :8787;
 // vorher je einen Audio- und einen Video-Auftrag einreihen)
 const L = require('./ui-lib');
 (async () => {
@@ -25,7 +25,7 @@ const L = require('./ui-lib');
     eq(name, 'Video: Feld leer', await p.inputValue('#ruleRows .rulerow input >> nth=0'), '');
     await p.fill('#ruleRows .rulerow input >> nth=0', 'nurvideo'); await p.fill('#pattern', '{res}');
     // --- Audio ist unabhängig ---
-    await L.enter(p, 'audio'); await L.goStep(p, 'name');
+    await L.enter(p, 'audio'); if (!(await p.locator('#fileList .file').count())) await L.addFile(p, 'a.mp3'); await L.goStep(p, 'name');
     eq(name, 'Audio: keine Ersetzungen aus Video', await rows(), 0);
     eq(name, 'Audio: Muster getrennt', await p.inputValue('#pattern'), '');
     await p.click('#addRule'); await p.fill('#ruleRows .rulerow input >> nth=0', 'nuraudio'); await p.fill('#pattern', '{artist}');
@@ -36,7 +36,7 @@ const L = require('./ui-lib');
     // Neuladen: Zustand bleibt je Welt
     await p.reload(); await p.waitForTimeout(1500); await withFile();
     eq(name, 'nach Neuladen (Video) 1 Zeile', await rows(), 1);
-    await L.enter(p, 'audio'); await L.goStep(p, 'name');
+    await L.enter(p, 'audio'); if (!(await p.locator('#fileList .file').count())) await L.addFile(p, 'a.mp3'); await L.goStep(p, 'name');
     eq(name, 'nach Neuladen (Audio) Wert', await p.inputValue('#ruleRows .rulerow input >> nth=0'), 'nuraudio');
     // --- Verlauf je Welt (Seite „Verlauf“, Welten strikt getrennt) ---
     // je Welt ein kurzer Auftrag, damit beide Verläufe Einträge haben (unabhängig vom Zustand des Servers)

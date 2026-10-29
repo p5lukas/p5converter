@@ -15,15 +15,15 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     for (const [pref, expectLabel, expectNote] of [['cpu', /bevorzugt: CPU/, true], ['qsv', /schnellste verfügbare/, false], ['auto', /schnellste verfügbare/, false]]) {
       await setPref(pref); await p.goto(L.url); await p.waitForTimeout(2500);
       await L.enter(p, 'video');
-      await L.goStep(p, 'video'); await p.selectOption('#vCodec', 'hevc'); await p.waitForTimeout(400);
+      await p.evaluate(() => cvSet('vCodec', 'hevc')); await p.waitForTimeout(400);
       const opt0 = await p.locator('#vBackend option[value=auto]').textContent();
       ok(expectLabel.test(opt0), `${name}/${pref}: Auswahl „Automatisch“ heißt „${opt0}“`);
       const res = await p.textContent('#vResolved');
       ok(/libx265/.test(res) && /CPU/.test(res), `${name}/${pref}: „Wird verwendet“ zeigt nicht libx265 + CPU: ${res}`);
       ok(/bevorzugt laut Einstellungen/.test(res) === expectNote, `${name}/${pref}: Hinweis „bevorzugt laut Einstellungen“ falsch: ${res}`);
       // Zurücksetzen ändert daran nichts
-      await L.goStep(p, 'files'); await p.evaluate(() => openReset()); if (await p.isVisible('#resetYes')) await p.click('#resetYes'); await p.waitForTimeout(400); // ohne Auswahl wird sofort verworfen
-      await L.enter(p, 'video'); await L.goStep(p, 'video'); await p.selectOption('#vCodec', 'hevc'); await p.waitForTimeout(300);
+      await p.evaluate(() => openReset()); if (await p.isVisible('#resetYes')) await p.click('#resetYes'); await p.waitForTimeout(400); // ohne Auswahl wird sofort verworfen
+      await L.enter(p, 'video'); await p.evaluate(() => cvSet('vCodec', 'hevc')); await p.waitForTimeout(300);
       ok(expectLabel.test(await p.locator('#vBackend option[value=auto]').textContent()), `${name}/${pref}: nach „Zurücksetzen“ stimmt die Auswahl nicht mehr`);
       if (pref === 'cpu') await p.screenshot({path: `${L.SHOTS}/p5c-enc-${name}.png`, fullPage: true});
     }

@@ -21,7 +21,7 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     await p.goto(L.url); await p.evaluate(() => localStorage.clear()); await p.goto(L.url); await p.waitForTimeout(1300);
     await L.enter(p, 'video');
     ok(await p.isVisible('#scanFolder') && await p.locator('#cvScanHelp #scanFolder').count() === 1, name + ': Knopf „Ordner untersuchen“ in der Erklär-Karte fehlt in Schritt 1');
-    ok(/Wo lohnt sich das Umwandeln/.test(await p.textContent('#cvScanHelp h2')) && /nie einzelne Dateien/.test(await p.textContent('#cvScanHelp')) && /Ordner untersuchen/.test(await p.textContent('#scanFolder')), name + ': Text der Erklär-Karte');
+    ok(/Platz sparen/.test(await p.textContent('#cvScanHelp h2')) && /Es wird nichts verändert/.test(await p.textContent('#cvScanHelp')) && /Ordner untersuchen/.test(await p.textContent('#scanFolder')), name + ': Text der Erklär-Karte');
     ok(await p.locator('#cvScanHelp .btns #scanFolder').isVisible() && await p.locator('#cvFiles #scanFolder').count() === 0, name + ': der Knopf gehört in die Erklär-Karte, nicht mehr in die Dateien-Karte');
     await p.screenshot({path: `${L.SHOTS}/p5c-lib-${name}-0-karte.png`, fullPage: true});
     ok(!(await p.isVisible('#cvScan')), name + ': Ergebnisfeld ohne Prüfung sichtbar');
