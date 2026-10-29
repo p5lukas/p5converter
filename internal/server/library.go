@@ -1,8 +1,8 @@
 package server
 
 // Bibliothek-Scan („Was lohnt sich?“): ein Ordner wird rekursiv gelesen (ffprobe, wenige Dateien gleichzeitig) und ORDNERWEISE zusammengefasst.
-// Es werden nie einzelne Dateien vorgeschlagen und nichts geschätzt: die Zeilen enthalten nur Fakten (Dateien, Größe, Codec-Mix, Bitrate, schwere
-// Tonformate, Bild-Untertitel); was davon „lohnend“ aussieht, entscheidet die Oberfläche anhand dieser Fakten.
+// Es werden nie einzelne Dateien vorgeschlagen: die Zeilen enthalten Fakten (Dateien, Größe, Codec-Mix, Bitrate, schwere Tonformate, Bild-Untertitel);
+// was davon „lohnend“ aussieht, entscheidet die Oberfläche anhand dieser Fakten. Einzige Schätzung: SaveBytes (estimate.go), in der Oberfläche als „≈“ gekennzeichnet.
 
 import (
 	"context"
@@ -35,11 +35,12 @@ type LibRow struct {
 	Heavy      map[string]int `json:"heavy"` // schwere Tonformate: dts, dtshd, truehd → Zahl der Dateien
 	ImageSubs  int            `json:"imageSubs"`
 	Unreadable int            `json:"unreadable"`
+	SaveBytes  int64          `json:"saveBytes"` // geschätzte Ersparnis beim Umwandeln mit H.265 „Gut“ (nur Bild, Schätzung)
 }
 
 type libAgg struct {
 	files, imageSubs, unreadable, maxHeight, leaves int
-	bytes                                           int64
+	bytes, save                                     int64
 	dur                                             float64
 	codecs, heavy                                   map[string]int
 }
@@ -51,6 +52,7 @@ func (a *libAgg) add(b *libAgg) {
 	a.imageSubs += b.imageSubs
 	a.unreadable += b.unreadable
 	a.bytes += b.bytes
+	a.save += b.save
 	a.dur += b.dur
 	a.leaves += b.leaves
 	if b.maxHeight > a.maxHeight {
@@ -71,7 +73,7 @@ func (a *libAgg) row(root, dir string, group bool) LibRow {
 		depth = len(strings.Split(filepath.ToSlash(rel), "/"))
 	}
 	r := LibRow{Path: dir, Name: filepath.Base(dir), Depth: depth, Group: group, Folders: a.leaves, Files: a.files, Bytes: a.bytes, Codecs: a.codecs,
-		MaxHeight: a.maxHeight, Heavy: a.heavy, ImageSubs: a.imageSubs, Unreadable: a.unreadable}
+		MaxHeight: a.maxHeight, Heavy: a.heavy, ImageSubs: a.imageSubs, Unreadable: a.unreadable, SaveBytes: a.save}
 	if a.dur > 0 {
 		r.AvgBitrate = int64(float64(a.bytes) * 8 / a.dur)
 	}

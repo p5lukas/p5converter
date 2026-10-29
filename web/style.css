@@ -570,8 +570,8 @@ table.mx td.mxno{color:var(--muted);text-align:center}
 .jobnow .jn-all{margin-top:10px;display:grid;gap:2px}
 .jobnow .bar.thin{height:3px;margin:2px 0}
 .jobnow.idle .jn-title{color:var(--text);text-shadow:none}
-.startcols{align-items:stretch}
-.startcols>.panel{height:100%;margin:0}
+.startcols{align-items:start}
+.startcols>.panel{margin:0}
 @media(max-width:1000px){.hero{grid-template-columns:1fr}}
 @media(max-width:700px){
   .hactions{order:4;width:100%;display:grid;grid-template-columns:1.35fr 1.25fr 1fr;gap:8px}
@@ -596,7 +596,6 @@ table.mx td.mxno{color:var(--muted);text-align:center}
 .cvfd .files{margin-top:8px}
 
 /* Satz */
-.cvsent{font-size:17px;line-height:2.5;overflow-wrap:anywhere}
 .tok{display:inline-flex;align-items:center;border:1px solid var(--accent);color:var(--accent);background:var(--dim);border-radius:8px;padding:0 11px;margin:0 2px;font-weight:700;font-size:inherit;line-height:1.9;box-shadow:0 0 10px var(--dim);text-align:left}
 .tok:after{content:"▾";margin-left:8px;font-size:.7em;opacity:.7}
 .tok:hover{box-shadow:0 0 16px var(--glow)}
@@ -670,20 +669,10 @@ table.mx td.mxno{color:var(--muted);text-align:center}
 .qrow{display:flex;flex-direction:column;gap:6px;grid-column:1/-1}
 
 /* Fenster „Details“ (seitliches Blatt) */
-dialog.sheet{margin:0 0 0 auto;height:100dvh;max-height:100dvh;width:min(820px,100vw);border-radius:14px 0 0 14px;border-right:0}
-dialog.sheet .dlg{height:100%;max-height:100dvh;padding:calc(14px + var(--sat-top)) 18px calc(14px + var(--sat-bottom))}
-.dh{justify-content:space-between;align-items:center}.dh h2{display:flex;align-items:center;gap:8px}
-.dtabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:10px}
-.dtabs button{padding:6px 12px;font-size:13px;color:var(--muted)}
-.dtabs button.on{border-color:var(--accent);color:var(--accent);background:var(--dim)}
-.dbody{overflow:auto;flex:1;min-height:0;display:grid;gap:14px;align-content:start;padding-right:2px}
-.dsec{display:grid;gap:14px}
-.dsec .panel{box-shadow:none}
 
 /* Handy: jede Zeile wird ein kleiner Block */
 @media(max-width:700px){
-  .cvsent{font-size:15px;line-height:2.4}
-  .cvr{grid-template-columns:1fr;gap:4px;padding:10px 12px}
+    .cvr{grid-template-columns:1fr;gap:4px;padding:10px 12px}
   .cvr.cvh{display:none}
   .cvk{font-weight:700;color:var(--text)}
   .cvb{font-size:12px;color:var(--muted)}.cvb:before{content:"vorher";display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
@@ -692,8 +681,7 @@ dialog.sheet .dlg{height:100%;max-height:100dvh;padding:calc(14px + var(--sat-to
   .cvgroups .cvg{flex:1 1 100%}
   .qseg{grid-template-columns:repeat(2,minmax(0,1fr));max-width:none}
   .cvfiles .btns button{flex:1}
-  dialog.sheet{width:100vw;border-radius:0}
-  .cvtop .presetbar{flex:1 1 100%}
+    .cvtop .presetbar{flex:1 1 100%}
 }
 
 /* Feinschliff Konvertieren: schmale Breiten, Querformat am Handy */
@@ -708,13 +696,11 @@ dialog.sheet .dlg{height:100%;max-height:100dvh;padding:calc(14px + var(--sat-to
   .stepnav #startInfo{order:-1;flex:1 1 100%}
   .stepnav .spacer{display:none}
   .stepnav #resetAll,.stepnav #savePreset{padding:9px 12px}.stepnav #resetAll .lbl2,.stepnav #savePreset .lbl2{display:none}
-  .stepnav #detailsBtn{flex:1 1 auto;justify-content:center}
   .stepnav #start{flex:3 1 auto;justify-content:center}
 }
 @media(max-width:700px){
   body[data-step=convert] header.top{position:static}
-  .stepnav #detailsBtn .lbl3{display:none}
-  .stepnav #detailsBtn,.stepnav #resetAll,.stepnav #savePreset{flex:0 0 46px}
+  .stepnav #resetAll,.stepnav #savePreset{flex:0 0 46px}
   .stepnav #start{flex:1 1 auto;order:0}
   .cvr{grid-template-columns:minmax(0,1fr)}
 }
@@ -811,8 +797,6 @@ dialog.sheet .dlg{height:100%;max-height:100dvh;padding:calc(14px + var(--sat-to
 .sec-audio .cvact.copy{color:var(--text)}
 
 /* Kacheln Wie umwandeln? */
-.cvtiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}
-.cvtile .tbig{font-size:21px;font-weight:700;color:var(--accent);text-shadow:0 0 12px var(--glow);line-height:1.2;overflow-wrap:anywhere}
 .tgrp{display:grid;gap:6px;min-width:0}
 .tgrp>.lt{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .pills{display:flex;gap:6px;flex-wrap:wrap}
@@ -825,10 +809,6 @@ dialog.sheet .dlg{height:100%;max-height:100dvh;padding:calc(14px + var(--sat-to
 .opt.on{border-color:var(--accent);background:var(--dim)}
 .opt.bad b{color:var(--bad)}.opt.bad.on{border-color:var(--bad);background:rgba(255,77,94,.1)}
 .opt input{margin-top:2px}
-.cvresult{display:flex;gap:10px;align-items:center;border:1px solid var(--accent);border-radius:12px;padding:12px 16px;background:var(--panel2);box-shadow:0 0 22px var(--dim);line-height:1.5}
-.cvresult .ic{width:1.5em;height:1.5em;color:var(--accent);flex:none}
-@media(max-width:1000px){.cvtiles{grid-template-columns:1fr}}
-
 /* allgemeine Regeln (Schritt Regeln, Details, Einstellungen) */
 .trkglobal{display:grid;gap:8px}
 .trkghead{display:flex;align-items:center;gap:6px}
@@ -891,14 +871,6 @@ button.cvenc{background:transparent}
 .libmain{display:grid;gap:3px;min-width:0;flex:1}
 .libname{display:flex;gap:6px;align-items:center;flex-wrap:wrap;overflow-wrap:anywhere}
 .libname .ic{color:var(--accent)}
-.cvsource{margin:0 0 12px}
-details.cvsrc{border:1px solid color-mix(in srgb,var(--accent) 32%,var(--line));border-radius:var(--r);background:color-mix(in srgb,var(--accent) 5%,var(--panel))}
-details.cvsrc>summary{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;list-style:none;font-size:13px}
-details.cvsrc>summary::-webkit-details-marker{display:none}
-.cvsrctxt{flex:1;min-width:0;overflow-wrap:anywhere;line-height:1.45}
-.cvsrcmore:after{content:" ▾"}details.cvsrc[open] .cvsrcmore:after{content:" ▴"}
-.cvsrclist{border-top:1px solid var(--line);padding:6px 14px 10px;display:flex;flex-direction:column;gap:6px;max-height:260px;overflow:auto}
-.cvsrcfile{display:flex;flex-direction:column;gap:1px}.cvsrcfile .n{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cvhint{display:block;margin-top:8px;line-height:1.45}.cvhint.good{color:var(--accent)}.cvhint.warn{color:var(--warn)}.cvhint.plain{color:var(--muted)}
 .cvhint .ic{width:1em;height:1em;vertical-align:-.12em}
 .scanhelp{margin:0 0 10px;font-size:13.5px;line-height:1.5}
@@ -924,3 +896,83 @@ canvas.rain{position:absolute;inset:0;width:100%;height:100%;pointer-events:none
 .bar.rain{position:relative;height:22px;border-radius:4px;border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);background:color-mix(in srgb,var(--accent) 7%,var(--bg))}
 .bar.rain>i{background:color-mix(in srgb,var(--accent) 18%,transparent);box-shadow:0 0 12px var(--dim)}
 canvas.rainbar{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+
+/* ---------- Konvertieren: Karten, die sich aufklappen ---------- */
+.cvchead.tog{padding-right:10px}
+.cvcard.closed .cvchead{border-bottom:0;cursor:pointer}
+.cvcard.closed .cvchead:hover{background:color-mix(in srgb,var(--accent) 14%,var(--panel2))}
+.cvcard.closed .cvsum{color:var(--text);font-size:13px}
+.cvtog{margin-left:10px;white-space:nowrap;flex:none;color:var(--accent);border-color:transparent}
+.cvr.nob{grid-template-columns:130px minmax(0,1fr)}
+.cvr.nob .cvn{grid-column:2}
+.cvnum{width:84px}
+.cvnamebox #namePreview{display:none}
+.cvnamebox .namebox{margin-top:0}
+.cvsuffix{display:grid;gap:5px;margin-bottom:8px}
+.cvown{display:grid;gap:8px;border-top:1px dashed var(--faint2);padding-top:10px}
+.cvown h4{margin:0}
+.cvr .pills{flex:1 1 auto}
+@media(max-width:700px){.cvr.nob{grid-template-columns:1fr}.cvr.nob .cvn{grid-column:1}.cvcard.closed .cvsum{font-size:12px}.cvtog{margin-left:auto}}
+
+.cvpad{padding:10px 14px 4px}
+.cvpad .trkhints{margin:0}
+
+/* ---------- Startseite: Voreinstellungen, eingeklappte Panels ---------- */
+.startlab{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:18px 0 8px}
+.presetgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.pbtn{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:14px 16px;border-radius:12px;border:1px solid var(--accent);background:var(--dim);text-align:left;color:var(--accent);box-shadow:0 0 16px var(--dim)}
+.pbtn b{font-size:17px}
+.pbtn small{font-weight:400;font-size:12px;color:var(--muted);line-height:1.4;overflow-wrap:anywhere}
+.pbtn.new{border-style:dashed;background:transparent;box-shadow:none}
+.pbtn.new.first{grid-column:1/-1;border-style:solid;background:var(--dim);padding:20px 22px}
+.pbtn.new.first b{font-size:20px}
+.startdet>summary{display:flex;align-items:center;gap:12px;cursor:pointer;list-style:none}
+.startdet>summary::-webkit-details-marker{display:none}
+.startdet>summary h2{margin:0}
+.startdet>summary .muted{margin-left:auto;text-align:right;min-width:0;overflow-wrap:anywhere}
+.startdet>summary:after{content:"▾";color:var(--accent);flex:none}
+.startdet[open]>summary:after{content:"▴"}
+.startdet[open]>summary{margin-bottom:12px}
+@media(max-width:700px){.presetgrid{grid-template-columns:1fr}}
+
+/* ---------- Assistent „Neue Voreinstellung“ ---------- */
+dialog.wizdlg{width:min(640px,100vw);max-height:100dvh;padding:0}
+.wizbox{display:grid;align-content:start;gap:12px;padding:calc(16px + var(--sat-top,0px)) 20px calc(18px + var(--sat-bottom,0px))}
+.wizhead{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.wizdots{display:flex;gap:6px}.wizdots i{flex:1;height:6px;border-radius:3px;background:var(--line)}.wizdots i.d{background:var(--accent)}
+.wiztitle{margin:4px 0 0;font-size:22px;color:var(--text)}
+.wizopts{display:grid;gap:10px}
+.opt2{display:flex;gap:14px;align-items:center;text-align:left;border:1px solid var(--line);border-radius:12px;padding:13px 16px;background:var(--panel);color:var(--text);width:100%}
+.opt2 .rd{width:20px;height:20px;border:2px solid var(--line);border-radius:50%;flex:none}
+.opt2 .wo{display:grid;gap:2px;min-width:0}.opt2 .wo b{font-size:16px}.opt2 .wo small{color:var(--muted);font-size:12.5px;line-height:1.4}
+.opt2.on{border-color:var(--accent);background:var(--dim);box-shadow:0 0 16px var(--dim)}
+.opt2.on .rd{border-color:var(--accent);background:radial-gradient(var(--accent) 45%,transparent 50%)}
+.opt2 .rec{margin-left:auto;flex:none;font-size:11px;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:0 8px}
+.wiznav{display:flex;justify-content:space-between;gap:10px;margin-top:6px}
+.wizsum{border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden}
+.wizrow{display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border-top:1px solid var(--line);font-size:14px}.wizrow:first-child{border-top:0}
+.wizlab{display:grid;gap:6px}.wizname{font-size:16px}
+@media(max-width:700px){dialog.wizdlg{height:100dvh;border-radius:0}.wiztitle{font-size:19px}.opt2 .rec{display:none}}
+
+/* ---------- Probeclip ---------- */
+dialog.clipdlg{width:min(980px,100vw)}
+.clipcands{display:grid;gap:8px}
+.clipcands .opt{display:flex}
+.clipcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.clipcard{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--panel);display:grid;gap:10px;align-content:start}
+.clipcard.fertig{border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+.clipct{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.clipstats{display:grid;gap:8px}
+.clipstats>div{display:grid;gap:1px}
+.clipstats b{font-size:15px}
+.clipimgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.clipimg{display:grid;gap:3px}
+.clipimg img{width:100%;border:1px solid var(--line);border-radius:8px;display:block;background:#000}
+.cliplab{margin-top:4px}
+@media(max-width:700px){dialog.clipdlg{height:100dvh;border-radius:0}.clipcards{grid-template-columns:1fr}}
+
+/* ---------- Bibliothek: geschätzte Ersparnis ---------- */
+.libtotal{font-size:15px;line-height:1.5}.libtotal b{font-size:24px;color:var(--accent);margin-right:4px}
+.libgain{margin-left:auto;align-self:center;white-space:nowrap;font-size:13px;color:var(--muted);text-align:right;padding-left:10px}
+.libgain.good{color:var(--accent);font-weight:700}
+@media(max-width:700px){.libgain{flex:1 0 100%;text-align:left;padding:4px 0 0 28px;margin-left:0}}

@@ -1,5 +1,6 @@
-// Prüft 0.0.9 in allen Ansichten: Schritt „Audio & Untertitel“ (Spurtabelle), „Alle auswählen/abwählen“, „Auf alle Dateien anwenden“,
-// Voreinstellungen nur im Einstellungs-Schritt, „Wenn Datei existiert“-Hinweis, Alles zurücksetzen, Hardware-Kachel, keine Neuigkeiten in der Kopfzeile.
+// Prüft in allen Ansichten: Startseite (Neuigkeiten in der Fußzeile, Hardware eingeklappt), Name & Ziel („Wenn Datei existiert“-Hinweis, Namensliste nur beim Umbenennen),
+// Ton und Untertitel in den Karten der Konvertieren-Seite (Titel, Standard, Forced, Umwandeln mit Zielbitrate; eine Änderung gilt für alle Dateien der Gruppe),
+// „N Spuren geändert“ in der Dateiliste, ein echter Lauf mit Ergebnisprüfung, Alles zurücksetzen.
 // Aufruf: INDIR=/tmp/media OUTDIR=/tmp/out SHOTS=/tmp/shots node tools/ui-check-tracks.js   (Dateien multi.mkv und multi2.mkv: je 2 Ton- und 2 Untertitelspuren)
 const L = require('./ui-lib');
 const { execFileSync } = require('child_process');
@@ -18,65 +19,70 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
     const ov = async () => p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     eq(name, 'Neuigkeiten nicht in der Kopfzeile', await p.locator('header.top #newsBtn').count(), 0);
     eq(name, 'Neuigkeiten in der Fußzeile', await p.locator('#footNews').count(), 1);
-    // Hardware-Kachel: eine Zeile je Hardware, Gründe eingeklappt
+    // Hardware (eingeklappt; Aufklappen zeigt eine Zeile je Hardware, Gründe bleiben eingeklappt)
+    eq(name, 'Hardware eingeklappt', await p.evaluate(() => document.querySelector('#hwCard').open), false);
+    await p.click('#hwCard summary'); await p.waitForTimeout(200);
     eq(name, 'Hardware-Zeilen', (await p.locator('#hwList > .hw, #hwList > details.hwoff').count()) > 0, true);
     eq(name, 'Gründe eingeklappt', await p.locator('#hwList details[open]').count(), 0);
     await p.screenshot({ path: `${L.SHOTS}/t-${name}-0-start.png`, fullPage: true });
+    await p.click('#hwCard summary');
     await L.enter(p, 'video');
     await L.addFile(p, 'multi.mkv'); await L.addFile(p, 'multi2.mkv');
-    await L.goStep(p, 'dest');
-    await p.selectOption('#exists', 'overwrite'); await p.waitForTimeout(100);
-    eq(name, 'Überschreiben-Hinweis in Warnfarbe', await p.evaluate(() => document.querySelector('#existsHint').classList.contains('warn')), true);
-    await p.screenshot({ path: `${L.SHOTS}/t-${name}-1-dest.png` });
-    await p.selectOption('#exists', 'rename');
-    await L.goStep(p, 'name');
+    const row = lbl => p.locator('.cvgrid .cvr', {has: p.locator('.cvk', {hasText: new RegExp('^' + lbl + '\\s*i?$', 'i')})});
+    await L.toCheck(p); await p.waitForTimeout(1500);
+    const nc = await L.openCard(p, 'name');
+    await nc.locator('.pill:has-text("Überschreiben")').click(); await p.waitForTimeout(200);
+    eq(name, 'Überschreiben-Hinweis in Warnfarbe', await p.evaluate(() => !!document.querySelector('[data-card=name] .tgrp .small.warn')), true);
+    await p.screenshot({ path: `${L.SHOTS}/t-${name}-1-dest.png`, fullPage: true });
+    await nc.locator('.pill:has-text("Beide behalten")').click(); await p.waitForTimeout(200);
     // Namensliste: nur wenn umbenannt wird, dann alle Dateien einzeilig („alt → neu“)
     eq(name, 'ohne Umbenennen keine Namensliste', await p.locator('.cvnamelist').count(), 0);
-    await p.fill('#pattern', '{filename} [X]'); await p.waitForTimeout(300);
-    await L.goStep(p, 'summary'); await p.waitForSelector('.cvnamelist .cvnl', {timeout: 8000}); await p.waitForTimeout(500);
+    await p.evaluate(() => cvSet('pattern', '{filename} [X]')); await p.evaluate(() => cvRender()); await p.waitForSelector('.cvnamelist .cvnl', {timeout: 8000}); await p.waitForTimeout(500);
     eq(name, 'Namensliste: eine Zeile je Datei (2)', await p.locator('.cvnamelist .cvnl').count(), 2);
     const nl = (await p.locator('.cvnamelist').textContent()).replace(/\s+/g, ' ');
     if (!/multi\.mkv.*multi \[X\]\.mkv/.test(nl) || !/multi2\.mkv.*multi2 \[X\]\.mkv/.test(nl)) errs.push(name + ': Namensliste „alt → neu“ unerwartet: ' + nl);
     eq(name, 'Namensliste einzeilig (Ellipse, keine Umbrüche)', await p.evaluate(() => [...document.querySelectorAll('.cvnamelist .cvnl')].every(r => r.getBoundingClientRect().height < 40)), true);
     if (await ov() > 0) errs.push(`${name}: Überlauf mit Namensliste: ${await ov()}px`);
     await p.screenshot({ path: `${L.SHOTS}/t-${name}-1b-namensliste.png`, fullPage: true });
-    await L.goStep(p, 'name'); await p.fill('#pattern', ''); await p.waitForTimeout(200);
-    await L.goStep(p, 'video');
-    await L.goStep(p, 'tracks');
-    await p.waitForSelector('.trkviews'); await p.click('.trkviews button:has-text("Einzelne Dateien")'); await p.waitForSelector('#trackEditor .trkcard');
-    eq(name, 'Karten (2 Ton + 2 Untertitel)', await p.locator('#trackEditor .trkcard').count(), 4);
-    if (await ov() > 0) errs.push(`${name}: Überlauf im Spuren-Schritt: ${await ov()}px`);
+    await p.fill('#pattern', ''); await p.locator('#pattern').dispatchEvent('change'); await p.waitForTimeout(500);
+    // Ton und Untertitel: beide Karten aufklappen; eine Änderung gilt für beide Dateien (eine Gruppe)
+    await L.openCard(p, 'tracks'); await L.openCard(p, 'subs'); await p.waitForTimeout(500);
+    eq(name, 'Zeilen (2 Ton + 2 Untertitel)', (await row('Ton 1').count()) + (await row('Ton 2').count()) + (await row('Untertitel 1').count()) + (await row('Untertitel 2').count()), 4);
+    if (await ov() > 0) errs.push(`${name}: Überlauf in der Spurenansicht: ${await ov()}px`);
     await p.screenshot({ path: `${L.SHOTS}/t-${name}-2-tracks.png`, fullPage: true });
-    // Alle abwählen / auswählen (Untertitel)
-    const subs = p.locator('#trackEditor .trkgroup >> nth=1');
-    await subs.getByText('Alle abwählen').click();
-    eq(name, 'Untertitel alle abgewählt', await subs.locator('.trkcard.off').count(), 2);
-    await subs.getByText('Alle auswählen').click();
-    eq(name, 'Untertitel alle ausgewählt', await subs.locator('.trkcard.off').count(), 0);
-    const card = i => p.locator('#trackEditor .trkcard').nth(i);
-    const expand = async i => { if (!(await card(i).locator('.trkadv').count())) { await card(i).locator('.trkmore').click(); await p.waitForTimeout(150); } };
-    // Titel der 1. Tonspur, 2. Tonspur automatisch, 1. Untertitel Forced (alles unter „Erweitert“)
-    await expand(0); await card(0).locator('.trkadv input:not([type])').first().fill('Deutsch Stereo'); await card(0).locator('.trkadv input:not([type])').first().dispatchEvent('change'); await p.waitForTimeout(200);
-    await expand(1); await card(1).locator('.trkadv input[type=checkbox]').first().check(); await p.waitForTimeout(200);
-    await expand(2); await card(2).locator('.trkadv input[type=checkbox]').first().check(); await p.waitForTimeout(200);
-    eq(name, 'bearbeitete Karten markiert', await p.locator('#trackEditor .trkcard.edited').count() >= 3, true);
-    // Neu kodieren: Empfehlung und Zielbitrate sichtbar
-    await card(1).locator('.trk-act').selectOption('encode'); await p.waitForTimeout(250);
-    if (!/Ergebnis für diese Spur: 160 kbit\/s/.test(await card(1).textContent())) errs.push(name + ': Zielbitrate fehlt: ' + (await card(1).textContent()).slice(0, 300));
-    await card(1).locator('.trk-act').selectOption(''); await p.waitForTimeout(250);
+    // Untertitel alle entfernen / wieder behalten (Zeile „Alle Untertitel“ gilt für Spuren ohne eigene Entscheidung)
+    await L.openCard(p, 'subs');
+    await p.selectOption('.cvgrid select[aria-label="Alle Untertitel"]', 'none'); await p.waitForTimeout(400);
+    eq(name, 'Untertitel alle entfernt', await p.locator('[data-card=subs] .cvr.dropped').count(), 2);
+    await p.selectOption('.cvgrid select[aria-label="Alle Untertitel"]', 'copy'); await p.waitForTimeout(400);
+    eq(name, 'Untertitel wieder alle behalten', await p.locator('[data-card=subs] .cvr.dropped').count(), 0);
+    // Titel der 1. Tonspur („⋯“), 2. Tonspur Standard, 1. Untertitel Forced
+    await L.openCard(p, 'tracks');
+    await row('Ton 1').locator('.cvmore').click(); await p.waitForTimeout(300);
+    await row('Ton 1').locator('.cved input').first().fill('Deutsch Stereo'); await p.keyboard.press('Tab'); await p.waitForTimeout(500);
+    await row('Ton 1').locator('.cvmore').click(); await p.waitForTimeout(200);
+    const stdBtn = n => row('Ton ' + n).locator('.cvflag:has-text("Standard")');
+    if (!(await stdBtn(2).evaluate(e => e.classList.contains('on')))) { await stdBtn(2).click(); await p.waitForTimeout(400); }
+    eq(name, 'Ton 2 ist Standard', await stdBtn(2).evaluate(e => e.classList.contains('on')), true);
+    await row('Untertitel 1').locator('.cvflag:has-text("Forced")').click(); await p.waitForTimeout(400);
+    eq(name, 'Untertitel 1 Forced', await row('Untertitel 1').locator('.cvflag.on:has-text("Forced")').count(), 1);
+    // Neu kodieren: Zielformat mit Bitrate sichtbar
+    await row('Ton 2').locator('select.cvact').selectOption('encode'); await p.waitForTimeout(400);
+    if (!/160 kbit\/s/.test(await row('Ton 2').locator('.cvenc').textContent())) errs.push(name + ': Zielbitrate fehlt: ' + (await row('Ton 2').textContent()).slice(0, 300));
+    await row('Ton 2').locator('select.cvact').selectOption('copy'); await p.waitForTimeout(400);
     await p.screenshot({ path: `${L.SHOTS}/t-${name}-3-edited.png`, fullPage: true });
-    await p.getByText('Auf alle Dateien anwenden').click(); await p.waitForTimeout(800);
-    await p.selectOption('#trkFile', '1'); await p.waitForTimeout(400);
-    eq(name, 'Änderungen auf 2. Datei übertragen', await p.locator('#trackEditor .trkcard.edited').count() >= 3, true);
-    // Zusammenfassung nennt die Änderung
-    await L.goStep(p, 'summary');
+    eq(name, 'Änderungen gelten für beide Dateien der Gruppe', await p.evaluate(() => S.files.video.map(f => Object.keys(f.tracks || {}).length >= 3).join()), 'true,true');
+    // Dateiliste: beide Dateien melden geänderte Spuren
     await p.click('#cvStepper [data-step=files]'); await p.waitForTimeout(600); await p.click('#cvFileDetails summary'); await p.waitForTimeout(200);
     eq(name, 'beide Dateien melden geänderte Spuren', await p.locator('#fileList [data-tr]').count(), 2);
+    await L.toCheck(p); await p.waitForTimeout(800);
     // nur Desktop: wirklich konvertieren und das Ergebnis prüfen
     if (name === 'desktop') {
-      await L.goStep(p, 'dest'); await p.selectOption('#outMode', 'custom'); await p.fill('#outDir', OUTDIR + '/tracks');
-      await p.selectOption('#exists', 'overwrite');
-      await L.goStep(p, 'summary'); await p.click('#start'); await p.waitForTimeout(6000);
+      const nc2 = await L.openCard(p, 'name');
+      await nc2.locator('.pill:has-text("Eigener Ordner")').click(); await p.waitForTimeout(300);
+      await nc2.locator('input[aria-label="Zielordner"]').fill(OUTDIR + '/tracks'); await nc2.locator('input[aria-label="Zielordner"]').press('Enter'); await p.waitForTimeout(300);
+      await nc2.locator('.pill:has-text("Überschreiben")').click(); await p.waitForTimeout(300);
+      await p.click('#start'); await p.waitForTimeout(6000);
       const f = OUTDIR + '/tracks/multi.mkv';
       if (!fs.existsSync(f)) errs.push('Ergebnisdatei fehlt');
       else {
@@ -88,16 +94,8 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
         eq(name, 'Ergebnis: Untertitel 1 forced', s[0].disposition.forced, 1);
       }
     }
-    // Assistent: Datei mit mehreren Sprachen und einem Forced-Untertitel ohne Markierung
-    await L.goStep(p, 'files'); await p.click('#cvStepper [data-step=files]'); await p.waitForTimeout(300); await p.click('#clearFiles'); await L.addFile(p, 'hint.mkv'); await L.goStep(p, 'tracks'); await p.waitForSelector('.trkviews'); await p.click('.trkviews button:has-text("Einzelne Dateien")'); await p.waitForSelector('#trackEditor .trkcard');
-    const hintTxt = await p.textContent('#trackEditor .trkhints');
-    if (!/Nur Deutsch und Englisch behalten/.test(hintTxt) || !/Als Forced markieren/.test(hintTxt)) errs.push(name + ': Assistent-Hinweise fehlen: ' + hintTxt);
-    await p.screenshot({ path: `${L.SHOTS}/t-${name}-3b-hints.png`, fullPage: true });
-    await p.getByRole('button', { name: 'Als Forced markieren' }).click(); await p.waitForTimeout(300);
-    eq(name, 'Forced-Hinweis erledigt', /Als Forced markieren/.test(await p.textContent('#trackEditor')), false);
-    while (await p.getByRole('button', { name: 'Nur Deutsch und Englisch behalten' }).count()) { await p.getByRole('button', { name: 'Nur Deutsch und Englisch behalten' }).first().click(); await p.waitForTimeout(300); }
-    eq(name, 'Fremdsprachen entfernt (1 Ton + 2 Untertitel)', await p.locator('#trackEditor .trkcard.off').count(), 3);
-    await L.goStep(p, 'files'); await p.click('#cvStepper [data-step=files]'); await p.waitForTimeout(300); await p.click('#clearFiles'); await L.addFile(p, 'long.mkv'); await L.toCheck(p);
+    if (!(await p.isVisible('#cvStepper'))) await L.enter(p, 'video'); // nach „Starten“ steht die Startseite da
+    await p.click('#cvStepper [data-step=files]'); await p.waitForTimeout(300); await p.click('#clearFiles'); await L.addFile(p, 'long.mkv'); await L.toCheck(p);
     // Alles zurücksetzen
     await p.click('#resetAll'); await p.waitForTimeout(250);
     eq(name, 'Rücksetz-Dialog offen', await p.isVisible('#resetDlg'), true);

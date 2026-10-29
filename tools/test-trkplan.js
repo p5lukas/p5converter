@@ -112,6 +112,21 @@ t('Wunsch „Deutsch (Forced)“ wählt den erratenen Forced-Untertitel vor', ()
   assert.strictEqual(p.edits[4].forced, true); assert.strictEqual(p.edits[4].default, true); assert.strictEqual(p.edits[3].default, false);
   assert.ok(p.tracks[1].why.some(w => w.includes('38 statt 1200')));
 });
+t('Forced erraten nach Spurtitel: „[ForcedNarrative]“, auch ohne Zählwerte', () => {
+  const g = TP.forcedGuess({streams: [S(3, 'ger'), S(4, 'ger', 'subrip', {title: '[ForcedNarrative]'}), S(5, 'eng', 'subrip', {title: 'English'})]});
+  assert.deepStrictEqual(Object.keys(g), ['4']); assert.strictEqual(g[4].title, '[ForcedNarrative]');
+  assert.strictEqual(TP.guessText(g[4]), 'Titel „[ForcedNarrative]“');
+  assert.deepStrictEqual(TP.forcedGuess({streams: [S(3, 'ger', 'subrip', {title: 'Deutsch', forced: false}), S(4, 'ger', 'subrip', {title: 'Deutsch', forced: true})]}), {});
+});
+t('Wunsch „Deutsch (Forced)“ nimmt den Untertitel „[ForcedNarrative]“ als Forced und Standard', () => {
+  const p = P([S(3, 'ger', 'subrip', {default: true}), S(4, 'ger', 'subrip', {title: '[ForcedNarrative]'})], {}, {prefs: {subDefault: [{lang: 'ger', forced: true}, {lang: 'ger', forced: false}]}});
+  assert.strictEqual(p.edits[4].forced, true); assert.strictEqual(p.edits[4].default, true); assert.strictEqual(p.edits[3].default, false);
+  assert.ok(p.tracks[1].why.some(w => w.startsWith('Wahrscheinlich Forced') && w.includes('ForcedNarrative')));
+});
+t('Titel und Größe zusammen ergeben eine gemeinsame Begründung', () => {
+  const g = TP.forcedGuess({streams: [SF(3, 'ger', 1200), SF(4, 'ger', 38, {title: 'Forced'})]});
+  assert.strictEqual(TP.guessText(g[4]), 'Titel „Forced“ und nur 38 statt 1200 Zeilen');
+});
 t('ohne Forced-Wunsch bleibt der erratene Untertitel unverändert (nur Hinweis)', () => {
   const p = P([SF(3, 'ger', 1200), SF(4, 'ger', 38)], {}, {prefs: {subDefault: [{lang: 'ger', forced: false}]}});
   assert.strictEqual(p.edits[4], undefined); assert.ok(p.tracks[1].guess);

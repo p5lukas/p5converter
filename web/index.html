@@ -35,24 +35,28 @@
 <main id="viewMain">
   <div id="editBanner" class="editbanner hidden"></div>
 
-  <!-- Startseite: Was umwandeln? (Video oder Audio), laufender Auftrag, gewonnener Platz, Hardware -->
+  <!-- Startseite: Voreinstellungen (Video), Art wählen (Video oder Audio), laufender Auftrag, gewonnener Platz und Hardware (eingeklappt) -->
   <section class="stepsec" data-step="start">
-    <div class="pagehead"><h1>Was möchtest du umwandeln?</h1><p class="muted">Wähle eine Art. Danach führt dich das Programm Schritt für Schritt durch die Auswahl.</p></div>
+    <div class="pagehead"><h1>Was möchtest du umwandeln?</h1></div>
+    <div class="startlab" id="startPresetLab">Video-Voreinstellungen</div>
+    <div class="presetgrid" id="startPresets"></div>
+    <div class="startlab">Oder neu einstellen</div>
     <div class="starttiles" id="startTiles"></div>
     <section class="hero" id="hero">
       <div class="jobnow" id="jobNow"></div>
       <div id="monitor" class="monitor"></div>
     </section>
     <div class="startcols">
-      <div class="panel" id="savedCard">
-        <div class="panel-h"><h2 data-info="savedInfo">Gewonnener Platz</h2></div>
+      <details class="panel startdet" id="savedCard">
+        <summary><h2 data-info="savedInfo">Gewonnener Platz</h2><span class="muted small" id="savedSum"></span></summary>
         <div id="savedBody" class="savedcols"></div>
-      </div>
-      <div class="panel" id="hwCard">
-      <div class="panel-h"><h2 data-info="hwInfo">Hardware</h2><button id="hwRedetect" class="small">Neu erkennen</button></div>
-      <div id="hwList"></div>
-      <div id="hwGpus" class="muted small"></div>
-      </div>
+      </details>
+      <details class="panel startdet" id="hwCard">
+        <summary><h2 data-info="hwInfo">Hardware</h2><span class="muted small" id="hwSum"></span></summary>
+        <div class="btns" style="margin-bottom:8px"><button id="hwRedetect" class="small">Neu erkennen</button></div>
+        <div id="hwList"></div>
+        <div id="hwGpus" class="muted small"></div>
+      </details>
     </div>
   </section>
 
@@ -62,13 +66,10 @@
       <button id="cvHome" class="ghost" type="button"><span data-ic="back"></span> Startseite</button>
       <div class="presetbar" id="presetBar">
         <span class="muted small">Voreinstellung:</span>
-        <div class="presets" id="aPresets"></div>
-        <div class="presets hidden" id="vPresets"></div>
+        <div class="presets" id="vPresets"></div>
       </div>
     </div>
     <nav class="stepper hidden" id="cvStepper" aria-label="Schritte"></nav>
-    <div class="cvhead hidden" id="cvHead"></div>
-    <div class="cvsource hidden" id="cvSource" aria-live="polite"></div>
     <div class="cvcard cvfiles" id="cvFiles">
       <div class="cvchead"><span class="cvico" data-ic="folder"></span><h2 data-info="stepFiles">Dateien</h2><span class="cvsum muted small" id="fileSummary"></span></div>
       <div class="cvcbody">
@@ -82,16 +83,13 @@
       </div>
     </div>
     <section class="cvcard hidden" id="cvScanHelp">
-      <div class="cvchead"><span class="cvico" data-ic="chip"></span><h2 data-info="libScan">Tipps: Wo lohnt sich das Umwandeln?</h2></div>
+      <div class="cvchead"><span class="cvico" data-ic="chip"></span><h2 data-info="libScan">Platz sparen: Ordner untersuchen</h2></div>
       <div class="cvcbody">
-        <p class="scanhelp">Das Programm schaut in einen Ordner (mit allen Unterordnern) und zeigt dir, <b>welche Ordner sich zum Umwandeln eher lohnen</b>, zum Beispiel wegen eines älteren Codecs oder sehr großer Dateien. Es wird nichts verändert, und du siehst nur ganze Ordner, nie einzelne Dateien.</p>
+        <p class="scanhelp">Zeigt dir, in welchen Ordnern sich das Umwandeln lohnt, mit geschätzter Ersparnis. Es wird nichts verändert.</p>
         <div class="btns"><button id="scanFolder" title="Einen Ordner rekursiv untersuchen und zeigen, bei welchen Ordnern sich das Umwandeln lohnt"><span data-ic="chip"></span> Ordner untersuchen …</button></div>
       </div>
     </section>
     <section class="cvcard hidden" id="cvScan" aria-live="polite"></section>
-    <div id="cvRules" class="cvstep hidden"></div>
-    <div id="cvHow" class="cvstep hidden"></div>
-    <div class="panel cvsentence" id="cvSentence"></div>
     <div class="cvtable" id="cvTable"></div>
   </section>
 
@@ -106,7 +104,6 @@
     <button id="resetAll" class="ghost discard" title="Abbrechen: Dateien und alle Eingaben verwerfen, zurück zur Startseite"><span data-ic="close"></span><span class="lbl2"> Verwerfen</span></button>
     <span id="startInfo" class="small muted"></span>
     <span class="spacer"></span>
-    <button id="detailsBtn" title="Weitere Einstellungen: Ziel, Namen, Video, Spuren, Prüfen"><span data-ic="gear"></span><span class="lbl3"> Details</span></button>
     <button id="savePreset" title="Die aktuellen Einstellungen als Voreinstellung speichern"><span data-ic="floppy"></span><span class="lbl2"> Voreinstellung speichern</span></button>
     <button id="start" class="primary big"><span data-ic="play"></span><span class="lbl4"> Konvertierung starten</span><span class="lbl5"> Starten</span></button>
   </div>
@@ -159,18 +156,9 @@
 <div id="toasts"></div>
 
 
-<dialog id="detailsDlg" class="sheet">
-  <div class="dlg">
-    <div class="dlg-h dh"><h2><span data-ic="gear"></span> Details</h2><button type="button" id="detailsClose" class="primary small">Fertig</button></div>
-    <nav class="dtabs" id="detailsTabs">
-      <button type="button" data-dtab="dest">Ziel &amp; Name</button>
-      <button type="button" data-dtab="video" id="dtabVideo">Video</button>
-      <button type="button" data-dtab="tracks" data-world="video">Audio &amp; Untertitel</button>
-      <button type="button" data-dtab="verify">Prüfen &amp; Original</button>
-    </nav>
-    <div class="dbody" id="detailsBody">
-      <section class="dsec" data-dsec="dest">
-    <div class="panel" id="destCard">
+<!-- Zustand der Konvertieren-Seite: die Felder stecken hier versteckt, die Karten in convert.js lesen und schreiben sie (so bleiben Voreinstellungen, Speichern und Starten unverändert) -->
+<div id="fieldStore" class="hidden">
+<div class="panel" id="destCard">
       <h2>Ziel</h2>
       <div class="grid2">
         <label>Speicherort
@@ -189,13 +177,10 @@
       </div>
     </div>
 <div style="height:14px"></div>
-    <div class="panel">
-      <h2>Benennen</h2>
-      <div class="grid2">
-        <label>Dateiname-Zusatz
-          <input id="suffix" placeholder="z. B. _x265">
-        </label>
-      </div>
+    <div id="nameStore">
+      <label class="cvsuffix">Dateiname-Zusatz
+        <input id="suffix" placeholder="z. B. _x265">
+      </label>
       <div class="namebox" id="nameBox">
         <h3 data-info="pattern">Dateiname</h3>
         <label id="patternRow">Namensmuster (optional)
@@ -209,8 +194,8 @@
         <div class="namepreview" id="namePreview"></div>
       </div>
     </div>
-      </section>
-      <section class="dsec" data-dsec="video">
+      
+      
     <div class="panel" id="audioSettings" data-world="audio">
       <h2>Audio-Einstellungen</h2>
       <div class="grid2">
@@ -284,14 +269,11 @@
       <label class="check" id="vHwDecRow"><input type="checkbox" id="vHwDec" checked> Hardware-Decoding nutzen (fällt bei Fehler automatisch zurück)</label>
 
     </div>
-      </section>
-      <section class="dsec" data-dsec="tracks" data-world="video">
-    <div class="panel" id="trackSettings">
-      <h2>Audio und Untertitel</h2>
-      <p class="trkintro">Hier musst du <b>nichts ändern</b>: Standardmäßig bleiben alle Ton- und Untertitelspuren unverändert („Passthrough“) – das ist verlustfrei und am schnellsten. Das Programm macht Vorschläge (Sprachen, Standard-Spur, Formate); jeden Vorschlag kannst du abwählen.</p>
-      <div id="trkTop"></div>
+      
+      
+    <div id="trackSettings">
       <input type="hidden" id="vTrkRules">
-      <div id="trkHold" class="hidden">
+      <div id="trkHold">
         <label id="vAudioModeRow">Alle übrigen Tonspuren
           <select id="vAudioMode"><option value="copy">Unverändert lassen (empfohlen)</option><option value="encode">Kleiner machen (neu kodieren)</option></select>
         </label>
@@ -304,10 +286,7 @@
           <select id="vSubMode"><option value="copy">Alle behalten (empfohlen)</option><option value="none">Alle entfernen</option></select>
         </label>
       </div>
-      <div id="trackEditor"></div>
     </div>
-      </section>
-      <section class="dsec" data-dsec="verify">
     <div class="panel" id="vfCard">
       <h2 data-info="vfInfo">Ergebnis prüfen &amp; Original</h2>
       <p class="muted small">Nach dem Umwandeln wird die neue Datei immer auf Lesbarkeit und Laufzeit geprüft. Hier kannst du mehr dazunehmen (Standard: in Einstellungen → Allgemein).</p>
@@ -319,10 +298,7 @@
       <div class="vfhint warn">Unwiderruflich: kein Papierkorb.</div>
       <div id="vfDelHint" class="warn small hidden">Das Original wird sofort und endgültig gelöscht, sobald alle gewählten Prüfungen bestanden sind.</div>
     </div>
-      </section>
-    </div>
-  </div>
-</dialog>
+</div>
 
 <dialog id="restoreDlg">
   <form method="dialog" class="dlg">
@@ -331,6 +307,10 @@
     <div class="dlg-f"><button type="button" id="restoreNo" class="ghost">Verwerfen</button><button type="button" id="restoreYes" class="primary">Fortsetzen</button></div>
   </form>
 </dialog>
+
+<dialog id="wizDlg" class="wizdlg"><div class="dlg wizbox" id="wizBox"></div></dialog>
+
+<dialog id="clipDlg" class="wizdlg clipdlg"><div class="dlg wizbox" id="clipBox"></div></dialog>
 
 <dialog id="presetDlg">
   <form method="dialog" class="dlg" id="presetForm">
@@ -412,6 +392,8 @@
 <script src="crf.js"></script>
 <script src="convert.js"></script>
 <script src="library.js"></script>
+<script src="wizard.js"></script>
+<script src="clip.js"></script>
 <script src="rain.js"></script>
 <script src="logs.js"></script>
 <script src="history.js"></script>

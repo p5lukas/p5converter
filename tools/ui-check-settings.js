@@ -51,16 +51,14 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     await p.goto(BASE); await p.waitForTimeout(1200);
     await L.enter(p, 'video'); await L.addFile(p, 'long.mkv');
     // Voreinstellung speichern
-    await L.goStep(p, 'video');
-    await p.selectOption('#vCodec', 'hevc'); await p.selectOption('#vDepth', '10'); await p.fill('#vCrf', '19');
-    await p.evaluate(() => { const e = document.querySelector('#vCrf'); e.value = 19; e.dispatchEvent(new Event('input', {bubbles: true})); });
-    await L.goStep(p, 'summary');
+    await L.toCheck(p);
+    await p.evaluate(() => { cvSet('vCodec', 'hevc'); cvSet('vDepth', '10'); cvSet('vCrf', '19'); });
+    await p.waitForTimeout(300);
     await p.click('#savePreset'); await p.waitForTimeout(300);
     await p.fill('#presetName', 'Mein Test ' + name); await p.click('#presetSave'); await p.waitForTimeout(600);
     ok(await p.locator('#vPresets button', {hasText: 'Mein Test ' + name}).count() === 1, name + ': Chip der neuen Voreinstellung fehlt');
     // zurücksetzen und per Chip laden
-    await L.goStep(p, 'video');
-    await p.selectOption('#vCodec', 'h264'); await p.selectOption('#vDepth', '8'); await L.goStep(p, 'files');
+    await p.evaluate(() => { cvSet('vCodec', 'h264'); cvSet('vDepth', '8'); });
     await p.click('#cvStepper [data-step=files]'); await p.waitForTimeout(400); // Schritt 1: dort stehen die Voreinstellungen
     await p.click('#vPresets button:has-text("Mein Test ' + name + '")'); await p.waitForTimeout(500);
     ok(await p.locator('#cvStepper .stp.on').getAttribute('data-step') === 'check', name + ': Voreinstellung sollte direkt zur Kontrolle springen');
@@ -74,7 +72,7 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     await p.evaluate(() => { location.hash = '#settings/presets'; }); await p.waitForTimeout(500);
     await p.click('.prow:has(input[value="Mein Test ' + name + '"]) button:has-text("Werte")'); await p.waitForTimeout(600);
     ok(await p.locator('#editBanner').isVisible(), name + ': Bearbeiten-Banner fehlt');
-    await p.evaluate(() => { const e = document.querySelector('#vCrf'); e.value = 27; e.dispatchEvent(new Event('input', {bubbles: true})); });
+    await p.evaluate(() => { cvSet('vCrf', '27'); });
     await p.screenshot({ path: `${SH}${name}-edit.png` });
     await p.click('#editBanner button.primary'); await p.waitForTimeout(600);
     const st = await (await fetch(BASE + '/api/settings')).json();

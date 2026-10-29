@@ -1,8 +1,8 @@
 'use strict';
 /* Bibliothek-Scan „Was lohnt sich?“ (Video, Schritt 1): ein Ordner wird auf dem Server rekursiv gelesen und ORDNERWEISE zusammengefasst
-   (/api/library/scan). Es werden nie einzelne Dateien vorgeschlagen und nichts geschätzt: die Zeilen zeigen nur Fakten (Dateien, Größe, Codec-Mix,
-   Bitrate, schwere Tonformate, Bild-Untertitel); die Hinweise „lohnt sich eher“ entstehen aus diesen Fakten (LIB.hints, mit Node getestet:
-   tools/test-library.js). „Übernehmen“ legt den ganzen Ordner (rekursiv) in Schritt 1 ab.
+   (/api/library/scan). Es werden nie einzelne Dateien vorgeschlagen: die Zeilen zeigen Fakten (Dateien, Größe, Codec-Mix, Bitrate, schwere Tonformate,
+   Bild-Untertitel); die Hinweise „lohnt sich eher“ entstehen aus diesen Fakten (LIB.hints, mit Node getestet: tools/test-library.js). Einzige Schätzung:
+   „spart ≈ …“ (saveBytes vom Server, H.265 „Gut“, nur Bild) – immer mit „≈“ gekennzeichnet. „Übernehmen“ legt den ganzen Ordner (rekursiv) in Schritt 1 ab.
    Nutzt S, $, h(), fill(), api(), icon(), toast(), fmtSize(), pathLabel(), openBrowser(), addScanned() aus den anderen Dateien (nur zur Laufzeit). */
 
 const LIB = (() => {
@@ -18,7 +18,7 @@ const LIB = (() => {
   // „H.264 ×3 · H.265 ×2“, die häufigsten zuerst
   const mix = codecs => Object.entries(codecs || {}).sort((a, b) => b[1] - a[1]).map(([c, n]) => codecName(c) + ' ×' + n).join(' · ');
 
-  // Hinweise zu einem Ordner: [{id, text, good}]; good = spricht für „lohnt sich“. Nichts davon ist eine Größenschätzung.
+  // Hinweise zu einem Ordner: [{id, text, good}]; good = spricht für „lohnt sich“. Nichts davon ist eine Größenschätzung (die steht getrennt in gainText).
   function hints(r, lowBitrate) {
     const out = [], files = r.files || 0;
     const olds = Object.entries(r.codecs || {}).filter(([c]) => c !== '?' && !MODERN.includes(c));
@@ -121,6 +121,12 @@ const LIB = (() => {
     return null;
   }
 
+  // geschätzte Ersparnis eines Ordners („≈ 9 GB sparen“); unter 5 % der Größe oder unter 50 MB ist es keine Rede wert
+  const gainText = (save, bytes) => !save || save < Math.max(50e6, (bytes || 0) * 0.05) ? 'kaum Ersparnis' : '≈ ' + fmtSizeLib(save) + ' sparen';
+  // Summe über alle Ordner ohne die Sammelzeilen (die fassen nur die Ordner darunter zusammen)
+  const totalSave = rows => (rows || []).filter(r => !r.group).reduce((a, r) => a + (r.saveBytes || 0), 0);
+  const totalBytes = rows => (rows || []).filter(r => !r.group).reduce((a, r) => a + (r.bytes || 0), 0);
+
   // Reihenfolge: „tree“ = wie im Dateibaum (Sammelordner vor ihren Ordnern), sonst flach nach Größe, Bitrate oder Name
   function sortRows(rows, key) {
     const r = rows.slice();
@@ -129,7 +135,7 @@ const LIB = (() => {
     else if (key === 'name') r.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()) || a.path.localeCompare(b.path));
     return r;
   }
-  return {hints, worth, mix, sortRows, codecName, mbit, highLimit, nf, seasonLike, clean, title, sourceFacts, sourceLine, convertHint, FILTERS, FILTER_DEFAULT, filterIds, matches, filterCounts};
+  return {hints, worth, mix, sortRows, gainText, totalSave, totalBytes, codecName, mbit, highLimit, nf, seasonLike, clean, title, sourceFacts, sourceLine, convertHint, FILTERS, FILTER_DEFAULT, filterIds, matches, filterCounts};
 })();
 if (typeof module !== 'undefined') module.exports = LIB;
 
@@ -191,14 +197,15 @@ function libRowEl(r, groups) {
         h('b', {}, t.name), r.group ? h('span', {class: 'chip'}, 'ganzer Ordner · ' + LIB.nf(r.folders) + ' Ordner') : null,
         flat && up ? h('small', {class: 'muted'}, 'in ' + up) : null),
       h('span', {class: 'libfacts muted small'}, num0(r.files) + ' · ' + fmtSize(r.bytes) + ' · ' + LIB.mix(r.codecs) + (r.avgBitrate ? ' · Ø ' + LIB.mbit(r.avgBitrate) : '') + (r.maxHeight ? ' · ' + r.maxHeight + 'p' : '')),
-      hs.length ? h('span', {class: 'libhints'}, hs.map(x => h('span', {class: 'chip ' + (x.good ? 'acc' : ''), title: x.good ? 'Spricht dafür, dass sich das Umwandeln lohnt' : 'Spricht eher dagegen'}, x.text))) : null));
+      hs.length ? h('span', {class: 'libhints'}, hs.map(x => h('span', {class: 'chip ' + (x.good ? 'acc' : ''), title: x.good ? 'Spricht dafür, dass sich das Umwandeln lohnt' : 'Spricht eher dagegen'}, x.text))) : null),
+    h('span', {class: 'libgain' + (r.saveBytes >= Math.max(50e6, r.bytes * 0.05) ? ' good' : ''), title: 'Schätzung für H.265 „Gut“ (nur das Bild, aus Codec und Bitrate)'}, LIB.gainText(r.saveBytes, r.bytes)));
 }
 
 function libRender() {
   const box = document.getElementById('cvScan'); if (!box) return;
   if (!LIBUI.id) { fill(box); return; }
   const running = LIBUI.state === 'running', ready = LIBUI.state === 'done' || LIBUI.state === 'canceled';
-  const head = h('div', {class: 'cvchead'}, h('span', {class: 'cvico'}, icon('chip')), h('h2', {}, 'Ergebnis: Wo lohnt sich das Umwandeln?', infoBtn('libScan')),
+  const head = h('div', {class: 'cvchead'}, h('span', {class: 'cvico'}, icon('chip')), h('h2', {}, 'Hier kannst du Platz sparen', infoBtn('libScan')),
     h('span', {class: 'cvsum muted small'}, pathLabel(LIBUI.root)), h('button', {type: 'button', class: 'small ghost', title: 'Ergebnis schließen', 'aria-label': 'Schließen', onclick: libClose}, '✕'));
   let body;
   if (running) {
@@ -214,6 +221,8 @@ function libRender() {
     const sortKey = !LIBUI.sortUser && LIBUI.onlyHints && LIBUI.fil.size === 1 && LIBUI.fil.has('high') ? 'bitrate' : LIBUI.sort;
     const shown = LIB.sortRows(LIBUI.onlyHints ? all.filter(r => LIB.matches(r, LIBUI.fil, libLow)) : all, sortKey);
     // im Dateibaum: ein Ordner mit Hinweisen zeigt auch seine Sammelordner darüber nur, wenn diese selbst Hinweise haben
+    const total = LIB.totalSave(all), tb = LIB.totalBytes(all);
+    const big = h('div', {class: 'libtotal'}, total >= 50e6 ? [h('b', {}, '≈ ' + fmtSizeLib(total)), ' von ' + fmtSizeLib(tb) + ' ließen sich sparen ', h('span', {class: 'muted small'}, '(Schätzung für H.265 „Gut“, nur das Bild)')] : ['Hier ist kaum etwas zu holen: ', h('span', {class: 'muted'}, 'die Dateien sind schon modern oder klein.')]);
     const ctl = h('div', {class: 'liberctl'},
       h('label', {class: 'check', style: 'margin:0'}, h('input', {type: 'checkbox', checked: LIBUI.onlyHints, onchange: ev => { LIBUI.onlyHints = ev.target.checked; libRender(); }}), h('span', {}, 'Nur Ordner mit Hinweisen')),
       h('label', {class: 'inline small'}, h('span', {}, 'Sortieren'), h('select', {'aria-label': 'Sortieren', onchange: ev => { LIBUI.sort = ev.target.value; LIBUI.sortUser = true; libRender(); }},
@@ -229,7 +238,7 @@ function libRender() {
     const legend = h('p', {class: 'liblegend muted small'}, 'Jede Zeile ist ein Ordner. Die grünen Kärtchen sagen, was sich dort eher lohnt; grau spricht eher dagegen. ' + (LIBUI.flat ? 'Die Liste ist nicht nach dem Ordnerbaum geordnet, deshalb steht bei Staffeln die Serie davor.' : 'Eingerückte Ordner liegen im Ordner darüber.') + ' Hake an, was du übernehmen willst.');
     const list = shown.length ? h('div', {class: 'liblist'}, shown.map(r => libRowEl(r, groups)))
       : h('div', {class: 'cvempty'}, all.length ? (LIBUI.fil.size ? 'Keine Ordner mit den gewählten Hinweisen. Wähle weitere Kärtchen an oder schalte „Nur Ordner mit Hinweisen“ aus: dann siehst du alle ' + all.length + '.' : 'Kein Hinweis gewählt: wähle oben mindestens ein Kärtchen an oder schalte „Nur Ordner mit Hinweisen“ aus.') : 'Keine Videos gefunden.');
-    body = [ctl, fil, legend, list, h('div', {class: 'btns libfoot'}, h('button', {type: 'button', class: 'primary', disabled: !LIBUI.sel.size, onclick: libAdopt},
+    body = [big, ctl, fil, legend, list, h('div', {class: 'btns libfoot'}, h('button', {type: 'button', class: 'primary', disabled: !LIBUI.sel.size, onclick: libAdopt},
       LIBUI.sel.size ? 'Ausgewählte Ordner übernehmen (' + LIBUI.sel.size + ')' : 'Ordner übernehmen'), h('span', {class: 'muted small'}, 'Übernommen wird immer der ganze Ordner mit allen Unterordnern.'), LIBUI.cached ? h('span', {class: 'muted small libcached'}, LIBUI.cached + ' von ' + num0(LIBUI.total) + ' kamen aus dem Merker (unverändert seit dem letzten Mal).') : null)];
   } else body = [];
   fill(box, head, h('div', {class: 'cvcbody'}, body));

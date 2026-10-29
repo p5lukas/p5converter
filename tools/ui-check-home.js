@@ -59,7 +59,7 @@ const OUT = (process.env.OUTDIR || '/tmp/out') + '/home';
     await p.click('#wizNext'); await p.waitForTimeout(800);
     await p.click('#startHistory'); await p.waitForTimeout(500);
     await p.click('#histBack'); await p.waitForTimeout(500);
-    ok(await p.locator('#cvStepper .stp.on').getAttribute('data-step') === 'rules', name + ': nach dem Verlauf nicht wieder bei „Regeln“');
+    ok(await p.locator('#cvStepper .stp.on').getAttribute('data-step') === 'check', name + ': nach dem Verlauf nicht wieder bei „Konvertieren“');
     await L.goStep(p, 'start');
     ok(/1 Datei ausgewählt/.test(await p.textContent('#startTiles [data-kind=video]')), name + ': Kachel zeigt „weiter“ mit Dateizahl nicht');
     ok(!(await p.isVisible('#convertView')), name + ': Ablauf nach „Startseite“ nicht ausgeblendet');

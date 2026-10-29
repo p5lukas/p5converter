@@ -1,5 +1,28 @@
 # Änderungen
 
+## 0.4.0 – 2026-10-29
+
+**Neu: einfachere Oberfläche (zwei Schritte, Karten)**
+- Video hat nur noch **zwei Schritte**: 1 Dateien, 2 Konvertieren. Auf der Konvertieren-Seite stehen **Video, Ton, Untertitel, Regeln, Name & Ziel und Prüfen** als kompakte Karten, die sich an Ort und Stelle auf- und zuklappen (was Aufmerksamkeit braucht, ist offen). Das Fenster „Details“ ist weg; alles ist dort einstellbar, wo man es vermutet
+- Bei **„Wie Quelle“** steht darunter, was die Quelle hat (Codec, Bit-Tiefe, …)
+- **Qualität und Geschwindigkeit** (Schnell … Langsam) stehen sichtbar nebeneinander; der **Encoder** (CPU, NVIDIA, Intel, AMD) ist eine eigene Zeile. Hardware wird weiter erkannt und genutzt
+- Weniger Text: lange Erklärungen sind kürzer oder hinter den Info-Punkten
+
+**Neu: Voreinstellungen nur für Video, mit Assistent**
+- Voreinstellungen erscheinen als Kacheln auf der Startseite und gelten nur für **Video** (Audio ist immer individuell). „+ Neue Voreinstellung“ startet einen kurzen **Assistenten** (fünf Fragen)
+
+**Neu: Probeclip**
+- 30 Sekunden aus der Mitte mit den gewählten Einstellungen umwandeln und vergleichen (Größe, SSIM/PSNR, vergrößerter Bildausschnitt). Ein Lauf gleichzeitig; Aufräumen nach 30 Minuten. **Mit Hardware-Encoder nur auf echter Hardware prüfbar** (in der Sandbox nur CPU getestet)
+
+**Neu: Bibliothek „Platz sparen“**
+- „Ordner untersuchen“ zeigt je Ordner eine **grobe Ersparnis-Schätzung** (≈, H.265 „Gut“, nur Bild); nichts wird verändert
+
+**Behoben**
+- **Forced-Untertitel** mit Titel wie „[ForcedNarrative]“ wurden nicht als Forced erkannt und daher nicht als Standard gewählt; der Titel zählt jetzt wie die Größen-Schätzung
+
+**Intern**
+- Neu: `web/wizard.js`, `web/clip.js`, `internal/server/clip.go`, `estimate.go` (mit Tests); alte Einzel-/Gruppen-/Matrix-Ansichten in `tracks.js` entfernt; UI-Tests auf die neue Oberfläche umgestellt (`ui-check-trkgroups.js` entfällt, abgedeckt durch `ui-check-tracks.js`)
+
 ## 0.3.7 – 2026-10-28
 
 **Behoben: Windows, Quick Sync „Lesen“ bei Intel + NVIDIA im selben PC**

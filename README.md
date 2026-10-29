@@ -12,7 +12,7 @@ Ein SoundConverter-Klon mit zusätzlichem Video-Teil, gebaut für ganze Serien-S
 ![Docker](https://img.shields.io/badge/Docker-ghcr.io%2Fp5lukas%2Fp5converter-00ff5a?logo=docker&logoColor=white&labelColor=0a1a0f)
 ![Unraid](https://img.shields.io/badge/Unraid-Template-00ff5a?labelColor=0a1a0f)
 ![Windows](https://img.shields.io/badge/Windows-Vorabversion-ffcc00?labelColor=0a1a0f)
-![Version](https://img.shields.io/badge/Version-0.3.7-00ff5a?labelColor=0a1a0f)
+![Version](https://img.shields.io/badge/Version-0.4.0-00ff5a?labelColor=0a1a0f)
 ![Lizenz](https://img.shields.io/badge/Lizenz-MIT-00ff5a?labelColor=0a1a0f)
 
 <img src="docs/images/start.png" alt="Startseite mit laufendem Auftrag" width="900">
@@ -29,7 +29,7 @@ Ein SoundConverter-Klon mit zusätzlichem Video-Teil, gebaut für ganze Serien-S
 > Docker image: `ghcr.io/p5lukas/p5converter:latest` (stable) or `:dev`, default port 8787.
 
 ## Auf einen Blick
-* **Startseite mit zwei Kacheln:** Video (grün) oder Audio (orange); Video läuft in **vier Schritten** (Dateien, Regeln, Wie umwandeln?, Kontrolle & Start), dazu Voreinstellungen und Umbenennen mit Live-Vorschau
+* **Startseite mit zwei Kacheln:** Video (grün) oder Audio (orange); Video läuft in **zwei Schritten** (Dateien, Konvertieren), dazu Video-Voreinstellungen (mit Assistent), Probeclip und Umbenennen mit Live-Vorschau
 * **Hardware-Encoding** (Quick Sync, NVENC, AMF, VAAPI) mit sichtbarer Bestätigung, ob Schreiben und Lesen wirklich auf der Hardware laufen
 * **Audio & Untertitel für ganze Staffeln:** Gruppen nach Sprachen, Regeln für Tonspuren nach Format, Sprach-Wünsche, Forced-Erkennung
 * **Kontrolle nach dem Konvertieren:** Spuren, Laufzeit, Größe und auf Wunsch ein kompletter Decode-Test, bevor ein Original gelöscht wird
@@ -133,7 +133,7 @@ Zielordner mit Struktur oder Namensmuster (`{artist}/{album}/{track} - {title}`)
 ### Konvertieren in einer Ansicht
 * **Kopfzeile:** „Konvertieren“, „Umbenennen“ und „Verlauf“ (mit Zähler für laufende und wartende Aufträge) sind in jeder Ansicht erreichbar
 * **Startseite:** die Kacheln **Video** und **Audio** („Was möchtest du umwandeln?“), der **aktuelle Auftrag** („Datei 4 von 13“ mit Fortschritt, Geschwindigkeit und Hardware mit grünen Haken) oder „Gerade nichts los“, daneben die Live-Auslastung; oben die Kacheln **Video** und **Audio**; darunter gleich große Kacheln **Gewonnener Platz** (Video und Audio getrennt gezählt, mit „Zurücksetzen“) und **Hardware**.
-* **Video in vier Schritten:** **1 Dateien** (zuerst der Quellordner, die Suche geht immer auch in Unterordner; wer eine Voreinstellung wählt, springt direkt zur Kontrolle), **2 Regeln** (voreingestellte Regeln mit Haken und „betrifft N Dateien“, Vorschläge, eigene Regeln), **3 Wie umwandeln?** (drei Kacheln: Hardware, Speichern, Danach prüfen, mit Satz als Zusammenfassung) und **4 Kontrolle & Start**: die Tabelle **„Vorher → Nachher“** in vier Karten (**Video**, **Audio** in Orange, **Untertitel**, **Dateiname**), links die Quelle, rechts das Ergebnis, jede Zeile direkt änderbar; Spuren heißen „E-AC-3 (Dolby Digital Plus) 5.1 · 640 kbit/s“, das Ziel einer umzuwandelnden Spur ist anklickbar. Dateien mit gleichem Aufbau sind eine **Gruppe**; abweichende Gruppen müssen kontrolliert werden, danach übernimmt das Programm deine Entscheidungen bei gleichen Spuren. Das **Funkel-Zeichen** steht nur bei Automatischem – mit Begründung und „rückgängig“. Info-Punkte (i) erklären jeden Bereich. Unten die Startleiste (Zusammenfassung, **Details**, „Als Voreinstellung speichern“, „Verwerfen“, Start). **Audio** ist eine einzige Ansicht mit Dateien, Satz und Tabelle. Danach zurück zur Startseite mit der laufenden Warteschlange
+* **Video in zwei Schritten:** **1 Dateien** (zuerst der Quellordner, die Suche geht immer auch in Unterordner; wer eine Voreinstellung wählt, springt direkt zu Schritt 2) und **2 Konvertieren**: kompakte, aufklappbare Karten **Video** (Codec, Container, **Qualität** und **Geschwindigkeit** nebeneinander, **Probeclip**, **Encoder** – CPU/NVIDIA/Intel/AMD werden erkannt), **Ton** (Orange), **Untertitel**, **Regeln**, **Name & Ziel** und **Prüfen**; links die Quelle („Wie Quelle“ zeigt, was die Quelle hat), rechts das Ergebnis, jede Zeile direkt änderbar. Dateien mit gleichem Aufbau sind eine **Gruppe**; das **Funkel-Zeichen** steht nur bei Automatischem – mit Begründung und „rückgängig“. Unten die Startleiste (Zusammenfassung, „Als Voreinstellung speichern“, „Verwerfen“, Start). **Voreinstellungen** gibt es nur für Video (Kacheln auf der Startseite, „+ Neue Voreinstellung“ = Assistent). **Audio** ist eine einzige Ansicht. Danach zurück zur Startseite mit der laufenden Warteschlange
 * **Qualität in vier festen Stufen** (Sehr gut / Gut / Normal / Klein, je Encoder und Codec in die passende Zahl umgerechnet, Regler unter „Erweitert“); wird ein neu kodiertes Video **nicht kleiner** als die Quelle, schlägt die Kontrolle an und das Original bleibt erhalten; bei schon kleiner Quelle steht vorher ein Hinweis
 
 ### Verlauf
