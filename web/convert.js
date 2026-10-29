@@ -255,17 +255,18 @@ function cvTrackRow(g, ex, r, n) {
 }
 
 // Dateiname: Beispiel für die erste Datei der Gruppe (vom Server berechnet)
-// Alle neuen Dateinamen einzeilig („alt → neu“), nur wenn tatsächlich umbenannt wird; Vorschau vom Server in einer Anfrage für alle Dateien
+// Alle Dateinamen einzeilig („alt → neu“) direkt unter den Namensfeldern, auch wenn noch nichts umbenannt wird (so sieht man, was man ändern kann); Vorschau vom Server in einer Anfrage für alle Dateien
 function cvNameList(files) {
   const pat = $('#pattern').value.trim(), rules = cleanRules(nameRules()), suf = $('#suffix').value;
-  if (!files.length || (!pat && !rules.length && !suf)) return null;
+  if (!files.length) return null;
+  const renaming = !!(pat || rules.length || suf);
   const target = S.world === 'video' ? {codec: $('#vCodec').value, height: +$('#vHeight').value, bitDepth: +$('#vDepth').value, container: $('#vContainer').value} : {container: outExt()};
   const body = {items: files.map(f => f.path), pattern: pat, replace: rules, suffix: suf, ext: outExt(), mode: 'convert', target}, k = 'L' + JSON.stringify(body);
   const box = h('div', {class: 'cvnamelist', 'aria-label': 'Neue Dateinamen'});
   const paint = items => {
     const seen = {}; items.forEach(x => { if (!x.error) seen[x.new.toLowerCase()] = (seen[x.new.toLowerCase()] || 0) + 1; });
     const bad = items.filter(x => x.error || seen[x.new.toLowerCase()] > 1).length;
-    fill(box, h('div', {class: 'cvnlh muted small'}, items.length + (items.length === 1 ? ' Datei' : ' Dateien') + ' bekommen einen neuen Namen' + (bad ? ' · ' : ''), bad ? h('span', {class: 'bad'}, bad + (bad === 1 ? ' Problem' : ' Probleme')) : null),
+    fill(box, h('div', {class: 'cvnlh muted small'}, items.length + (items.length === 1 ? ' Datei' : ' Dateien') + (renaming ? ' bekommen einen neuen Namen' : ' behalten ihren Namen – Muster, Zusatz oder Ersetzung oben ändern ihn') + (bad ? ' · ' : ''), bad ? h('span', {class: 'bad'}, bad + (bad === 1 ? ' Problem' : ' Probleme')) : null),
       items.map(x => { const dup = !x.error && seen[x.new.toLowerCase()] > 1;
         return h('div', {class: 'cvnl' + (x.error || dup ? ' bad' : '')}, h('span', {class: 'o', title: x.old}, x.old), h('span', {class: 'ar'}, '→'),
           h('span', {class: 'n', title: x.error ? x.error : x.new}, x.error ? x.error : x.new + (dup ? ' (doppelt!)' : ''))); }));

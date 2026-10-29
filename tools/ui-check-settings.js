@@ -70,14 +70,17 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     // bearbeiten
     await p.click('#gearBtn'); await p.waitForTimeout(300);
     await p.evaluate(() => { location.hash = '#settings/presets'; }); await p.waitForTimeout(500);
-    await p.click('.prow:has(input[value="Mein Test ' + name + '"]) button:has-text("Werte")'); await p.waitForTimeout(600);
-    ok(await p.locator('#editBanner').isVisible(), name + ': Bearbeiten-Banner fehlt');
-    await p.evaluate(() => { cvSet('vCrf', '27'); });
+    await p.click('.prow:has(input[value="Mein Test ' + name + '"]) button:has-text("Bearbeiten")'); await p.waitForTimeout(600);
+    ok(await p.isVisible('#wizDlg') && /Voreinstellung bearbeiten/.test(await p.textContent('#wizBox')), name + ': Bearbeiten-Fenster fehlt');
+    ok(!(await p.isVisible('#cvStepper')) && (await p.locator('#fileList .file').count()) === 0, name + ': Bearbeiten darf keine Dateien verlangen');
+    ok(await p.locator('#wizBox select').count() >= 8, name + ': zu wenig Einstellungen im Bearbeiten-Fenster: ' + await p.locator('#wizBox select').count());
+    ok(await p.inputValue('#wizBox select[aria-label="Video-Format"]') === 'hevc' && await p.inputValue('#wizBox select[aria-label="Bit-Tiefe"]') === '10', name + ': gespeicherte Werte nicht vorbelegt');
+    await p.selectOption('#wizBox select[aria-label="Qualität"]', 'normal'); await p.selectOption('#wizBox select[aria-label="Geschwindigkeit"]', 'fast'); await p.waitForTimeout(200);
     await p.screenshot({ path: `${SH}${name}-edit.png` });
-    await p.click('#editBanner button.primary'); await p.waitForTimeout(600);
+    await p.click('#wizSave'); await p.waitForTimeout(800);
     const st = await (await fetch(BASE + '/api/settings')).json();
     const pr = st.settings.presets.find(x => x.name === 'Mein Test ' + name);
-    ok(pr && String(pr.values.vCrf) === '27', name + ': geänderter CRF nicht gespeichert (' + JSON.stringify(pr && pr.values.vCrf) + ')');
+    ok(pr && pr.values.vQuality === 'normal' && pr.values.vPreset === 'fast' && pr.values.vDepth === '10', name + ': Änderungen nicht gespeichert (' + JSON.stringify(pr && pr.values) + ')');
     // Vorschlag abwählen
     await p.evaluate(() => { location.hash = '#settings/presets'; }); await p.waitForTimeout(500);
     await p.click('.prow:has(input[value="Mein Test ' + name + '"]) input[type=checkbox]'); await p.waitForTimeout(600);
