@@ -16,6 +16,7 @@
 
 ## Offen
 - [ ] **Windows-App: Folgearbeiten** (erste Version 0.1.1 steht auf `dev`): (1) ~~Tray~~ (erledigt in 0.1.2); (2) **Prüfung durch den Nutzer** auf dem Windows-PC (Fenster, Symbol, Hardware-Erkennung, echte Konvertierung, Deinstallation); (3) Größe der `setup.exe` aus dem CI-Lauf (Zusammenfassung „Größen“) mitteilen; (4) Linux-App danach; (5) Windows erst nach Freigabe nach `main`
+- [ ] **Geschwindigkeit (Preset) sichtbar machen – Variante B (Nutzer 29.10.):** Das Auswahlfeld „Geschwindigkeit“ (Langsam / Mittel / Schnell / Sehr schnell) steht bisher nur in Details → Video und wird übersehen, obwohl es bei „Gut“ stark über die Dateigröße mitentscheidet (der Nutzer nimmt immer „Langsam“). Es kommt als zweites Auswahlfeld **dauerhaft neben die Qualitätsstufe in die Hauptansicht** (auch am Handy ohne Platzprobleme; bei „Kopieren“ ausgeblendet); in Details bleibt es nicht doppelt. Teil der Voreinstellungen wie bisher (`vPreset`).
 - [ ] Optional: Image als multi-arch (amd64/arm64) bauen
 
 ## Vom Nutzer zu prüfen (nicht in der Sandbox möglich)
