@@ -1,5 +1,15 @@
 # Änderungen
 
+## 0.4.2 – 2026-10-30
+
+**Neu: Qualität per Schieberegler**
+- Unter den Qualitätsstufen steht jetzt **immer** ein Schieberegler für den eigenen Wert (CRF/CQ, je nach Encoder); er war hinter „Erweitert“ versteckt. Das Ziehen setzt die Stufe auf „Eigener Wert“
+- **Assistent und Bearbeiten-Fenster:** die Qualitätsfrage hat die Wahl „Eigener Wert“ mit Regler (Startwert: die bisherige Stufe); der Wert wird in der Voreinstellung gespeichert und beim Bearbeiten wieder gezeigt
+- Auf dem Handy bricht die Beschriftung des Reglers um, damit er im Kasten bleibt
+
+**Tests**
+- `ui-check-verify.js` (Regler ziehen), `ui-check-settings.js` (Eigener Wert im Bearbeiten-Fenster)
+
 ## 0.4.1 – 2026-10-29
 
 **Behoben: Voreinstellung bearbeiten**

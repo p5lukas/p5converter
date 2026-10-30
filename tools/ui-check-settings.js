@@ -76,11 +76,15 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     ok(await p.locator('#wizBox select').count() >= 8, name + ': zu wenig Einstellungen im Bearbeiten-Fenster: ' + await p.locator('#wizBox select').count());
     ok(await p.inputValue('#wizBox select[aria-label="Video-Format"]') === 'hevc' && await p.inputValue('#wizBox select[aria-label="Bit-Tiefe"]') === '10', name + ': gespeicherte Werte nicht vorbelegt');
     await p.selectOption('#wizBox select[aria-label="Qualität"]', 'normal'); await p.selectOption('#wizBox select[aria-label="Geschwindigkeit"]', 'fast'); await p.waitForTimeout(200);
+    ok(await p.locator('#wizBox input[type=range]').count() === 0, name + ': Regler nur bei „Eigener Wert“');
+    await p.selectOption('#wizBox select[aria-label="Qualität"]', 'custom'); await p.waitForTimeout(200);
+    ok(await p.locator('#wizBox input[type=range]').count() === 1, name + ': Regler bei „Eigener Wert“ fehlt');
+    await p.locator('#wizBox input[type=range]').fill('27'); await p.waitForTimeout(200);
     await p.screenshot({ path: `${SH}${name}-edit.png` });
     await p.click('#wizSave'); await p.waitForTimeout(800);
     const st = await (await fetch(BASE + '/api/settings')).json();
     const pr = st.settings.presets.find(x => x.name === 'Mein Test ' + name);
-    ok(pr && pr.values.vQuality === 'normal' && pr.values.vPreset === 'fast' && pr.values.vDepth === '10', name + ': Änderungen nicht gespeichert (' + JSON.stringify(pr && pr.values) + ')');
+    ok(pr && pr.values.vQuality === 'custom' && String(pr.values.vCrf) === '27' && pr.values.vPreset === 'fast' && pr.values.vDepth === '10', name + ': Änderungen nicht gespeichert (' + JSON.stringify(pr && pr.values) + ')');
     // Vorschlag abwählen
     await p.evaluate(() => { location.hash = '#settings/presets'; }); await p.waitForTimeout(500);
     await p.click('.prow:has(input[value="Mein Test ' + name + '"]) input[type=checkbox]'); await p.waitForTimeout(600);
