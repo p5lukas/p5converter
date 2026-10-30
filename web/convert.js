@@ -133,7 +133,7 @@ function cvFilesPanel(files) {
 function qualityControl(compact) {
   const c = qCurrent(), st = $('#vQuality').value, scale = Q.scaleName(c.backend);
   const seg = h('div', {class: 'qseg', role: 'radiogroup', 'aria-label': 'Qualität'}, Q.STAGES.map(([id, name, sub]) => h('button', {type: 'button', role: 'radio', 'aria-checked': st === id ? 'true' : 'false',
-    class: 'qs' + (st === id ? ' on' : ''), onclick: () => qSetStage(id)}, h('b', {}, name), h('small', {}, sub))));
+    class: 'qs' + (st === id ? ' on' : ''), onclick: () => qSetStage(id)}, h('b', {}, name), h('small', {}, sub), h('small', {class: 'qv'}, scale + ' ' + Q.value(c.backend, c.codec, id)))));
   const out = h('output', {}, $('#vCrf').value), custom = st === 'custom';
   // Der Regler steht immer da (nicht hinter „Erweitert“): Bewegen setzt die Stufe auf „Eigener Wert“
   const slider = h('div', {class: 'qadv' + (custom ? ' on' : '')}, h('label', {class: 'qsl'}, h('span', {}, (custom ? 'Eigener Wert · ' : 'Selbst einstellen · ') + scale + ' '), out,

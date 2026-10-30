@@ -17,7 +17,8 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     ok(await p.isVisible('#wizDlg') && await inside('#wizDlg'), name + ': Assistent nicht sichtbar oder ragt heraus');
     ok(/Frage 1 von 10/.test(await p.textContent('#wizBox')), name + ': „Frage 1 von 10“ fehlt');
     await p.screenshot({path: `${L.SHOTS}/p5c-wiz-${name}-1.png`});
-    while (await p.locator('#wizGo').count()) { await p.click('#wizGo'); await p.waitForTimeout(120); }
+    while (await p.locator('#wizGo').count()) {
+      if (/Wie gut soll das Bild/.test(await p.textContent('#wizBox'))) ok(/CRF \d+/.test(await p.textContent('#wizBox .wizopts')), name + ': Wert hinter den Stufen fehlt im Assistenten'); await p.click('#wizGo'); await p.waitForTimeout(120); }
     ok(/Passt das so/.test(await p.textContent('#wizBox')), name + ': Zusammenfassung fehlt');
     await p.fill('#wizName', tag); await p.screenshot({path: `${L.SHOTS}/p5c-wiz-${name}-2.png`});
     await p.click('#wizSave'); await p.waitForTimeout(800);

@@ -15,7 +15,8 @@ function wizQuestions() {
   const backends = [['auto', 'Automatisch', hw.length ? 'Grafikkarte (' + hw.join(', ') + '), sonst CPU – schneller, Datei etwas größer' : 'keine Grafikkarte gefunden – es rechnet die CPU'], ['cpu', 'CPU', 'rechnet am genauesten, dauert länger', true]];
   hwIds.forEach(id => backends.push([id, BACKEND_FULL[id] || id, 'nur diese Grafikeinheit nutzen']));
   if (a.backend && !backends.some(b => b[0] === a.backend)) backends.push([a.backend, BACKEND_FULL[a.backend] || a.backend, 'in der Voreinstellung gespeichert, hier gerade nicht erkannt']);
-  const stages = Q.STAGES.map(([id, name, sub]) => [id, name, {vgood: 'kaum ein Unterschied zur Quelle, große Dateien', good: 'sehr nah an der Quelle, deutlich kleiner', normal: 'kleiner, bei genauem Hinsehen kleine Unterschiede'}[id] || sub || '', id === 'good']);
+  const rid = a.backend === 'auto' ? (preferredFor(a.codec) || workingBackends(a.codec)[0] || 'cpu') : a.backend, scale = Q.scaleName(rid);
+  const stages = Q.STAGES.map(([id, name, sub]) => [id, name, scale + ' ' + Q.value(rid, a.codec, id) + ' · ' + ({vgood: 'kaum ein Unterschied zur Quelle, große Dateien', good: 'sehr nah an der Quelle, deutlich kleiner', normal: 'kleiner, bei genauem Hinsehen kleine Unterschiede'}[id] || sub || ''), id === 'good']);
   stages.push(['custom', 'Eigener Wert', 'mit Schieberegler selbst einstellen']);
   const qs = [
     {id: 'codec', label: 'Video-Format', title: 'Welches Video-Format soll herauskommen?', opts: [

@@ -1,5 +1,13 @@
 # Änderungen
 
+## 0.4.3 – 2026-10-30
+
+**Neu: Wert hinter der Qualitätsstufe**
+- An jeder Stufe (Sehr gut / Gut / Normal / Klein) steht die Zahl dahinter (CRF/CQ/ICQ/QP je nach Encoder, z. B. „CRF 20“): in der Video-Karte der Konvertieren-Seite, im Assistenten und im Bearbeiten-Fenster. Die Zahl hängt von Encoder und Codec ab und ändert sich mit der Auswahl
+
+**Tests**
+- `ui-check-verify.js` (Werte aller vier Stufen), `ui-check-settings.js`, `ui-check-wizard.js`
+
 ## 0.4.2 – 2026-10-30
 
 **Neu: Qualität per Schieberegler**

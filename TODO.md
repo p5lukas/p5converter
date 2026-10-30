@@ -15,7 +15,6 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
-- [ ] **Qualität: bei der Auswahl den Wert dahinter anzeigen (Nutzer 30.10.):** Bei den Stufen (Sehr gut / Gut / Normal / Klein) soll irgendwo dabeistehen, welche Zahl (CRF/CQ) dahintersteckt – z. B. direkt an jeder Stufe („Gut · CRF 20“) auf der Konvertieren-Seite, im Assistenten und im Bearbeiten-Fenster; der Wert hängt von Encoder und Codec ab (Q.value), steht also je nach Auswahl. (Noch nicht umgesetzt; bei „leg los“ Variante vorschlagen, falls nötig.)
 - [ ] **Windows-App: Folgearbeiten** (erste Version 0.1.1 steht auf `dev`): (1) ~~Tray~~ (erledigt in 0.1.2); (2) **Prüfung durch den Nutzer** auf dem Windows-PC (Fenster, Symbol, Hardware-Erkennung, echte Konvertierung, Deinstallation); (3) Größe der `setup.exe` aus dem CI-Lauf (Zusammenfassung „Größen“) mitteilen; (4) Linux-App danach; (5) Windows erst nach Freigabe nach `main`
 - [ ] Optional: Image als multi-arch (amd64/arm64) bauen
 
@@ -75,6 +74,7 @@
 - [ ] Linux-App (Fedora KDE) mit eigener Oberfläche
 
 ## Erledigt
+- [x] 0.4.3: **Qualität: bei der Auswahl den Wert dahinter anzeigen (Nutzer 30.10.):** Bei den Stufen (Sehr gut / Gut / Normal / Klein) soll irgendwo dabeistehen, welche Zahl (CRF/CQ) dahintersteckt – z. B. direkt an jeder Stufe („Gut · CRF 20“) auf der Konvertieren-Seite, im Assistenten und im Bearbeiten-Fenster; der Wert hängt von Encoder und Codec ab (Q.value), steht also je nach Auswahl. (Noch nicht umgesetzt; bei „leg los“ Variante vorschlagen, falls nötig.)
 - [x] 0.4.2: **Qualität: manuelle Angabe per Schieberegler muss möglich sein (Nutzer 30.10., nach Test von 0.4.1 auf dev):** Neben den Stufen (Sehr gut / Gut / Normal) soll man den Wert (CRF/CQ) selbst einstellen können, mit einem **Slider** – auf der Konvertieren-Seite (Karte Video, Zeile Qualität) und im Assistenten/Bearbeiten-Fenster („Eigener Wert“). Der Stufenname soll dabei „Eigener Wert“ zeigen; der gewählte Wert bleibt in der Voreinstellung erhalten. (Noch nicht umgesetzt.)
 - [x] 0.4.1: **Voreinstellungen bearbeiten ist verbuggt, Assistent soll mehr fragen (Nutzer 29.10.):** (1) Beim Bearbeiten einer Voreinstellung (Einstellungen → Voreinstellungen → „Werte“) soll man „Dateien wählen“ – das ergibt keinen Sinn; Bearbeiten muss ohne Dateien gehen (Ursache prüfen: `editPreset` setzt Schritt 2, der ohne Dateien zurück zu Schritt 1 springt). (2) Der **Assistent** soll deutlich **mehr Fragen** stellen: alle einstellbaren Dinge aus dem Video- **und** Audio-Bereich (z. B. Container, Bit-Tiefe, Geschwindigkeit, Encoder, Ton umwandeln/Format/Bitrate, Untertitel …), nicht nur fünf. (Noch nicht umgesetzt; offen: ob alles als lange Frageliste oder mit „Weitere Einstellungen“-Block, bei „leg los“ als Variante vorschlagen.)
 - [x] 0.4.1: **Umbenennen: Dateiliste fehlt unter den Eingaben (Nutzer 29.10.):** Beim Umbenennen stehen die Dateien nicht unter den Feldern, deshalb sieht man nicht, was man ändern kann bzw. muss. Gewünscht: die Dateiliste (mit Live-Vorschau alt → neu) direkt darunter. (Noch nicht umgesetzt; bei „leg los“ klären, ob Variante: Liste unter den Feldern.)
