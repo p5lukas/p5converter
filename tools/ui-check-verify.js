@@ -21,9 +21,9 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     await vsel('Auflösung', '720'); await p.waitForTimeout(400);
     ok(await p.inputValue('#vCrf') === '20', name + ': feste Stufen, auch bei 720p unverändert 20, ist ' + await p.inputValue('#vCrf'));
     ok(/Stufe „Gut“ = CRF 20/.test(await p.textContent('#vCrfWhy')), name + ': Stufentext fehlt: ' + await p.textContent('#vCrfWhy'));
-    await p.click('.cvgrid .qline .linkbtn'); await p.waitForTimeout(300); // Erweitert: der Regler mit der echten Zahl
-    ok(await p.locator('.cvgrid .qadv input[type=range]').count() === 1, name + ': Regler unter „Erweitert“ fehlt');
-    await p.evaluate(() => cvSet('vCrf', '28')); await p.waitForTimeout(400);
+    ok(await p.locator('.cvgrid .qadv input[type=range]').count() === 1, name + ': Regler für den eigenen Wert fehlt (steht immer da)');
+    await p.locator('.cvgrid .qadv input[type=range]').fill('28'); await p.waitForTimeout(400); // wie der Nutzer: Regler ziehen
+    ok(/Eigener Wert/.test(await p.textContent('.cvgrid .qadv')), name + ': Regler zeigt „Eigener Wert“ nicht');
     ok(await p.inputValue('#vQuality') === 'custom', name + ': bewegter Regler sollte „Eigener Wert“ sein, ist ' + await p.inputValue('#vQuality'));
     ok(/Eigener Wert/.test(await p.textContent('#vCrfWhy')), name + ': Text „Eigener Wert“ fehlt');
     await p.screenshot({path: `${L.SHOTS}/p5c-vf-${name}-video.png`, fullPage: true});

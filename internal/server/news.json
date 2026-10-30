@@ -1,5 +1,11 @@
 [
   {
+    "id": "quality-slider-1",
+    "version": "0.4.2",
+    "title": "Qualität selbst einstellen",
+    "text": "Unter den Stufen (Sehr gut … Klein) steht jetzt immer ein Schieberegler für den eigenen Wert (CRF/CQ); er ist nicht mehr hinter „Erweitert“ versteckt. Auch im Assistenten und beim Bearbeiten einer Voreinstellung gibt es „Eigener Wert“ mit Regler. Der Wert bleibt in der Voreinstellung erhalten."
+  },
+  {
     "id": "preset-edit-1",
     "version": "0.4.1",
     "title": "Voreinstellung bearbeiten – ohne Dateien",

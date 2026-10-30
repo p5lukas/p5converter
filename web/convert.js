@@ -134,14 +134,13 @@ function qualityControl(compact) {
   const c = qCurrent(), st = $('#vQuality').value, scale = Q.scaleName(c.backend);
   const seg = h('div', {class: 'qseg', role: 'radiogroup', 'aria-label': 'Qualität'}, Q.STAGES.map(([id, name, sub]) => h('button', {type: 'button', role: 'radio', 'aria-checked': st === id ? 'true' : 'false',
     class: 'qs' + (st === id ? ' on' : ''), onclick: () => qSetStage(id)}, h('b', {}, name), h('small', {}, sub))));
-  const out = h('output', {}, $('#vCrf').value);
-  const adv = CV.qOpen ? h('div', {class: 'qadv'}, h('label', {class: 'qsl'}, h('span', {}, scale + ' '), out,
-    h('input', {type: 'range', min: 10, max: 40, value: $('#vCrf').value, 'aria-label': scale, oninput: ev => { out.textContent = ev.target.value; }, onchange: ev => cvSet('vCrf', ev.target.value)})),
-    h('div', {class: 'muted small'}, 'Niedriger = bessere Qualität, größere Datei. ' + (Q.SCALE_HELP[scale] || '') + '. Die Zahl gilt nur für diesen Encoder.')) : null;
-  return h('div', {class: 'qctl'}, seg,
-    h('div', {class: 'qline muted small'}, st === 'custom' ? 'Eigener Wert · ' : '', scale + ' ' + $('#vCrf').value, ' · ', encoderName(c.backend, c.codec),
-      ' · ', h('button', {type: 'button', class: 'linkbtn', onclick: () => { CV.qOpen = !CV.qOpen; renderQualityControls(); cvRender(); }}, CV.qOpen ? 'Regler ausblenden ▴' : 'Erweitert ▾')),
-    adv);
+  const out = h('output', {}, $('#vCrf').value), custom = st === 'custom';
+  // Der Regler steht immer da (nicht hinter „Erweitert“): Bewegen setzt die Stufe auf „Eigener Wert“
+  const slider = h('div', {class: 'qadv' + (custom ? ' on' : '')}, h('label', {class: 'qsl'}, h('span', {}, (custom ? 'Eigener Wert · ' : 'Selbst einstellen · ') + scale + ' '), out,
+    h('input', {type: 'range', min: 10, max: 40, value: $('#vCrf').value, 'aria-label': 'Eigener Wert (' + scale + ')', oninput: ev => { out.textContent = ev.target.value; }, onchange: ev => cvSet('vCrf', ev.target.value)})),
+    h('div', {class: 'muted small'}, 'Niedriger = bessere Qualität, größere Datei. ' + (Q.SCALE_HELP[scale] || '') + '. Die Zahl gilt nur für diesen Encoder.'));
+  return h('div', {class: 'qctl'}, seg, slider,
+    h('div', {class: 'qline muted small'}, custom ? 'Eigener Wert · ' : '', scale + ' ' + $('#vCrf').value, ' · ', encoderName(c.backend, c.codec)));
 }
 function renderQualityControls() { const m = $('#vQualityMount'); if (m) fill(m, qualityControl(true)); }
 

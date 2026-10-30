@@ -983,3 +983,6 @@ dialog.clipdlg{width:min(980px,100vw)}
 .wizgrp h3{margin:0;font-size:14px;color:var(--accent);letter-spacing:.06em;text-transform:uppercase}
 .wizfield{display:grid;gap:4px}.wizfield label{display:grid;gap:4px}.wizfield select{width:100%}.wizfield small{font-size:12.5px;line-height:1.4}
 dialog.wizdlg .wizbox{overflow-y:auto;max-height:100dvh}
+.qadv.on{border-style:solid;border-color:var(--accent)}
+.qsl input[type=range]{min-width:0;width:100%}
+@media(max-width:700px){.qsl{grid-template-columns:auto minmax(0,1fr)}.qsl>span{grid-column:1/-1}}

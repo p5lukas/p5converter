@@ -16,7 +16,7 @@ function wizQuestions() {
   hwIds.forEach(id => backends.push([id, BACKEND_FULL[id] || id, 'nur diese Grafikeinheit nutzen']));
   if (a.backend && !backends.some(b => b[0] === a.backend)) backends.push([a.backend, BACKEND_FULL[a.backend] || a.backend, 'in der Voreinstellung gespeichert, hier gerade nicht erkannt']);
   const stages = Q.STAGES.map(([id, name, sub]) => [id, name, {vgood: 'kaum ein Unterschied zur Quelle, große Dateien', good: 'sehr nah an der Quelle, deutlich kleiner', normal: 'kleiner, bei genauem Hinsehen kleine Unterschiede'}[id] || sub || '', id === 'good']);
-  if (a.quality === 'custom') stages.push(['custom', 'Eigener Wert', 'CRF ' + (WIZ.orig && WIZ.orig.vCrf || '?') + ' bleibt erhalten']);
+  stages.push(['custom', 'Eigener Wert', 'mit Schieberegler selbst einstellen']);
   const qs = [
     {id: 'codec', label: 'Video-Format', title: 'Welches Video-Format soll herauskommen?', opts: [
       ['hevc', 'H.265', 'kleinere Dateien, läuft auf fast allen aktuellen Geräten', true], ['h264', 'H.264', 'läuft überall, Dateien etwas größer'],
@@ -41,12 +41,12 @@ function wizQuestions() {
 }
 // Antworten aus den Werten einer Voreinstellung (Bearbeiten) bzw. Empfehlungen (neu)
 function wizAnswers(v) {
-  const rec = {codec: 'hevc', container: 'mkv', quality: 'good', speed: 'slow', backend: 'cpu', height: '0', depth: '0', aMode: 'copy', aCodec: 'aac', aKbps: '160', subs: 'copy', tracks: trkHasPrefs() ? 'prefs' : 'keep'};
+  const rec = {codec: 'hevc', container: 'mkv', quality: 'good', speed: 'slow', backend: 'cpu', crf: '22', height: '0', depth: '0', aMode: 'copy', aCodec: 'aac', aKbps: '160', subs: 'copy', tracks: trkHasPrefs() ? 'prefs' : 'keep'};
   if (!v) return rec;
   let tracks = 'prefs';
   if (v.vTrkRules) { try { const r = JSON.parse(v.vTrkRules); tracks = r && !(r.audio || []).length && !(r.sub || []).length && r.usePrefs === false ? 'keep' : 'custom'; } catch (e) { tracks = 'custom'; } }
   const pick = (x, d) => x == null || x === '' ? d : String(x);
-  return {codec: pick(v.vCodec, rec.codec), container: pick(v.vContainer, 'mkv'), quality: pick(v.vQuality, rec.quality), speed: pick(v.vPreset, 'medium'), backend: pick(v.vBackend, 'cpu'), height: pick(v.vHeight, '0'),
+  return {codec: pick(v.vCodec, rec.codec), container: pick(v.vContainer, 'mkv'), quality: pick(v.vQuality, rec.quality), speed: pick(v.vPreset, 'medium'), backend: pick(v.vBackend, 'cpu'), crf: pick(v.vCrf, '22'), height: pick(v.vHeight, '0'),
     depth: pick(v.vDepth, '0'), aMode: pick(v.vAudioMode, 'copy'), aCodec: pick(v.vAudioCodec, rec.aCodec), aKbps: pick(v.vAudioKbps, rec.aKbps), subs: pick(v.vSubMode, 'copy'), tracks};
 }
 // die Werte der Voreinstellung: die Felder (beim Bearbeiten die gespeicherten Werte), überschrieben mit den Antworten
@@ -58,7 +58,8 @@ function wizValues() {
   if (a.codec === 'copy') Object.assign(v, {vDepth: '0'});
   else {
     v.vBackend = a.backend; v.vPreset = a.speed; v.vQuality = a.quality; v.vHeight = a.height; v.vDepth = a.depth;
-    if (a.quality !== 'custom') {
+    if (a.quality === 'custom') v.vCrf = String(a.crf);
+    else {
       const id = a.backend === 'auto' ? (preferredFor(a.codec) || workingBackends(a.codec)[0] || 'cpu') : a.backend, crf = Q.value(id, a.codec, a.quality);
       if (crf != null) v.vCrf = String(crf);
     }
@@ -69,10 +70,24 @@ function wizValues() {
 function wizName() {
   const a = WIZ.a;
   if (a.codec === 'copy') return 'Neu verpacken (' + a.container.toUpperCase() + ')';
-  return CODEC_LABEL[a.codec] + ' · ' + Q.stageName(a.quality) + ({slow: ' · langsam', fast: ' · schnell', veryfast: ' · sehr schnell'}[a.speed] || '') + (a.backend !== 'cpu' ? ' · Grafikkarte' : '');
+  return CODEC_LABEL[a.codec] + ' · ' + (a.quality === 'custom' ? 'Wert ' + a.crf : Q.stageName(a.quality)) + ({slow: ' · langsam', fast: ' · schnell', veryfast: ' · sehr schnell'}[a.speed] || '') + (a.backend !== 'cpu' ? ' · Grafikkarte' : '');
 }
 const wizLabel = (qs, qid) => { const q = qs.find(x => x.id === qid); const o = q && q.opts.find(x => x[0] === WIZ.a[qid]); return o ? o[1] : ''; };
-function wizSet(qid, v) { WIZ.a[qid] = v; wizRender(); }
+// Schieberegler für „Eigener Wert“ (nur bei Qualität = Eigener Wert)
+function wizSlider() {
+  if (WIZ.a.quality !== 'custom') return null;
+  const scale = Q.scaleName(WIZ.a.backend === 'auto' ? (preferredFor(WIZ.a.codec) || workingBackends(WIZ.a.codec)[0] || 'cpu') : WIZ.a.backend), out = h('output', {}, WIZ.a.crf);
+  return h('div', {class: 'qadv on wizslider'}, h('label', {class: 'qsl'}, h('span', {}, 'Eigener Wert · ' + scale + ' '), out,
+    h('input', {type: 'range', min: 10, max: 40, value: WIZ.a.crf, 'aria-label': 'Eigener Wert', oninput: ev => { WIZ.a.crf = ev.target.value; out.textContent = ev.target.value; }})),
+    h('div', {class: 'muted small'}, 'Niedriger = bessere Qualität, größere Datei. Die Zahl gilt nur für den gewählten Encoder.'));
+}
+function wizSet(qid, v) {
+  if (qid === 'quality' && v === 'custom' && WIZ.a.quality !== 'custom') { // Startwert des Reglers: die bisherige Stufe
+    const id = WIZ.a.backend === 'auto' ? (preferredFor(WIZ.a.codec) || workingBackends(WIZ.a.codec)[0] || 'cpu') : WIZ.a.backend, n = Q.value(id, WIZ.a.codec, WIZ.a.quality);
+    if (n != null) WIZ.a.crf = String(n);
+  }
+  WIZ.a[qid] = v; wizRender();
+}
 const wizHead = (text, n) => h('div', {class: 'wizhead'}, h('span', {class: 'muted small'}, text), h('button', {type: 'button', class: 'small ghost', 'aria-label': 'Schließen', onclick: () => $('#wizDlg').close()}, '✕'));
 function wizRender() {
   const qs = wizQuestions(), n = qs.length, box = $('#wizBox'), keep = box.querySelector('.wizform') ? box.scrollTop : 0;
@@ -85,11 +100,12 @@ function wizRender() {
     fill(box, head, dots, h('h2', {class: 'wiztitle'}, q.title),
       h('div', {class: 'wizopts', role: 'radiogroup', 'aria-label': q.title}, q.opts.map(([v, label, sub, rec]) => h('button', {type: 'button', role: 'radio', 'aria-checked': WIZ.a[q.id] === v ? 'true' : 'false', class: 'opt2' + (WIZ.a[q.id] === v ? ' on' : ''),
         onclick: () => wizSet(q.id, v)}, h('span', {class: 'rd'}), h('span', {class: 'wo'}, h('b', {}, label), sub ? h('small', {}, sub) : null), rec ? h('span', {class: 'rec'}, 'empfohlen') : null))),
+      q.id === 'quality' ? wizSlider() : null,
       h('div', {class: 'wiznav'}, h('button', {type: 'button', id: 'wizPrev', class: 'ghost', disabled: WIZ.i === 0, onclick: () => { WIZ.i--; wizRender(); }}, '‹ Zurück'),
         h('button', {type: 'button', id: 'wizGo', class: 'primary', onclick: () => { WIZ.i++; wizRender(); }}, 'Weiter ›')));
     return;
   }
-  const rows = qs.map(q => [q.label, wizLabel(qs, q.id)]);
+  const rows = qs.map(q => [q.label, wizLabel(qs, q.id) + (q.id === 'quality' && WIZ.a.quality === 'custom' ? ' (' + WIZ.a.crf + ')' : '')]);
   const name = h('input', {id: 'wizName', class: 'wizname', value: WIZ.name != null ? WIZ.name : wizName(), maxlength: 40, 'aria-label': 'Name der Voreinstellung', autocomplete: 'off', onkeydown: ev => { if (ev.key === 'Enter') { ev.preventDefault(); wizSave(); } }});
   fill(box, head, dots, h('h2', {class: 'wiztitle'}, 'Passt das so?'),
     h('div', {class: 'wizsum'}, rows.map(([k, v]) => h('div', {class: 'wizrow'}, h('span', {class: 'muted'}, k), h('b', {}, v)))),
@@ -104,7 +120,7 @@ function wizRenderEdit(qs, keep) {
     const cur = q.opts.find(o => o[0] === WIZ.a[q.id]);
     return h('div', {class: 'wizfield'}, h('label', {}, h('span', {class: 'lt'}, q.label),
       h('select', {'aria-label': q.label, onchange: ev => wizSet(q.id, ev.target.value)}, q.opts.map(([v, label]) => h('option', {value: v, selected: v === WIZ.a[q.id]}, label)))),
-      cur && cur[2] ? h('small', {class: 'muted'}, cur[2]) : null);
+      cur && cur[2] ? h('small', {class: 'muted'}, cur[2]) : null, q.id === 'quality' ? wizSlider() : null);
   };
   const name = h('input', {id: 'wizName', class: 'wizname', value: WIZ.name, maxlength: 40, 'aria-label': 'Name der Voreinstellung', autocomplete: 'off', oninput: ev => { WIZ.name = ev.target.value; }});
   const group = (title, ids) => { const l = qs.filter(q => ids.includes(q.id)); return l.length ? h('section', {class: 'wizgrp'}, h('h3', {}, title), l.map(sel)) : null; };
