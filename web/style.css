@@ -986,3 +986,4 @@ dialog.wizdlg .wizbox{overflow-y:auto;max-height:100dvh}
 .qadv.on{border-style:solid;border-color:var(--accent)}
 .qsl input[type=range]{min-width:0;width:100%}
 @media(max-width:700px){.qsl{grid-template-columns:auto minmax(0,1fr)}.qsl>span{grid-column:1/-1}}
+.qs small.qv{color:var(--accent);margin-top:1px}

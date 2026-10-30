@@ -1,5 +1,11 @@
 [
   {
+    "id": "quality-value-1",
+    "version": "0.4.3",
+    "title": "Qualität: Wert hinter der Stufe",
+    "text": "An jeder Qualitätsstufe (Sehr gut … Klein) steht jetzt die Zahl dahinter, zum Beispiel „CRF 20“. Sie hängt von Encoder und Codec ab. Das gilt auf der Konvertieren-Seite, im Assistenten und im Bearbeiten-Fenster."
+  },
+  {
     "id": "quality-slider-1",
     "version": "0.4.2",
     "title": "Qualität selbst einstellen",

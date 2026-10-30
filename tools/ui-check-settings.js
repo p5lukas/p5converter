@@ -76,6 +76,7 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     ok(await p.locator('#wizBox select').count() >= 8, name + ': zu wenig Einstellungen im Bearbeiten-Fenster: ' + await p.locator('#wizBox select').count());
     ok(await p.inputValue('#wizBox select[aria-label="Video-Format"]') === 'hevc' && await p.inputValue('#wizBox select[aria-label="Bit-Tiefe"]') === '10', name + ': gespeicherte Werte nicht vorbelegt');
     await p.selectOption('#wizBox select[aria-label="Qualität"]', 'normal'); await p.selectOption('#wizBox select[aria-label="Geschwindigkeit"]', 'fast'); await p.waitForTimeout(200);
+    ok(/CRF \d+/.test(await p.textContent('#wizBox .wizfield:has(select[aria-label="Qualität"])')), name + ': Wert hinter der Stufe fehlt im Bearbeiten-Fenster');
     ok(await p.locator('#wizBox input[type=range]').count() === 0, name + ': Regler nur bei „Eigener Wert“');
     await p.selectOption('#wizBox select[aria-label="Qualität"]', 'custom'); await p.waitForTimeout(200);
     ok(await p.locator('#wizBox input[type=range]').count() === 1, name + ': Regler bei „Eigener Wert“ fehlt');

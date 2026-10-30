@@ -20,6 +20,7 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     ok(await p.inputValue('#vCrf') === '20', name + ': „Gut“ bei H.265 (CPU) sollte 20 sein, ist ' + await p.inputValue('#vCrf'));
     await vsel('Auflösung', '720'); await p.waitForTimeout(400);
     ok(await p.inputValue('#vCrf') === '20', name + ': feste Stufen, auch bei 720p unverändert 20, ist ' + await p.inputValue('#vCrf'));
+    ok((await p.locator('.cvgrid .qs .qv').allTextContents()).join('|') === 'CRF 17|CRF 20|CRF 23|CRF 27', name + ': Wert an jeder Stufe fehlt: ' + (await p.locator('.cvgrid .qs .qv').allTextContents()).join('|'));
     ok(/Stufe „Gut“ = CRF 20/.test(await p.textContent('#vCrfWhy')), name + ': Stufentext fehlt: ' + await p.textContent('#vCrfWhy'));
     ok(await p.locator('.cvgrid .qadv input[type=range]').count() === 1, name + ': Regler für den eigenen Wert fehlt (steht immer da)');
     await p.locator('.cvgrid .qadv input[type=range]').fill('28'); await p.waitForTimeout(400); // wie der Nutzer: Regler ziehen
