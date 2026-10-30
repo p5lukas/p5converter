@@ -15,6 +15,7 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
+- [ ] **Qualität: bei der Auswahl den Wert dahinter anzeigen (Nutzer 30.10.):** Bei den Stufen (Sehr gut / Gut / Normal / Klein) soll irgendwo dabeistehen, welche Zahl (CRF/CQ) dahintersteckt – z. B. direkt an jeder Stufe („Gut · CRF 20“) auf der Konvertieren-Seite, im Assistenten und im Bearbeiten-Fenster; der Wert hängt von Encoder und Codec ab (Q.value), steht also je nach Auswahl. (Noch nicht umgesetzt; bei „leg los“ Variante vorschlagen, falls nötig.)
 - [ ] **Windows-App: Folgearbeiten** (erste Version 0.1.1 steht auf `dev`): (1) ~~Tray~~ (erledigt in 0.1.2); (2) **Prüfung durch den Nutzer** auf dem Windows-PC (Fenster, Symbol, Hardware-Erkennung, echte Konvertierung, Deinstallation); (3) Größe der `setup.exe` aus dem CI-Lauf (Zusammenfassung „Größen“) mitteilen; (4) Linux-App danach; (5) Windows erst nach Freigabe nach `main`
 - [ ] Optional: Image als multi-arch (amd64/arm64) bauen
 
