@@ -15,6 +15,7 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
+- [ ] **Qualität: manuelle Angabe per Schieberegler muss möglich sein (Nutzer 30.10., nach Test von 0.4.1 auf dev):** Neben den Stufen (Sehr gut / Gut / Normal) soll man den Wert (CRF/CQ) selbst einstellen können, mit einem **Slider** – auf der Konvertieren-Seite (Karte Video, Zeile Qualität) und im Assistenten/Bearbeiten-Fenster („Eigener Wert“). Der Stufenname soll dabei „Eigener Wert“ zeigen; der gewählte Wert bleibt in der Voreinstellung erhalten. (Noch nicht umgesetzt.)
 - [ ] **Windows-App: Folgearbeiten** (erste Version 0.1.1 steht auf `dev`): (1) ~~Tray~~ (erledigt in 0.1.2); (2) **Prüfung durch den Nutzer** auf dem Windows-PC (Fenster, Symbol, Hardware-Erkennung, echte Konvertierung, Deinstallation); (3) Größe der `setup.exe` aus dem CI-Lauf (Zusammenfassung „Größen“) mitteilen; (4) Linux-App danach; (5) Windows erst nach Freigabe nach `main`
 - [ ] Optional: Image als multi-arch (amd64/arm64) bauen
 
