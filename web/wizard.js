@@ -71,7 +71,7 @@ function wizValues() {
 function wizName() {
   const a = WIZ.a;
   if (a.codec === 'copy') return 'Neu verpacken (' + a.container.toUpperCase() + ')';
-  return CODEC_LABEL[a.codec] + ' · ' + (a.quality === 'custom' ? 'Wert ' + a.crf : Q.stageName(a.quality)) + ({slow: ' · langsam', fast: ' · schnell', veryfast: ' · sehr schnell'}[a.speed] || '') + (a.backend !== 'cpu' ? ' · Grafikkarte' : '');
+  return CODEC_LABEL[a.codec] + ' · ' + (a.quality === 'custom' ? 'Wert ' + a.crf : Q.stageName(a.quality)) + (a.backend !== 'cpu' ? ' · Grafikkarte' : '');
 }
 const wizLabel = (qs, qid) => { const q = qs.find(x => x.id === qid); const o = q && q.opts.find(x => x[0] === WIZ.a[qid]); return o ? o[1] : ''; };
 // Schieberegler für „Eigener Wert“ (nur bei Qualität = Eigener Wert)

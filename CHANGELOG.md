@@ -1,5 +1,36 @@
 # Änderungen
 
+## 0.5.0 – 2026-11-06
+<!-- zusammenfassung -->
+
+Mit 0.5.0 ist p5converter von vorne bis hinten durchgesehen: Oberfläche, Texte, Hilfen und Dokumentation. Diese Version fasst alles seit 0.3.0 zusammen.
+
+**Einfacher bedienen**
+- Video geht jetzt in zwei Schritten: erst Dateien wählen, dann auf einer Seite alles ansehen, ändern und starten. Video, Ton, Untertitel, Regeln, Name & Ziel und Prüfen sind aufklappbare Karten. Das alte Fenster „Details“ gibt es nicht mehr, alles steht dort, wo man es vermutet.
+- „Wie Quelle“ zeigt, was die Quelle tatsächlich hat (zum Beispiel „wie Quelle (1080p)“).
+- Die Qualität hat vier Stufen mit der Zahl dahinter (zum Beispiel „CRF 20“) und einen Regler für einen eigenen Wert, der immer sichtbar ist. Geschwindigkeit und Encoder stehen direkt daneben.
+- Die Dateiliste mit altem und neuem Namen steht unter „Name & Ziel“ immer direkt unter den Feldern.
+
+**Neu**
+- **Voreinstellungen für Video** als Kacheln auf der Startseite. Der Assistent „+ Neue Voreinstellung“ fragt alle Einstellungen ab, und „Bearbeiten“ ändert sie später auf einer Seite, ohne dass du Dateien wählen musst.
+- **Probeclip:** 30 Sekunden aus der Mitte mit deinen Einstellungen umwandeln und vergleichen (Größe, Bildähnlichkeit, vergrößerter Ausschnitt).
+- **Platz sparen:** „Ordner untersuchen“ schätzt ordnerweise, wie viel das Umwandeln bringen könnte. Verändert wird dabei nichts.
+- **Warteschlange verwalten:** Reihenfolge ändern, einzelne Aufträge anhalten, alles pausieren. Die Warteschlange übersteht einen Neustart.
+- **Fortschrittsbalken mit Matrix-Regen** (abschaltbar) und der Knopf „Verwerfen“ in jedem Schritt.
+- **Windows:** Quick Sync klappt auch auf PCs mit zwei Grafikeinheiten (zum Beispiel Intel und NVIDIA), weil die Erkennung die Adapter durchprobiert.
+
+**Besser**
+- Forced-Untertitel werden auch an Titeln wie „[ForcedNarrative]“ erkannt.
+- MKV-Dateien mit eingebetteten Schriftarten (typisch bei ASS-Untertiteln) lassen sich wieder umwandeln.
+- Das Verlaufs- und Warteschlangen-Fenster springt nicht mehr, geöffnete Details bleiben offen, und Befehl und Log lassen sich kopieren.
+- „Ordner untersuchen“ zeigt das Ergebnis wieder an (ein Fehler seit 0.4.0).
+- Alle Texte, die Hilfen hinter den **i**-Punkten und die README wurden durchgesehen und auf den neuen Stand gebracht.
+
+**Hinter den Kulissen**
+- Der Build installiert ffmpeg jetzt mit Zeitlimit und bis zu drei Versuchen. Ein hängendes `apt` auf dem Runner hatte schon mehrmals einen Lauf blockiert.
+- Der Release-Text kommt aus diesem Abschnitt der CHANGELOG.
+
+
 ## 0.4.4 – 2026-11-05
 
 **Behoben: „Ordner untersuchen“ zeigte kein Ergebnis**
