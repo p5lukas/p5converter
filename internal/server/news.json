@@ -1,5 +1,11 @@
 [
   {
+    "id": "scan-result-fix-1",
+    "version": "0.4.4",
+    "title": "Ordner untersuchen zeigt wieder das Ergebnis",
+    "text": "Nach „Ordner untersuchen“ erschien kein Ergebnis, im Log stand „fmtSizeLib is not defined“. Das ist behoben: Die Summe „≈ … GB ließen sich sparen“ und die Ordnerliste werden wieder angezeigt."
+  },
+  {
     "id": "quality-value-1",
     "version": "0.4.3",
     "title": "Qualität: Wert hinter der Stufe",
