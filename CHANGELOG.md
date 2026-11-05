@@ -24,11 +24,14 @@ Mit 0.5.0 ist p5converter von vorne bis hinten durchgesehen: Oberfläche, Texte,
 - MKV-Dateien mit eingebetteten Schriftarten (typisch bei ASS-Untertiteln) lassen sich wieder umwandeln.
 - Das Verlaufs- und Warteschlangen-Fenster springt nicht mehr, geöffnete Details bleiben offen, und Befehl und Log lassen sich kopieren.
 - „Ordner untersuchen“ zeigt das Ergebnis wieder an (ein Fehler seit 0.4.0).
+- Am Handy sind die Voreinstellungs-Kacheln kompakter (zwei nebeneinander), und in „Name & Ziel“ stehen alter und neuer Dateiname untereinander, damit man den Unterschied sieht. Die Info-Punkte sitzen dort neben den Beschriftungen, und „+ Dateien“ bricht nicht mehr um.
+- „Gewonnener Platz“ zeigt „12,3 GB gewonnen“ oder „Mehrbedarf“ statt eines verwirrenden Minuszeichens. Pfade bei „Namen der Quellordner“ stehen nicht mehr in Großbuchstaben.
 - Alle Texte, die Hilfen hinter den **i**-Punkten und die README wurden durchgesehen und auf den neuen Stand gebracht.
 
 **Hinter den Kulissen**
 - Der Build installiert ffmpeg jetzt mit Zeitlimit und bis zu drei Versuchen. Ein hängendes `apt` auf dem Runner hatte schon mehrmals einen Lauf blockiert.
 - Der Release-Text kommt aus diesem Abschnitt der CHANGELOG.
+- Alle UI-Tests laufen grün (der Test für den Regen-Balken war zeitabhängig und ist robuster, der News-Test klappt das Feld „Gewonnener Platz“ auf).
 
 
 ## 0.4.4 – 2026-11-05

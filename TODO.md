@@ -19,6 +19,7 @@
 - [ ] Optional: Image als multi-arch (amd64/arm64) bauen
 
 ## Vom Nutzer zu prüfen (nicht in der Sandbox möglich)
+- [ ] 0.5.0 Release `v0.5.0` auf GitHub ansehen (Text, `p5converter-setup.exe`, Unraid-Vorlage) und auf `main` das Image `:latest`; README-Bilder auf GitHub; auf dem iPhone/iPad (Safari und Web-App) Startseite, Konvertieren, „Name & Ziel“ und Assistent durchklicken
 - [ ] 0.4.2 Qualitäts-Regler (Video-Karte, Assistent, Bearbeiten) auf iPhone/iPad und mit NVIDIA/Intel-Encoder (CQ/ICQ-Skala): Wert wird übernommen und in der Voreinstellung gespeichert?
 - [ ] 0.4.1 Voreinstellung bearbeiten (Einstellungen → Voreinstellungen → „Bearbeiten“) und Assistent „Neue Voreinstellung“ auf iPhone/iPad ansehen (lange Liste, Scrollen im Fenster); Encoder-Auswahl mit echter NVIDIA/Intel-Grafik; Dateiliste unter „Name & Ziel“: genau das, was gemeint war (sonst Seite „Umbenennen“ nennen)
 - [ ] 0.4.0 Oberfläche auf iPhone/iPad (Safari und Web-App, Hoch/Quer) ansehen: Startseite (Voreinstellungen-Kacheln), Konvertieren-Karten, Assistent, Probeclip-Fenster; in der Sandbox nur mit Chromium-Emulation geprüft
