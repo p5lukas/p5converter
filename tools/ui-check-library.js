@@ -95,6 +95,20 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     ok(!(await p.isVisible('#scanFolder')), name + ': „Ordner prüfen“ gibt es nur bei Video');
     await ctx.close();
   }
+  // ---- große Ersparnis: die Summe „≈ 7,5 GB von 18,6 GB ließen sich sparen“ (nur ab 50 MB; früher fehlte hier fmtSizeLib → nichts wurde angezeigt) ----
+  for (const [name, opt] of L.views) {
+    const ctx = await b.newContext(opt); const p = await ctx.newPage();
+    p.on('pageerror', e => fails.push(name + ' JS: ' + e.message));
+    await p.goto(L.url); await p.waitForTimeout(1300); await L.enter(p, 'video');
+    await p.evaluate(async d => { await libStart(d); }, L.INDIR);
+    await p.waitForFunction(() => LIBUI.state === 'done', null, {timeout: 60000});
+    await p.evaluate(() => { LIBUI.rows.forEach(r => { if (!r.group) { r.bytes = 20e9; r.saveBytes = 8e9; } }); libRender(); });
+    await p.waitForTimeout(300);
+    const t = (await p.textContent('#cvScan .libtotal').catch(() => '')) || '';
+    ok(/≈ [\d,]+ GB/.test(t) && /ließen sich sparen/.test(t), name + ': Summe der Ersparnis fehlt: ' + t.slice(0, 120));
+    ok(await p.locator('#cvScan .libgain').count() >= 1, name + ': Ersparnis je Ordner fehlt');
+    await ctx.close();
+  }
   // ---- Abbruch (Desktop): große Prüfung abbrechen ----
   {
     const ctx = await b.newContext(L.views[0][1]); const p = await ctx.newPage();

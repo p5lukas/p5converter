@@ -1,5 +1,13 @@
 # Änderungen
 
+## 0.4.4 – 2026-11-05
+
+**Behoben: „Ordner untersuchen“ zeigte kein Ergebnis**
+- Nach dem Untersuchen eines Ordners (Platz sparen) erschien nichts, im Log stand `Fehler in der Oberfläche: Promise: fmtSizeLib is not defined`. Ursache (seit 0.4.0): die Summenzeile „≈ … GB von … GB ließen sich sparen“ rief die Größenformatierung auf, die nur innerhalb der Bibliothek-Funktionen sichtbar war. Sie wird nur ab 50 MB geschätzter Ersparnis gezeichnet, deshalb fiel es in den kleinen Testordnern nicht auf. Jetzt ist die Funktion von außen erreichbar (`LIB.fmtSizeLib`)
+
+**Tests**
+- `ui-check-library.js`: neuer Durchlauf mit großer Ersparnis in allen Ansichten (schlägt ohne den Fix mit demselben Fehler fehl)
+
 ## 0.4.3 – 2026-10-30
 
 **Neu: Wert hinter der Qualitätsstufe**

@@ -135,7 +135,7 @@ const LIB = (() => {
     else if (key === 'name') r.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()) || a.path.localeCompare(b.path));
     return r;
   }
-  return {hints, worth, mix, sortRows, gainText, totalSave, totalBytes, codecName, mbit, highLimit, nf, seasonLike, clean, title, sourceFacts, sourceLine, convertHint, FILTERS, FILTER_DEFAULT, filterIds, matches, filterCounts};
+  return {hints, worth, mix, sortRows, gainText, fmtSizeLib, totalSave, totalBytes, codecName, mbit, highLimit, nf, seasonLike, clean, title, sourceFacts, sourceLine, convertHint, FILTERS, FILTER_DEFAULT, filterIds, matches, filterCounts};
 })();
 if (typeof module !== 'undefined') module.exports = LIB;
 
@@ -222,7 +222,7 @@ function libRender() {
     const shown = LIB.sortRows(LIBUI.onlyHints ? all.filter(r => LIB.matches(r, LIBUI.fil, libLow)) : all, sortKey);
     // im Dateibaum: ein Ordner mit Hinweisen zeigt auch seine Sammelordner darüber nur, wenn diese selbst Hinweise haben
     const total = LIB.totalSave(all), tb = LIB.totalBytes(all);
-    const big = h('div', {class: 'libtotal'}, total >= 50e6 ? [h('b', {}, '≈ ' + fmtSizeLib(total)), ' von ' + fmtSizeLib(tb) + ' ließen sich sparen ', h('span', {class: 'muted small'}, '(Schätzung für H.265 „Gut“, nur das Bild)')] : ['Hier ist kaum etwas zu holen: ', h('span', {class: 'muted'}, 'die Dateien sind schon modern oder klein.')]);
+    const big = h('div', {class: 'libtotal'}, total >= 50e6 ? [h('b', {}, '≈ ' + LIB.fmtSizeLib(total)), ' von ' + LIB.fmtSizeLib(tb) + ' ließen sich sparen ', h('span', {class: 'muted small'}, '(Schätzung für H.265 „Gut“, nur das Bild)')] : ['Hier ist kaum etwas zu holen: ', h('span', {class: 'muted'}, 'die Dateien sind schon modern oder klein.')]);
     const ctl = h('div', {class: 'liberctl'},
       h('label', {class: 'check', style: 'margin:0'}, h('input', {type: 'checkbox', checked: LIBUI.onlyHints, onchange: ev => { LIBUI.onlyHints = ev.target.checked; libRender(); }}), h('span', {}, 'Nur Ordner mit Hinweisen')),
       h('label', {class: 'inline small'}, h('span', {}, 'Sortieren'), h('select', {'aria-label': 'Sortieren', onchange: ev => { LIBUI.sort = ev.target.value; LIBUI.sortUser = true; libRender(); }},
