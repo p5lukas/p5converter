@@ -1,4 +1,4 @@
-// Prüft Symbole (keine bunten Emojis), Namensmuster + Ersetzungen + Vorschau (Schritt „Benennen“) und die Seite „Umbenennen“
+// Prüft Symbole (keine bunten Emojis), Namensmuster + Ersetzungen + Vorschau (Karte „Name & Ziel“) und die Seite „Umbenennen“
 // in allen Ansichten. Aufruf: INDIR=/tmp/media SHOTS=/tmp/shots node tools/ui-check-rename.js   (Server auf :8787)
 const L = require('./ui-lib');
 const EMOJI = /\p{Emoji_Presentation}|[⚙⚠⚡⬆▶✎✦⭐]/u; // echte Emojis und iOS-anfällige Zeichen
@@ -13,8 +13,9 @@ const EMOJI = /\p{Emoji_Presentation}|[⚙⚠⚡⬆▶✎✦⭐]/u; // echte Emo
     await p.goto(L.url); await p.waitForTimeout(1200);
     await p.screenshot({ path: `${L.SHOTS}/rn-${name}-head.png` });
     await L.enter(p, 'video');
-    await L.goStep(p, 'files'); await L.addFile(p, 'Show S01E01');
-    await L.goStep(p, 'video'); await p.selectOption('#vCodec', 'hevc'); await p.selectOption('#vHeight', '720');
+    await L.addFile(p, 'Show S01E01'); await L.toCheck(p); await p.waitForTimeout(900);
+    await p.selectOption('.cvgrid select[aria-label="Video-Codec"]', 'hevc'); await p.waitForTimeout(500);
+    await p.selectOption('.cvgrid select[aria-label="Auflösung"]', '720'); await p.waitForTimeout(500);
     await L.goStep(p, 'name');
     await p.fill('#pattern', '{filename} [{res}][{codec}]');
     await p.click('#addRule'); await p.fill('.rulerow input >> nth=0', 'webdl'); await p.fill('.rulerow input >> nth=1', 'WEB');

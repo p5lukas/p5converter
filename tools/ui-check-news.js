@@ -46,6 +46,7 @@ const L = require('./ui-lib');
   await p.goto(L.url); await p.waitForTimeout(1500);
   const before = await p.evaluate(() => ({a: S.saved.audio.count, v: S.saved.video.count}));
   if (before.a) {
+    await p.evaluate(() => { document.querySelector('#savedCard').open = true; }); await p.waitForTimeout(200); // das Feld „Gewonnener Platz“ ist seit 0.4.0 eingeklappt
     await p.click('#savedBody .savedcol.audio .savedreset'); await p.waitForTimeout(200);
     eq('desktop', 'Rückfrage sichtbar', await p.isVisible('#savedResetDlg'), true);
     await p.click('#savedResetNo'); eq('desktop', 'Abbrechen schließt', await p.isVisible('#savedResetDlg'), false);

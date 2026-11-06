@@ -23,6 +23,13 @@ t('schwere Tonformate, DTS und Bild-Untertitel', () => {
   assert.ok(ids(row({heavy: {dts: 3}})).includes('dts')); assert.ok(ids(row({imageSubs: 2})).includes('img'));
   assert.ok(LIB.worth(row({imageSubs: 1})));
 });
+t('geschätzte Ersparnis: „≈ 9 GB sparen“ oder „kaum Ersparnis“, Summe ohne Sammelzeilen', () => {
+  assert.strictEqual(LIB.gainText(0, 4e9), 'kaum Ersparnis');
+  assert.strictEqual(LIB.gainText(1e8, 4e9), 'kaum Ersparnis'); // unter 5 % der Größe
+  assert.ok(/^≈ 2,\d GB sparen$/.test(LIB.gainText(2.4e9, 4e9)), LIB.gainText(2.4e9, 4e9));
+  const rows = [row({saveBytes: 3e9, bytes: 6e9}), row({saveBytes: 1e9, bytes: 2e9, group: false}), row({saveBytes: 4e9, bytes: 8e9, group: true})];
+  assert.strictEqual(LIB.totalSave(rows), 4e9); assert.strictEqual(LIB.totalBytes(rows), 8e9);
+});
 t('„schon klein“ und „nicht lesbar“ sprechen nicht für das Umwandeln', () => {
   const r = row({codecs: {h264: 4}, avgBitrate: 2e6});
   assert.ok(ids(r, Q.lowBitrate).includes('small')); assert.ok(LIB.worth(r, Q.lowBitrate), 'älterer Codec bleibt ein Hinweis');

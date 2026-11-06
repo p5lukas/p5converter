@@ -57,7 +57,7 @@ const setPrefs = async (p, subDefault) => { if (p.url() === 'about:blank') await
     // ---- 3) echter Lauf (nur Desktop): Ergebnis prüfen ----
     if (name === 'desktop') {
       await open();
-      await L.goStep(p, 'dest'); await p.selectOption('#outMode', 'custom'); await p.fill('#outDir', OUT); await p.selectOption('#exists', 'overwrite');
+      await L.goStep(p, 'dest'); await p.evaluate(o => { cvSet('outMode', 'custom'); cvSet('outDir', o); cvSet('exists', 'overwrite'); }, OUT);
       await L.goStep(p, 'files');
       await p.click('#start'); await p.waitForTimeout(5000);
       const out = OUT + '/forced.mkv';

@@ -1,5 +1,102 @@
 # Änderungen
 
+## 0.5.0 – 2026-11-06
+<!-- zusammenfassung -->
+
+Mit 0.5.0 ist p5converter von vorne bis hinten durchgesehen: Oberfläche, Texte, Hilfen und Dokumentation. Diese Version fasst alles seit 0.3.0 zusammen.
+
+**Einfacher bedienen**
+- Video geht jetzt in zwei Schritten: erst Dateien wählen, dann auf einer Seite alles ansehen, ändern und starten. Video, Ton, Untertitel, Regeln, Name & Ziel und Prüfen sind aufklappbare Karten. Das alte Fenster „Details“ gibt es nicht mehr, alles steht dort, wo man es vermutet.
+- „Wie Quelle“ zeigt, was die Quelle tatsächlich hat (zum Beispiel „wie Quelle (1080p)“).
+- Die Qualität hat vier Stufen mit der Zahl dahinter (zum Beispiel „CRF 20“) und einen Regler für einen eigenen Wert, der immer sichtbar ist. Geschwindigkeit und Encoder stehen direkt daneben.
+- Die Dateiliste mit altem und neuem Namen steht unter „Name & Ziel“ immer direkt unter den Feldern.
+
+**Neu**
+- **Voreinstellungen für Video** als Kacheln auf der Startseite. Der Assistent „+ Neue Voreinstellung“ fragt alle Einstellungen ab, und „Bearbeiten“ ändert sie später auf einer Seite, ohne dass du Dateien wählen musst.
+- **Probeclip:** 30 Sekunden aus der Mitte mit deinen Einstellungen umwandeln und vergleichen (Größe, Bildähnlichkeit, vergrößerter Ausschnitt).
+- **Platz sparen:** „Ordner untersuchen“ schätzt ordnerweise, wie viel das Umwandeln bringen könnte. Verändert wird dabei nichts.
+- **Warteschlange verwalten:** Reihenfolge ändern, einzelne Aufträge anhalten, alles pausieren. Die Warteschlange übersteht einen Neustart.
+- **Fortschrittsbalken mit Matrix-Regen** (abschaltbar) und der Knopf „Verwerfen“ in jedem Schritt.
+- **Windows:** Quick Sync klappt auch auf PCs mit zwei Grafikeinheiten (zum Beispiel Intel und NVIDIA), weil die Erkennung die Adapter durchprobiert.
+
+**Besser**
+- Forced-Untertitel werden auch an Titeln wie „[ForcedNarrative]“ erkannt.
+- MKV-Dateien mit eingebetteten Schriftarten (typisch bei ASS-Untertiteln) lassen sich wieder umwandeln.
+- Das Verlaufs- und Warteschlangen-Fenster springt nicht mehr, geöffnete Details bleiben offen, und Befehl und Log lassen sich kopieren.
+- „Ordner untersuchen“ zeigt das Ergebnis wieder an (ein Fehler seit 0.4.0).
+- Am Handy sind die Voreinstellungs-Kacheln kompakter (zwei nebeneinander), und in „Name & Ziel“ stehen alter und neuer Dateiname untereinander, damit man den Unterschied sieht. Die Info-Punkte sitzen dort neben den Beschriftungen, und „+ Dateien“ bricht nicht mehr um.
+- „Gewonnener Platz“ zeigt „12,3 GB gewonnen“ oder „Mehrbedarf“ statt eines verwirrenden Minuszeichens. Pfade bei „Namen der Quellordner“ stehen nicht mehr in Großbuchstaben.
+- Alle Texte, die Hilfen hinter den **i**-Punkten und die README wurden durchgesehen und auf den neuen Stand gebracht.
+
+**Hinter den Kulissen**
+- Der Build installiert ffmpeg jetzt mit Zeitlimit und bis zu drei Versuchen. Ein hängendes `apt` auf dem Runner hatte schon mehrmals einen Lauf blockiert.
+- Der Release-Text kommt aus diesem Abschnitt der CHANGELOG.
+- Alle UI-Tests laufen grün (der Test für den Regen-Balken war zeitabhängig und ist robuster, der News-Test klappt das Feld „Gewonnener Platz“ auf).
+
+
+## 0.4.4 – 2026-11-05
+
+**Behoben: „Ordner untersuchen“ zeigte kein Ergebnis**
+- Nach dem Untersuchen eines Ordners (Platz sparen) erschien nichts, im Log stand `Fehler in der Oberfläche: Promise: fmtSizeLib is not defined`. Ursache (seit 0.4.0): die Summenzeile „≈ … GB von … GB ließen sich sparen“ rief die Größenformatierung auf, die nur innerhalb der Bibliothek-Funktionen sichtbar war. Sie wird nur ab 50 MB geschätzter Ersparnis gezeichnet, deshalb fiel es in den kleinen Testordnern nicht auf. Jetzt ist die Funktion von außen erreichbar (`LIB.fmtSizeLib`)
+
+**Tests**
+- `ui-check-library.js`: neuer Durchlauf mit großer Ersparnis in allen Ansichten (schlägt ohne den Fix mit demselben Fehler fehl)
+
+## 0.4.3 – 2026-10-30
+
+**Neu: Wert hinter der Qualitätsstufe**
+- An jeder Stufe (Sehr gut / Gut / Normal / Klein) steht die Zahl dahinter (CRF/CQ/ICQ/QP je nach Encoder, z. B. „CRF 20“): in der Video-Karte der Konvertieren-Seite, im Assistenten und im Bearbeiten-Fenster. Die Zahl hängt von Encoder und Codec ab und ändert sich mit der Auswahl
+
+**Tests**
+- `ui-check-verify.js` (Werte aller vier Stufen), `ui-check-settings.js`, `ui-check-wizard.js`
+
+## 0.4.2 – 2026-10-30
+
+**Neu: Qualität per Schieberegler**
+- Unter den Qualitätsstufen steht jetzt **immer** ein Schieberegler für den eigenen Wert (CRF/CQ, je nach Encoder); er war hinter „Erweitert“ versteckt. Das Ziehen setzt die Stufe auf „Eigener Wert“
+- **Assistent und Bearbeiten-Fenster:** die Qualitätsfrage hat die Wahl „Eigener Wert“ mit Regler (Startwert: die bisherige Stufe); der Wert wird in der Voreinstellung gespeichert und beim Bearbeiten wieder gezeigt
+- Auf dem Handy bricht die Beschriftung des Reglers um, damit er im Kasten bleibt
+
+**Tests**
+- `ui-check-verify.js` (Regler ziehen), `ui-check-settings.js` (Eigener Wert im Bearbeiten-Fenster)
+
+## 0.4.1 – 2026-10-29
+
+**Behoben: Voreinstellung bearbeiten**
+- „Bearbeiten“ (Einstellungen → Voreinstellungen) verlangte, Dateien zu wählen (die Seite sprang ohne Dateien zurück zu Schritt 1). Jetzt öffnet sich ein Fenster mit **allen Einstellungen auf einer Seite** (Auswahllisten mit Hinweis, Name der Kachel); es braucht keine Dateien. Nicht abgefragte Werte der Voreinstellung (Dateiname, Muster, Ersetzungen) bleiben erhalten
+
+**Geändert: Assistent fragt alles**
+- Der Assistent „Neue Voreinstellung“ stellt jetzt alle Einstellungen aus **Video, Ton und Untertitel**: Format (H.265, H.264, AV1, VP9, nur neu verpacken), Container, Qualität, Geschwindigkeit, Encoder (Automatisch, CPU, erkannte Grafikeinheiten), Auflösung, Bit-Tiefe, Ton unverändert/kleiner machen (mit Format und Bitrate), Untertitel behalten/entfernen und Sprach-Regeln. Fragen, die nicht passen (z. B. Qualität beim bloßen Neu-Verpacken), entfallen. „Geschwindigkeit“ und „Encoder“ sind jetzt getrennte Fragen; „Langsam“ ist vorgeschlagen
+
+**Geändert: Dateiliste unter den Namensfeldern**
+- In „Name & Ziel“ stehen die Dateien (alt → neu) jetzt **immer** direkt unter den Namensfeldern, auch bevor etwas umbenannt wird („behalten ihren Namen“), damit man sieht, was man ändern kann
+
+**Tests**
+- `ui-check-settings.js` (Bearbeiten ohne Dateien), `ui-check-wizard.js`, `ui-check-tracks.js` angepasst
+
+## 0.4.0 – 2026-10-29
+
+**Neu: einfachere Oberfläche (zwei Schritte, Karten)**
+- Video hat nur noch **zwei Schritte**: 1 Dateien, 2 Konvertieren. Auf der Konvertieren-Seite stehen **Video, Ton, Untertitel, Regeln, Name & Ziel und Prüfen** als kompakte Karten, die sich an Ort und Stelle auf- und zuklappen (was Aufmerksamkeit braucht, ist offen). Das Fenster „Details“ ist weg; alles ist dort einstellbar, wo man es vermutet
+- Bei **„Wie Quelle“** steht darunter, was die Quelle hat (Codec, Bit-Tiefe, …)
+- **Qualität und Geschwindigkeit** (Schnell … Langsam) stehen sichtbar nebeneinander; der **Encoder** (CPU, NVIDIA, Intel, AMD) ist eine eigene Zeile. Hardware wird weiter erkannt und genutzt
+- Weniger Text: lange Erklärungen sind kürzer oder hinter den Info-Punkten
+
+**Neu: Voreinstellungen nur für Video, mit Assistent**
+- Voreinstellungen erscheinen als Kacheln auf der Startseite und gelten nur für **Video** (Audio ist immer individuell). „+ Neue Voreinstellung“ startet einen kurzen **Assistenten** (fünf Fragen)
+
+**Neu: Probeclip**
+- 30 Sekunden aus der Mitte mit den gewählten Einstellungen umwandeln und vergleichen (Größe, SSIM/PSNR, vergrößerter Bildausschnitt). Ein Lauf gleichzeitig; Aufräumen nach 30 Minuten. **Mit Hardware-Encoder nur auf echter Hardware prüfbar** (in der Sandbox nur CPU getestet)
+
+**Neu: Bibliothek „Platz sparen“**
+- „Ordner untersuchen“ zeigt je Ordner eine **grobe Ersparnis-Schätzung** (≈, H.265 „Gut“, nur Bild); nichts wird verändert
+
+**Behoben**
+- **Forced-Untertitel** mit Titel wie „[ForcedNarrative]“ wurden nicht als Forced erkannt und daher nicht als Standard gewählt; der Titel zählt jetzt wie die Größen-Schätzung
+
+**Intern**
+- Neu: `web/wizard.js`, `web/clip.js`, `internal/server/clip.go`, `estimate.go` (mit Tests); alte Einzel-/Gruppen-/Matrix-Ansichten in `tracks.js` entfernt; UI-Tests auf die neue Oberfläche umgestellt (`ui-check-trkgroups.js` entfällt, abgedeckt durch `ui-check-tracks.js`)
+
 ## 0.3.7 – 2026-10-28
 
 **Behoben: Windows, Quick Sync „Lesen“ bei Intel + NVIDIA im selben PC**

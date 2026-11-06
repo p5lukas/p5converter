@@ -21,7 +21,7 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     await p.goto(L.url); await p.evaluate(() => localStorage.clear()); await p.goto(L.url); await p.waitForTimeout(1300);
     await L.enter(p, 'video');
     ok(await p.isVisible('#scanFolder') && await p.locator('#cvScanHelp #scanFolder').count() === 1, name + ': Knopf „Ordner untersuchen“ in der Erklär-Karte fehlt in Schritt 1');
-    ok(/Wo lohnt sich das Umwandeln/.test(await p.textContent('#cvScanHelp h2')) && /nie einzelne Dateien/.test(await p.textContent('#cvScanHelp')) && /Ordner untersuchen/.test(await p.textContent('#scanFolder')), name + ': Text der Erklär-Karte');
+    ok(/Platz sparen/.test(await p.textContent('#cvScanHelp h2')) && /Es wird nichts verändert/.test(await p.textContent('#cvScanHelp')) && /Ordner untersuchen/.test(await p.textContent('#scanFolder')), name + ': Text der Erklär-Karte');
     ok(await p.locator('#cvScanHelp .btns #scanFolder').isVisible() && await p.locator('#cvFiles #scanFolder').count() === 0, name + ': der Knopf gehört in die Erklär-Karte, nicht mehr in die Dateien-Karte');
     await p.screenshot({path: `${L.SHOTS}/p5c-lib-${name}-0-karte.png`, fullPage: true});
     ok(!(await p.isVisible('#cvScan')), name + ': Ergebnisfeld ohne Prüfung sichtbar');
@@ -62,11 +62,11 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     await p.click('#cvScan .libfil[data-fil=old]'); await p.click('#cvScan .libfil[data-fil=heavy]'); await p.click('#cvScan .libfil[data-fil=img]'); await p.click('#cvScan .libfil[data-fil=high]'); await p.waitForTimeout(250);
     ok(await p.locator('#cvScan .librow').count() === before, name + ': Standard wiederhergestellt');
     await p.screenshot({path: `${L.SHOTS}/p5c-lib-${name}-1b-filter.png`, fullPage: true});
-    // zweiter Durchlauf desselben Ordners: alles kommt aus dem Merker, die Zeilen bleiben gleich
+    // zweiter Durchlauf desselben Ordners: alles kommt aus dem Zwischenspeicher, die Zeilen bleiben gleich
     const rowsBefore = (await p.locator('#cvScan .librow').allTextContents()).join('|');
     await p.evaluate(() => libStart(LIBUI.root)); await p.waitForSelector('#cvScan .librow', {timeout: 20000}); await p.waitForTimeout(500);
-    ok(/4 von 4 Dateien kamen aus dem Merker/.test(await p.textContent('#cvScan .libcached').catch(() => '')), name + ': Hinweis „aus dem Merker“ fehlt');
-    ok((await p.locator('#cvScan .librow').allTextContents()).join('|') === rowsBefore, name + ': Zeilen aus dem Merker weichen vom ersten Durchlauf ab');
+    ok(/4 von 4 Dateien kamen aus dem Zwischenspeicher/.test(await p.textContent('#cvScan .libcached').catch(() => '')), name + ': Hinweis „aus dem Zwischenspeicher“ fehlt');
+    ok((await p.locator('#cvScan .librow').allTextContents()).join('|') === rowsBefore, name + ': Zeilen aus dem Zwischenspeicher weichen vom ersten Durchlauf ab');
     // Filter und Sortierung
     await p.uncheck('#cvScan .liberctl input[type=checkbox]'); await p.waitForTimeout(200);
     ok(await p.locator('#cvScan .librow').count() >= 5, name + ': ohne Filter fehlen Ordner');
@@ -93,6 +93,20 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     // ---- Audio: kein Knopf ----
     await L.home(p); await p.click('[data-kind=audio]'); await p.waitForTimeout(400);
     ok(!(await p.isVisible('#scanFolder')), name + ': „Ordner prüfen“ gibt es nur bei Video');
+    await ctx.close();
+  }
+  // ---- große Ersparnis: die Summe „≈ 7,5 GB von 18,6 GB ließen sich sparen“ (nur ab 50 MB; früher fehlte hier fmtSizeLib → nichts wurde angezeigt) ----
+  for (const [name, opt] of L.views) {
+    const ctx = await b.newContext(opt); const p = await ctx.newPage();
+    p.on('pageerror', e => fails.push(name + ' JS: ' + e.message));
+    await p.goto(L.url); await p.waitForTimeout(1300); await L.enter(p, 'video');
+    await p.evaluate(async d => { await libStart(d); }, L.INDIR);
+    await p.waitForFunction(() => LIBUI.state === 'done', null, {timeout: 60000});
+    await p.evaluate(() => { LIBUI.rows.forEach(r => { if (!r.group) { r.bytes = 20e9; r.saveBytes = 8e9; } }); libRender(); });
+    await p.waitForTimeout(300);
+    const t = (await p.textContent('#cvScan .libtotal').catch(() => '')) || '';
+    ok(/≈ [\d,]+ GB/.test(t) && /ließen sich sparen/.test(t), name + ': Summe der Ersparnis fehlt: ' + t.slice(0, 120));
+    ok(await p.locator('#cvScan .libgain').count() >= 1, name + ': Ersparnis je Ordner fehlt');
     await ctx.close();
   }
   // ---- Abbruch (Desktop): große Prüfung abbrechen ----

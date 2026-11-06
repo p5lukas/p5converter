@@ -1,5 +1,5 @@
-// Prüfregel: Einstellungen → „Regeln“ (allgemeine Regeln auf dem Server) und ihre Wirkung im Ablauf: Schritt „Regeln“ zeigt sie als voreingestellte Regeln
-// (Haken je Regel, „betrifft N Dateien“), die Kontrolle wendet sie an (✦), abgewählt wirken sie nicht; in allen Ansichten.
+// Prüfregel: Einstellungen → „Regeln“ (allgemeine Regeln auf dem Server) und ihre Wirkung im Ablauf: die Karte „Regeln“ der Konvertieren-Seite zeigt sie als
+// voreingestellte Regeln (Haken je Regel, „betrifft N Dateien“), die Ton-Karte wendet sie an (✦), abgewählt wirken sie nicht und der Vorschlag steht in der Ton-Karte; in allen Ansichten.
 // Voraussetzung: INDIR enthält ep01.mkv … ep06.mkv (ep01–05: Ton ger (DTS)/eng/fre, ep06 nur eng). Aufruf: INDIR=/tmp/season SHOTS=/tmp/shots node tools/ui-check-rules.js
 const L = require('./ui-lib.js');
 const fails = [];
@@ -45,29 +45,27 @@ const putSettings = async mut => { const s = await settings(); mut(s); await fet
     await p.click('#addFiles'); await p.waitForTimeout(300);
     await p.fill('#bPath', L.INDIR); await p.click('#bGo'); await p.waitForTimeout(500);
     await p.click('#bAll'); await p.click('#bAddSel'); await p.waitForTimeout(800);
-    await p.click('#wizNext'); await p.waitForSelector('#cvRules .cvcard'); await p.waitForTimeout(900);
-    ok(await p.locator('#cvRules .sec-rules .trkgrule').count() === 1, name + ': voreingestellte Regel fehlt in Schritt 2');
-    const gtxt = (await p.textContent('#cvRules .sec-rules')).replace(/\s+/g, ' ');
-    ok(/DTS .*E-AC-3/.test(gtxt) && /betrifft 5 Dateien/.test(gtxt), name + ': Regeltext/Zähler: ' + gtxt);
-    ok(await p.locator('#cvRules .sec-rules .trkgrule input').isChecked(), name + ': Haken sollte gesetzt sein');
-    ok(await p.locator('#cvRules .trkhints').count() === 0, name + ': Vorschlag DTS trotz vorhandener Regel');
-    await p.screenshot({path: `${L.SHOTS}/p5c-rules-${name}-2-schritt2.png`, fullPage: true});
     await L.toCheck(p); await p.waitForTimeout(1800);
+    const rules = await L.openCard(p, 'rules');
+    ok(await rules.locator('.trkgrule').count() === 1, name + ': voreingestellte Regel fehlt in der Karte „Regeln“');
+    const gtxt = (await rules.textContent()).replace(/\s+/g, ' ');
+    ok(/DTS .*E-AC-3/.test(gtxt) && /betrifft 5 Dateien/.test(gtxt), name + ': Regeltext/Zähler: ' + gtxt);
+    ok(await rules.locator('.trkgrule input').isChecked(), name + ': Haken sollte gesetzt sein');
+    ok(await p.locator('[data-card=audio] .trkhints').count() === 0, name + ': Vorschlag DTS trotz vorhandener Regel');
+    ok(/1 Regel aktiv/.test(await p.textContent('[data-card=rules] .cvsum')) || await rules.locator('.trkgrule').count() === 1, name + ': Kurzfassung der Karte „Regeln“');
+    await p.screenshot({path: `${L.SHOTS}/p5c-rules-${name}-2-regeln.png`, fullPage: true});
     ok(await row('Ton 1').locator('select.cvact').inputValue() === 'encode', name + ': Ton 1 sollte durch die allgemeine Regel umgewandelt werden');
     ok(/E-AC-3 \(Dolby Digital Plus\) Mono · 256 kbit\/s/.test(await row('Ton 1').textContent()), name + ': Ziel fehlt: ' + await row('Ton 1').textContent());
     ok(await row('Ton 1').locator('.cvai').count() === 1, name + ': ✦ „Automatisch“ fehlt');
     // abwählen (nur dieser Lauf)
-    await p.click('#cvStepper [data-step=rules]'); await p.waitForSelector('#cvRules .trkgrule'); await p.waitForTimeout(500);
-    await p.locator('#cvRules .sec-rules .trkgrule input').uncheck(); await p.waitForTimeout(500);
-    ok(/betrifft 5 Dateien/.test(await p.textContent('#cvRules .sec-rules')) && await p.locator('#cvRules .trkgrule.off').count() === 1, name + ': abgewählte Regel nicht als aus markiert');
-    ok(await p.locator('#cvRules .trkhints').count() === 1, name + ': nach dem Abwählen sollte der Vorschlag wieder erscheinen');
-    await L.toCheck(p); await p.waitForTimeout(1500);
+    await rules.locator('.trkgrule input').uncheck(); await p.waitForTimeout(700);
+    ok(/betrifft 5 Dateien/.test(await p.textContent('[data-card=rules]')) && await p.locator('[data-card=rules] .trkgrule.off').count() === 1, name + ': abgewählte Regel nicht als aus markiert');
+    ok(await p.locator('[data-card=audio] .trkhints').count() === 1, name + ': nach dem Abwählen sollte der Vorschlag in der Ton-Karte wieder erscheinen');
+    ok(/1 Vorschlag/.test(await p.textContent('[data-card=audio] .cvsum')), name + ': Vorschlag in der Kurzfassung der Ton-Karte');
     ok(await row('Ton 1').locator('select.cvact').inputValue() === 'copy', name + ': abgewählte Regel wirkt trotzdem');
     ok((await settings()).trackRules.audio.length === 1, name + ': Abwählen darf die gespeicherte Regel nicht ändern');
     // wieder anwählen
-    await p.click('#cvStepper [data-step=rules]'); await p.waitForSelector('#cvRules .trkgrule'); await p.waitForTimeout(500);
-    await p.locator('#cvRules .sec-rules .trkgrule input').check(); await p.waitForTimeout(500);
-    await L.toCheck(p); await p.waitForTimeout(1500);
+    await p.locator('[data-card=rules] .trkgrule input').check(); await p.waitForTimeout(700);
     ok(await row('Ton 1').locator('select.cvact').inputValue() === 'encode', name + ': wieder angewählt, Regel sollte wirken');
     await p.screenshot({path: `${L.SHOTS}/p5c-rules-${name}-3-kontrolle.png`, fullPage: true});
     // Voreinstellung speichert die Abwahl mit (off) – Schlüssel der Regel

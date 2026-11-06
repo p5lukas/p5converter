@@ -175,7 +175,6 @@ function refreshVideoUI() {
   $('#vAudioHint').classList.toggle('hidden', $('#vAudioMode').value !== 'encode');
   trkRuleHint();
   crfRefresh();
-  if (typeof CV !== 'undefined' && CV.tab === 'tracks' && $('#detailsDlg').open) trkRender();
   renderHwCard();
 }
 function encoderName(backend, codec) {
@@ -209,7 +208,9 @@ function hwFoot(h2) {
 }
 function renderHwCard() {
   const hw = hwResult(), box = $('#hwList');
-  if (!hw.backends.length) { box.innerHTML = '<span class="muted">Erkennung läuft …</span>'; return; }
+  const sum = $('#hwSum');
+  if (!hw.backends.length) { box.innerHTML = '<span class="muted">Erkennung läuft …</span>'; if (sum) sum.textContent = 'Erkennung läuft …'; return; }
+  if (sum) sum.textContent = hw.backends.filter(b => ['h264', 'hevc', 'av1', 'vp9'].some(c => b.codecs && b.codecs[c])).map(b => b.label.replace(/ \(.*\)$/, '')).join(', ') || 'keine nutzbar';
   fill(box, hwRows(hw));
   fill($('#hwGpus'), hwFoot(hw) + ' · ', h('a', {href: '#settings/hardware'}, 'Diagnose'));
 }
@@ -224,7 +225,7 @@ function renderFileList() {
     ${S.world === 'video' && trkCount(f) ? `<button class="small ghost" data-tr="${i}" title="Für diese Datei sind einzelne Spuren geändert. Klicken zum Ansehen.">${trkCount(f)} ${trkCount(f) === 1 ? 'Spur' : 'Spuren'} geändert</button>` : ''}
     <button class="small ghost rm" data-rm="${i}">✕</button></div>`).join('');
   $$('#fileList [data-rm]').forEach(b => b.onclick = () => { list.splice(+b.dataset.rm, 1); renderFiles(); });
-  $$('#fileList [data-tr]').forEach(b => b.onclick = () => { TRK.cur = +b.dataset.tr; TRK.view = 'single'; openSheet('tracks'); });
+  $$('#fileList [data-tr]').forEach(b => b.onclick = () => openSheet('tracks'));
 }
 function renderFiles() {
   renderFileList(); renderStartInfo(); refreshNamePreview();
@@ -368,7 +369,7 @@ async function start() {
   try {
     const r = await api('/api/jobs', req);
     toast(r.ids.length + (r.ids.length === 1 ? ' Auftrag eingereiht.' : ' Aufträge eingereiht.'), 'ok');
-    files.length = 0; if (kind === 'video') { S.vstep = 1; S.rulesSeen = false; S.presetSkip = false; }
+    files.length = 0; if (kind === 'video') S.vstep = 1;
     renderFiles(); saveSettings(); poll(); renderStartTiles(); showStep('start');
   } catch (e) { toast(e.message, 'bad'); }
 }

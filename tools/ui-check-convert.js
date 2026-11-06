@@ -29,13 +29,17 @@ const probe = f => JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-print_fo
     await p.click('#addFiles'); await p.waitForTimeout(300);
     await p.fill('#bPath', L.INDIR); await p.click('#bGo'); await p.waitForTimeout(500);
     await p.click('#bAll'); await p.click('#bAddSel'); await p.waitForTimeout(800);
-    // Schritt 2: Regel-Vorschlag DTS → E-AC-3 (nur für diesen Lauf) anlegen; Schritt 4: Kontrolle
-    await p.click('#wizNext'); await p.waitForSelector('#cvRules .cvcard'); await p.waitForTimeout(500);
-    ok(/DTS/.test(await p.textContent('#cvRules .trkhints')), name + ': Regel-Vorschlag für DTS fehlt in Schritt 2');
-    ok(await p.locator('#cvRules .trkhints button:has-text("Immer anwenden")').count() >= 1, name + ': „Immer anwenden“ fehlt');
-    await p.click('#cvRules button:has-text("Regel: DTS")'); await p.waitForTimeout(600);
-    ok(await p.locator('#cvRules .trkrule').count() === 1, name + ': die Regel steht nicht bei „Eigene Regeln“');
-    await L.toCheck(p); await p.waitForTimeout(2200);
+    // Konvertieren-Seite: Regel-Vorschlag DTS → E-AC-3 (nur für diesen Lauf) in der Ton-Karte anlegen
+    await L.toCheck(p); await p.waitForSelector('[data-card=audio] .trkhints', {timeout: 15000}); await p.waitForTimeout(500);
+    ok(/DTS/.test(await p.textContent('[data-card=audio] .trkhints')), name + ': Regel-Vorschlag für DTS fehlt in der Ton-Karte');
+    ok(await p.locator('[data-card=audio] .trkhints button:has-text("Immer anwenden")').count() >= 1, name + ': „Immer anwenden“ fehlt');
+    ok(/1 Vorschlag/.test(await p.textContent('[data-card=audio] .cvsum')), name + ': Vorschlag in der Kurzfassung der Ton-Karte');
+    await p.click('[data-card=audio] button:has-text("Regel: DTS")'); await p.waitForTimeout(600);
+    ok(await p.locator('[data-card=audio] .trkhints').count() === 0, name + ': der Vorschlag sollte nach dem Anlegen verschwinden');
+    const rc = await L.openCard(p, 'rules');
+    ok(await rc.locator('.trkrule').count() === 1, name + ': die Regel steht nicht bei „Eigene Regeln“ in der Karte „Regeln“');
+    await L.openCard(p, 'subs'); await p.waitForTimeout(500);
+    await p.evaluate(() => { CV.card.rules = false; cvRender(); }); await p.waitForTimeout(600);
 
     // ---- Gruppen nach Rahmendaten ----
     ok(await p.locator('.cvg').count() === 2, name + ': 2 Gruppen erwartet, ' + await p.locator('.cvg').count());
@@ -44,7 +48,7 @@ const probe = f => JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-print_fo
     ok(/noch nicht kontrolliert/.test(gt), name + ': „noch nicht kontrolliert“ fehlt');
     ok(await p.locator('.cvg.todo').count() === 2, name + ': beide Gruppen sollten „todo“ sein');
     ok(/Gruppe 1: Ton: .*Untertitel:/.test(await p.textContent('.cvgline')), name + ': Zeile mit Sprachen der Gruppe fehlt');
-    for (const r of ['Video', 'Container', 'Ton 1', 'Ton 2', 'Ton 3', 'Untertitel 1', 'Untertitel 2', 'Untertitel 3', 'Dateiname']) ok(await row(r).count() === 1, name + ': Zeile „' + r + '“ fehlt');
+    for (const r of ['Video', 'Container', 'Ton 1', 'Ton 2', 'Ton 3', 'Untertitel 1', 'Untertitel 2', 'Untertitel 3']) ok(await row(r).count() === 1, name + ': Zeile „' + r + '“ fehlt');
     ok(await p.locator('.cvgrid .cvk', {hasText: /^Qualität$/i}).count() === 0, name + ': bei „Kopieren“ darf es keine Qualitätszeile geben');
     ok(/Remux/.test(await p.textContent('#startInfo')) && /noch nicht kontrolliert/.test(await p.textContent('#startInfo')), name + ': Startleiste ohne Warnung: ' + await p.textContent('#startInfo'));
     ok(await ov() <= 0, name + ': Überlauf ' + await ov() + 'px');
@@ -57,7 +61,7 @@ const probe = f => JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-print_fo
     ok(/AC-3 \(Dolby Digital\) Mono/.test(await row('Ton 2').textContent()), name + ': Kennung „AC-3 (Dolby Digital)“ links fehlt');
     ok(await row('Ton 1').locator('.cvai .ai').count() === 1 && /Regel/.test(await row('Ton 1').locator('.cvai').textContent()), name + ': ✦ „Automatisch“ mit Regel-Begründung fehlt');
     ok(await row('Ton 2').locator('.cvai').count() === 0, name + ': Ton 2 (unverändert) darf kein ✦ haben – Standardvorschläge leuchten nicht');
-    ok(await p.locator('.cvgrid .cvai').count() === 1, name + ': genau eine automatische Markierung erwartet, ' + await p.locator('.cvgrid .cvai').count());
+    ok(await p.locator('.cvgrid .cvai:not(:has-text("Forced"))').count() === 1, name + ': genau eine automatische Markierung (ohne den Forced-Vorschlag) erwartet, ' + await p.locator('.cvgrid .cvai:not(:has-text("Forced"))').count());
     await p.screenshot({path: `${L.SHOTS}/p5c-cv-${name}-2-regel.png`, fullPage: true});
     await row('Ton 1').locator('.cvai button:has-text("rückgängig")').click(); await p.waitForTimeout(500);
     ok(await row('Ton 1').locator('select.cvact').inputValue() === 'copy' && await row('Ton 1').locator('.cvai').count() === 0, name + ': „rückgängig“ wirkt nicht');
@@ -69,6 +73,7 @@ const probe = f => JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-print_fo
     await row('Ton 2').locator('select.cvact').selectOption('copy'); await p.waitForTimeout(300);
     await row('Ton 3').locator('select.cvact').selectOption('drop'); await p.waitForTimeout(400);
     ok(await p.locator('.cvr.dropped').count() === 1, name + ': entfernte Spur nicht durchgestrichen');
+    await L.openCard(p, 'subs');
     await row('Untertitel 2').locator('.cvflag:has-text("Forced")').click(); await p.waitForTimeout(400);
     ok(await row('Untertitel 2').locator('.cvflag.on:has-text("Forced")').count() === 1, name + ': Forced-Schalter wirkt nicht');
     // Erweitert: Titel ändern
@@ -139,8 +144,11 @@ const probe = f => JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-print_fo
 
     // ---- echter Lauf (nur Desktop): Ergebnis prüfen ----
     if (name === 'desktop') {
-      await L.goStep(p, 'dest'); await p.selectOption('#outMode', 'custom'); await p.fill('#outDir', OUT); await p.selectOption('#exists', 'overwrite');
-      await L.goStep(p, 'files'); accept = true;
+      const nc = await L.openCard(p, 'name');
+      await nc.locator('.pill:has-text("Eigener Ordner")').click(); await p.waitForTimeout(300);
+      await nc.locator('input[aria-label="Zielordner"]').fill(OUT); await nc.locator('input[aria-label="Zielordner"]').press('Enter'); await p.waitForTimeout(400);
+      await nc.locator('.pill:has-text("Überschreiben")').click(); await p.waitForTimeout(300);
+      ok(await p.inputValue('#outDir') === OUT && await p.inputValue('#exists') === 'overwrite', name + ': Ziel und „Überschreiben“ nicht gesetzt'); accept = true;
       await p.click('#start'); await p.waitForTimeout(9000);
       for (const e of ['ep01', 'ep03', 'ep05']) {
         const f = OUT + '/' + e + '.mkv';

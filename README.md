@@ -4,76 +4,67 @@
 
 # p5converter
 
-**Audio und Video konvertieren – mit Hardware-Beschleunigung, Kontrolle nach dem Umwandeln und Web-Oberfläche im Matrix-Look.**
+**Audio und Video umwandeln, mit Hardware-Beschleunigung, Prüfung nach dem Umwandeln und einer Web-Oberfläche im Matrix-Look.**
 
-Ein einzelnes Go-Programm steuert **ffmpeg** an. Läuft als Docker-Container auf **Unraid**, als **Windows-App** (Vorabversion) – und später als Linux-App.
-Ein SoundConverter-Klon mit zusätzlichem Video-Teil, gebaut für ganze Serien-Staffeln und Plex.
+Ein einzelnes Go-Programm steuert **ffmpeg** an. Es läuft als Docker-Container (zum Beispiel auf **Unraid**) und als **Windows-App**.
+Gedacht für ganze Serien-Staffeln, Plex und alle, die ihre Mediathek kleiner machen wollen, ohne etwas zu verlieren.
 
 ![Docker](https://img.shields.io/badge/Docker-ghcr.io%2Fp5lukas%2Fp5converter-00ff5a?logo=docker&logoColor=white&labelColor=0a1a0f)
 ![Unraid](https://img.shields.io/badge/Unraid-Template-00ff5a?labelColor=0a1a0f)
 ![Windows](https://img.shields.io/badge/Windows-Vorabversion-ffcc00?labelColor=0a1a0f)
-![Version](https://img.shields.io/badge/Version-0.3.7-00ff5a?labelColor=0a1a0f)
+![Version](https://img.shields.io/badge/Version-0.5.0-00ff5a?labelColor=0a1a0f)
 ![Lizenz](https://img.shields.io/badge/Lizenz-MIT-00ff5a?labelColor=0a1a0f)
 
-<img src="docs/images/start.png" alt="Startseite mit laufendem Auftrag" width="900">
+<img src="docs/images/start.png" alt="Startseite mit laufendem Auftrag und Video-Voreinstellungen" width="900">
 
-<sub>Alle Dateinamen in den Bildern sind Testdateien.</sub>
+<sub>Alle Dateinamen in den Bildern gehören zu Testdateien.</sub>
 
 </div>
 
-> *English in short:* p5converter is a self-hosted web UI (single Go binary + ffmpeg) to convert audio and video. The home page offers two tiles (video, audio);
-> video runs in four steps (files, rules, how to convert, check & start). It supports Intel Quick Sync, NVIDIA NVENC, AMD AMF and VAAPI, per-track audio rules and
-> per-file subtitle choices for whole seasons (e.g. DTS → E-AC-3, keep only German/English, forced-subtitle detection), quality in four steps (translated per encoder,
-> with the real number under "Erweitert"), a before/after table, a post-conversion check (tracks, length, full decode) before originals are touched, a manageable queue
-> (reorder, hold, pause, survives a restart), a folder scan that shows where converting is likely to pay off, a conversion history, renaming, and a Windows app.
-> Docker image: `ghcr.io/p5lukas/p5converter:latest` (stable) or `:dev`, default port 8787.
+> **In English:** p5converter is a self-hosted web app (one Go binary plus ffmpeg) for converting audio and video. It runs as a Docker image
+> (`ghcr.io/p5lukas/p5converter:latest`, default port 8787) and as a Windows app. Video takes two steps: pick files, then check and start.
+> Hardware encoding works with Intel Quick Sync, NVIDIA NVENC, AMD AMF and VAAPI. You can set per-track rules for whole seasons
+> (for example DTS to E-AC-3, keep only German and English, detect forced subtitles), try your settings on a 30-second test clip,
+> and let the app check every new file before an original is touched. It also has a queue that survives restarts, a folder scan that
+> estimates where converting pays off, a history, batch renaming and presets. The interface is in German.
 
-## Auf einen Blick
-* **Startseite mit zwei Kacheln:** Video (grün) oder Audio (orange); Video läuft in **vier Schritten** (Dateien, Regeln, Wie umwandeln?, Kontrolle & Start), dazu Voreinstellungen und Umbenennen mit Live-Vorschau
-* **Hardware-Encoding** (Quick Sync, NVENC, AMF, VAAPI) mit sichtbarer Bestätigung, ob Schreiben und Lesen wirklich auf der Hardware laufen
-* **Audio & Untertitel für ganze Staffeln:** Gruppen nach Sprachen, Regeln für Tonspuren nach Format, Sprach-Wünsche, Forced-Erkennung
-* **Kontrolle nach dem Konvertieren:** Spuren, Laufzeit, Größe und auf Wunsch ein kompletter Decode-Test, bevor ein Original gelöscht wird
-* **Warteschlange verwalten** (Reihenfolge ändern, anhalten, pausieren; überlebt einen Neustart) und **„Wo lohnt sich das Umwandeln?“** (Schritt 1, eigene Karte mit Erklärung und Knopf „Ordner untersuchen“): zeigt ordnerweise, wo sich das Umwandeln eher lohnt (nur Fakten, keine Schätzung; die Hinweis-Kärtchen lassen sich als Filter an- und abwählen, ein Merker macht den zweiten Durchlauf schnell); laufende Aufträge zeigen einen dicken **Regen-Fortschrittsbalken**, und **„Verwerfen“** in der Fußleiste bricht den Ablauf ab; in den Schritten 2 und 3 zeigt eine **Übersicht der Quelldateien** (Codec, Auflösung, Ton, Untertitel), was man hat, samt Hinweis zur Codec-Wahl; Verlauf und Warteschlange behalten geöffnete Details, und Befehl und Log lassen sich **kopieren**
-* **Verlauf** der letzten 100 Aufträge je Art, Video und Audio in einer Liste (mit CSV-Export), **gewonnener Platz**, Live-Auslastung
-* **Handy und Tablet:** als Web-App auf dem Home-Bildschirm nutzbar
+## Was p5converter kann
 
-<p align="center"><img src="docs/images/konvertieren.png" alt="Kontrolle: Karten Video, Audio, Untertitel, Dateiname" width="820"><br><sub>Kontrolle & Start: die Tabelle „Vorher → Nachher“ in vier Karten (Audio orange), Gruppen, Funkel-Markierung für Automatisches</sub></p>
+* **Zwei Schritte für Video:** erst die Dateien wählen, dann auf einer Seite alles prüfen und starten. Links siehst du, wie die Datei jetzt ist, rechts, was herauskommt. Jede Zeile lässt sich direkt ändern.
+* **Hardware-Encoding** mit Intel Quick Sync, NVIDIA NVENC, AMD AMF und VAAPI. Die Hardware wird mit einem echten Test-Encode erkannt, und bei jedem Auftrag siehst du, was ffmpeg tatsächlich benutzt hat. Fehlt eine passende Grafikeinheit, rechnet die CPU.
+* **Qualität in vier Stufen** (Sehr gut, Gut, Normal, Klein). Das Programm rechnet jede Stufe für den gewählten Encoder in die passende Zahl um und zeigt sie dazu an. Wer es genau will, stellt den Wert mit einem Regler selbst ein.
+* **Probeclip:** 30 Sekunden aus der Mitte mit deinen Einstellungen umwandeln und vergleichen (Größe, Bildähnlichkeit, vergrößerter Ausschnitt), bevor der große Lauf startet.
+* **Ton und Untertitel für ganze Staffeln:** Dateien mit gleichem Aufbau bilden eine Gruppe, eine Entscheidung gilt für alle. Dazu Regeln nach Format (zum Beispiel nur DTS in E-AC-3 umwandeln), Sprach-Wünsche und die Erkennung von Forced-Untertiteln.
+* **Voreinstellungen für Video** als Kacheln auf der Startseite, angelegt mit einem Assistenten, der alle Einstellungen abfragt.
+* **Kontrolle nach dem Umwandeln:** Spuren, Laufzeit, Größe und auf Wunsch ein kompletter Decode-Test, bevor ein Original gelöscht wird. Wird ein neu kodiertes Video nicht kleiner, bleibt das Original erhalten.
+* **Platz sparen:** „Ordner untersuchen“ zeigt ordnerweise, wo sich das Umwandeln lohnt, mit grober Ersparnis-Schätzung. Dabei wird nichts verändert.
+* **Warteschlange** mit Reihenfolge, Anhalten und Pausieren, die einen Neustart übersteht. Dazu ein Verlauf der letzten 100 Aufträge je Art mit CSV-Export und der gewonnene Speicherplatz.
+* **Umbenennen** mit Namensmuster, Suchen und Ersetzen und Live-Vorschau, auch ohne zu konvertieren.
+* **Handy und Tablet:** läuft im Browser und als Web-App auf dem Home-Bildschirm (Hoch- und Querformat).
+
+<p align="center"><img src="docs/images/konvertieren.png" alt="Seite Konvertieren mit den Karten Video, Ton, Untertitel und Name & Ziel" width="820"><br><sub>Die Seite „Konvertieren“: Video, Ton, Untertitel, Regeln, Name & Ziel und Prüfen als aufklappbare Karten</sub></p>
 
 <table>
 <tr>
+<td width="50%"><img src="docs/images/assistent.png" alt="Assistent für neue Voreinstellungen"><br><sub>Der Assistent legt neue Voreinstellungen an</sub></td>
+<td width="50%"><img src="docs/images/probeclip.png" alt="Vergleich im Probeclip"><br><sub>Der Probeclip zeigt vorab, was die Einstellungen bringen</sub></td>
+</tr>
+<tr>
 <td width="50%"><img src="docs/images/verlauf.png" alt="Verlauf und Warteschlange"><br><sub>Warteschlange und Verlauf</sub></td>
-<td width="50%"><img src="docs/images/mobil.png" alt="Mobile Ansicht" width="260"><br><sub>Mobil / iPhone</sub></td>
+<td width="50%"><img src="docs/images/mobil.png" alt="Mobile Ansicht" width="260"><br><sub>Auf dem iPhone</sub></td>
 </tr>
 </table>
 
+## Installation
 
-## App-Icon
-Gleicher Aufbau wie bei **p5assets** (Matrix-Regen, Poster-Rahmen, „p5“); das Abzeichen unten rechts unterscheidet die Apps: bei p5converter **silberne Audio-CD + blaue Blu-ray** (Audio und Video), bei p5assets ein oranger Komet. Dateien: `web/icon*.png`, `web/apple-touch-icon.png` (iPhone/iPad-Web-App), `unraid/icon.png`; Quelle und Erzeugung: `tools/icons/` (`make_icons.py converter <Ordner>`).
-
-## Windows (Vorabversion)
-**Eine Datei:** `p5converter-setup.exe` aus der [neuesten Vorabversion](https://github.com/p5lukas/p5converter/releases) (der laufende Entwicklungsstand liegt in [`dev-latest`](https://github.com/p5lukas/p5converter/releases/tag/dev-latest)) laden und starten. Windows meldet beim ersten Start einmal „Unbekannter Herausgeber“ (die Datei ist nicht mit einem Zertifikat signiert): **Weitere Informationen → Trotzdem ausführen**. Danach durchklicken – fertig. Der Installer richtet sich nur für dein Konto ein (keine Administrator-Abfrage), enthält Programm und ffmpeg und legt ein Startmenü-Symbol an (Desktop-Symbol und Autostart optional).
-* Die Oberfläche öffnet in einem **eigenen Fenster** (Microsoft Edge WebView2, in Windows 11 und aktuellem Windows 10 schon vorhanden; sonst richtet der Installer es ein) und sieht genauso aus wie im Browser.
-* **Hardware wird automatisch erkannt:** Intel Quick Sync, NVIDIA NVENC und AMD AMF (jeweils mit aktuellem Grafiktreiber), sonst rechnet die CPU. Ist ein NVIDIA-Treiber zu alt für NVENC, steht unter Einstellungen → Hardware → „Warum?“ in Klartext, welche Version fehlt – dann den Treiber aktualisieren.
-* Einstellungen und Logs liegen in `%APPDATA%\p5converter`.
-* **Symbol im Infobereich (Tray):** Das Schließen-Kreuz versteckt nur das Fenster, p5converter und laufende Aufträge laufen weiter. Klick auf das Symbol (oder ein zweiter Start) zeigt das Fenster wieder; **Beenden** über das Symbol oder den Knopf „Beenden“ in der Oberfläche.
-* Die Datei hängt an jedem Release (`vX.Y.Z`, gebaut von `main`); in `dev-latest` liegt immer der aktuelle Stand von `dev`. Mit zwei Grafikeinheiten (z. B. Intel + NVIDIA) probiert die Hardware-Erkennung die Adapter durch, damit auch das **Lesen** mit Quick Sync klappt (Diagnose unter Einstellungen → Hardware).
-
-## Kanäle: `:latest` und `:dev`
-| Image | Branch | Wofür |
-|---|---|---|
-| `ghcr.io/p5lukas/p5converter:latest` | `main` | stabil |
-| `ghcr.io/p5lukas/p5converter:dev` | `dev` | Neues zuerst testen (Unraid vorher mit der Vorlage `unraid/p5converter-dev.xml` oder im Container das Image auf `:dev` stellen) |
-| `ghcr.io/p5lukas/p5converter:<Version>` | Tag | feste Version |
-
-Neue Funktionen landen zuerst auf `dev`; nach dem Test geht es nach `main`. Der Build läuft per GitHub Action bei Push auf `dev` bzw. `main`.
-
-## Installation (Unraid)
+### Unraid
 
 1. `unraid/p5converter.xml` nach `/boot/config/plugins/dockerMan/templates-user/` kopieren.
-2. Unraid → **Docker → Container hinzufügen → p5converter** → Pfade prüfen → **Apply**.
-3. Weboberfläche: `http://<unraid-ip>:8787`
+2. In Unraid unter **Docker → Container hinzufügen → p5converter** die Pfade prüfen und mit **Apply** starten.
+3. Die Oberfläche öffnet sich unter `http://<unraid-ip>:8787`.
 
-Oder per Kommandozeile:
+### Docker
+
 ```bash
 docker run -d --name p5converter -p 8787:8787 \
   --device /dev/dri \
@@ -81,100 +72,110 @@ docker run -d --name p5converter -p 8787:8787 \
   -v /mnt/user/appdata/p5converter/output:/output -v /mnt/user/appdata/p5converter/config:/config \
   ghcr.io/p5lukas/p5converter:latest
 ```
-* `--device /dev/dri` reicht Intel Quick Sync / VAAPI durch (im Unraid-Template ein sichtbarer Eintrag „Intel/AMD Grafik“).
-* `/config` speichert Einstellungen, Voreinstellungen, Farben und die Anmeldung dauerhaft (gilt auf allen Geräten). Ohne diesen Pfad funktioniert alles, wird aber nicht gespeichert; die Anmeldung lässt sich dann nicht einschalten.
-* **GPU einrichten (alles optional, ohne GPU rechnet die CPU):**
 
-  | Hardware | Was du tun musst |
-  |---|---|
-  | **Intel Quick Sync** | nichts – `--device /dev/dri` (im Unraid-Template schon eingetragen) |
-  | **AMD** (unter Linux per VAAPI) | nichts – ebenfalls `--device /dev/dri`; AMD AMF gibt es nur unter Windows |
-  | **NVIDIA NVENC** | Nvidia-Driver-Plugin (Unraid) bzw. NVIDIA Container Toolkit installieren und `--runtime=nvidia` bei „Extra Parameters“ ergänzen (Unraid: Erweiterte Ansicht). `NVIDIA_VISIBLE_DEVICES=all` und `NVIDIA_DRIVER_CAPABILITIES=compute,video,utility` sind im Image voreingestellt |
+* `--device /dev/dri` reicht Intel Quick Sync und VAAPI durch. Im Unraid-Template steht der Eintrag „Intel/AMD Grafik“ schon drin.
+* `/config` speichert Einstellungen, Voreinstellungen, den Verlauf und die Anmeldung dauerhaft. Ohne diesen Pfad funktioniert alles, wird aber nicht gespeichert, und die Anmeldung lässt sich nicht einschalten.
+* Die Oberfläche sieht nur eingehängte Ordner. Das Unraid-Template kennt zweimal Audio (`/audio1`, `/audio2`) und viermal Video (`/video1` bis `/video4`), alle optional, dazu den Zielordner `/output`. Per Kommandozeile geht auch ein einzelnes `/media`. Die Liste steht in `P5_ROOTS`. Die Quellordner brauchen Schreibzugriff, wenn die Ergebnisse neben die Quelle sollen oder Quellen gelöscht werden. `PUID` und `PGID` (Standard 99 und 100) bestimmen den Besitzer neuer Dateien.
+* Die Anmeldung ist optional. Du legst sie in der Oberfläche unter **Einstellungen → Anmeldung** an, nicht per Umgebungsvariable. Trotzdem gehört p5converter nicht ins offene Internet.
 
-  `--runtime=nvidia` ist bewusst **nicht** vorausgefüllt: Ohne NVIDIA-Treiber würde Docker den Container gar nicht starten. Ob die GPU erkannt wurde, steht unter Einstellungen → Hardware (dort auch ein Hinweis, falls eine GPU fehlt).
-* Die Oberfläche sieht nur eingehängte Ordner: im Unraid-Template **2× Audio** (`/audio1`, `/audio2`), **4× Video** (`/video1` … `/video4`) – alle optional, leer lassen was nicht gebraucht wird – und den Zielordner `/output`. Per Kommandozeile geht auch ein einzelnes `/media`. Die Liste steht in `P5_ROOTS`; nicht eingehängte Ordner werden ausgeblendet. Die Quell-Ordner brauchen Schreibzugriff, wenn die Ergebnisse neben die Quelle sollen oder Quellen gelöscht werden. `PUID`/`PGID` (Standard 99/100) bestimmen den Besitzer neuer Dateien.
-* Anmeldung (optional): wird in der Oberfläche unter **Einstellungen → Anmeldung** angelegt, nicht per Umgebungsvariable. Trotzdem nicht ins Internet stellen.
+**Grafikkarte einrichten** (alles optional, ohne Grafikkarte rechnet die CPU):
 
-## Funktionen
+| Hardware | Was du tun musst |
+|---|---|
+| Intel Quick Sync | nichts, `--device /dev/dri` reicht (im Unraid-Template schon eingetragen) |
+| AMD unter Linux (VAAPI) | nichts, ebenfalls `--device /dev/dri`. AMD AMF gibt es nur unter Windows |
+| NVIDIA NVENC | Nvidia-Driver-Plugin (Unraid) oder NVIDIA Container Toolkit installieren und `--runtime=nvidia` bei „Extra Parameters“ ergänzen (Unraid: Erweiterte Ansicht). `NVIDIA_VISIBLE_DEVICES=all` und `NVIDIA_DRIVER_CAPABILITIES=compute,video,utility` sind im Image schon gesetzt |
 
-### Design
-Gleiche Designlinie wie [p5assets](https://github.com/p5lukas/p5assets): Matrix-Theme mit **einer** Grundfarbe (p5-Grün, nur Audio orange), Startseite mit Kacheln, aktuellem Auftrag und Live-Auslastung, Version und Neuigkeiten in der Fußzeile (nach einem Update einmal pro Version ein kurzer Hinweis, der Merker liegt auf dem Server); in der iPhone/iPad-Web-App Ziehen zum Aktualisieren.
-Läuft auf Desktop, Handy und iPad (Hoch-/Querformat); auf iPhone/iPad per **Teilen → Zum Home-Bildschirm** als Web-App.
+`--runtime=nvidia` ist absichtlich nicht vorausgefüllt: Ohne NVIDIA-Treiber würde Docker den Container gar nicht starten. Ob die Grafikkarte erkannt wurde, steht unter Einstellungen → Hardware.
 
-### Hilfe für Einsteiger
-Jede Einstellung hat einen kleinen **ⓘ**-Punkt mit einfacher Erklärung und Beispielen (z. B. wann 10 Bit sinnvoll ist).
+Hat dein Unraid-Container noch den Eintrag „Passwort (optional)“ (`P5_PASSWORD`), lösche ihn mit REMOVE. Die Variable wird seit 0.0.3 nicht mehr benutzt.
 
-### Audio (wie SoundConverter)
-MP3, Ogg Vorbis, Opus, AAC/M4A, FLAC, WAV · VBR-Qualität oder konstante Bitrate · Samplerate/Kanäle · Tags und Cover bleiben erhalten · Ordner rekursiv hinzufügen ·
-Zielordner mit Struktur oder Namensmuster (`{artist}/{album}/{track} - {title}`) · „Wenn Datei existiert“: beide behalten und die neue nummerieren (`Film (2).mkv`) / überspringen / überschreiben (mit Warnfarbe) · Quelle optional löschen – nur nach bestandener **Kontrolle der neuen Datei** (lesbar und gleich lang; optional Spuren/Größe, kompletter Decode-Test).
+### Windows (Vorabversion)
 
-### Video
-* Container **MKV** (Standard) oder MP4, „Nur Remux“ (Video kopieren)
-* Codec **H.264, H.265, AV1, VP9**
-* **Auflösung** (max. Höhe, nie hochskaliert), **Qualität in vier Stufen** (Sehr gut, Gut, Normal, Klein; je Encoder in die passende Zahl umgerechnet, mit Anpassung an die Art des Materials: Anime, Korn …; „Erweitert“ zeigt CRF/CQ/ICQ/QP), Geschwindigkeits-Preset, **8/10 Bit** (oder „wie Quelle“)
-* **Audio & Untertitel direkt in der Tabelle, auch für Einsteiger und für ganze Serien:** Standard ist **Passthrough** (nichts ändern). Das Programm macht Vorschläge, jeder lässt sich abwählen. **Drei Ansichten:** **Gruppen** (Dateien mit gleichen Sprachen zusammengefasst, Haken je Sprache gilt für die ganze Gruppe, Vorschau „Was passiert“, abweichende Dateien markiert), **Tabelle** (Dateien × Sprachen mit Haken) und **Einzelne Dateien** (Spurkarten in Klartext mit „Erweitert“: Titel, Sprache, **Forced (erzwungene Untertitel)**, Standard, Format). **Regeln nach Format** (z. B. nur DTS in E-AC-3 umwandeln, Bild-Untertitel entfernen; erste passende Regel gewinnt; **allgemeine Regeln** in den Einstellungen auf dem Server, die im Ablauf als voreingestellte Regeln erscheinen und je Lauf abwählbar sind; eigene Regeln als Voreinstellung speicherbar; mit Regel-Vorschlägen) und **Sprach-Wünsche** in den Einstellungen als Rangliste (Ton/Untertitel behalten, Standard-Ton, Standard-Untertitel z. B. „Deutsch Forced“). Die Wirkung steht vor dem Start in der Zusammenfassung
-* **Forced erkennen:** Ist ein Untertitel viel kleiner als die vollständige Spur derselben Sprache (unter 20 %), schlägt das Programm „Als Forced markieren“ vor (nie ungefragt; mit dem Wunsch „Deutsch (Forced)“ ist er vorausgewählt). Dafür braucht die MKV die Größenangaben, die mkvmerge ablegt
-* **Spuren ohne Sprachangabe:** Das Programm liest nur, was in der Datei steht. Fehlt bei Ton oder Untertitel die Sprache, kann sie ein Werkzeug wie [ULDAS](https://github.com/netplexflix/ULDAS) vorher automatisch ergänzen (erkennt Sprache per Whisper, auch Forced und SDH); p5converter übernimmt dann die erkannten Sprachen. Es wird kein Code daraus verwendet
-* **Datei-Browser:** Suchfeld (filtert den Ordner beim Tippen; „Auch in Unterordnern“ durchsucht alles darunter, Umlaute egal) und eigene **Namen für die Quellordner** (Einstellungen → Allgemein)
-* **Plex:** Sprache wird als dreibuchstabiger Code geschrieben; „Forced“ erkennt Plex nur in **MKV** (bei MP4 kommt eine Warnung) und die Untertitelsprache muss zur Tonspur passen; danach in Plex neu **analysieren**
-* Schriftarten-Anhänge bleiben in MKV erhalten
+Lade `p5converter-setup.exe` aus der [neuesten Vorabversion](https://github.com/p5lukas/p5converter/releases) und starte sie. Der laufende Entwicklungsstand liegt in [`dev-latest`](https://github.com/p5lukas/p5converter/releases/tag/dev-latest). Windows meldet beim ersten Start „Unbekannter Herausgeber“, weil die Datei nicht mit einem Zertifikat signiert ist. Klicke auf **Weitere Informationen → Trotzdem ausführen** und geh den Installer durch.
 
-> **Unraid:** Zeigt dein Container noch „Passwort (optional)“ (`P5_PASSWORD`), mit REMOVE löschen – die Variable wird seit 0.0.3 nicht mehr benutzt; die Anmeldung legst du in den Einstellungen an.
+* Der Installer richtet sich nur für dein Konto ein, braucht keine Administratorrechte und enthält Programm und ffmpeg. Er legt ein Startmenü-Symbol an, Desktop-Symbol und Autostart sind optional.
+* Die Oberfläche öffnet in einem eigenen Fenster (Microsoft Edge WebView2, bei Windows 11 und aktuellem Windows 10 schon da, sonst richtet der Installer es ein) und sieht aus wie im Browser.
+* Intel Quick Sync, NVIDIA NVENC und AMD AMF werden automatisch erkannt, sobald der aktuelle Grafiktreiber installiert ist. Ist ein NVIDIA-Treiber zu alt, steht unter Einstellungen → Hardware → „Warum?“, welche Version fehlt. Bei zwei Grafikeinheiten (zum Beispiel Intel und NVIDIA) probiert die Erkennung die Adapter durch, damit auch das Lesen mit Quick Sync klappt.
+* Das Schließen-Kreuz versteckt nur das Fenster. Laufende Aufträge arbeiten im Infobereich weiter, ein Klick aufs Symbol holt das Fenster zurück. Beenden kannst du über das Symbol oder den Knopf „Beenden“.
+* Einstellungen und Logs liegen in `%APPDATA%\p5converter`.
 
-### Einstellungen, Voreinstellungen, Anmeldung
-* **Zahnrad** oben rechts (am Handy als Liste mit Gruppen): Allgemein, Voreinstellungen, Hardware, Audio & Untertitel, Regeln, Anmeldung, Info
-* **Voreinstellungen** (Audio und Video): Knopf „Als Voreinstellung speichern“ (Diskette) neben „Konvertierung starten“; in den Einstellungen umbenennen, sortieren, duplizieren, löschen, „Vorschlag“ an/aus und „Werte“ zum Bearbeiten
-* **Regeln**: allgemeine Regeln für Tonspuren (Codec → umwandeln/entfernen, Bitrate je Stereo-Paar, E-AC-3 höchstens 640 kbit/s), gespeichert in `/config` für alle Geräte
-* **Anmeldung** wie bei p5assets: im Browser anlegen, „Angemeldet bleiben (30 Tage)“, Spaßmeldung nach falschem Passwort (abschaltbar), Passwort nur als Hash; vergessen: `docker exec -it p5converter p5converter auth reset`, `P5_AUTH_RESET=1` oder `/config/auth.json` löschen
+### Kanäle: `:latest` und `:dev`
 
-### Logs
-* **Terminal-Symbol** in der Kopfzeile: Log-Seite mit Suche, Stufenfilter, Live-Ansicht, Download und „Leeren“; Zähler für neue Warnungen/Fehler. Datei: `/config/logs/p5converter.log` (rotierend). Passwörter, Cookies und Tokens werden nie geschrieben.
+| Image | Branch | Wofür |
+|---|---|---|
+| `ghcr.io/p5lukas/p5converter:latest` | `main` | stabil |
+| `ghcr.io/p5lukas/p5converter:dev` | `dev` | Neues zuerst testen (in Unraid mit der Vorlage `unraid/p5converter-dev.xml` oder indem du im Container das Image auf `:dev` stellst) |
+| `ghcr.io/p5lukas/p5converter:<Version>` | Tag | feste Version |
 
-### Konvertieren in einer Ansicht
-* **Kopfzeile:** „Konvertieren“, „Umbenennen“ und „Verlauf“ (mit Zähler für laufende und wartende Aufträge) sind in jeder Ansicht erreichbar
-* **Startseite:** die Kacheln **Video** und **Audio** („Was möchtest du umwandeln?“), der **aktuelle Auftrag** („Datei 4 von 13“ mit Fortschritt, Geschwindigkeit und Hardware mit grünen Haken) oder „Gerade nichts los“, daneben die Live-Auslastung; oben die Kacheln **Video** und **Audio**; darunter gleich große Kacheln **Gewonnener Platz** (Video und Audio getrennt gezählt, mit „Zurücksetzen“) und **Hardware**.
-* **Video in vier Schritten:** **1 Dateien** (zuerst der Quellordner, die Suche geht immer auch in Unterordner; wer eine Voreinstellung wählt, springt direkt zur Kontrolle), **2 Regeln** (voreingestellte Regeln mit Haken und „betrifft N Dateien“, Vorschläge, eigene Regeln), **3 Wie umwandeln?** (drei Kacheln: Hardware, Speichern, Danach prüfen, mit Satz als Zusammenfassung) und **4 Kontrolle & Start**: die Tabelle **„Vorher → Nachher“** in vier Karten (**Video**, **Audio** in Orange, **Untertitel**, **Dateiname**), links die Quelle, rechts das Ergebnis, jede Zeile direkt änderbar; Spuren heißen „E-AC-3 (Dolby Digital Plus) 5.1 · 640 kbit/s“, das Ziel einer umzuwandelnden Spur ist anklickbar. Dateien mit gleichem Aufbau sind eine **Gruppe**; abweichende Gruppen müssen kontrolliert werden, danach übernimmt das Programm deine Entscheidungen bei gleichen Spuren. Das **Funkel-Zeichen** steht nur bei Automatischem – mit Begründung und „rückgängig“. Info-Punkte (i) erklären jeden Bereich. Unten die Startleiste (Zusammenfassung, **Details**, „Als Voreinstellung speichern“, „Verwerfen“, Start). **Audio** ist eine einzige Ansicht mit Dateien, Satz und Tabelle. Danach zurück zur Startseite mit der laufenden Warteschlange
-* **Qualität in vier festen Stufen** (Sehr gut / Gut / Normal / Klein, je Encoder und Codec in die passende Zahl umgerechnet, Regler unter „Erweitert“); wird ein neu kodiertes Video **nicht kleiner** als die Quelle, schlägt die Kontrolle an und das Original bleibt erhalten; bei schon kleiner Quelle steht vorher ein Hinweis
+Neues landet zuerst auf `dev` und geht nach dem Test nach `main`. Der Build läuft als GitHub Action bei jedem Push auf `dev` und `main`. Für Windows hängt die Datei an jedem Release, den aktuellen `dev`-Stand findest du in `dev-latest`.
 
-### Verlauf
-* **Kopfzeile → Verlauf:** oben die Warteschlange (laufende und wartende Aufträge von Video und Audio mit Abzeichen, „Parallel“ je Art, „Alle abbrechen“), darunter die letzten **100** beendeten Aufträge je Art (Video und Audio in einer Liste, gespeichert in `/config`, bleibt nach „Fertige entfernen“ und Neustart): Ergebnis, Größe vorher/nachher, Dauer, Prüfergebnis, bei Fehlern ffmpeg-Befehl und Log · Suche, Filter nach Ergebnis und Zeitraum · **CSV-Export** · „Verlauf leeren“
+## So benutzt du es
 
-### Warteschlange (auf der Seite „Verlauf“)
-* **Video und Audio laufen in getrennten Warteschlangen** mit eigener Anzahl paralleler Aufträge (eine gemeinsame Liste in der Anzeige); Farben: grün = geklappt, gelb = Hinweis/Ausweichweg, rot = Fehler; „Schreiben“/„Lesen“ mit Haken, wenn ffmpeg die Hardware bestätigt hat
-* **Abbrechen räumt auf**: unfertige Datei und vom Auftrag neu angelegte leere Ordner werden gelöscht; Reste eines Absturzes beim nächsten Start; die Quelldatei bleibt unberührt
-* **Auslastung** von CPU und Grafik/Videoeinheit live (auch im Leerlauf)
+**Startseite.** Oben stehen deine Video-Voreinstellungen als Kacheln, darunter die großen Kacheln **Video** (grün) und **Audio** (orange). Darunter siehst du den aktuellen Auftrag („Datei 4 von 13“ mit Fortschritt) oder „Gerade nichts los“, die Live-Auslastung, den gewonnenen Platz und die erkannte Hardware. In der Kopfzeile sitzen Umbenennen, Verlauf, Logs und Einstellungen.
 
-### Umbenennen
-* **Namensmuster** mit Variablen (`{title}`, `{year}`, `{res}`, `{codec}`, `{bit}`, `{container}`, `{date}`, `{filename}`; Audio: `{artist}`, `{album}`, `{track}` …) und **Suchen & Ersetzen** (mehrere Regeln, einfacher Text, Groß-/Kleinschreibung egal) im Bereich „Ziel“, mit Live-Vorschau; beides lässt sich in Voreinstellungen speichern
-* **Seite „Umbenennen“** (Kopfzeile): Dateien ohne Konvertierung umbenennen, mit Vorschau; es wird nie überschrieben oder verschoben
+**Video in zwei Schritten.**
+1. *Dateien:* Wähle Dateien oder ganze Ordner. Die Suche im Datei-Browser durchsucht immer auch die Unterordner. Wer eine Voreinstellung wählt, springt direkt zu Schritt 2. Mit „Ordner untersuchen“ findest du heraus, wo sich das Umwandeln lohnt.
+2. *Konvertieren:* Auf aufklappbaren Karten stehen **Video** (Codec, Container, Qualität, Geschwindigkeit, Encoder, Probeclip), **Ton**, **Untertitel**, **Regeln**, **Name & Ziel** und **Prüfen**. Unten sind Zusammenfassung, „Als Voreinstellung speichern“, „Verwerfen“ und Start. „Wie Quelle“ zeigt immer an, was die Quelle hat. Ein Funkel-Zeichen markiert, was das Programm selbst angepasst hat, mit Begründung und „rückgängig“.
 
-### Hardware-Encoding
-* **Erkennung per echtem Test-Encode** (Quick Sync, NVENC, VAAPI, AMF – je Codec und 8/10 Bit), nicht nur „Encoder im ffmpeg vorhanden“
-* „Automatisch“ oder festes Backend; ein nicht funktionierendes Backend wird **abgelehnt, nicht still durch die CPU ersetzt**
-* **Nachweis der Nutzung:** pro Auftrag der von ffmpeg gemeldete Encoder („Schreiben: Quick Sync · hevc_qsv ✓“, dazu „Lesen: Hardware/CPU“), kompletter Befehl und Log; live CPU- und GPU-Auslastung (NVIDIA: `nvidia-smi` mit Encode/Decode-Engine · Intel: Status „Quick Sync: Leerlauf/aktiv“ aus sysfs-RC6 · AMD: `gpu_busy_percent`)
-* Hardware-Decoding optional (bei Quick Sync, VAAPI und NVIDIA mit durchgängiger Hardware-Kette, daher „Lesen: … ✓“ nachweisbar); bei Fehlern probiert das Programm automatisch weitere Wege, zuletzt die CPU zum Lesen – ohne Fehlermeldung
-* **Quick Sync auch auf älteren Intel-Chips** (Gen 8–11, z. B. i9-9900): das Image enthält die Media-SDK-Runtime *und* oneVPL (Gen 12+); die Erkennung probiert mehrere Startvarianten
-* **Diagnose** unter Einstellungen → Hardware (Ergebnis jedes Tests, `vainfo`, GPUs) mit „Diagnose kopieren“
+**Audio** ist eine einzige Ansicht: MP3, Ogg Vorbis, Opus, AAC/M4A, FLAC und WAV, VBR-Qualität oder feste Bitrate, Samplerate und Kanäle. Tags und Cover bleiben erhalten, Ordner lassen sich rekursiv hinzufügen. Voreinstellungen gibt es nur für Video.
 
-> Die Qualitätszahl (CRF bei der CPU, CQ bei NVIDIA, ICQ bei Quick Sync, QP bei VAAPI/AMD) ist zwischen den Encodern nicht vergleichbar; deshalb rechnet das Programm die vier Stufen je Encoder um. Die Stufen sind Startwerte und noch **nicht auf echter Hardware gemessen** – bitte Größe und Bild vergleichen und die Zahl unter „Erweitert“ nachstellen.
+**Name und Ziel.** Das Ergebnis kommt neben die Quelle oder in einen eigenen Ordner, mit Ordnerstruktur ab dem Quellordner oder alles in einen Ordner. Das Namensmuster kennt Variablen wie `{title}`, `{year}`, `{res}`, `{codec}` und `{filename}` (bei Audio `{artist}`, `{album}`, `{track}`). Darunter stehen alle Dateien mit altem und neuem Namen. Existiert die Zieldatei schon, kannst du beide behalten (die neue wird nummeriert), überspringen oder überschreiben.
+
+**Ton und Untertitel.** Standard ist, nichts zu ändern. Das Programm macht Vorschläge, jeder lässt sich abwählen:
+* *Regeln nach Format*, zum Beispiel nur DTS in E-AC-3 umwandeln. Die erste passende Regel gewinnt. Allgemeine Regeln legst du einmal unter Einstellungen → Regeln an, im Ablauf lassen sie sich pro Lauf abwählen.
+* *Sprach-Wünsche* unter Einstellungen → Audio & Untertitel: welche Sprachen bleiben und welche Spur Standard ist, zum Beispiel „Deutsch Forced“.
+* *Forced erkennen:* Ist ein Untertitel viel kleiner als die vollständige Spur derselben Sprache (unter 20 %) oder heißt er „Forced“, „Narrative“ und ähnlich, schlägt das Programm „Als Forced markieren“ vor. Mit dem Wunsch „Deutsch (Forced)“ ist er schon gewählt. Die Größenangaben stehen in MKV-Dateien, die mkvmerge erzeugt hat.
+* *Spuren ohne Sprachangabe:* Das Programm liest nur, was in der Datei steht. Ein Werkzeug wie [ULDAS](https://github.com/netplexflix/ULDAS) kann fehlende Sprachen vorher ergänzen (Spracherkennung per Whisper). Aus diesem Projekt wird kein Code verwendet.
+* *Plex:* Die Sprache wird als Code aus drei Buchstaben geschrieben. Forced erkennt Plex nur in MKV, und die Untertitelsprache muss zur Tonspur passen. Danach in Plex neu analysieren. Schriftarten-Anhänge bleiben in MKV erhalten.
+
+**Voreinstellungen.** „+ Neue Voreinstellung“ auf der Startseite startet den Assistenten. Er fragt Format, Container, Qualität, Geschwindigkeit, Encoder, Auflösung, Bit-Tiefe, Ton und Untertitel ab. Unter Einstellungen → Voreinstellungen kannst du sie umbenennen, sortieren, duplizieren, löschen, als Kachel ein- oder ausblenden und mit „Bearbeiten“ alle Werte auf einer Seite ändern.
+
+**Warteschlange und Verlauf.** Video und Audio laufen in getrennten Warteschlangen mit eigener Zahl paralleler Aufträge. Grün heißt geklappt, Gelb ein Hinweis oder Ausweichweg, Rot ein Fehler. Abbrechen räumt auf: Die unfertige Datei und neu angelegte leere Ordner werden gelöscht, die Quelle bleibt unberührt. Im Verlauf stehen Ergebnis, Größe vorher und nachher, Dauer und Prüfergebnis, bei Fehlern der ffmpeg-Befehl und das Log zum Kopieren.
+
+**Hilfe.** Hinter fast jeder Einstellung steckt ein kleiner **i**-Punkt mit einer Erklärung in einfachen Worten.
+
+## Hardware-Encoding im Detail
+
+* Die Erkennung probiert für jeden Encoder, Codec und jede Bit-Tiefe einen echten Test-Encode, statt nur nachzusehen, ob ffmpeg den Encoder kennt.
+* „Automatisch“ nimmt die schnellste Hardware, die wirklich funktioniert. Ein festgelegter Encoder, der nicht funktioniert, wird abgelehnt und nicht heimlich durch die CPU ersetzt.
+* Pro Auftrag steht der von ffmpeg gemeldete Encoder („Schreiben: Quick Sync · hevc_qsv ✓“) und ob das Lesen auf der Hardware oder der CPU lief. Dazu der komplette Befehl und das Log. Die Auslastung kommt von `nvidia-smi` (NVIDIA), aus sysfs (Intel) und von `gpu_busy_percent` (AMD).
+* Hardware-Decoding ist optional. Klappt es bei einer Datei nicht, probiert das Programm automatisch weitere Wege, zuletzt die CPU zum Lesen.
+* Quick Sync läuft auch auf älteren Intel-Chips (Generation 8 bis 11, zum Beispiel i9-9900). Das Image enthält dafür die Media-SDK-Runtime und oneVPL für Generation 12 und neuer.
+* Unter Einstellungen → Hardware stehen Diagnose, `vainfo` und die erkannten Grafikeinheiten, mit „Diagnose kopieren“ für Fehlermeldungen.
+
+Die Qualitätszahl heißt bei der CPU CRF, bei NVIDIA CQ, bei Quick Sync ICQ und bei VAAPI und AMD QP. Die Zahlen sind zwischen den Encodern nicht vergleichbar, deshalb rechnet das Programm die vier Stufen für jeden Encoder um. Die Stufen sind Startwerte und noch nicht auf echter Hardware gemessen. Vergleiche Größe und Bild, am einfachsten mit dem Probeclip, und stell den Wert mit dem Regler nach.
+
+## Logs, Anmeldung, Sicherheit
+
+* **Logs:** Das Terminal-Symbol in der Kopfzeile öffnet die Log-Seite mit Suche, Stufenfilter, Live-Ansicht und Download. Die Datei liegt in `/config/logs/p5converter.log` und rotiert. Passwörter, Cookies und Tokens werden nie geschrieben.
+* **Anmeldung:** Benutzername und Passwort legst du im Browser an. Das Passwort wird nur als Hash gespeichert, „Angemeldet bleiben“ gilt 30 Tage. Hast du es vergessen: `docker exec -it p5converter p5converter auth reset`, die Variable `P5_AUTH_RESET=1` oder das Löschen von `/config/auth.json`.
+* **Sicherheit:** Schreibende API-Aufrufe verlangen JSON und dieselbe Herkunft (Schutz vor fremden Webseiten), Dateizugriff gibt es nur innerhalb von `P5_ROOTS`, und nach Fehlversuchen bremst die Anmeldung.
 
 ## Qualitätssicherung
-Die CI führt Unit- und Integrationstests mit echtem ffmpeg aus (alle Software-Encoder, Audioformate, Spuren/Untertitel, Parallel-Kollisionen, Abbruch, Sicherheitsprüfungen) und startet das gebaute Docker-Image zu einem **Smoke-Test mit echten Konvertierungen**, bevor es veröffentlicht wird.
-**GPU-Pfade (QSV/NVENC/VAAPI) sind implementiert, aber noch nicht auf echter Hardware geprüft** – bitte erste Läufe über „Details“ am Auftrag kontrollieren und Probleme melden.
 
-## Sicherheit
-Optionale Anmeldung (Hash des Passworts, Sitzungs-Cookie, Bremse bei Fehlversuchen). Schreibende API-Aufrufe verlangen JSON und dieselbe Herkunft (Schutz vor fremden Webseiten); Dateizugriff nur innerhalb von `P5_ROOTS`.
+Die CI führt Unit- und Integrationstests mit echtem ffmpeg aus (alle Software-Encoder, Audioformate, Spuren und Untertitel, Parallelität, Abbruch, Sicherheitsprüfungen). Danach startet sie das gebaute Docker-Image zu einem Smoke-Test mit echten Konvertierungen, bevor es veröffentlicht wird. Unter Windows laufen ein Server-Test, ein Test der Programmoberfläche und ein Test des Installers.
+
+**Noch nicht auf echter Hardware geprüft** sind die GPU-Pfade (Quick Sync, NVENC, VAAPI, AMF) und der Probeclip mit Hardware-Encoder. Schau bei den ersten Läufen in die Details des Auftrags, und melde Probleme gern als [Issue](https://github.com/p5lukas/p5converter/issues).
 
 ## Entwicklung
+
 ```bash
-sh tools/precheck.sh          # Vorprüfung vor jedem Push (gofmt, vet, Windows-Build, JS-Syntax, Versionsstellen, Tests)
-go test ./...                 # benötigt ffmpeg im PATH
+sh tools/precheck.sh          # Vorprüfung vor jedem Push (gofmt, vet, Windows-Build, JS-Syntax, Tests)
+go test ./...                 # braucht ffmpeg im PATH
 go build -o p5converter . && P5_NO_BROWSER=1 ./p5converter   # http://127.0.0.1:8787
 docker build -f docker/Dockerfile -t p5converter .
 ```
+
 Umgebungsvariablen: `P5_LISTEN`, `P5_ROOTS`, `P5_JOBS`, `P5_CONFIG`, `P5_AUTH_RESET`, `P5_FFMPEG_DIR`, `P5_NO_BROWSER`, `PUID`, `PGID`.
+Die Änderungen jeder Version stehen in der [CHANGELOG.md](CHANGELOG.md). Das App-Icon (Quelle und Erzeugung in `tools/icons/`) hat denselben Aufbau wie bei [p5assets](https://github.com/p5lukas/p5assets): Matrix-Regen, Poster-Rahmen, „p5“. Das Abzeichen unten rechts (silberne Audio-CD und blaue Blu-ray) unterscheidet die beiden Apps.
 
 ## Roadmap
-1. Unraid/Docker stabilisieren, Design verfeinern
+
+1. Unraid und Docker weiter stabilisieren und verfeinern
 2. Windows-App mit eigener Oberfläche
 3. Linux-Desktop-App (Fedora KDE) mit eigener Oberfläche
+
+## Lizenz
+
+[MIT](LICENSE). ffmpeg wird als eigenes Programm mitgeliefert und steht unter seiner eigenen Lizenz (siehe `windows/ffmpeg-LICENSE.txt`).

@@ -1,5 +1,83 @@
 [
   {
+    "id": "v050-review-1",
+    "version": "0.5.0",
+    "title": "Version 0.5.0: alles durchgesehen",
+    "text": "Texte, Hilfen hinter den i-Punkten, Aussehen und Dokumentation wurden einmal komplett durchgesehen. Neu ist unter anderem die kompaktere Startseite am Handy; beim Platz gewonnen steht jetzt verständlich „… gewonnen“ oder „… Mehrbedarf“. Die ganze Liste steht in der CHANGELOG."
+  },
+  {
+    "id": "scan-result-fix-1",
+    "version": "0.4.4",
+    "title": "Ordner untersuchen zeigt wieder das Ergebnis",
+    "text": "Nach „Ordner untersuchen“ erschien kein Ergebnis, im Log stand „fmtSizeLib is not defined“. Das ist behoben: Die Summe „≈ … GB ließen sich sparen“ und die Ordnerliste werden wieder angezeigt."
+  },
+  {
+    "id": "quality-value-1",
+    "version": "0.4.3",
+    "title": "Qualität: Wert hinter der Stufe",
+    "text": "An jeder Qualitätsstufe (Sehr gut … Klein) steht jetzt die Zahl dahinter, zum Beispiel „CRF 20“. Sie hängt von Encoder und Codec ab. Das gilt auf der Konvertieren-Seite, im Assistenten und im Bearbeiten-Fenster."
+  },
+  {
+    "id": "quality-slider-1",
+    "version": "0.4.2",
+    "title": "Qualität selbst einstellen",
+    "text": "Unter den Stufen (Sehr gut … Klein) steht jetzt immer ein Schieberegler für den eigenen Wert (CRF/CQ); er ist nicht mehr hinter „Erweitert“ versteckt. Auch im Assistenten und beim Bearbeiten einer Voreinstellung gibt es „Eigener Wert“ mit Regler. Der Wert bleibt in der Voreinstellung erhalten."
+  },
+  {
+    "id": "preset-edit-1",
+    "version": "0.4.1",
+    "title": "Voreinstellung bearbeiten – ohne Dateien",
+    "text": "Einstellungen → Voreinstellungen → „Bearbeiten“ öffnet jetzt alle Einstellungen auf einer Seite als Auswahllisten. Du musst keine Dateien mehr wählen."
+  },
+  {
+    "id": "wizard-all-1",
+    "version": "0.4.1",
+    "title": "Assistent fragt alles",
+    "text": "Der Assistent „Neue Voreinstellung“ fragt jetzt alle Einstellungen aus Video, Ton und Untertitel ab: Format, Container, Qualität, Geschwindigkeit, Encoder, Auflösung, Bit-Tiefe, Ton umwandeln (Format, Bitrate), Untertitel und Sprach-Regeln."
+  },
+  {
+    "id": "namelist-1",
+    "version": "0.4.1",
+    "title": "Dateiliste unter den Namensfeldern",
+    "text": "In „Name & Ziel“ stehen die Dateien jetzt immer direkt unter den Namensfeldern (alt → neu), auch bevor etwas umbenannt wird. So siehst du, was du ändern kannst."
+  },
+  {
+    "id": "ui-simple-1",
+    "version": "0.4.0",
+    "title": "Einfacher: zwei Schritte, alles in Karten",
+    "text": "Video hat nur noch zwei Schritte: Dateien wählen, dann „Konvertieren“. Dort stehen Video, Ton, Untertitel, Regeln, Name & Ziel und Prüfen als kompakte Karten, die sich an Ort und Stelle aufklappen. Das Fenster „Details“ gibt es nicht mehr. Bei „Wie Quelle“ steht jetzt, was die Quelle hat."
+  },
+  {
+    "id": "speed-visible-1",
+    "version": "0.4.0",
+    "title": "Geschwindigkeit sichtbar",
+    "text": "Qualität und Geschwindigkeit (Schnell bis Langsam) stehen nebeneinander in der Video-Karte; Encoder (CPU, NVIDIA, Intel …) ebenfalls. Erkannte Hardware bleibt voll nutzbar."
+  },
+  {
+    "id": "presets-wizard-1",
+    "version": "0.4.0",
+    "title": "Voreinstellungen nur für Video, mit Assistent",
+    "text": "Voreinstellungen erscheinen als Kacheln auf der Startseite und gelten nur für Video (Audio ist immer individuell). „+ Neue Voreinstellung“ startet einen kurzen Assistenten mit fünf Fragen."
+  },
+  {
+    "id": "clip-1",
+    "version": "0.4.0",
+    "title": "Probeclip",
+    "text": "30 Sekunden aus der Mitte mit den gewählten Einstellungen umwandeln und vergleichen: Größe, Ähnlichkeit (SSIM) und ein Bildausschnitt. So siehst du vor dem großen Lauf, was Qualität und Geschwindigkeit bringen."
+  },
+  {
+    "id": "lib-save-1",
+    "version": "0.4.0",
+    "title": "Platz sparen mit Schätzung",
+    "text": "„Ordner untersuchen“ zeigt jetzt eine grobe Ersparnis-Schätzung („≈“) je Ordner. Es ist eine Schätzung, nichts wird verändert."
+  },
+  {
+    "id": "forced-fix-1",
+    "version": "0.4.0",
+    "title": "Forced-Untertitel besser erkannt",
+    "text": "Spuren mit Titel wie „[ForcedNarrative]“ oder „Forced“ werden jetzt als Forced erkannt und gelten als Standard-Untertitel, auch wenn die Datei kein Forced-Flag hat."
+  },
+  {
     "id": "win-qsv-decode-1",
     "version": "0.3.7",
     "title": "Windows: Quick Sync auch beim Lesen",
@@ -62,8 +140,8 @@
   {
     "id": "library-filter-1",
     "version": "0.3.4",
-    "title": "Ordner prüfen: Filter und Merker",
-    "text": "Die Hinweise über der Liste sind Kärtchen, die du einzeln an- und abwählen kannst. Und ein zweiter Durchlauf desselben Ordners ist viel schneller: Unveränderte Dateien kommen aus einem Merker."
+    "title": "Ordner prüfen: Filter und Zwischenspeicher",
+    "text": "Die Hinweise über der Liste sind Kärtchen, die du einzeln an- und abwählen kannst. Und ein zweiter Durchlauf desselben Ordners ist viel schneller: Unveränderte Dateien kommen aus einem Zwischenspeicher."
   },
   {
     "id": "queue-manage-1",

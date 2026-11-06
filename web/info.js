@@ -76,16 +76,16 @@ const INFO = {
     <p class="ex">Tipp: Ganze Bibliothek schnell verkleinern → Hardware. Lieblingsfilm in bester Qualität archivieren → CPU.</p>`},
   vResolved: {t: 'Wird verwendet', b: `<p>Zeigt den Encoder, den das Programm mit deinen Einstellungen einsetzt, z. B. <code>hevc_qsv</code> mit dem Schild „Intel Quick Sync“ oder <code>libx265</code> mit „CPU“. Bei „Automatisch“ gilt der bevorzugte Encoder aus Einstellungen → Hardware, sonst der schnellste verfügbare.</p>
     <p>Beim laufenden Auftrag zeigt die Warteschlange zwei getrennte Angaben: <b>Schreiben</b> (Encoder, z. B. „Quick Sync · hevc_qsv ✓“ – das Häkchen heißt: ffmpeg hat die Nutzung bestätigt) und <b>Lesen</b> (Decoder: Hardware oder CPU).</p>`},
-  vCrf: {t: 'Qualität (CRF)', b: `<p>Der wichtigste Regler: bestimmt Bildqualität und Dateigröße. <b>Kleinerer Wert = bessere Qualität, größere Datei.</b></p>
+  vCrf: {t: 'Qualität (CRF)', b: `<p>Der wichtigste Wert: Er bestimmt Bildqualität und Dateigröße. <b>Kleinerer Wert = bessere Qualität, größere Datei.</b> Meist reichen die vier Stufen; den Wert selbst stellst du mit dem Regler darunter ein.</p>
     <ul><li>H.264: 18 (sehr hoch) – <b>21–23 (gut)</b> – 28 (sichtbar schlechter)</li>
     <li>H.265: 20 – <b>23–26</b> – 30</li>
     <li>AV1: 24 – <b>28–32</b> – 38</li></ul>
     <p><b>Faustregel:</b> alle ca. +6 halbiert etwa die Dateigröße.</p>
     <p>Bei Grafikchips ist der Wert ein ähnlicher „Qualitätswert“, aber nicht 1:1 vergleichbar (ca. 20–28 üblich).</p>
-    <p class="ex">Unsicher? Teste mit einer kurzen Datei und schau dir das Ergebnis an. Die Voreinstellungen oben („Klein“, „Archiv“ …) setzen sinnvolle Werte.</p>`},
+    <p class="ex">Unsicher? Probier den Probeclip aus (30 Sekunden aus der Mitte) und schau dir das Ergebnis an.</p>`},
   vPreset: {t: 'Geschwindigkeit', b: `<p>Wie viel Mühe sich der Encoder gibt.</p>
-    <ul><li><b>Langsam:</b> kleinere Datei bei <i>gleicher</i> Qualität, dauert länger.</li><li><b>Mittel:</b> guter Kompromiss.</li><li><b>Sehr schnell:</b> schnell fertig, Datei etwas größer.</li></ul>
-    <p>Die Qualität (Aussehen) bestimmt <b>nur der CRF-Regler</b>, nicht diese Einstellung. Bei Hardware-Encodern ist der Unterschied klein.</p>`},
+    <ul><li><b>Langsam:</b> kleinere Datei bei <i>gleicher</i> Qualität, dauert länger.</li><li><b>Mittel:</b> guter Kompromiss.</li><li><b>Schnell:</b> zügig fertig, Datei etwas größer.</li><li><b>Sehr schnell:</b> am schnellsten, Datei am größten.</li></ul>
+    <p>Wie das Bild aussieht, bestimmt <b>nur die Qualität</b>, nicht diese Einstellung. Bei Hardware-Encodern ist der Unterschied klein.</p>`},
   vDepth: {t: 'Bit-Tiefe (8 / 10 Bit)', b: `<p>Wie fein Farbverläufe gespeichert werden: 8 Bit = 256 Stufen pro Farbe, 10 Bit = 1024 Stufen. Fast alle Filme/DVDs/Blu-rays sind 8 Bit; 4K-Blu-rays und HDR-Material sind 10 Bit.</p>
     <ul><li><b>Wie Quelle (empfohlen):</b> 8-Bit-Film bleibt 8 Bit, 10-Bit/HDR bleibt 10 Bit.</li>
     <li><b>8-Bit-Datei → 10 Bit umwandeln?</b> Geht, es entstehen aber <b>keine neuen Farben</b>. Trotzdem sinnvoll bei H.265/AV1: Der Encoder rechnet genauer, es gibt weniger „Streifen“ in Himmel/Nebel/dunklen Szenen und die Datei wird oft etwas kleiner. Gut fürs Archiv. Bei H.264 bringt es kaum etwas.</li>
@@ -107,32 +107,17 @@ const INFO = {
   vSubMode: {t: 'Untertitel', b: `<ul><li><b>Passthrough:</b> alle Untertitel werden übernommen (in MKV ohne Verlust).</li><li><b>Alle entfernen:</b> keine Untertitel in der neuen Datei.</li></ul>
     <p>Einzelne Untertitel änderst du in den Ansichten darunter. Welche Sprachen bleiben, legst du in Einstellungen → Audio &amp; Untertitel fest.</p>
     <p class="ex">Hinweis: In MP4 gehen Bild-Untertitel (Blu-ray/PGS, DVD) nicht – nimm dafür MKV.</p>`},
-  trkRules: {t: 'Regeln nach Format', b: `<p>Damit wandelst du nur bestimmte Spuren um oder entfernst sie, statt alle Spuren gleich zu behandeln. Die Regeln laufen <b>von oben nach unten</b>, die <b>erste passende</b> gewinnt. Deine eigenen Änderungen an einer Spur gehen immer vor.</p>
-    <p class="ex">Beispiel: „DTS → umwandeln in AC-3 192 kbit/s je Stereo-Paar“. Alle anderen Tonspuren bleiben unverändert (oder folgen „Alle übrigen Tonspuren“). Mit „Surround“ oder „Stereo“ grenzt du nach Kanälen ein.</p>
-    <p>Für Untertitel gibt es keine Regeln: Du entscheidest sie je Datei oder Gruppe in der Kontrolle (Schritt 4), die Sprachen legst du unter „Audio &amp; Untertitel“ fest. Bild-Untertitel (PGS, VobSub, DVB) sind groß und nicht überall abspielbar, deshalb steht das dort als Hinweis, entfernt wird nichts von selbst.</p>
-    <p>Die Regeln lassen sich als Voreinstellung speichern (Diskette im Ablauf). Das Programm schlägt Regeln vor, wenn es passende Spuren in deinen Dateien findet (z. B. DTS).</p>`},
-  trkViews: {t: 'Gruppen, Tabelle, Einzelne Dateien', b: `<ul><li><b>Gruppen:</b> Dateien mit denselben Sprachen sind zusammengefasst (z. B. eine ganze Staffel). Ein Haken bei einer Sprache gilt für die ganze Gruppe. Abweichende Dateien stehen in eigenen, markierten Gruppen. Jede Gruppe zeigt, was passieren wird.</li>
-    <li><b>Tabelle:</b> Alle Dateien als Zeilen, alle Sprachen als Spalten, mit Häkchen. Der Haken in der Spaltenüberschrift gilt für alle Dateien.</li>
-    <li><b>Einzelne Dateien:</b> jede Spur einer Datei als Karte mit allen Einstellungen (Titel, Sprache, Forced, Standard, Format).</li></ul>`},
   trkPrefs: {t: 'Sprach-Wünsche', b: `<p>Hier legst du einmal fest, welche Sprachen du haben willst. In der Tabelle „Vorher → Nachher“ wird das dann bei jeder Datei automatisch angewendet (mit dem Funkel-Zeichen markiert) – und die Tipps berücksichtigen es.</p>
     <ul><li><b>Behalten:</b> andere Sprachen werden entfernt (leer = nichts entfernen). Hat eine Datei keine deiner Sprachen, bleibt sie unverändert.</li>
     <li><b>Standard:</b> eine Rangliste. Die erste Sprache, die in der Datei vorkommt, wird zur Spur, die der Player automatisch startet (z. B. Deutsch, sonst Englisch).</li>
     <li><b>Forced:</b> „Deutsch (Forced)“ heißt: der erzwungene Untertitel, der nur bei fremdsprachigen Stellen erscheint.</li></ul>
     <p>Reihenfolge ändern: ziehen oder ▲ ▼. Die Wünsche gelten für Video.</p>`},
-  vAudioTracks: {t: 'Audiospuren', b: `<p>Regeln für den Ton in <b>allen</b> Dateien. Standard ist „Passthrough“: Alle Tonspuren bleiben unverändert. Einzelne Spuren änderst du unten in der Tabelle.</p>`},
-  vSubTracks: {t: 'Untertitel', b: `<p>Regeln für die Untertitel in <b>allen</b> Dateien. Standard ist „Passthrough“: Alle Untertitel bleiben unverändert.</p>`},
-  trkTable: {t: 'Spuren dieser Datei', b: `<p>Jede Ton- und Untertitelspur der gewählten Datei als Karte. Was du hier änderst, gilt nur für diese Datei – oder mit „Auf alle Dateien anwenden“ für alle.</p>
-    <ul><li><b>Häkchen:</b> Spur behalten. Ohne Häkchen wird sie entfernt (z. B. Kommentar-Tonspur, fremde Untertitel).</li>
-    <li><b>So lassen / Kleiner machen (nur Ton):</b> „So lassen“ ist verlustfrei und am schnellsten. „Kleiner machen“ rechnet nur diese Tonspur um; Format und Bitrate sind schon sinnvoll vorausgefüllt.</li>
-    <li><b>Erweitert:</b> Titel (so heißt die Spur im Player), Sprache, „Forced (erzwungene Untertitel)“ und „startet automatisch“. Forced-Untertitel erscheinen nur bei fremdsprachigen Stellen.</li></ul>
-    <p><b>Plex:</b> Die Sprache wird als Code aus drei Buchstaben geschrieben, nur so erkennt Plex sie sicher. „Forced“ erkennt Plex nur in MKV-Dateien, und die Untertitelsprache muss zur Tonspur passen. Danach in Plex das Element neu analysieren („Analysieren“).</p>
-    <p class="ex">Die „Tipps zu dieser Datei“ schlagen Sinnvolles per Knopfdruck vor, z. B. nur Deutsch und Englisch behalten.</p>`},
   conc: {t: 'Parallel', b: `<p>Wie viele Dateien gleichzeitig umgewandelt werden.</p>
     <ul><li><b>Video mit CPU: 1</b> – ein Auftrag nutzt schon alle Kerne.</li><li>Video mit Hardware: 1–2.</li><li>Audio: 2–4, geht deutlich schneller.</li></ul>`},
-  setPresets: {t: 'Voreinstellungen', b: `<p>Eine Voreinstellung ist ein gespeicherter Satz von Einstellungen, z. B. „H.265, CRF 22, 1080p“. Ein Klick darauf stellt alles auf einmal ein.</p><ul><li><b>Vorschlag:</b> erscheint oben im Einstellungs-Panel des Konverters.</li><li><b>✎ Werte:</b> öffnet den Konverter mit dieser Voreinstellung – Einstellungen ändern und „Änderungen speichern“.</li></ul><p class="ex">Neue Voreinstellung: im Konverter einstellen und „💾 Als Voreinstellung speichern“ klicken.</p>`},
+  setPresets: {t: 'Voreinstellungen', b: `<p>Eine Voreinstellung ist ein gespeicherter Satz von Video-Einstellungen, z. B. „H.265, Qualität Gut, 1080p“. Ein Klick auf die Kachel auf der Startseite stellt alles auf einmal ein. Für Audio gibt es keine Voreinstellungen.</p><ul><li><b>Vorschlag:</b> zeigt die Voreinstellung als Kachel auf der Startseite.</li><li><b>Bearbeiten:</b> öffnet alle Einstellungen der Voreinstellung auf einer Seite. Dateien brauchst du dafür nicht.</li></ul><p class="ex">Neu anlegen: auf der Startseite „+ Neue Voreinstellung“ wählen (der Assistent fragt alles Nötige) oder beim Konvertieren unten auf „Als Voreinstellung speichern“ klicken.</p>`},
   setBackend: {t: 'Bevorzugter Encoder', b: `<p>Welche Hardware im Konverter vorausgewählt ist. „Automatisch“ nimmt die schnellste, die wirklich funktioniert. Wählst du hier z. B. VAAPI, ist es beim nächsten Öffnen vorausgewählt (sofern du im Konverter nicht schon selbst etwas gewählt hast).</p>`},
   setAuth: {t: 'Anmeldung', b: `<p>Schützt p5converter mit Benutzername und Passwort. Das Passwort wird nur als Hash auf dem Server gespeichert.</p><p>Bei vergessenem Passwort: Befehl im Container ausführen oder die Datei in /config löschen (siehe „Passwort vergessen?“).</p><p class="ex">Im reinen Heimnetz ist die Anmeldung optional. Ist die Oberfläche von außen erreichbar, sollte sie an sein.</p>`},
-  savedInfo: {t: 'Gewonnener Platz', b: `<p>Zeigt, wie viel Speicherplatz du durch das Konvertieren insgesamt gewonnen hast, getrennt für <b>Video</b> und <b>Audio</b>: Größe der Originale minus Größe der Ergebnisse. Audio und Video werden getrennt gezählt.</p>
+  savedInfo: {t: 'Gewonnener Platz', b: `<p>Zeigt, wie viel Speicherplatz du durch das Konvertieren insgesamt gewonnen hast, getrennt für <b>Video</b> und <b>Audio</b>: Größe der Originale minus Größe der Ergebnisse. </p>
     <p>Gezählt wird jede erfolgreich fertige Datei. Wird eine Datei größer (z. B. MP3 → FLAC), zählt das als Mehrbedarf. Die Summe bleibt gespeichert (Pfad <code>/config</code>), solange dieser Pfad eingehängt ist.</p>
     <p>Mit „Zurücksetzen“ beginnt die Zählung dieser Art bei 0.</p>`},
   hwInfo: {t: 'Hardware', b: `<p>Zeigt, welche Hardware (Intel-CPU-Videoeinheit, Grafikkarte) für schnelles Umwandeln nutzbar sind. Das Programm prüft das mit echten Mini-Umwandlungen.</p>
@@ -141,49 +126,23 @@ const INFO = {
   stepFiles: {t: 'Dateien wählen', b: `<p>Wähle zuerst den <b>Quellordner</b> (z. B. „Filme 4K“): Der Datei-Browser öffnet sich gleich dort.</p>
     <ul><li><b>Suche:</b> tippst du mindestens zwei Buchstaben, durchsucht das Programm <b>immer auch alle Unterordner</b>. Umlaute darfst du so oder so tippen (Müller oder Mueller).</li>
     <li><b>Diesen Ordner (rekursiv):</b> nimmt alle Videos oder Lieder des Ordners samt Unterordnern mit.</li></ul>
-    <p class="ex">Du kannst auch oben eine Voreinstellung wählen. Dann geht es nach der Dateiwahl direkt zur Kontrolle.</p>`},
-  stepRules: {t: 'Regeln', b: `<p>Hier legst du fest, was mit <b>Tonspuren und Untertiteln</b> allgemein passiert, zum Beispiel „DTS in E-AC-3 umwandeln“ oder „Bild-Untertitel entfernen“.</p>
-    <p>Die <b>voreingestellten Regeln</b> aus Einstellungen → Regeln gelten schon. Jede lässt sich für diesen Lauf abwählen. Rechts steht, wie viele deiner Dateien eine Regel betrifft.</p>
-    <p class="ex">Hier musst du nichts ändern: Ohne Regeln bleiben alle Spuren unverändert.</p>`},
-  stepHow: {t: 'Wie soll umgewandelt werden?', b: `<p>Drei Fragen, jede als Kachel: <b>womit</b> umgewandelt wird (Hardware), <b>wohin</b> gespeichert wird und <b>wie</b> das Ergebnis danach geprüft wird. Unten steht die Zusammenfassung als Satz.</p>
-    <p>Alles Weitere (Qualität, Spuren, Name) stellst du im nächsten Schritt in der Kontrolle genauer ein.</p>`},
-  stepCheck: {t: 'Kontrolle & Start', b: `<p>Links siehst du, wie die Dateien jetzt sind, rechts, was herauskommt. Die Tabelle ist in vier Karten gegliedert: Video, Audio, Untertitel und Dateiname. Jede Zeile lässt sich direkt ändern.</p>
-    <p>Mit <b>Starten</b> unten geht es los. Das Original bleibt unberührt, außer du hast „Original danach löschen“ gewählt.</p>`},
-  tileHw: {t: 'Hardware', b: `<p>Wer die Rechenarbeit macht. Hardware (Intel Quick Sync, NVIDIA NVENC, AMD AMF, VAAPI) ist oft 5–20× schneller und schont die CPU. Die CPU braucht länger, liefert bei gleicher Größe aber meist die beste Qualität.</p>
-    <p><b>Automatisch</b> nimmt die schnellste Hardware, die wirklich funktioniert (oder deinen bevorzugten Encoder aus Einstellungen → Hardware). Nur nutzbare Einträge lassen sich wählen.</p>
-    <p><b>Kopieren (Remux)</b> rechnet gar nichts neu: Das Video wird nur in einen neuen Container verpackt.</p>`},
-  tileDest: {t: 'Speichern', b: `<p>Wohin die fertige Datei geschrieben wird: <b>neben die Quelle</b> (gleicher Ordner, neuer Name) oder in einen <b>eigenen Ordner</b>.</p>
-    <p><b>Wenn die Datei schon da ist:</b> „Beide behalten“ nummeriert die neue Datei (sicherste Wahl), „Überspringen“ lässt die vorhandene in Ruhe, „Überschreiben“ ersetzt sie endgültig.</p>`},
+    <p class="ex">Du kannst auch oben eine Voreinstellung wählen. Dann geht es nach der Dateiwahl direkt zu Schritt 2, „Konvertieren“.</p>`},
   tileCheck: {t: 'Danach prüfen', b: `<p>Jede neue Datei wird immer geprüft: lässt sie sich lesen, und ist sie (fast) genauso lang wie das Original? Hier wählst du mehr dazu:</p>
     <ul><li><b>Spuren &amp; Größe:</b> sind alle gewählten Spuren drin, und ist die Datei nicht absurd klein? Kostet kaum Zeit.</li>
     <li><b>Komplett durchlesen:</b> ffmpeg liest die ganze neue Datei einmal durch und meldet beschädigte Stellen. Dauert bei langen Videos merklich.</li>
     <li><b>Original danach löschen:</b> endgültig, kein Papierkorb, und nur wenn alle Prüfungen bestanden sind.</li></ul>
     <p>Wird das Ergebnis bei einem neu kodierten Video <b>nicht kleiner</b> als die Quelle, schlägt die Prüfung an und dein Original bleibt in jedem Fall erhalten.</p>`},
-  cardVideo: {t: 'Video', b: `<p>Alles zum Bild: Codec und Auflösung, Container (Dateityp) und Qualität. Links steht die Quelle, rechts das Ergebnis. Geänderte Zeilen sind grün hervorgehoben.</p>`},
+  cardVideo: {t: 'Video', b: `<p>Alles zum Bild: Codec, Auflösung, Bit-Tiefe, Container (Dateityp), Qualität, Geschwindigkeit und Encoder. Links steht die Quelle, rechts das Ergebnis. Geänderte Zeilen sind grün hervorgehoben. Mit dem Probeclip siehst du vorab, was die Einstellungen bringen.</p>`},
   cardAudio: {t: 'Audio', b: `<p>Alle Tonspuren der Datei, eine Zeile je Spur (orange). Pro Spur wählst du <b>unverändert</b>, <b>umwandeln</b> oder <b>entfernen</b>; dazu, welche Spur Standard ist.</p>`},
   cardSubs: {t: 'Untertitel', b: `<p>Alle Untertitel der Datei, eine Zeile je Spur. <b>behalten</b> oder <b>entfernen</b>; dazu „Forced“ und „Standard“.</p>`},
-  cardName: {t: 'Dateiname', b: `<p>So heißt die neue Datei. „bleibt“ heißt: Der Name ändert sich nicht (nur die Endung, wenn der Container wechselt). Muster, Zusatz und Ersetzungen stellst du über „ändern“ ein.</p>`},
+  cardName: {t: 'Dateiname', b: `<p>Hier legst du fest, wohin die neue Datei kommt und wie sie heißt. Darunter stehen alle Dateien mit altem und neuem Namen. Ohne Muster, Zusatz oder Ersetzung ändert sich nur die Endung, falls der Container wechselt.</p>`},
   cardAudioFile: {t: 'Audio-Datei', b: `<p>Format, Qualität, Samplerate und Kanäle der neuen Datei, daneben die Werte der Quelle. Tags (Titel, Interpret, Album …) werden immer übernommen.</p>`},
-  rowVideo: {t: 'Video', b: `<p>Links: Codec, Höhe und Bit-Tiefe der Quelle. Rechts wählst du den neuen <b>Codec</b> (Kopieren = nichts neu berechnen), die <b>Auflösung</b> und die <b>Bit-Tiefe</b>.</p>
-    <p class="ex">H.265 spart gegenüber H.264 etwa 30–50 % bei gleicher Qualität.</p>`},
-  rowContainer: {t: 'Container', b: `<p>Der „Karton“ aus Bild, Ton und Untertiteln. <b>MKV</b> kann alles (empfohlen für Plex, Jellyfin, Kodi), <b>MP4</b> läuft auf mehr Fernsehern, nimmt aber keine Bild-Untertitel mit.</p>`},
-  rowQuality: {t: 'Qualität in vier Stufen', b: `<p>Vier feste Stufen: <b>Sehr gut</b> (groß), <b>Gut</b> (empfohlen), <b>Normal</b> (kleiner) und <b>Klein</b> (weich). Das Programm rechnet jede Stufe je Encoder und Codec in die passende Zahl um (CRF, CQ, ICQ oder QP). Die Zahl siehst du unter „Erweitert“, dort lässt sie sich auch selbst einstellen.</p>
-    <p>Links steht die Bitrate der Quelle. Ist sie schon klein (unter etwa 4 Mbit/s bei 1080p), erscheint ein Hinweis: Neu kodieren spart dann kaum Platz.</p>
-    <p class="ex">Wird das Ergebnis nicht kleiner als die Quelle, bleibt dein Original in jedem Fall erhalten. Die Zahlen sind Startwerte, nicht auf deiner Hardware gemessen; bei Bereichen gilt der niedrigere Wert.</p>`},
-  rowAudio: {t: 'Tonspur', b: `<ul><li><b>unverändert:</b> der Ton wird 1:1 kopiert, ohne Verlust und am schnellsten.</li><li><b>umwandeln:</b> in ein anderes Format (z. B. E-AC-3). Klick auf das Ziel („→ E-AC-3 …“) ändert Format und Bitrate.</li><li><b>entfernen:</b> die Spur kommt nicht in die neue Datei.</li></ul>
-    <p><b>Standard</b> ist die Spur, die der Player von selbst startet; es gibt immer höchstens eine. Ein Klick auf eine andere Spur setzt sie, ein Klick auf die gesetzte nimmt die eigene Wahl zurück.</p>
-    <p>Links steht die Kennung der Spur („E-AC-3 (Dolby Digital Plus) 5.1 · 640 kbit/s“): zuerst der Codec, in Klammern der Markenname, dann Kanäle und Bitrate. „⋯“ öffnet Titel und Sprache.</p>`},
-  rowSub: {t: 'Untertitel', b: `<ul><li><b>behalten</b> oder <b>entfernen</b> je Spur.</li><li><b>Forced</b> = erzwungene Untertitel, die nur bei fremdsprachigen Stellen erscheinen (Plex erkennt das nur in MKV).</li><li><b>Standard</b> = startet automatisch.</li></ul>
-    <p>Ist ein Untertitel viel kleiner als der gleichsprachige vollständige, schlägt das Programm „Forced“ vor.</p>`},
-  rowName: {t: 'Dateiname', b: `<p>So heißt die neue Datei (Beispiel für die erste Datei der Gruppe). „bleibt“ = der Name ändert sich nicht. „ändern“ öffnet Namensmuster, Zusatz und Ersetzungen.</p>`},
-  autoMark: {t: 'Funkel-Markierung', b: `<p>Das Funkel-Zeichen steht nur bei dem, was das Programm <b>selbst erkannt oder angepasst</b> hat: Regeln, Sprach-Wünsche, erkannte Forced-Untertitel und Übernahmen aus einer kontrollierten Gruppe. Gewöhnliche Standardvorschläge bekommen keine Markierung.</p>
-    <p>Mit „rückgängig“ nimmst du die Anpassung zurück; mit „Vorschlag“ übernimmst du einen Hinweis per Knopfdruck.</p>`},
   groups: {t: 'Gruppen', b: `<p>Dateien mit gleichen Rahmendaten (Video, Tonspuren, Sprachen, Formate) bilden eine <b>Gruppe</b>; eine Entscheidung gilt für die ganze Gruppe (die zweite Tonspur ist überall die zweite).</p>
     <p>Abweichend aufgebaute Dateien sind eine eigene Gruppe und müssen <b>kontrolliert</b> werden. Entscheidungen einer kontrollierten Gruppe werden bei gleichen Spuren anderer Gruppen übernommen („Übernommen“).</p>`},
   trkGlobal: {t: 'Voreingestellte Regeln', b: `<p>Allgemeine Regeln aus Einstellungen → Regeln, zum Beispiel „DTS → E-AC-3, 256 kbit/s je Stereo-Paar“. Sie gelten bei jedem Lauf. Mit dem Haken schaltest du eine Regel für <b>diesen Lauf</b> aus.</p>
     <p>Rechts steht, wie viele deiner Dateien die Regel betrifft. Die Bitrate gilt je Stereo-Paar; eine 5.1-Spur bekommt mehr (Wert × Kanäle ÷ 2), höchstens 640 kbit/s.</p>`},
-  libScan: {t: 'Wo lohnt sich das Umwandeln?', b: `<p>Prüft einen Ordner samt allen Unterordnern und zeigt, <b>bei welchen Ordnern</b> sich das Umwandeln eher lohnt. Es werden nie einzelne Dateien vorgeschlagen, immer nur ganze Ordner (zum Beispiel eine Staffel, und darüber die ganze Serie).</p>
-    <p>Die Dateien werden nur <b>gelesen</b> (ffprobe, zwei gleichzeitig), nichts wird verändert. Was gelesen wurde, merkt sich der Server (mit Größe und Änderungsdatum): ein zweiter Durchlauf liest nur <b>neue oder geänderte</b> Dateien und ist deshalb viel schneller. Es gibt <b>keine Schätzung</b>, wie viel du sparst, nur Fakten und Hinweise:</p>
+  libScan: {t: 'Platz sparen: Ordner untersuchen', b: `<p>Prüft einen Ordner samt allen Unterordnern und zeigt, <b>bei welchen Ordnern</b> sich das Umwandeln eher lohnt. Es werden nie einzelne Dateien vorgeschlagen, immer nur ganze Ordner (zum Beispiel eine Staffel, und darüber die ganze Serie).</p>
+    <p>Die Dateien werden nur <b>gelesen</b> (ffprobe, zwei gleichzeitig), nichts wird verändert. Was gelesen wurde, merkt sich der Server (mit Größe und Änderungsdatum): ein zweiter Durchlauf liest nur <b>neue oder geänderte</b> Dateien und ist deshalb viel schneller. Die Ersparnis (≈) ist eine <b>grobe Schätzung</b> für H.265 in der Stufe „Gut“, nur fürs Bild. Dazu kommen Fakten und Hinweise:</p>
     <ul><li><b>Älterer Codec:</b> H.264, MPEG-4 und Ähnliches statt H.265/AV1.</li><li><b>Hohe Bitrate:</b> die Datei ist für ihre Auflösung sehr groß (ab etwa 8 Mbit/s bei 1080p).</li>
     <li><b>Schwerer Ton / DTS:</b> DTS-HD und TrueHD sind riesig, DTS spielen viele Fernseher nicht.</li><li><b>Bild-Untertitel:</b> PGS und VobSub sind groß und nicht überall abspielbar.</li>
     <li><b>Schon klein:</b> Neukodieren spart hier kaum Platz.</li></ul>

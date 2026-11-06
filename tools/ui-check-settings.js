@@ -51,16 +51,14 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     await p.goto(BASE); await p.waitForTimeout(1200);
     await L.enter(p, 'video'); await L.addFile(p, 'long.mkv');
     // Voreinstellung speichern
-    await L.goStep(p, 'video');
-    await p.selectOption('#vCodec', 'hevc'); await p.selectOption('#vDepth', '10'); await p.fill('#vCrf', '19');
-    await p.evaluate(() => { const e = document.querySelector('#vCrf'); e.value = 19; e.dispatchEvent(new Event('input', {bubbles: true})); });
-    await L.goStep(p, 'summary');
+    await L.toCheck(p);
+    await p.evaluate(() => { cvSet('vCodec', 'hevc'); cvSet('vDepth', '10'); cvSet('vCrf', '19'); });
+    await p.waitForTimeout(300);
     await p.click('#savePreset'); await p.waitForTimeout(300);
     await p.fill('#presetName', 'Mein Test ' + name); await p.click('#presetSave'); await p.waitForTimeout(600);
     ok(await p.locator('#vPresets button', {hasText: 'Mein Test ' + name}).count() === 1, name + ': Chip der neuen Voreinstellung fehlt');
     // zurücksetzen und per Chip laden
-    await L.goStep(p, 'video');
-    await p.selectOption('#vCodec', 'h264'); await p.selectOption('#vDepth', '8'); await L.goStep(p, 'files');
+    await p.evaluate(() => { cvSet('vCodec', 'h264'); cvSet('vDepth', '8'); });
     await p.click('#cvStepper [data-step=files]'); await p.waitForTimeout(400); // Schritt 1: dort stehen die Voreinstellungen
     await p.click('#vPresets button:has-text("Mein Test ' + name + '")'); await p.waitForTimeout(500);
     ok(await p.locator('#cvStepper .stp.on').getAttribute('data-step') === 'check', name + ': Voreinstellung sollte direkt zur Kontrolle springen');
@@ -72,14 +70,22 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     // bearbeiten
     await p.click('#gearBtn'); await p.waitForTimeout(300);
     await p.evaluate(() => { location.hash = '#settings/presets'; }); await p.waitForTimeout(500);
-    await p.click('.prow:has(input[value="Mein Test ' + name + '"]) button:has-text("Werte")'); await p.waitForTimeout(600);
-    ok(await p.locator('#editBanner').isVisible(), name + ': Bearbeiten-Banner fehlt');
-    await p.evaluate(() => { const e = document.querySelector('#vCrf'); e.value = 27; e.dispatchEvent(new Event('input', {bubbles: true})); });
+    await p.click('.prow:has(input[value="Mein Test ' + name + '"]) button:has-text("Bearbeiten")'); await p.waitForTimeout(600);
+    ok(await p.isVisible('#wizDlg') && /Voreinstellung bearbeiten/.test(await p.textContent('#wizBox')), name + ': Bearbeiten-Fenster fehlt');
+    ok(!(await p.isVisible('#cvStepper')) && (await p.locator('#fileList .file').count()) === 0, name + ': Bearbeiten darf keine Dateien verlangen');
+    ok(await p.locator('#wizBox select').count() >= 8, name + ': zu wenig Einstellungen im Bearbeiten-Fenster: ' + await p.locator('#wizBox select').count());
+    ok(await p.inputValue('#wizBox select[aria-label="Video-Format"]') === 'hevc' && await p.inputValue('#wizBox select[aria-label="Bit-Tiefe"]') === '10', name + ': gespeicherte Werte nicht vorbelegt');
+    await p.selectOption('#wizBox select[aria-label="Qualität"]', 'normal'); await p.selectOption('#wizBox select[aria-label="Geschwindigkeit"]', 'fast'); await p.waitForTimeout(200);
+    ok(/CRF \d+/.test(await p.textContent('#wizBox .wizfield:has(select[aria-label="Qualität"])')), name + ': Wert hinter der Stufe fehlt im Bearbeiten-Fenster');
+    ok(await p.locator('#wizBox input[type=range]').count() === 0, name + ': Regler nur bei „Eigener Wert“');
+    await p.selectOption('#wizBox select[aria-label="Qualität"]', 'custom'); await p.waitForTimeout(200);
+    ok(await p.locator('#wizBox input[type=range]').count() === 1, name + ': Regler bei „Eigener Wert“ fehlt');
+    await p.locator('#wizBox input[type=range]').fill('27'); await p.waitForTimeout(200);
     await p.screenshot({ path: `${SH}${name}-edit.png` });
-    await p.click('#editBanner button.primary'); await p.waitForTimeout(600);
+    await p.click('#wizSave'); await p.waitForTimeout(800);
     const st = await (await fetch(BASE + '/api/settings')).json();
     const pr = st.settings.presets.find(x => x.name === 'Mein Test ' + name);
-    ok(pr && String(pr.values.vCrf) === '27', name + ': geänderter CRF nicht gespeichert (' + JSON.stringify(pr && pr.values.vCrf) + ')');
+    ok(pr && pr.values.vQuality === 'custom' && String(pr.values.vCrf) === '27' && pr.values.vPreset === 'fast' && pr.values.vDepth === '10', name + ': Änderungen nicht gespeichert (' + JSON.stringify(pr && pr.values) + ')');
     // Vorschlag abwählen
     await p.evaluate(() => { location.hash = '#settings/presets'; }); await p.waitForTimeout(500);
     await p.click('.prow:has(input[value="Mein Test ' + name + '"]) input[type=checkbox]'); await p.waitForTimeout(600);

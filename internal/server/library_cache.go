@@ -58,6 +58,7 @@ func factsOf(info *ffmpeg.Info) fileFacts {
 // addFacts rechnet die Fakten einer lesbaren Datei in die Ordnersumme ein.
 func (a *libAgg) addFacts(f fileFacts) {
 	a.dur += f.Dur
+	a.save += int64(float64(f.Size) * (1 - estimateRatio(f.Codec, f.Size, f.Dur, f.Height)))
 	a.codecs[f.Codec]++
 	if f.Height > a.maxHeight {
 		a.maxHeight = f.Height

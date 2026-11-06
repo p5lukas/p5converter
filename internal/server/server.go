@@ -54,6 +54,7 @@ type Server struct {
 	ffver       string
 	lib         libraryScans
 	libCache    *libCache // Merker des Ordner-Scans
+	clips       clipStore // Probeclips (Vergleich von Einstellungen an einem kurzen Ausschnitt)
 }
 
 func New(build version.Info, t ffmpeg.Tools, roots []string, concurrency int, configDir string) *Server {
@@ -178,6 +179,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/library/scan/{id}", s.libraryGet)
 	mux.HandleFunc("POST /api/library/scan/{id}/cancel", s.libraryCancel)
 	mux.HandleFunc("GET /api/probe", s.probe)
+	mux.HandleFunc("POST /api/clip", s.clipStart)
+	mux.HandleFunc("GET /api/clip/{id}", s.clipGet)
+	mux.HandleFunc("POST /api/clip/{id}/cancel", s.clipCancel)
+	mux.HandleFunc("GET /api/clip/{id}/img/{name}", s.clipImage)
 	mux.HandleFunc("POST /api/jobs", s.submit)
 	mux.HandleFunc("GET /api/state", s.state)
 	mux.HandleFunc("POST /api/rename/preview", s.renamePreview)

@@ -24,7 +24,7 @@ const paint = (p, sel) => p.evaluate(sel => { const c = document.querySelector(s
     const ov = () => p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     await p.goto(L.url); await p.evaluate(() => localStorage.clear()); await p.goto(L.url); await p.waitForTimeout(1300);
     await api('/api/queue/pause', {on: false}); await api('/api/jobs/cancel-all', {kind: ''}); await api('/api/concurrency', {kind: 'video', n: 2}); await p.waitForTimeout(1000);
-    for (const f of ['long.mkv', 'multi.mkv']) await api('/api/jobs', {kind: 'video', items: [{path: L.INDIR + '/' + f}], output: {dir: OUT, structure: 'flat', exists: 'rename'}, video: {codec: 'hevc', backend: 'cpu', crf: 24, preset: 'slow'}});
+    for (const f of ['long.mkv', 'multi.mkv', 'long.mkv', 'multi.mkv', 'long.mkv', 'multi.mkv']) await api('/api/jobs', {kind: 'video', items: [{path: L.INDIR + '/' + f}], output: {dir: OUT, structure: 'flat', exists: 'rename'}, video: {codec: 'hevc', backend: 'cpu', crf: 24, preset: 'slow'}});
     await p.waitForSelector('#jobNow .bar.rain', {timeout: 15000}); await p.waitForTimeout(2500);
     // ---- Startseite ----
     const hb = await p.locator('#jobNow .bar.rain').first().boundingBox();

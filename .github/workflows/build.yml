@@ -30,7 +30,18 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with: { go-version: "1.24" }
-      - run: sudo apt-get -o DPkg::Lock::Timeout=120 -o Acquire::Retries=3 update && sudo apt-get -o DPkg::Lock::Timeout=120 -o Acquire::Retries=3 install -y ffmpeg
+      - name: ffmpeg installieren (mit Zeitlimit, bis zu drei Versuche)
+        timeout-minutes: 12
+        run: |
+          # apt hing auf den Runnern schon dreimal ohne Fehlermeldung; jeder Versuch ist deshalb zeitlich begrenzt
+          for i in 1 2 3; do
+            if sudo timeout 150 apt-get -o DPkg::Lock::Timeout=60 -o Acquire::Retries=3 update \
+              && sudo timeout 240 apt-get -o DPkg::Lock::Timeout=60 -o Acquire::Retries=3 install -y ffmpeg; then
+              exit 0
+            fi
+            echo "Versuch $i gescheitert, neuer Versuch folgt"; sleep 10
+          done
+          exit 1
       - run: go vet ./...
       - run: go test -race ./...
       - name: Logik von Audio und Untertitel (Node)
@@ -215,7 +226,7 @@ jobs:
         shell: pwsh
         run: |
           gh release delete dev-latest -R ${{ github.repository }} --cleanup-tag -y 2>$null
-          gh release create dev-latest build/out/p5converter-setup.exe -R ${{ github.repository }} --target ${{ github.sha }} --prerelease --title "p5converter Windows (dev-latest)" --notes-file windows/dev-latest-notes.md
+          gh release create dev-latest build/out/p5converter-setup.exe -R ${{ github.repository }} --target ${{ github.sha }} --prerelease --title "Windows-Testversion (dev) – wird laufend ersetzt" --notes-file windows/dev-latest-notes.md
 
   # Eine Version, ein Release (wie bei p5assets): nur von main (Tag v* oder von Hand mit Version). Der Text kommt aus dem CHANGELOG (alle Versionen seit dem
   # letzten Release, neueste zuerst), keine automatische Liste der Pull Requests. Zum Testen von dev gibt es nur „dev-latest“ (Windows-exe).
