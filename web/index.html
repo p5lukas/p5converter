@@ -178,12 +178,12 @@
     </div>
 <div style="height:14px"></div>
     <div id="nameStore">
-      <label class="cvsuffix">Dateiname-Zusatz
+      <label class="cvsuffix"><span class="lt">Dateiname-Zusatz</span>
         <input id="suffix" placeholder="z. B. _x265">
       </label>
       <div class="namebox" id="nameBox">
         <h3 data-info="pattern">Dateiname</h3>
-        <label id="patternRow">Namensmuster (optional)
+        <label id="patternRow"><span class="lt">Namensmuster (optional)</span>
           <input id="pattern" placeholder="{title} ({year}) [{res}][{codec}]" autocomplete="off" spellcheck="false">
         </label>
         <div class="varchips" id="varChips"></div>
@@ -238,7 +238,7 @@
         </label>
         <label>Video-Codec
           <select id="vCodec">
-            <option value="copy">Kopieren (kein Re-Encode)</option>
+            <option value="copy">Kopieren (nicht neu kodieren)</option>
             <option value="h264">H.264 (x264)</option><option value="hevc">H.265 / HEVC (x265)</option>
             <option value="av1">AV1</option><option value="vp9">VP9</option>
           </select>
@@ -316,7 +316,7 @@
   <form method="dialog" class="dlg" id="presetForm">
     <h2><span data-ic="floppy"></span> Als Voreinstellung speichern</h2>
     <label>Name<input id="presetName" maxlength="40" placeholder="z. B. Filme klein H.265" autocomplete="off"></label>
-    <label class="check"><input type="checkbox" id="presetSuggest" checked> Als Vorschlag oben im Konverter anzeigen</label>
+    <label class="check"><input type="checkbox" id="presetSuggest" checked> Als Kachel auf der Startseite anzeigen</label>
     <p class="muted small" id="presetHint"></p>
     <div class="dlg-f"><button type="button" id="presetCancel" class="ghost">Abbrechen</button><button class="primary" id="presetSave">Speichern</button></div>
   </form>
@@ -343,7 +343,7 @@
     <div class="dlg-h">
       <button type="button" id="bUp" class="small" title="Eine Ebene hoch"><span data-ic="up"></span></button>
       <input id="bPath">
-      <button type="button" id="bGo" class="small">Gehe</button>
+      <button type="button" id="bGo" class="small">Öffnen</button>
     </div>
     <div id="bWhere" class="muted small"></div>
     <div id="bDrives" class="small"></div>

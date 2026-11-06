@@ -281,7 +281,7 @@ function pagePresets() {
         h('button', {class: 'small danger', title: 'Löschen', onclick: () => { if (confirm('Voreinstellung „' + p.name + '“ löschen?')) saveCfg(x => { x.presets = x.presets.filter(q => q.id !== p.id); }); }}, icon('trash'))));
   }) : h('div', {class: 'empty'}, 'Keine Voreinstellungen in dieser Art.');
   return h('div', {}, h('h2', {}, 'Voreinstellungen', infoBtn('setPresets')),
-    h('p', {class: 'muted'}, 'Voreinstellungen füllen alle Einstellungen für Video mit einem Klick. Die mit „Vorschlag“ erscheinen auf der Startseite als Knöpfe.'),
+    h('p', {class: 'muted'}, 'Voreinstellungen füllen alle Einstellungen für Video mit einem Klick. Die mit „Vorschlag“ erscheinen auf der Startseite als Kacheln.'),
     mine.length > 1 ? h('div', {class: 'btns', style: 'margin-bottom:10px'}, h('span', {class: 'muted small'}, 'Vorschläge:'),
       h('button', {class: 'small', onclick: () => saveCfg(x => x.presets.forEach(q => { if (q.world === tab) q.suggest = true; }), false)}, 'Alle auswählen'),
       h('button', {class: 'small', onclick: () => saveCfg(x => x.presets.forEach(q => { if (q.world === tab) q.suggest = false; }), false)}, 'Alle abwählen')) : null,

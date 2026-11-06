@@ -211,9 +211,9 @@ function libRender() {
   if (running) {
     const pct = LIBUI.total ? Math.round(LIBUI.done / LIBUI.total * 100) : 0;
     body = [h('div', {class: 'libprog'}, h('div', {class: 'bar'}, h('i', {style: 'width:' + pct + '%'})),
-      h('div', {class: 'job-m'}, h('span', {}, LIBUI.total ? LIBUI.done + ' von ' + num0(LIBUI.total) + ' gelesen' + (LIBUI.cached ? ' (' + LIBUI.cached + ' aus dem Merker)' : '') : 'Suche Videos …'), h('span', {class: 'muted'}, LIBUI.current ? LIBUI.current.split(/[\\/]/).pop() : '')),
+      h('div', {class: 'job-m'}, h('span', {}, LIBUI.total ? LIBUI.done + ' von ' + num0(LIBUI.total) + ' gelesen' + (LIBUI.cached ? ' (' + LIBUI.cached + ' aus dem Zwischenspeicher)' : '') : 'Suche Videos …'), h('span', {class: 'muted'}, LIBUI.current ? LIBUI.current.split(/[\\/]/).pop() : '')),
       h('div', {class: 'btns'}, h('button', {type: 'button', class: 'small', onclick: libCancel}, 'Abbrechen'))),
-      h('p', {class: 'muted small'}, 'Die Dateien werden nur gelesen (ffprobe, zwei gleichzeitig), nichts wird verändert. Bereits gelesene, unveränderte Dateien kommen beim nächsten Mal aus dem Merker.')];
+      h('p', {class: 'muted small'}, 'Die Dateien werden nur gelesen (ffprobe, zwei gleichzeitig), nichts wird verändert. Bereits gelesene, unveränderte Dateien kommen beim nächsten Mal aus dem Zwischenspeicher.')];
   } else if (LIBUI.state === 'error') body = [h('p', {class: 'warn'}, LIBUI.err || 'Die Prüfung ist fehlgeschlagen.')];
   else if (ready) {
     const all = LIBUI.rows, counts = LIB.filterCounts(all, libLow);
@@ -239,7 +239,7 @@ function libRender() {
     const list = shown.length ? h('div', {class: 'liblist'}, shown.map(r => libRowEl(r, groups)))
       : h('div', {class: 'cvempty'}, all.length ? (LIBUI.fil.size ? 'Keine Ordner mit den gewählten Hinweisen. Wähle weitere Kärtchen an oder schalte „Nur Ordner mit Hinweisen“ aus: dann siehst du alle ' + all.length + '.' : 'Kein Hinweis gewählt: wähle oben mindestens ein Kärtchen an oder schalte „Nur Ordner mit Hinweisen“ aus.') : 'Keine Videos gefunden.');
     body = [big, ctl, fil, legend, list, h('div', {class: 'btns libfoot'}, h('button', {type: 'button', class: 'primary', disabled: !LIBUI.sel.size, onclick: libAdopt},
-      LIBUI.sel.size ? 'Ausgewählte Ordner übernehmen (' + LIBUI.sel.size + ')' : 'Ordner übernehmen'), h('span', {class: 'muted small'}, 'Übernommen wird immer der ganze Ordner mit allen Unterordnern.'), LIBUI.cached ? h('span', {class: 'muted small libcached'}, LIBUI.cached + ' von ' + num0(LIBUI.total) + ' kamen aus dem Merker (unverändert seit dem letzten Mal).') : null)];
+      LIBUI.sel.size ? 'Ausgewählte Ordner übernehmen (' + LIBUI.sel.size + ')' : 'Ordner übernehmen'), h('span', {class: 'muted small'}, 'Übernommen wird immer der ganze Ordner mit allen Unterordnern.'), LIBUI.cached ? h('span', {class: 'muted small libcached'}, LIBUI.cached + ' von ' + num0(LIBUI.total) + ' kamen aus dem Zwischenspeicher (unverändert seit dem letzten Mal).') : null)];
   } else body = [];
   fill(box, head, h('div', {class: 'cvcbody'}, body));
 }

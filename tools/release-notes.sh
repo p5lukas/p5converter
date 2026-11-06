@@ -5,6 +5,8 @@
 set -eu
 ver="${1:?Version fehlt (z. B. 0.3.7)}"
 since="${2:-}"
+# Enthält der Abschnitt von VERSION die Zeile „<!-- zusammenfassung -->“, fasst er alle früheren Versionen zusammen: dann steht nur er im Release-Text
+if awk -v ver="$ver" '/^## /{on=($2==ver)} on && /<!-- zusammenfassung -->/{f=1} END{exit f?0:1}' "$(cd "$(dirname "$0")/.." && pwd)/CHANGELOG.md"; then since=""; fi
 here="$(cd "$(dirname "$0")/.." && pwd)"
 repo="${GITHUB_REPOSITORY:-p5lukas/p5converter}"
 tag="$(printf '%s' "$ver" | sed 's/-.*$//')"

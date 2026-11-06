@@ -62,11 +62,11 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     await p.click('#cvScan .libfil[data-fil=old]'); await p.click('#cvScan .libfil[data-fil=heavy]'); await p.click('#cvScan .libfil[data-fil=img]'); await p.click('#cvScan .libfil[data-fil=high]'); await p.waitForTimeout(250);
     ok(await p.locator('#cvScan .librow').count() === before, name + ': Standard wiederhergestellt');
     await p.screenshot({path: `${L.SHOTS}/p5c-lib-${name}-1b-filter.png`, fullPage: true});
-    // zweiter Durchlauf desselben Ordners: alles kommt aus dem Merker, die Zeilen bleiben gleich
+    // zweiter Durchlauf desselben Ordners: alles kommt aus dem Zwischenspeicher, die Zeilen bleiben gleich
     const rowsBefore = (await p.locator('#cvScan .librow').allTextContents()).join('|');
     await p.evaluate(() => libStart(LIBUI.root)); await p.waitForSelector('#cvScan .librow', {timeout: 20000}); await p.waitForTimeout(500);
-    ok(/4 von 4 Dateien kamen aus dem Merker/.test(await p.textContent('#cvScan .libcached').catch(() => '')), name + ': Hinweis „aus dem Merker“ fehlt');
-    ok((await p.locator('#cvScan .librow').allTextContents()).join('|') === rowsBefore, name + ': Zeilen aus dem Merker weichen vom ersten Durchlauf ab');
+    ok(/4 von 4 Dateien kamen aus dem Zwischenspeicher/.test(await p.textContent('#cvScan .libcached').catch(() => '')), name + ': Hinweis „aus dem Zwischenspeicher“ fehlt');
+    ok((await p.locator('#cvScan .librow').allTextContents()).join('|') === rowsBefore, name + ': Zeilen aus dem Zwischenspeicher weichen vom ersten Durchlauf ab');
     // Filter und Sortierung
     await p.uncheck('#cvScan .liberctl input[type=checkbox]'); await p.waitForTimeout(200);
     ok(await p.locator('#cvScan .librow').count() >= 5, name + ': ohne Filter fehlen Ordner');

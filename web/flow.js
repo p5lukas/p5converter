@@ -80,7 +80,7 @@ function renderSaved() {
   const d = S.saved || {}, box = $('#savedBody');
   fill(box, ['video', 'audio'].map(k => savedCol(k, d[k])));
   const ts = ['video', 'audio'].map(k => d[k]).filter(t => t && t.count), gain = ts.reduce((a, t) => a + t.in - t.out, 0), el = $('#savedSum');
-  if (el) el.textContent = ts.length ? (gain >= 0 ? '−' : '+') + fmtSize(Math.abs(gain)) + (gain >= 0 ? ' Platz gewonnen' : ' Mehrbedarf') : 'noch nichts umgewandelt';
+  if (el) el.textContent = ts.length ? fmtSize(Math.abs(gain)) + (gain >= 0 ? ' gewonnen' : ' Mehrbedarf') : 'noch nichts umgewandelt';
 }
 function openSavedReset(kind) {
   S.resetKind = kind;

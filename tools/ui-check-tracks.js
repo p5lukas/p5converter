@@ -42,7 +42,7 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
     eq(name, 'Namensliste: eine Zeile je Datei (2)', await p.locator('.cvnamelist .cvnl').count(), 2);
     const nl = (await p.locator('.cvnamelist').textContent()).replace(/\s+/g, ' ');
     if (!/multi\.mkv.*multi \[X\]\.mkv/.test(nl) || !/multi2\.mkv.*multi2 \[X\]\.mkv/.test(nl)) errs.push(name + ': Namensliste „alt → neu“ unerwartet: ' + nl);
-    eq(name, 'Namensliste einzeilig (Ellipse, keine Umbrüche)', await p.evaluate(() => [...document.querySelectorAll('.cvnamelist .cvnl')].every(r => r.getBoundingClientRect().height < 40)), true);
+    eq(name, 'Namensliste: breit einzeilig (Ellipse), am Handy alt und neu untereinander', await p.evaluate(() => { const mob = innerWidth <= 700; return [...document.querySelectorAll('.cvnamelist .cvnl')].every(r => mob ? r.getBoundingClientRect().height > 30 && r.getBoundingClientRect().height < 110 : r.getBoundingClientRect().height < 40); }), true);
     if (await ov() > 0) errs.push(`${name}: Überlauf mit Namensliste: ${await ov()}px`);
     await p.screenshot({ path: `${L.SHOTS}/t-${name}-1b-namensliste.png`, fullPage: true });
     await p.fill('#pattern', ''); await p.locator('#pattern').dispatchEvent('change'); await p.waitForTimeout(500);

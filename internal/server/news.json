@@ -1,5 +1,11 @@
 [
   {
+    "id": "v050-review-1",
+    "version": "0.5.0",
+    "title": "Version 0.5.0: alles durchgesehen",
+    "text": "Texte, Hilfen hinter den i-Punkten, Aussehen und Dokumentation wurden einmal komplett durchgesehen. Neu ist unter anderem die kompaktere Startseite am Handy; beim Platz gewonnen steht jetzt verständlich „… gewonnen“ oder „… Mehrbedarf“. Die ganze Liste steht in der CHANGELOG."
+  },
+  {
     "id": "scan-result-fix-1",
     "version": "0.4.4",
     "title": "Ordner untersuchen zeigt wieder das Ergebnis",
@@ -134,8 +140,8 @@
   {
     "id": "library-filter-1",
     "version": "0.3.4",
-    "title": "Ordner prüfen: Filter und Merker",
-    "text": "Die Hinweise über der Liste sind Kärtchen, die du einzeln an- und abwählen kannst. Und ein zweiter Durchlauf desselben Ordners ist viel schneller: Unveränderte Dateien kommen aus einem Merker."
+    "title": "Ordner prüfen: Filter und Zwischenspeicher",
+    "text": "Die Hinweise über der Liste sind Kärtchen, die du einzeln an- und abwählen kannst. Und ein zweiter Durchlauf desselben Ordners ist viel schneller: Unveränderte Dateien kommen aus einem Zwischenspeicher."
   },
   {
     "id": "queue-manage-1",

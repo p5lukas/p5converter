@@ -987,3 +987,19 @@ dialog.wizdlg .wizbox{overflow-y:auto;max-height:100dvh}
 .qsl input[type=range]{min-width:0;width:100%}
 @media(max-width:700px){.qsl{grid-template-columns:auto minmax(0,1fr)}.qsl>span{grid-column:1/-1}}
 .qs small.qv{color:var(--accent);margin-top:1px}
+@media(max-width:700px){
+  .presetgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .pbtn{padding:11px 12px}.pbtn b{font-size:15px}
+  .pbtn small{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .pbtn.new.first{padding:16px 16px}
+}
+.cvnamebox .namebox h3{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:16px 0 6px}
+.cvnamebox .varchips{margin-top:6px}
+@media(max-width:700px){
+  .cvnl{display:block;padding:4px 0;line-height:1.45}
+  .cvnl .o,.cvnl .n{display:block;white-space:normal;overflow:visible;overflow-wrap:anywhere}
+  .cvnl .ar{display:none}
+  .cvnl .n::before{content:'→ ';color:var(--accent)}
+}
+.rootname code{text-transform:none;letter-spacing:0}
+#cvFiles .btns button,#addFiles,#addFolder,#clearFiles{white-space:nowrap}
