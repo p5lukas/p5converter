@@ -1,5 +1,11 @@
 [
   {
+    "id": "v051-stabil",
+    "version": "0.5.1",
+    "title": "Version 0.5.1: stabiler im Hintergrund",
+    "text": "Die Oberfläche lädt jetzt als Module, der Server beendet sich beim Neustart sauber, und Freigaben mit Symlinks führen nicht mehr nach außen. Zum Bedienen ändert sich nichts – die Liste steht in der CHANGELOG."
+  },
+  {
     "id": "v050-review-1",
     "version": "0.5.0",
     "title": "Version 0.5.0: alles durchgesehen",
