@@ -1,3 +1,10 @@
 .git
+.gitignore
 dist
 *.md
+*.whl
+docs/
+windows/
+unraid/
+tools/
+.github/
