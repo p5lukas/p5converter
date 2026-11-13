@@ -5,6 +5,7 @@ package jobs
 // by themselves but offered to the user ("N Aufträge fortsetzen?"), because the result files of an interrupted run are gone.
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 )
@@ -62,6 +63,32 @@ func (m *Manager) persistLocked() {
 	tmp := m.queueFile + ".tmp"
 	if os.WriteFile(tmp, b, 0o644) == nil {
 		os.Rename(tmp, m.queueFile)
+	}
+}
+
+// StopForRestart stops the queue for a clean program end: no new job starts and running jobs are cancelled,
+// but their requests stay in the queue file. The next start offers them again ("fortsetzen"), exactly like
+// after a container restart.
+func (m *Manager) StopForRestart() {
+	m.mu.Lock()
+	m.stopping = true
+	var cancels []context.CancelFunc
+	for _, j := range m.jobs {
+		if j.Status != "running" {
+			continue
+		}
+		r := *j.req
+		r.Items = []Item{j.item}
+		m.restorable = append(m.restorable, r)
+		j.Status = "stopped" // not written as pending: the request is already in restorable
+		if j.cancel != nil {
+			cancels = append(cancels, j.cancel)
+		}
+	}
+	m.persistLocked()
+	m.mu.Unlock()
+	for _, c := range cancels {
+		c()
 	}
 }
 

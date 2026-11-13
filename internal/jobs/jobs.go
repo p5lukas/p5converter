@@ -116,6 +116,7 @@ type Manager struct {
 	finished    int // jobs that reached an end state since start (also those already pruned)
 	// queue management (queue.go): whole queue paused, file with the pending jobs, jobs of a previous run waiting for the user's decision
 	paused     bool
+	stopping   bool // StopForRestart: no new job starts, running ones go back into the queue file
 	queueFile  string
 	restorable []Request
 }
@@ -298,8 +299,8 @@ func (m *Manager) ClearFinished(kind string) {
 func (m *Manager) schedule() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.paused {
-		return // queue paused: running jobs finish, nothing new starts
+	if m.paused || m.stopping {
+		return // queue paused (or the program is ending): running jobs finish, nothing new starts
 	}
 	// each world has its own queue and its own number of parallel jobs
 	for _, kind := range []string{"audio", "video"} {
@@ -338,6 +339,26 @@ func (m *Manager) wasCancelled(j *Job) bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return j.cancelled
+}
+
+// takeRestart reports whether the job was stopped by StopForRestart: then it gets no end state and no
+// history entry, because its request already waits in the queue file for the next start.
+func (m *Manager) takeRestart(j *Job) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if !m.stopping {
+		return false
+	}
+	j.Status = "stopped"
+	j.Error = ""
+	return true
+}
+
+// Running reports how many jobs are still executing (their goroutine has not returned yet).
+func (m *Manager) Running() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.running["audio"] + m.running["video"]
 }
 
 var jlog = logs.Get("jobs")
@@ -456,36 +477,26 @@ func (m *Manager) release(out string) {
 
 var mapRe = regexp.MustCompile(`^Stream #\d+:\d+ -> #\d+:\d+ \(`)
 
+// attempt is one way to run the job: with or without hardware decoding (and, for QSV/VAAPI, with the
+// frames staying on the GPU or being copied back to normal memory).
+type attempt struct {
+	hwdec bool
+	mode  string
+	label string
+}
+
+// run executes one job: probe, build the ffmpeg arguments, run ffmpeg, check the result and report it.
 func (m *Manager) run(j *Job) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	m.update(j, func() { j.cancel = cancel })
 
-	info, err := m.tools.Probe(ctx, j.item.Path)
-	if err != nil {
-		m.fail(j, err)
-		return
-	}
-	out, ok := m.claimOutput(j, outputPath(j, info))
+	info, out, newDirs, ok := m.prepare(ctx, j)
 	if !ok {
-		m.update(j, func() {
-			j.Status = "skipped"
-			j.Output = out
-			j.Ended = time.Now()
-			j.Error = "Zieldatei existiert bereits"
-		})
-		jlog.Warnf("Auftrag %s übersprungen: Zieldatei existiert bereits (%s)", j.ID, out)
-		m.finish(j)
 		return
 	}
 	defer m.release(out)
-	m.update(j, func() { j.Output = out })
-	jlog.Infof("Auftrag %s gestartet: %s → %s", j.ID, j.item.Path, out)
-	newDirs := missingDirs(filepath.Dir(out))
-	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
-		m.fail(j, err)
-		return
-	}
+
 	tmp := out + ".part"
 	m.trackPartial(tmp, true)
 	defer m.trackPartial(tmp, false)
@@ -495,50 +506,70 @@ func (m *Manager) run(j *Job) {
 		m.removeEmptyDirs(newDirs, out)
 	}
 
-	type attempt struct {
-		hwdec bool
-		mode  string
-		label string
-	}
-	buildArgs := func(a attempt) ([]string, error) {
-		if j.Kind == "audio" {
-			return build.BuildAudio(info, j.req.Audio, j.item.Path, tmp)
-		}
-		v := j.req.Video
-		v.HWDecode = v.HWDecode && a.hwdec
-		v.HWDecodeMode = a.mode
-		plan, err := build.BuildVideo(info, v, j.item.Overrides, j.item.Path, tmp)
-		if err != nil {
-			return nil, err
-		}
-		m.update(j, func() {
-			j.Backend, j.Encoder, j.Warnings = plan.Backend, plan.Encoder, plan.Warnings
-		})
-		return plan.Args, nil
-	}
-
-	attempts := []attempt{{hwdec: false}}
-	if j.Kind == "video" {
-		v := j.req.Video
-		if v.HWDecode && v.Backend != "cpu" && v.Codec != "copy" {
-			if name, ok := gpuNames[v.Backend]; ok {
-				// qsv, vaapi, nvenc: first everything on the GPU, then frames copied back to normal memory, last the CPU reads
-				attempts = []attempt{
-					{true, "full", name + " lesen (alles auf der Hardware)"},
-					{true, "download", name + " lesen (Bilder zurück in den Arbeitsspeicher)"},
-					{false, "", ""},
-				}
-			} else {
-				attempts = []attempt{{true, "", "Hardware-Decoding"}, {false, "", ""}}
-			}
-		}
-	}
-	var usedArgs []string
-	for i, a := range attempts {
-		args, e := buildArgs(a)
-		if e != nil {
-			m.fail(j, e)
+	usedArgs, err := m.convert(ctx, j, info, tmp)
+	if err != nil {
+		cleanup()
+		if m.takeRestart(j) {
+			jlog.Infof("Auftrag %s beim Beenden gestoppt, wird beim nächsten Start fortgesetzt (%s)", j.ID, filepath.Base(j.item.Path))
 			return
+		}
+		if m.wasCancelled(j) {
+			m.update(j, func() { j.Status = "canceled"; j.Ended = time.Now(); j.Error = "" })
+			jlog.Infof("Auftrag %s abgebrochen, unfertige Datei gelöscht (%s)", j.ID, filepath.Base(j.item.Path))
+			m.finish(j)
+			return
+		}
+		m.fail(j, err)
+		return
+	}
+	if err := os.Rename(tmp, out); err != nil {
+		cleanup()
+		m.fail(j, err)
+		return
+	}
+	m.verifyAndReport(ctx, j, info, out, usedArgs)
+}
+
+// prepare probes the source and reserves the output path (probe error, existing file and a failing
+// mkdir are reported here; ok=false means the job is already finished).
+func (m *Manager) prepare(ctx context.Context, j *Job) (info *ffmpeg.Info, out string, newDirs []string, ok bool) {
+	info, err := m.tools.Probe(ctx, j.item.Path)
+	if err != nil {
+		m.fail(j, err)
+		return nil, "", nil, false
+	}
+	out, ok = m.claimOutput(j, outputPath(j, info))
+	if !ok {
+		m.update(j, func() {
+			j.Status = "skipped"
+			j.Output = out
+			j.Ended = time.Now()
+			j.Error = "Zieldatei existiert bereits"
+		})
+		jlog.Warnf("Auftrag %s übersprungen: Zieldatei existiert bereits (%s)", j.ID, out)
+		m.finish(j)
+		return nil, "", nil, false
+	}
+	m.update(j, func() { j.Output = out })
+	jlog.Infof("Auftrag %s gestartet: %s → %s", j.ID, j.item.Path, out)
+	newDirs = missingDirs(filepath.Dir(out))
+	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
+		m.release(out)
+		m.fail(j, err)
+		return nil, "", nil, false
+	}
+	return info, out, newDirs, true
+}
+
+// convert tries the attempts in order until one works (hardware decoding may fail on some GPUs).
+func (m *Manager) convert(ctx context.Context, j *Job, info *ffmpeg.Info, tmp string) ([]string, error) {
+	attempts := m.attemptsFor(j)
+	var usedArgs []string
+	var err error
+	for i, a := range attempts {
+		args, e := m.buildArgs(j, info, tmp, a)
+		if e != nil {
+			return nil, e
 		}
 		m.update(j, func() {
 			switch {
@@ -558,7 +589,7 @@ func (m *Manager) run(j *Job) {
 			// these chains only work when the GPU really decodes (scale_vaapi/scale_cuda/hwdownload need GPU frames)
 			m.update(j, func() { j.DecoderConfirmed, j.DecoderName = true, "hwaccel "+j.req.Video.Backend })
 		}
-		if err == nil || m.wasCancelled(j) || i == len(attempts)-1 {
+		if err == nil || m.wasCancelled(j) || ctx.Err() != nil || i == len(attempts)-1 {
 			break
 		}
 		// this way did not work: note it quietly and try the next one
@@ -569,22 +600,49 @@ func (m *Manager) run(j *Job) {
 			j.Error = ""
 		})
 	}
-	if err != nil {
-		cleanup()
-		if m.wasCancelled(j) {
-			m.update(j, func() { j.Status = "canceled"; j.Ended = time.Now(); j.Error = "" })
-			jlog.Infof("Auftrag %s abgebrochen, unfertige Datei gelöscht (%s)", j.ID, filepath.Base(j.item.Path))
-			m.finish(j)
-			return
+	return usedArgs, err
+}
+
+// attemptsFor lists the ways to run this job: plain software decoding, or the hardware chain when it was asked for.
+func (m *Manager) attemptsFor(j *Job) []attempt {
+	attempts := []attempt{{}}
+	if j.Kind != "video" {
+		return attempts
+	}
+	v := j.req.Video
+	if !v.HWDecode || v.Backend == "cpu" || v.Codec == "copy" {
+		return attempts
+	}
+	if name, ok := gpuNames[v.Backend]; ok {
+		// qsv, vaapi, nvenc: first everything on the GPU, then frames copied back to normal memory, last the CPU reads
+		return []attempt{
+			{true, "full", name + " lesen (alles auf der Hardware)"},
+			{true, "download", name + " lesen (Bilder zurück in den Arbeitsspeicher)"},
+			{false, "", ""},
 		}
-		m.fail(j, err)
-		return
 	}
-	if err := os.Rename(tmp, out); err != nil {
-		cleanup()
-		m.fail(j, err)
-		return
+	return []attempt{{true, "", "Hardware-Decoding"}, {false, "", ""}}
+}
+
+// buildArgs turns one attempt into the ffmpeg arguments and reports the encoder ffmpeg will use.
+func (m *Manager) buildArgs(j *Job, info *ffmpeg.Info, tmp string, a attempt) ([]string, error) {
+	if j.Kind == "audio" {
+		return build.BuildAudio(info, j.req.Audio, j.item.Path, tmp)
 	}
+	v := j.req.Video
+	v.HWDecode = v.HWDecode && a.hwdec
+	v.HWDecodeMode = a.mode
+	plan, err := build.BuildVideo(info, v, j.item.Overrides, j.item.Path, tmp)
+	if err != nil {
+		return nil, err
+	}
+	m.update(j, func() { j.Backend, j.Encoder, j.Warnings = plan.Backend, plan.Encoder, plan.Warnings })
+	return plan.Args, nil
+}
+
+// verifyAndReport checks the finished file (tracks, duration, size, optional decode test), removes the
+// source only after a passed check, and reports the job to statistics and history.
+func (m *Manager) verifyAndReport(ctx context.Context, j *Job, info *ffmpeg.Info, out string, usedArgs []string) {
 	var size int64
 	if st, err := os.Stat(out); err == nil {
 		size = st.Size()
