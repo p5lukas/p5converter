@@ -158,40 +158,8 @@ func BuildVideo(info *ffmpeg.Info, o VideoOpts, ov Overrides, in, out string) (*
 	}
 
 	args := []string{"-hide_banner", "-nostdin", "-y", "-progress", "pipe:1", "-nostats"}
-
-	// --- device / hardware decode (input options) ---
 	if hw {
-		devInit := o.HWInit
-		if o.HWDecode && o.Backend == "qsv" && len(o.HWDecodeInit) > 0 {
-			devInit = o.HWDecodeInit
-		}
-		args = append(args, devInit...)
-		if o.Backend == "vaapi" {
-			dev := o.VaapiDevice
-			if dev == "" {
-				dev = "/dev/dri/renderD128"
-			}
-			args = append(args, "-vaapi_device", dev)
-		}
-		if o.HWDecode {
-			switch o.Backend {
-			case "qsv":
-				args = append(args, "-hwaccel", "qsv", "-hwaccel_output_format", "qsv")
-				if len(devInit) > 0 {
-					args = append(args, "-hwaccel_device", "hw")
-				}
-			case "nvenc":
-				args = append(args, "-hwaccel", "cuda", "-hwaccel_output_format", "cuda")
-			case "vaapi":
-				dev := o.VaapiDevice
-				if dev == "" {
-					dev = "/dev/dri/renderD128"
-				}
-				args = append(args, "-hwaccel", "vaapi", "-hwaccel_device", dev, "-hwaccel_output_format", "vaapi")
-			case "amf":
-				args = append(args, "-hwaccel", "d3d11va")
-			}
-		}
+		args = append(args, hwInputArgs(o)...)
 	}
 	args = append(args, "-i", in, "-map_metadata", "0", "-map_chapters", "0")
 
@@ -201,140 +169,211 @@ func BuildVideo(info *ffmpeg.Info, o VideoOpts, ov Overrides, in, out string) (*
 		args = append(args, "-c:v", "copy")
 		plan.Encoder = "copy"
 	} else {
-		enc := EncoderName(o.Backend, o.Codec)
-		if o.Backend == "cpu" && o.Codec == "av1" && o.AV1Aom {
-			enc = "libaom-av1"
+		vargs, err := videoEncodeArgs(o, vs, plan)
+		if err != nil {
+			return nil, err
 		}
-		if enc == "" {
-			return nil, fmt.Errorf("%s unterstützt %s nicht", o.Backend, o.Codec)
-		}
-		plan.Encoder = enc
-
-		ten := o.BitDepth == 10 || (o.BitDepth == 0 && vs.BitDepth > 8)
-		if ten && (o.Codec == "h264" && o.Backend != "cpu" || o.Codec == "vp9" && o.Backend != "cpu") {
-			plan.Warnings = append(plan.Warnings, "10 Bit mit "+enc+" nicht möglich – verwende 8 Bit")
-			ten = false
-		}
-		if ten && o.Backend == "nvenc" && o.Codec == "h264" {
-			ten = false
-		}
-		plan.TenBit = ten
-
-		var vf []string
-		scaleH, scaleW := 0, 0
-		if o.Height > 0 && vs.Height > 0 {
-			if o.Height < vs.Height {
-				scaleH = o.Height
-				scaleW = (vs.Width*o.Height/vs.Height + 1) / 2 * 2
-				vf = append(vf, fmt.Sprintf("scale=-2:%d", o.Height))
-			} else if o.Height > vs.Height {
-				plan.Warnings = append(plan.Warnings, "Quelle ist kleiner als Zielauflösung – keine Hochskalierung")
-			}
-		}
-		hwPix := "nv12"
-		swPix := "yuv420p"
-		if ten {
-			hwPix, swPix = "p010le", "yuv420p10le"
-		}
-		crf := strconv.Itoa(o.CRF)
-		if o.CRF <= 0 {
-			crf = "23"
-		}
-		pi := presetIndex(o.Preset) // 0 slow .. 3 veryfast
-		enargs := []string{"-c:v", enc}
-
-		switch o.Backend {
-		case "cpu":
-			vf = append(vf, "format="+swPix)
-			switch o.Codec {
-			case "h264":
-				enargs = append(enargs, "-preset", []string{"slow", "medium", "fast", "veryfast"}[pi], "-crf", crf)
-				if ten {
-					enargs = append(enargs, "-profile:v", "high10")
-				}
-			case "hevc":
-				enargs = append(enargs, "-preset", []string{"slow", "medium", "fast", "veryfast"}[pi], "-crf", crf)
-				if o.Container == "mp4" {
-					enargs = append(enargs, "-tag:v", "hvc1")
-				}
-			case "av1":
-				if enc == "libaom-av1" {
-					enargs = append(enargs, "-crf", crf, "-b:v", "0", "-cpu-used", []string{"2", "4", "6", "8"}[pi], "-row-mt", "1")
-				} else {
-					enargs = append(enargs, "-preset", []string{"4", "6", "8", "10"}[pi], "-crf", crf)
-				}
-			case "vp9":
-				enargs = append(enargs, "-crf", crf, "-b:v", "0", "-row-mt", "1", "-cpu-used", []string{"1", "2", "3", "4"}[pi])
-			}
-		case "qsv":
-			switch {
-			case !o.HWDecode:
-				vf = append(vf, "format="+hwPix)
-			case o.HWDecodeMode == "download":
-				// frames live on the GPU: copy them back, then the normal software filters apply
-				srcFmt := "nv12"
-				if vs.BitDepth > 8 {
-					srcFmt = "p010le"
-				}
-				vf = append([]string{"hwdownload", "format=" + srcFmt}, vf...)
-				vf = append(vf, "format="+hwPix)
-			default:
-				// whole chain on the GPU: software filters cannot read Quick Sync frames
-				vf = nil
-				var vpp []string
-				if scaleH > 0 && scaleW > 0 {
-					vpp = append(vpp, fmt.Sprintf("w=%d", scaleW), fmt.Sprintf("h=%d", scaleH))
-				}
-				if (vs.BitDepth > 8) != ten {
-					vpp = append(vpp, "format="+hwPix)
-				}
-				if len(vpp) > 0 {
-					vf = []string{"vpp_qsv=" + strings.Join(vpp, ":")}
-				}
-			}
-			enargs = append(enargs, "-preset", []string{"slow", "medium", "fast", "veryfast"}[pi], "-global_quality", crf)
-			if ten && o.Codec == "hevc" {
-				enargs = append(enargs, "-profile:v", "main10")
-			}
-		case "nvenc":
-			if o.HWDecode {
-				vf = gpuChain(o.HWDecodeMode, "cuda", vs, scaleW, scaleH, hwPix, ten, vf)
-			} else {
-				vf = append(vf, "format="+hwPix)
-			}
-			enargs = append(enargs, "-preset", []string{"p6", "p5", "p4", "p2"}[pi], "-rc", "vbr", "-cq", crf, "-b:v", "0")
-			if ten && o.Codec == "hevc" {
-				enargs = append(enargs, "-profile:v", "main10")
-			}
-		case "vaapi":
-			if o.HWDecode {
-				vf = gpuChain(o.HWDecodeMode, "vaapi", vs, scaleW, scaleH, hwPix, ten, vf)
-			} else {
-				vf = append(vf, "format="+hwPix, "hwupload")
-			}
-			enargs = append(enargs, "-qp", crf)
-			if ten && o.Codec == "hevc" {
-				enargs = append(enargs, "-profile:v", "main10")
-			}
-		case "amf":
-			vf = append(vf, "format="+hwPix)
-			enargs = append(enargs, "-quality", []string{"quality", "quality", "balanced", "speed"}[pi], "-rc", "cqp",
-				"-qp_i", crf, "-qp_p", crf)
-			if o.Codec == "h264" {
-				enargs = append(enargs, "-qp_b", crf)
-			}
-			if ten && o.Codec == "hevc" {
-				enargs = append(enargs, "-profile:v", "main10")
-			}
-		default:
-			return nil, fmt.Errorf("unbekanntes Backend %q", o.Backend)
-		}
-		if len(vf) > 0 {
-			args = append(args, "-vf", strings.Join(vf, ","))
-		}
-		args = append(args, enargs...)
+		args = append(args, vargs...)
 	}
 
+	args = append(args, audioTrackArgs(info, o, ov, plan)...)
+	args = append(args, subtitleTrackArgs(info, o, ov, plan)...)
+	if o.Container == "mkv" {
+		// Schriften für gestaltete Untertitel. Als LETZTE Spur: stehen Anhänge vor einer kopierten Tonspur, lehnt der Matroska-Muxer von
+		// ffmpeg 6.1 deren Pakete ab („Received a packet for an attachment stream“) und die Umwandlung bricht nach 0 Bildern ab.
+		args = append(args, "-map", "0:t?", "-c:t", "copy")
+	}
+
+	muxer := "matroska"
+	if o.Container == "mp4" {
+		muxer = "mp4"
+		args = append(args, "-movflags", "+faststart")
+	}
+	args = append(args, "-f", muxer, out)
+	plan.Args = args
+	return plan, nil
+}
+
+// hwInputArgs are the input options for the GPU: device setup and hardware decoding.
+func hwInputArgs(o VideoOpts) []string {
+	var out []string
+	devInit := o.HWInit
+	if o.HWDecode && o.Backend == "qsv" && len(o.HWDecodeInit) > 0 {
+		devInit = o.HWDecodeInit
+	}
+	out = append(out, devInit...)
+	if o.Backend == "vaapi" {
+		dev := o.VaapiDevice
+		if dev == "" {
+			dev = "/dev/dri/renderD128"
+		}
+		out = append(out, "-vaapi_device", dev)
+	}
+	if o.HWDecode {
+		switch o.Backend {
+		case "qsv":
+			out = append(out, "-hwaccel", "qsv", "-hwaccel_output_format", "qsv")
+			if len(devInit) > 0 {
+				out = append(out, "-hwaccel_device", "hw")
+			}
+		case "nvenc":
+			out = append(out, "-hwaccel", "cuda", "-hwaccel_output_format", "cuda")
+		case "vaapi":
+			dev := o.VaapiDevice
+			if dev == "" {
+				dev = "/dev/dri/renderD128"
+			}
+			out = append(out, "-hwaccel", "vaapi", "-hwaccel_device", dev, "-hwaccel_output_format", "vaapi")
+		case "amf":
+			out = append(out, "-hwaccel", "d3d11va")
+		}
+	}
+
+	return out
+}
+
+// videoEncodeArgs builds the video filters and the encoder options for the chosen backend.
+func videoEncodeArgs(o VideoOpts, vs *ffmpeg.Stream, plan *Plan) ([]string, error) {
+	var out []string
+	enc := EncoderName(o.Backend, o.Codec)
+	if o.Backend == "cpu" && o.Codec == "av1" && o.AV1Aom {
+		enc = "libaom-av1"
+	}
+	if enc == "" {
+		return nil, fmt.Errorf("%s unterstützt %s nicht", o.Backend, o.Codec)
+	}
+	plan.Encoder = enc
+
+	ten := o.BitDepth == 10 || (o.BitDepth == 0 && vs.BitDepth > 8)
+	if ten && (o.Codec == "h264" && o.Backend != "cpu" || o.Codec == "vp9" && o.Backend != "cpu") {
+		plan.Warnings = append(plan.Warnings, "10 Bit mit "+enc+" nicht möglich – verwende 8 Bit")
+		ten = false
+	}
+	if ten && o.Backend == "nvenc" && o.Codec == "h264" {
+		ten = false
+	}
+	plan.TenBit = ten
+
+	var vf []string
+	scaleH, scaleW := 0, 0
+	if o.Height > 0 && vs.Height > 0 {
+		if o.Height < vs.Height {
+			scaleH = o.Height
+			scaleW = (vs.Width*o.Height/vs.Height + 1) / 2 * 2
+			vf = append(vf, fmt.Sprintf("scale=-2:%d", o.Height))
+		} else if o.Height > vs.Height {
+			plan.Warnings = append(plan.Warnings, "Quelle ist kleiner als Zielauflösung – keine Hochskalierung")
+		}
+	}
+	hwPix := "nv12"
+	swPix := "yuv420p"
+	if ten {
+		hwPix, swPix = "p010le", "yuv420p10le"
+	}
+	crf := strconv.Itoa(o.CRF)
+	if o.CRF <= 0 {
+		crf = "23"
+	}
+	pi := presetIndex(o.Preset) // 0 slow .. 3 veryfast
+	enargs := []string{"-c:v", enc}
+
+	switch o.Backend {
+	case "cpu":
+		vf = append(vf, "format="+swPix)
+		switch o.Codec {
+		case "h264":
+			enargs = append(enargs, "-preset", []string{"slow", "medium", "fast", "veryfast"}[pi], "-crf", crf)
+			if ten {
+				enargs = append(enargs, "-profile:v", "high10")
+			}
+		case "hevc":
+			enargs = append(enargs, "-preset", []string{"slow", "medium", "fast", "veryfast"}[pi], "-crf", crf)
+			if o.Container == "mp4" {
+				enargs = append(enargs, "-tag:v", "hvc1")
+			}
+		case "av1":
+			if enc == "libaom-av1" {
+				enargs = append(enargs, "-crf", crf, "-b:v", "0", "-cpu-used", []string{"2", "4", "6", "8"}[pi], "-row-mt", "1")
+			} else {
+				enargs = append(enargs, "-preset", []string{"4", "6", "8", "10"}[pi], "-crf", crf)
+			}
+		case "vp9":
+			enargs = append(enargs, "-crf", crf, "-b:v", "0", "-row-mt", "1", "-cpu-used", []string{"1", "2", "3", "4"}[pi])
+		}
+	case "qsv":
+		switch {
+		case !o.HWDecode:
+			vf = append(vf, "format="+hwPix)
+		case o.HWDecodeMode == "download":
+			// frames live on the GPU: copy them back, then the normal software filters apply
+			srcFmt := "nv12"
+			if vs.BitDepth > 8 {
+				srcFmt = "p010le"
+			}
+			vf = append([]string{"hwdownload", "format=" + srcFmt}, vf...)
+			vf = append(vf, "format="+hwPix)
+		default:
+			// whole chain on the GPU: software filters cannot read Quick Sync frames
+			vf = nil
+			var vpp []string
+			if scaleH > 0 && scaleW > 0 {
+				vpp = append(vpp, fmt.Sprintf("w=%d", scaleW), fmt.Sprintf("h=%d", scaleH))
+			}
+			if (vs.BitDepth > 8) != ten {
+				vpp = append(vpp, "format="+hwPix)
+			}
+			if len(vpp) > 0 {
+				vf = []string{"vpp_qsv=" + strings.Join(vpp, ":")}
+			}
+		}
+		enargs = append(enargs, "-preset", []string{"slow", "medium", "fast", "veryfast"}[pi], "-global_quality", crf)
+		if ten && o.Codec == "hevc" {
+			enargs = append(enargs, "-profile:v", "main10")
+		}
+	case "nvenc":
+		if o.HWDecode {
+			vf = gpuChain(o.HWDecodeMode, "cuda", vs, scaleW, scaleH, hwPix, ten, vf)
+		} else {
+			vf = append(vf, "format="+hwPix)
+		}
+		enargs = append(enargs, "-preset", []string{"p6", "p5", "p4", "p2"}[pi], "-rc", "vbr", "-cq", crf, "-b:v", "0")
+		if ten && o.Codec == "hevc" {
+			enargs = append(enargs, "-profile:v", "main10")
+		}
+	case "vaapi":
+		if o.HWDecode {
+			vf = gpuChain(o.HWDecodeMode, "vaapi", vs, scaleW, scaleH, hwPix, ten, vf)
+		} else {
+			vf = append(vf, "format="+hwPix, "hwupload")
+		}
+		enargs = append(enargs, "-qp", crf)
+		if ten && o.Codec == "hevc" {
+			enargs = append(enargs, "-profile:v", "main10")
+		}
+	case "amf":
+		vf = append(vf, "format="+hwPix)
+		enargs = append(enargs, "-quality", []string{"quality", "quality", "balanced", "speed"}[pi], "-rc", "cqp",
+			"-qp_i", crf, "-qp_p", crf)
+		if o.Codec == "h264" {
+			enargs = append(enargs, "-qp_b", crf)
+		}
+		if ten && o.Codec == "hevc" {
+			enargs = append(enargs, "-profile:v", "main10")
+		}
+	default:
+		return nil, fmt.Errorf("unbekanntes Backend %q", o.Backend)
+	}
+	if len(vf) > 0 {
+		out = append(out, "-vf", strings.Join(vf, ","))
+	}
+	out = append(out, enargs...)
+
+	return out, nil
+}
+
+// audioTrackArgs maps, converts and marks the audio tracks that survive the rules.
+func audioTrackArgs(info *ffmpeg.Info, o VideoOpts, ov Overrides, plan *Plan) []string {
+	var out []string
 	// --- audio ---
 	var audio []ffmpeg.Stream
 	for _, s := range info.ByType("audio") {
@@ -369,7 +408,7 @@ func BuildVideo(info *ffmpeg.Info, o VideoOpts, ov Overrides, in, out string) (*
 		}
 	}
 	for i, s := range audio {
-		args = append(args, "-map", "0:"+strconv.Itoa(s.Index))
+		out = append(out, "-map", "0:"+strconv.Itoa(s.Index))
 		n := strconv.Itoa(i)
 		e := ov.edit(s.Index)
 		encode := o.AudioMode == "encode"
@@ -405,19 +444,19 @@ func BuildVideo(info *ffmpeg.Info, o VideoOpts, ov Overrides, in, out string) (*
 			if codec == "" {
 				codec = "aac"
 			}
-			args = append(args, "-c:a:"+n, codec)
+			out = append(out, "-c:a:"+n, codec)
 			if codec != "flac" {
-				args = append(args, "-b:a:"+n, strconv.Itoa(br)+"k")
+				out = append(out, "-b:a:"+n, strconv.Itoa(br)+"k")
 			}
 			if codec == "libopus" && ch == 6 {
-				args = append(args, "-filter:a:"+n, "aformat=channel_layouts=5.1")
+				out = append(out, "-filter:a:"+n, "aformat=channel_layouts=5.1")
 			} else if codec == "libopus" && ch == 8 {
-				args = append(args, "-filter:a:"+n, "aformat=channel_layouts=7.1")
+				out = append(out, "-filter:a:"+n, "aformat=channel_layouts=7.1")
 			}
 		} else {
-			args = append(args, "-c:a:"+n, "copy")
+			out = append(out, "-c:a:"+n, "copy")
 		}
-		args = append(args, trackMeta("a", n, s, e, plan, o.Container)...)
+		out = append(out, trackMeta("a", n, s, e, plan, o.Container)...)
 		def, hasDef := s.Default, false
 		if ov.DefaultAudio != nil {
 			def, hasDef = s.Index == *ov.DefaultAudio, true
@@ -428,10 +467,16 @@ func BuildVideo(info *ffmpeg.Info, o VideoOpts, ov Overrides, in, out string) (*
 			def, hasDef = *e.Default, true
 		}
 		if hasDef || e.Forced != nil {
-			args = append(args, "-disposition:a:"+n, dispositionValue(def, forcedOf(s, e)))
+			out = append(out, "-disposition:a:"+n, dispositionValue(def, forcedOf(s, e)))
 		}
 	}
 
+	return out
+}
+
+// subtitleTrackArgs maps, converts and marks the subtitle tracks that survive the rules.
+func subtitleTrackArgs(info *ffmpeg.Info, o VideoOpts, ov Overrides, plan *Plan) []string {
+	var out []string
 	// --- subtitles ---
 	n := 0
 	for _, s := range info.ByType("subtitle") {
@@ -446,20 +491,20 @@ func BuildVideo(info *ffmpeg.Info, o VideoOpts, ov Overrides, in, out string) (*
 			plan.Warnings = append(plan.Warnings, fmt.Sprintf("Untertitel #%d (%s) passt nicht in MP4 – entfernt", s.Index, s.Codec))
 			continue
 		}
-		args = append(args, "-map", "0:"+strconv.Itoa(s.Index))
+		out = append(out, "-map", "0:"+strconv.Itoa(s.Index))
 		sn := strconv.Itoa(n)
 		if o.Container == "mp4" {
-			args = append(args, "-c:s:"+sn, "mov_text")
+			out = append(out, "-c:s:"+sn, "mov_text")
 		} else {
-			args = append(args, "-c:s:"+sn, "copy")
+			out = append(out, "-c:s:"+sn, "copy")
 		}
-		args = append(args, trackMeta("s", sn, s, e, plan, o.Container)...)
+		out = append(out, trackMeta("s", sn, s, e, plan, o.Container)...)
 		if e.Default != nil || e.Forced != nil {
 			def := s.Default
 			if e.Default != nil {
 				def = *e.Default
 			}
-			args = append(args, "-disposition:s:"+sn, dispositionValue(def, forcedOf(s, e)))
+			out = append(out, "-disposition:s:"+sn, dispositionValue(def, forcedOf(s, e)))
 		}
 		if forcedOf(s, e) && o.Container == "mp4" {
 			plan.Warnings = append(plan.Warnings, fmt.Sprintf("Untertitel #%d ist „Forced“ – Plex erkennt das nur in MKV-Dateien", s.Index))
@@ -467,20 +512,7 @@ func BuildVideo(info *ffmpeg.Info, o VideoOpts, ov Overrides, in, out string) (*
 		n++
 	}
 
-	if o.Container == "mkv" {
-		// Schriften für gestaltete Untertitel. Als LETZTE Spur: stehen Anhänge vor einer kopierten Tonspur, lehnt der Matroska-Muxer von
-		// ffmpeg 6.1 deren Pakete ab („Received a packet for an attachment stream“) und die Umwandlung bricht nach 0 Bildern ab.
-		args = append(args, "-map", "0:t?", "-c:t", "copy")
-	}
-
-	muxer := "matroska"
-	if o.Container == "mp4" {
-		muxer = "mp4"
-		args = append(args, "-movflags", "+faststart")
-	}
-	args = append(args, "-f", muxer, out)
-	plan.Args = args
-	return plan, nil
+	return out
 }
 
 // gpuChain builds the video filter chain for VAAPI / NVIDIA when the source is decoded by the GPU.
