@@ -32,12 +32,12 @@ exports.toCheck = async p => {
 // eine Karte der Konvertieren-Seite aufklappen (id: video, audio, subs, rules, name, check oder die alten Namen dest/tracks/verify)
 exports.openCard = async (p, id) => {
   const c = CARD[id] || id;
-  await p.evaluate(x => { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); CV.card[x] = true; cvRender(); }, c); await p.waitForTimeout(500);
+  await p.evaluate(x => { const {CV, cvRender} = window.__p5; if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); CV.card[x] = true; cvRender(); }, c); await p.waitForTimeout(500);
   return p.locator(`[data-card="${c}"]`);
 };
 exports.goStep = async (p, id) => {
   if (id === 'start') { await exports.home(p); return; }
-  if (await p.isVisible('#startTiles')) { const k = await p.evaluate(() => S.world); await p.click(`[data-kind=${k}]`); await p.waitForTimeout(400); } // von der Startseite aus: die zuletzt benutzte Art
+  if (await p.isVisible('#startTiles')) { const k = await p.evaluate(() => { const {S} = window.__p5; return (S.world); }); await p.click(`[data-kind=${k}]`); await p.waitForTimeout(400); } // von der Startseite aus: die zuletzt benutzte Art
   if (id in CARD) {
     if (!(await p.isVisible('#stepnav')) && (await p.locator('#fileList .file').count())) await exports.toCheck(p);
     if (await p.isVisible('#stepnav')) await exports.openCard(p, id);

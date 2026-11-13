@@ -1,6 +1,6 @@
 'use strict';
 // Anfänger-Erklärungen für jede Einstellung. Schlüssel = id des Bedienelements (oder data-info).
-const INFO = {
+export const INFO = {
   outMode: {t: 'Speicherort', b: `<p>Wohin die fertige Datei geschrieben wird.</p>
     <ul><li><b>Neben der Quelldatei:</b> Die neue Datei liegt im selben Ordner wie das Original. Praktisch für ein paar Dateien.</li>
     <li><b>Eigener Ordner:</b> Alles landet in einem Ordner deiner Wahl, z. B. <code>/output</code>. Besser bei großen Sammlungen – dein Original-Ordner bleibt sauber.</li></ul>

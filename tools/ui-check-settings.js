@@ -52,13 +52,13 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     await L.enter(p, 'video'); await L.addFile(p, 'long.mkv');
     // Voreinstellung speichern
     await L.toCheck(p);
-    await p.evaluate(() => { cvSet('vCodec', 'hevc'); cvSet('vDepth', '10'); cvSet('vCrf', '19'); });
+    await p.evaluate(() => { const {cvSet} = window.__p5; cvSet('vCodec', 'hevc'); cvSet('vDepth', '10'); cvSet('vCrf', '19'); });
     await p.waitForTimeout(300);
     await p.click('#savePreset'); await p.waitForTimeout(300);
     await p.fill('#presetName', 'Mein Test ' + name); await p.click('#presetSave'); await p.waitForTimeout(600);
     ok(await p.locator('#vPresets button', {hasText: 'Mein Test ' + name}).count() === 1, name + ': Chip der neuen Voreinstellung fehlt');
     // zurücksetzen und per Chip laden
-    await p.evaluate(() => { cvSet('vCodec', 'h264'); cvSet('vDepth', '8'); });
+    await p.evaluate(() => { const {cvSet} = window.__p5; cvSet('vCodec', 'h264'); cvSet('vDepth', '8'); });
     await p.click('#cvStepper [data-step=files]'); await p.waitForTimeout(400); // Schritt 1: dort stehen die Voreinstellungen
     await p.click('#vPresets button:has-text("Mein Test ' + name + '")'); await p.waitForTimeout(500);
     ok(await p.locator('#cvStepper .stp.on').getAttribute('data-step') === 'check', name + ': Voreinstellung sollte direkt zur Kontrolle springen');

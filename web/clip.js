@@ -1,3 +1,11 @@
+import { $, BACKEND_FULL, S, api, fmtSize, fmtTime, refreshVideoUI, resolveBackend, saveSettings, toast, workingBackends } from './app.js';
+import { CV, cvRender } from './convert.js';
+import { qSetStage } from './crf.js';
+import { icon } from './icons.js';
+import { Q } from './quality.js';
+import { fill, h, setField } from './settings.js';
+import { TRK, fileLabel } from './tracks.js';
+
 'use strict';
 /* Probeclip: 30 Sekunden aus der Mitte einer Datei werden mit mehreren Einstellungen umgewandelt (der Server schneidet den Ausschnitt ohne Neukodieren und misst
    Größe, Dauer und den Abstand zur Quelle). Hier: Einstellungen zum Vergleichen vorschlagen, Lauf starten, Ergebnis mit denselben Bildstellen zeigen, „Diese nehmen“ übernimmt
@@ -31,7 +39,7 @@ function clipCandidates() {
 }
 
 function clipClose() { clearTimeout(CLIP.timer); CLIP.timer = 0; if (CLIP.busy && CLIP.id) api('/api/clip/' + CLIP.id + '/cancel', {}).catch(() => {}); CLIP.busy = false; $('#clipDlg').close(); }
-function openClip() {
+export function openClip() {
   const f = clipFile();
   if (!f) { toast('Zuerst Dateien wählen.', 'bad'); return; }
   CLIP.file = f; CLIP.cands = clipCandidates(); CLIP.run = null; CLIP.id = null; CLIP.busy = false;

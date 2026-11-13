@@ -1,3 +1,11 @@
+import { $, $$, CHECKS, FIELDS, NAME_EMPTY, NAME_FIELDS, S, api, applyKindTheme, enterKind, fmtSize, outModeUI, refreshAudioUI, refreshVideoUI, renderFiles, renderHero, saveSettings, showName, toast } from './app.js';
+import { CV, cvLayout, cvRender, openSheet } from './convert.js';
+import { icon } from './icons.js';
+import { syncNameUI } from './rename.js';
+import { PRESET_FIELDS, W, applyPreset, cfg, describePreset, fill, h, setField } from './settings.js';
+import { vfReset } from './verify.js';
+import { openWizard } from './wizard.js';
+
 'use strict';
 /* Startseite (Kacheln Video und Audio), Wegweiser durch den Ablauf, gewonnener Platz, „Wenn Datei existiert“, Zurücksetzen.
    Video läuft in zwei Schritten (1 Dateien, 2 Konvertieren), Audio in einer Ansicht.
@@ -5,10 +13,10 @@
 
 // Die frühere Schritt-Folge (Dateien, Ziel, Benennen, Video, Spuren, Zusammenfassung) ist jetzt der Ablauf („convert“) mit Karten; alte Namen führen zur passenden Karte
 const OLD_STEPS = {files: null, summary: null, dest: 'dest', name: 'dest', video: 'video', audio: 'video', tracks: 'tracks'};
-const VSTEPS = [['files', 'Dateien'], ['check', 'Konvertieren']];
+export const VSTEPS = [['files', 'Dateien'], ['check', 'Konvertieren']];
 
 // zeigt die Startseite oder den Ablauf; Voreinstellungsleiste, Schrittleiste und Startleiste passen sich an
-function applySteps() {
+export function applySteps() {
   $$('.stepsec').forEach(sec => sec.classList.toggle('hidden', sec.dataset.step !== S.step));
   document.body.dataset.step = S.step;
   document.body.dataset.vstep = S.step === 'convert' && S.world === 'video' ? S.vstep : '';
@@ -16,7 +24,7 @@ function applySteps() {
   if (typeof cvLayout === 'function') cvLayout();
 }
 
-function showStep(id, keepScroll) {
+export function showStep(id, keepScroll) {
   let tab = null;
   if (id in OLD_STEPS) { tab = OLD_STEPS[id]; id = 'convert'; }
   if (id !== 'start' && id !== 'convert') id = 'start';
@@ -29,7 +37,7 @@ function showStep(id, keepScroll) {
   if (tab) openSheet(tab);
 }
 // Video: Schritt 1 und 2
-function vGo(n) {
+export function vGo(n) {
   S.vstep = Math.max(1, Math.min(2, n));
   applySteps(); cvRender();
   window.scrollTo(0, 0);
@@ -47,13 +55,13 @@ function startWithPreset(p) {
   if (S.files.video.length) { vGo(2); toast('Voreinstellung „' + p.name + '“ geladen', 'ok'); }
   else toast('Voreinstellung „' + p.name + '“ geladen – wähle jetzt Dateien', 'ok');
 }
-function renderStartPresets() {
+export function renderStartPresets() {
   const box = $('#startPresets'); if (!box) return;
   const list = cfg().presets.filter(p => p.world === 'video' && p.suggest);
   fill(box, list.map(p => h('button', {type: 'button', class: 'pbtn', 'data-preset': p.id, title: describePreset(p), onclick: () => startWithPreset(p)}, h('b', {}, p.name), h('small', {}, describePreset(p)))),
     h('button', {type: 'button', class: 'pbtn new' + (list.length ? '' : ' first'), id: 'wizStart', onclick: openWizard}, h('b', {}, list.length ? '+ Neue Voreinstellung' : 'Erste Voreinstellung einrichten'), h('small', {}, 'Assistent mit allen Einstellungen')));
 }
-function renderStartTiles() {
+export function renderStartTiles() {
   renderStartPresets();
   const box = $('#startTiles'); if (!box) return;
   fill(box, ['video', 'audio'].map(k => {
@@ -76,7 +84,7 @@ function savedCol(k, t) {
     h('div', {class: 'savedrow'}, h('small', {class: 'muted'}, t.count + (t.count === 1 ? ' Datei' : ' Dateien') + ' · ' + fmtSize(t.in) + ' → ' + fmtSize(t.out))),
     h('button', {type: 'button', class: 'small ghost savedreset', 'data-kind': k, title: 'Zählung von ' + name + ' auf 0 setzen', onclick: () => openSavedReset(k)}, 'Zurücksetzen'));
 }
-function renderSaved() {
+export function renderSaved() {
   const d = S.saved || {}, box = $('#savedBody');
   fill(box, ['video', 'audio'].map(k => savedCol(k, d[k])));
   const ts = ['video', 'audio'].map(k => d[k]).filter(t => t && t.count), gain = ts.reduce((a, t) => a + t.in - t.out, 0), el = $('#savedSum');
@@ -96,7 +104,7 @@ async function doSavedReset() {
 }
 
 // ---------- „Wenn Datei existiert“: erklärender Satz unter der Auswahl ----------
-const EXISTS_HINT = {
+export const EXISTS_HINT = {
   rename: 'Vorhandene Datei bleibt, die neue bekommt eine Nummer, z. B. „Film (2).mkv“.',
   skip: 'Vorhandene Datei wird nicht angefasst, dieser Auftrag wird übersprungen.',
   overwrite: 'Achtung: Die vorhandene Datei wird ersetzt. Das lässt sich nicht rückgängig machen.',
@@ -114,7 +122,7 @@ const RESET_OVERRIDES = {
   video: {vContainer: 'mkv', vCodec: 'copy', vAudioMode: 'copy', vSubMode: 'copy', vTrkRules: '', vQuality: 'good'},
   audio: {aFormat: 'flac'},
 };
-function captureDefaults() {
+export function captureDefaults() {
   S.defaults = {};
   [...FIELDS, ...CHECKS].forEach(k => { const el = $('#' + k); S.defaults[k] = el.type === 'checkbox' ? el.checked : el.value; });
 }
@@ -130,7 +138,7 @@ function resetWorld() {
   showStep('start');
   toast(W(w).name + ' wurde verworfen.', 'ok');
 }
-function openReset() {
+export function openReset() {
   const w = S.world, n = S.files[w].length;
   // nichts gewählt (keine Dateien, noch im ersten Schritt): kein Grund zur Rückfrage
   if (!n && (w !== 'video' || S.vstep <= 1)) { resetWorld(); return; }
@@ -138,7 +146,7 @@ function openReset() {
   $('#resetDlg').showModal();
 }
 
-function wireFlow() {
+export function wireFlow() {
   $('#savedResetNo').onclick = () => $('#savedResetDlg').close();
   $('#savedResetYes').onclick = doSavedReset;
   $('#exists').addEventListener('input', existsUI);

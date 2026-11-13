@@ -39,12 +39,12 @@ const IC = {
   reset: '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/>',
   rename: '<path d="M4 7h10M4 12h6M4 17h10"/><path d="M15 17l1-4 5-5 3 3-5 5z" transform="translate(-2 1) scale(.9)"/>',
 };
-function ic(name, cls) {
+export function ic(name, cls) {
   return '<svg class="ic ' + (cls || '') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (IC[name] || '') + '</svg>';
 }
-function icon(name, cls) {
+export function icon(name, cls) {
   const s = document.createElement('span');
   s.className = 'icw'; s.innerHTML = ic(name, cls);
   return s;
 }
-document.querySelectorAll('[data-ic]').forEach(e => { e.classList.add('icw'); e.innerHTML = ic(e.dataset.ic); });
+if (typeof document !== 'undefined') document.querySelectorAll('[data-ic]').forEach(e => { e.classList.add('icw'); e.innerHTML = ic(e.dataset.ic); });

@@ -1,7 +1,9 @@
 // Test der Hinweise des Bibliothek-Scans (web/library.js): nur Fakten, nie einzelne Dateien. Aufruf: node tools/test-library.js
-const LIB = require('../web/library.js');
-const Q = require('../web/quality.js');
 const assert = require('assert');
+
+(async () => {
+  const { LIB } = await import('../web/library.js');
+  const { Q } = await import('../web/quality.js');
 let n = 0;
 const t = (name, fn) => { fn(); n++; };
 const row = o => ({path: '/lib/x', name: 'x', depth: 1, group: false, folders: 1, files: 4, bytes: 4e9, avgBitrate: 6e6, codecs: {hevc: 4}, maxHeight: 1080, heavy: {}, imageSubs: 0, unreadable: 0, ...o});
@@ -102,4 +104,5 @@ t('Quelle der Dateien und Hinweis zur Codec-Wahl', () => {
   assert.ok(/nur neu verpackt/.test(LIB.convertHint(old, 'copy').text)); assert.strictEqual(LIB.convertHint(old, 'vp9'), null); assert.strictEqual(LIB.convertHint(LIB.sourceFacts([]), 'hevc'), null);
   assert.ok(!/GB|MB|Prozent|%/.test(LIB.convertHint(old, 'hevc').text), 'keine Schätzung der Ersparnis');
 });
-console.log('library: ' + n + ' Tests ok');
+  console.log('library: ' + n + ' Tests ok');
+})().catch(e => { console.error(e); process.exit(1); });

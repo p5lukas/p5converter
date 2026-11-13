@@ -40,7 +40,7 @@ const L = require('./ui-lib');
     eq(name, 'nach Neuladen (Audio) Wert', await p.inputValue('#ruleRows .rulerow input >> nth=0'), 'nuraudio');
     // --- Verlauf je Welt (Seite „Verlauf“, Welten strikt getrennt) ---
     // je Welt ein kurzer Auftrag, damit beide Verläufe Einträge haben (unabhängig vom Zustand des Servers)
-    await p.evaluate(async ([indir, out]) => {
+    await p.evaluate(async ([indir, out]) => { const {api} = window.__p5;
       const post = b => fetch('/api/jobs', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(b)});
       const o = {dir: out, structure: 'flat', exists: 'overwrite'};
       await post({kind: 'audio', items: [{path: indir + '/a.mp3'}], output: o, audio: {format: 'flac'}});

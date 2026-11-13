@@ -1,3 +1,16 @@
+import { $, BACKEND_FULL, S, api, encoderName, fmtSize, hwResult, infoBtn, openBrowser, pathLabel, pickFrom, renderFileList, resolveBackend, rootNameOf, toast, workingBackends } from './app.js';
+import { openClip } from './clip.js';
+import { qCurrent, qSetStage } from './crf.js';
+import { EXISTS_HINT, VSTEPS, applySteps, vGo } from './flow.js';
+import { icon } from './icons.js';
+import { LIB, LIBUI } from './library.js';
+import { Q } from './quality.js';
+import { cleanRules, nameRules, outExt } from './rename.js';
+import { fill, h, setField } from './settings.js';
+import { LANGS, REC_NAME, TRK, chTxt, codecTxt, fileLabel, isLossless, langName, trkDesc, trkEdit, trkEncExplain, trkEncInfo, trkGlobalList, trkGlobalRules, trkHasPrefs, trkLoadAll, trkPlan, trkPlanAuto, trkPrefLine, trkRuleSuggestionList, trkRuleSuggestions, trkRules, trkRulesBody, trkRulesSave, trkSet, trkSum, trkSumText, trkTargetDesc, trkToggleAudioDefault, trkWarnings } from './tracks.js';
+import { TP } from './trkplan.js';
+import { vfTime } from './verify.js';
+
 'use strict';
 /* Konvertieren: eine Seite mit Karten (Video, Ton, Untertitel, Regeln, Name & Ziel, Prüfen) statt vieler Schritte und einem Details-Fenster.
    Video hat zwei Schritte: 1 Dateien, 2 Konvertieren (Audio nur die eine Ansicht). Jede Karte zeigt eine Zeile mit dem Wichtigsten und klappt an Ort
@@ -8,11 +21,11 @@
    so funktionieren Voreinstellungen, Speichern und Starten unverändert. Die Berechnung steckt in trkplan.js (TP) und quality.js (Q).
    Nutzt S, $, h(), fill(), api(), icon(), setField(), trk*() usw. aus den anderen Dateien (nur zur Laufzeit). */
 
-const CV = {card: {}, gsel: {}, reviewed: new Set(), inh: {}, open: new Set(), unfold: new Set(), pop: null, qOpen: false, groups: [], bad: [], names: {}};
+export const CV = {card: {}, gsel: {}, reviewed: new Set(), inh: {}, open: new Set(), unfold: new Set(), pop: null, qOpen: false, groups: [], bad: [], names: {}};
 
 // ---------- Hilfen ----------
 // Feld der Oberfläche setzen und die übliche Verarbeitung auslösen (Speichern, Vorschau, Neuzeichnen)
-function cvSet(id, v) { setField(id, v); $('#' + id).dispatchEvent(new Event('input', {bubbles: true})); }
+export function cvSet(id, v) { setField(id, v); $('#' + id).dispatchEvent(new Event('input', {bubbles: true})); }
 function cvSelect(id, labels, aria) {
   const src = $('#' + id);
   const sel = h('select', {'aria-label': aria || id, onchange: ev => cvSet(id, ev.target.value)});
@@ -40,7 +53,7 @@ const cvSigText = info => { const g = TP.signature(info); return 'Ton: ' + (g.au
 
 // ---------- Aufbau: welche Teile sind sichtbar? ----------
 // Video: Schritt 1 (Dateien, Voreinstellungen, Ordner-Tipps) und Schritt 2 (Konvertieren). Audio: Dateien und Karten in einer Ansicht.
-function cvLayout() {
+export function cvLayout() {
   const conv = S.step === 'convert', video = S.world === 'video', st = S.vstep, show = (id, on) => { const e = $('#' + id); if (e) e.classList.toggle('hidden', !on); };
   show('cvStepper', conv && video);
   show('cvFiles', conv && (!video || st === 1));
@@ -70,7 +83,7 @@ function cvOpenCard(id) {
 }
 // frühere Reiter des Fensters „Details“ führen jetzt zur passenden Karte
 const CV_OLD_TAB = {dest: 'name', name: 'name', video: 'video', audio: 'video', tracks: 'audio', verify: 'check'};
-function openSheet(tab) { cvOpenCard(CV_OLD_TAB[tab] || 'video'); }
+export function openSheet(tab) { cvOpenCard(CV_OLD_TAB[tab] || 'video'); }
 
 // ---------- kleine Fenster am Satz (Popover) ----------
 function cvClosePop() {
@@ -142,7 +155,7 @@ function qualityControl(compact) {
   return h('div', {class: 'qctl'}, seg, slider,
     h('div', {class: 'qline muted small'}, custom ? 'Eigener Wert · ' : '', scale + ' ' + $('#vCrf').value, ' · ', encoderName(c.backend, c.codec)));
 }
-function renderQualityControls() { const m = $('#vQualityMount'); if (m) fill(m, qualityControl(true)); }
+export function renderQualityControls() { const m = $('#vQualityMount'); if (m) fill(m, qualityControl(true)); }
 
 // ---------- Zeilen der Tabelle ----------
 function cvRow(label, before, after, o) {
@@ -199,7 +212,7 @@ function cvAiBlock(reasons) {
 function cvEncFields(g, ord, r) {
   const e = trkEncInfo(r);
   return h('div', {class: 'cvencf'}, h('div', {class: 'trkgrid'},
-    h('label', {}, h('span', {class: 'lt'}, 'Format'), h('select', {'aria-label': 'Zielformat', onchange: ev => { const c = ev.target.value; cvEach(g, ord, (it, t) => trkSet(it.f, t.index, {action: 'encode', codec: c, kbps: REC_KBPS[c]})); }},
+    h('label', {}, h('span', {class: 'lt'}, 'Format'), h('select', {'aria-label': 'Zielformat', onchange: ev => { const c = ev.target.value; cvEach(g, ord, (it, t) => trkSet(it.f, t.index, {action: 'encode', codec: c, kbps: TP.REC_KBPS[c]})); }},
       Object.keys(REC_NAME).map(c => h('option', {value: c, selected: c === e.c}, REC_NAME[c])))),
     e.c !== 'flac' ? h('label', {}, h('span', {class: 'lt'}, 'Bitrate je Stereo-Paar (kbit/s)'), h('input', {type: 'number', min: 32, max: 640, value: e.per, 'aria-label': 'Bitrate je Stereo-Paar',
       onchange: ev => { const k = +ev.target.value; ev.target.blur(); cvEach(g, ord, (it, t) => trkSet(it.f, t.index, {action: 'encode', kbps: k > 0 ? k : undefined, codec: trkEdit(it.f, t.index).codec || e.c})); }})) : null),
@@ -214,9 +227,9 @@ function popEnc(gkey, ord) {
 
 function cvTrackEditor(g, ex, r, ord) {
   const s = r.s, e = trkEdit(ex.f, s.index), isA = r.type === 'audio', enc = r.kept && r.action === 'encode' && isA;
-  const val = e.lang !== undefined ? normLang(e.lang) : normLang(s.lang);
-  const langSel = h('select', {'aria-label': 'Sprache', onchange: ev => { const v = ev.target.value; cvEach(g, ord, (it, t) => trkSet(it.f, t.index, {lang: v === normLang(t.lang) || (!v && noLang(t.lang)) ? undefined : v})); }},
-    [h('option', {value: '', selected: noLang(val) && !val}, 'Unbekannt (keine Angabe)'), LANGS.map(([c, n]) => h('option', {value: c, selected: c === val}, n + ' (' + c + ')')),
+  const val = e.lang !== undefined ? TP.normLang(e.lang) : TP.normLang(s.lang);
+  const langSel = h('select', {'aria-label': 'Sprache', onchange: ev => { const v = ev.target.value; cvEach(g, ord, (it, t) => trkSet(it.f, t.index, {lang: v === TP.normLang(t.lang) || (!v && TP.noLang(t.lang)) ? undefined : v})); }},
+    [h('option', {value: '', selected: TP.noLang(val) && !val}, 'Unbekannt (keine Angabe)'), LANGS.map(([c, n]) => h('option', {value: c, selected: c === val}, n + ' (' + c + ')')),
       val && !LANGS.some(x => x[0] === val) && val !== 'und' ? h('option', {value: val, selected: true}, val.toUpperCase() + ' (' + val + ')') : null]);
   return h('div', {class: 'cved'}, h('div', {class: 'trkgrid'},
     h('label', {}, h('span', {class: 'lt'}, 'Titel (so heißt die Spur im Player)'), h('input', {value: e.title !== undefined ? e.title : (s.title || ''), placeholder: isA ? 'z. B. Deutsch 5.1' : 'z. B. Deutsch',
@@ -246,7 +259,7 @@ function cvTrackRow(g, ex, r, n) {
   }
   const after = h('div', {class: 'cvafter'}, act, kind === 'encode' ? h('button', {type: 'button', class: 'cvenc', title: 'Zielformat und Bitrate ändern', onclick: ev => cvPop(ev.currentTarget, 'Ton ' + n + ' umwandeln', () => popEnc(g.key, ord)) }, '→ ' + trkTargetDesc(r) + ' ▾') : null, flags,
     h('button', {type: 'button', class: 'cvmore', 'aria-expanded': open ? 'true' : 'false', title: 'Titel, Sprache und Format ändern', onclick: () => { open ? CV.open.delete(key) : CV.open.add(key); cvRender(); }}, open ? '▴' : '⋯'));
-  const noLg = r.kept && noLang(r.lang);
+  const noLg = r.kept && TP.noLang(r.lang);
   const extra = [cvAiBlock(reasons),
     noLg ? h('div', {class: 'cvwarn small'}, icon('warn'), ' Die Sprache fehlt. Ohne Sprache ordnet Plex die Spur nicht richtig zu. ', h('button', {type: 'button', class: 'small', onclick: () => { CV.open.add(key); cvRender(); }}, 'Sprache festlegen')) : null,
     open ? cvTrackEditor(g, ex, r, ord) : null];
@@ -282,7 +295,7 @@ function cvGroups(items) {
   list.forEach((g, i) => { g.n = i + 1; g.name = 'Gruppe ' + (i + 1); });
   return list;
 }
-const cvUnreviewed = () => (S.world === 'video' && CV.groups.length > 1) ? CV.groups.filter(g => !CV.reviewed.has(g.key)).length : 0;
+export const cvUnreviewed = () => (S.world === 'video' && CV.groups.length > 1) ? CV.groups.filter(g => !CV.reviewed.has(g.key)).length : 0;
 function cvPropagate(src) {
   const ex = src.items[0], edits = ex.f.tracks || {};
   if (!Object.keys(edits).length) return 0;
@@ -433,7 +446,7 @@ function cvVideoTable(items) {
     const def = list.find(r => r.kept && r.def), defTxt = def ? ' · Standard: ' + langName(def.lang) + (def.forced ? ' (Forced)' : '') : '';
     return list.length + ' ' + (list.length === 1 ? one : many) + (enc ? ' · ' + enc + ' umgewandelt' : '') + (drop ? ' · ' + drop + ' entfernt' : '') + (!enc && !drop ? ' · bleiben unverändert' : '') + defTxt;
   };
-  const attention = type => ex.plan.tracks.some(r => r.type === type && (r.own || r.guess || !r.kept || r.why.length || (r.kept && noLang(r.lang)))) || (type === 'audio' ? $('#vAudioMode').value !== 'copy' : $('#vSubMode').value !== 'copy');
+  const attention = type => ex.plan.tracks.some(r => r.type === type && (r.own || r.guess || !r.kept || r.why.length || (r.kept && TP.noLang(r.lang)))) || (type === 'audio' ? $('#vAudioMode').value !== 'copy' : $('#vSubMode').value !== 'copy');
   const vsum = copy ? 'Video wird nicht neu kodiert' : (vsrc ? (CV_SRC_CODEC[vsrc.codec] || (vsrc.codec || '?').toUpperCase()) : '?') + ' → ' + CV_CODEC[$('#vCodec').value] + ' · ' + Q.stageName($('#vQuality').value) + ' · ' + SPEED_NAME[$('#vPreset').value] + ' · ' + (BACKEND_FULL[resolveBackend().id] || '');
   const plainName = !$('#pattern').value.trim() && !cleanRules(nameRules()).length && !$('#suffix').value;
   const nameSum = 'Name ' + (plainName ? 'bleibt' : 'wird angepasst') + ' · ' + cvDestText() + ' · ' + ({rename: 'Datei da: nummerieren', skip: 'Datei da: überspringen', overwrite: 'Datei da: überschreiben'}[$('#exists').value] || '');
@@ -445,7 +458,7 @@ function cvVideoTable(items) {
     cvCard('name', 'file', 'Name & Ziel', 'cardName', nameSum, null, {id: 'name', open: ($('#outMode').value === 'custom' && !$('#outDir').value.trim()) || $('#exists').value === 'overwrite', body: cvDestBody(S.files.video)}),
     cvCard('check', 'shield', 'Prüfen', 'tileCheck', cvCheckText().replace(/^./, c => c.toUpperCase()), null, {id: 'check', open: $('#deleteSource').checked, body: cvCheckBody()})];
 }
-const SPEED_NAME = {slow: 'Langsam', medium: 'Mittel', fast: 'Schnell', veryfast: 'Sehr schnell'};
+export const SPEED_NAME = {slow: 'Langsam', medium: 'Mittel', fast: 'Schnell', veryfast: 'Sehr schnell'};
 // Hinweis, wenn die Quelle schon klein ist: Neukodieren spart dann kaum Platz
 function cvLowHint(info) {
   const v = cvVideoStream(info), br = (v && v.bitRate) || (info.bitRate > 0 ? info.bitRate : 0), height = v && v.height;
@@ -507,7 +520,7 @@ function cvBar(files, items) {
 function cvNameHome() { const st = $('#nameStore'); if (st && st.parentElement.id !== 'fieldStore') $('#fieldStore').append(st); }
 function cvNameDock(box) { const slot = box.querySelector('[data-nameslot]'); if (slot) slot.append($('#nameStore')); }
 let cvSeq = 0, cvRaf = 0;
-function cvRender() {
+export function cvRender() {
   if (S.step !== 'convert') return;
   cancelAnimationFrame(cvRaf);
   cvRaf = requestAnimationFrame(cvRenderNow);
@@ -547,7 +560,7 @@ async function cvRenderNow() {
   cvPopFill();
 }
 
-function wireConvert() {
+export function wireConvert() {
   matchMedia('(max-width:700px)').addEventListener('change', () => { if (CV.pop) cvPopPlace(); });
   addEventListener('resize', () => { if (CV.pop) cvPopPlace(); });
   // Namensfelder: Tabelle und Vorschau erst nach der Eingabe neu zeichnen

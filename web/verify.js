@@ -1,3 +1,7 @@
+import { $, S } from './app.js';
+import { cvRender } from './convert.js';
+import { cfg, fill, h } from './settings.js';
+
 'use strict';
 /* Kontrolle nach dem Konvertieren (Satz „danach geprüft“ und Details → Prüfen): Spuren prüfen (A), Decode-Test (B), Quelldatei löschen.
    Je Art (Video, Audio) getrennt; die Anfangswerte kommen aus Einstellungen → Allgemein. Nutzt S, $, h(), cfg(), W() aus app.js/settings.js. */
@@ -7,21 +11,21 @@ function vfDefaults(w) {
   const v = (cfg().verify || {})[w] || {};
   return {tracks: v.tracks !== false, decode: v.decode !== false, del: false};
 }
-function vfStash(w) {
+export function vfStash(w) {
   if (!w || !$('#vfTracks')) return;
   S.vf[w] = {tracks: $('#vfTracks').checked, decode: $('#vfDecode').checked, del: $('#deleteSource').checked};
 }
-function vfShow(w) {
+export function vfShow(w) {
   const v = S.vf[w] || (S.vf[w] = vfDefaults(w));
   $('#vfTracks').checked = v.tracks; $('#vfDecode').checked = v.decode; $('#deleteSource').checked = v.del;
   S.vfFor = w;
   vfUI();
 }
 // „Zurücksetzen“ und geänderte Standardwerte in den Einstellungen: zurück auf die Standardauswahl
-function vfReset(w) { S.vf[w] = vfDefaults(w); if (S.vfFor === w) vfShow(w); }
+export function vfReset(w) { S.vf[w] = vfDefaults(w); if (S.vfFor === w) vfShow(w); }
 
 // Zeitangaben in Worten (Schätzwerte, grob): Wie viel länger dauert der Auftrag durch die Prüfung?
-function vfTime(w, kind) {
+export function vfTime(w, kind) {
   if (kind === 'tracks') return ['kaum länger', 'Sekundenbruchteile je Datei'];
   if (w === 'audio') return ['kaum länger', 'ein Lied braucht nur Bruchteile einer Sekunde'];
   const copy = $('#vCodec').value === 'copy';
@@ -40,11 +44,11 @@ function vfUI() {
 }
 
 // was an den Server geht (Teil von output)
-function vfCollect() {
+export function vfCollect() {
   return {deleteSource: $('#deleteSource').checked, verifyTracks: $('#vfTracks').checked, verifyDecode: $('#vfDecode').checked};
 }
 
-function wireVerify() {
+export function wireVerify() {
   S.vf = {};
   ['vfTracks', 'vfDecode', 'deleteSource'].forEach(id => $('#' + id).addEventListener('input', () => { vfStash(S.vfFor); vfUI(); if (typeof cvRender === 'function') cvRender(); }));
   $('#vCodec').addEventListener('input', vfUI);

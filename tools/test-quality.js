@@ -1,6 +1,8 @@
 // Test der Qualitätsstufen (web/quality.js). Aufruf: node tools/test-quality.js
-const Q = require('../web/quality.js');
 const assert = require('assert');
+
+(async () => {
+  const { Q } = await import('../web/quality.js');
 let n = 0;
 const t = (name, fn) => { fn(); n++; };
 
@@ -38,4 +40,5 @@ t('Name der Skala je Encoder', () => {
   assert.strictEqual(Q.scaleName('vaapi'), 'QP'); assert.strictEqual(Q.scaleName('amf'), 'QP'); assert.strictEqual(Q.scaleName('x'), 'CRF');
 });
 t('Stufennamen', () => { assert.strictEqual(Q.stageName('good'), 'Gut'); assert.strictEqual(Q.stageName('custom'), 'Eigener Wert'); });
-console.log('quality: ' + n + ' Tests ok');
+  console.log('quality: ' + n + ' Tests ok');
+})().catch(e => { console.error(e); process.exit(1); });

@@ -1,3 +1,9 @@
+import { S, addScanned, api, fmtSize, infoBtn, openBrowser, pathLabel, toast } from './app.js';
+import { cvLayout } from './convert.js';
+import { icon } from './icons.js';
+import { Q } from './quality.js';
+import { fill, h } from './settings.js';
+
 'use strict';
 /* Bibliothek-Scan „Was lohnt sich?“ (Video, Schritt 1): ein Ordner wird auf dem Server rekursiv gelesen und ORDNERWEISE zusammengefasst
    (/api/library/scan). Es werden nie einzelne Dateien vorgeschlagen: die Zeilen zeigen Fakten (Dateien, Größe, Codec-Mix, Bitrate, schwere Tonformate,
@@ -5,7 +11,7 @@
    „spart ≈ …“ (saveBytes vom Server, H.265 „Gut“, nur Bild) – immer mit „≈“ gekennzeichnet. „Übernehmen“ legt den ganzen Ordner (rekursiv) in Schritt 1 ab.
    Nutzt S, $, h(), fill(), api(), icon(), toast(), fmtSize(), pathLabel(), openBrowser(), addScanned() aus den anderen Dateien (nur zur Laufzeit). */
 
-const LIB = (() => {
+export const LIB = (() => {
   const CODEC = {h264: 'H.264', hevc: 'H.265', av1: 'AV1', vp9: 'VP9', mpeg4: 'MPEG-4', mpeg2video: 'MPEG-2', vc1: 'VC-1', wmv3: 'WMV', msmpeg4v3: 'MPEG-4', '?': '?'};
   const MODERN = ['hevc', 'av1', 'vp9'];
   const codecName = c => CODEC[c] || String(c).toUpperCase();
@@ -140,16 +146,16 @@ const LIB = (() => {
 if (typeof module !== 'undefined') module.exports = LIB;
 
 // ---------- Oberfläche (nur im Browser) ----------
-const LIBUI = {id: null, state: '', root: '', total: 0, done: 0, current: '', rows: [], sel: new Set(), onlyHints: true, fil: new Set(LIB.FILTER_DEFAULT), sort: 'tree', sortUser: false, timer: 0, err: ''};
+export const LIBUI = {id: null, state: '', root: '', total: 0, done: 0, current: '', rows: [], sel: new Set(), onlyHints: true, fil: new Set(LIB.FILTER_DEFAULT), sort: 'tree', sortUser: false, timer: 0, err: ''};
 const libLow = typeof Q !== 'undefined' ? Q.lowBitrate : null;
 
 // Ordner wählen, der geprüft werden soll (der Datei-Browser öffnet im zuletzt benutzten Ordner)
-async function libPick() {
+export async function libPick() {
   const r = await openBrowser('dir', S.lastDir); if (!r) return;
   S.lastDir = r.dir;
   await libStart(r.dir);
 }
-async function libStart(dir) {
+export async function libStart(dir) {
   clearTimeout(LIBUI.timer);
   if (LIBUI.id && LIBUI.state === 'running') api('/api/library/scan/' + LIBUI.id + '/cancel', {}).catch(() => {});
   try {
@@ -201,7 +207,7 @@ function libRowEl(r, groups) {
     h('span', {class: 'libgain' + (r.saveBytes >= Math.max(50e6, r.bytes * 0.05) ? ' good' : ''), title: 'Schätzung für H.265 „Gut“ (nur das Bild, aus Codec und Bitrate)'}, LIB.gainText(r.saveBytes, r.bytes)));
 }
 
-function libRender() {
+export function libRender() {
   const box = document.getElementById('cvScan'); if (!box) return;
   if (!LIBUI.id) { fill(box); return; }
   const running = LIBUI.state === 'running', ready = LIBUI.state === 'done' || LIBUI.state === 'canceled';

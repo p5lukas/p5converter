@@ -13,7 +13,7 @@ const OUT = (process.env.OUTDIR || '/tmp/out') + '/queue';
     p.on('pageerror', e => fails.push(name + ' JS: ' + e.message));
     p.on('console', m => m.type() === 'error' && !/401|Anmeldung/.test(m.text()) && fails.push(name + ' console: ' + m.text()));
     const api = (path, body) => p.evaluate(async ([path, body]) => (await fetch(path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)})).json(), [path, body]);
-    const queuedNames = () => p.evaluate(async () => (await (await fetch('/api/state')).json()).jobs.filter(j => j.status === 'queued').map(j => j.name));
+    const queuedNames = () => p.evaluate(async () => { const {api} = window.__p5; return ((await (await fetch('/api/state')).json()).jobs.filter(j => j.status === 'queued').map(j => j.name)); });
     const ov = () => p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     await p.goto(L.url); await p.evaluate(() => localStorage.clear()); await p.goto(L.url); await p.waitForTimeout(1300);
     await api('/api/jobs/cancel-all', {kind: ''}); await api('/api/queue/pause', {on: false}); await api('/api/concurrency', {kind: 'video', n: 1}); await p.waitForTimeout(1200);

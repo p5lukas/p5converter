@@ -1,9 +1,23 @@
+import { $, BACKEND_FULL, S, api, applyKindTheme, enterKind, hwRows, infoBtn, normInfo, openBrowser, openNews, refreshAudioUI, refreshVideoUI, renderStartInfo, saveSettings, toast } from './app.js';
+import { logout, updateAuthUI } from './auth.js';
+import { SPEED_NAME, cvRender } from './convert.js';
+import { qAfterPreset } from './crf.js';
+import { renderStartPresets, showStep, vGo } from './flow.js';
+import { historyPage, stopHistory } from './history.js';
+import { icon } from './icons.js';
+import { logsPage, stopLogs } from './logs.js';
+import { Q } from './quality.js';
+import { renderRenamePage, syncNameUI } from './rename.js';
+import { LANGS, langName, trkRender, trkRulesBody } from './tracks.js';
+import { vfReset } from './verify.js';
+import { openWizard } from './wizard.js';
+
 'use strict';
 /* Einstellungen-Seite, Voreinstellungen und gemeinsame Hilfsfunktionen. Wird vor app.js geladen; app.js stellt
    $, api, S, toast, … bereit (nur zur Laufzeit benutzt). Die Einstellungen liegen auf dem Server (/config). */
 
 // ---------- kleine DOM-Helfer ----------
-function h(tag, attrs, ...kids) {
+export function h(tag, attrs, ...kids) {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs || {})) {
     if (v == null || v === false) continue;
@@ -16,16 +30,16 @@ function h(tag, attrs, ...kids) {
   for (const c of kids.flat(Infinity)) if (c != null && c !== false) el.append(c.nodeType ? c : document.createTextNode(String(c)));
   return el;
 }
-const fill = (el, ...kids) => { el.replaceChildren(...kids.flat(Infinity).filter(k => k != null && k !== false)); return el; };
+export const fill = (el, ...kids) => { el.replaceChildren(...kids.flat(Infinity).filter(k => k != null && k !== false)); return el; };
 const opt = (v, t) => h('option', {value: v}, t);
 
 // ---------- Arten (Video und Audio) ----------
 // Namen sind fest; die Art wird auf der Startseite gewählt (Video grün, Audio orange).
 const KIND_NAMES = {audio: 'Audio', video: 'Video'};
-const cfg = () => (S.cfg && S.cfg.settings) || {presets: [], showNews: true, preferredBackend: 'auto', hwDecode: true, trackRules: {audio: [], sub: []}};
-const W = w => ({name: KIND_NAMES[w] || w});
+export const cfg = () => (S.cfg && S.cfg.settings) || {presets: [], showNews: true, preferredBackend: 'auto', hwDecode: true, trackRules: {audio: [], sub: []}};
+export const W = w => ({name: KIND_NAMES[w] || w});
 
-async function saveCfg(mutate, msg) {
+export async function saveCfg(mutate, msg) {
   const next = JSON.parse(JSON.stringify(cfg()));
   mutate(next);
   try {
@@ -46,25 +60,25 @@ function applyCfg() {
 }
 
 // ---------- Voreinstellungen ----------
-const PRESET_FIELDS = {
+export const PRESET_FIELDS = {
   audio: ['aFormat', 'aMode', 'aQuality', 'aBitrate', 'aFlac', 'aWav', 'aRate', 'aCh', 'aCover', 'pattern', 'suffix', 'renRules'],
   video: ['vContainer', 'vCodec', 'vBackend', 'vCrf', 'vQuality', 'vPreset', 'vDepth', 'vHeight', 'vHwDec', 'vAudioMode', 'vAudioCodec', 'vAudioKbps', 'vSubMode', 'vTrkRules', 'pattern', 'suffix', 'renRules'],
 };
 // diese Felder hängen von anderen ab (Optionen werden erst nach dem ersten Durchgang neu aufgebaut)
 const LATE_FIELDS = ['vBackend', 'aMode', 'aQuality', 'aBitrate'];
 
-function collectPresetValues(world) {
+export function collectPresetValues(world) {
   const o = {};
   PRESET_FIELDS[world].forEach(k => { const el = $('#' + k); if (el) o[k] = el.type === 'checkbox' ? el.checked : el.value; });
   return o;
 }
-function setField(k, v) {
+export function setField(k, v) {
   const el = $('#' + k); if (!el) return;
   if (el.type === 'checkbox') el.checked = !!v;
   else if (el.tagName === 'SELECT') { if ([...el.options].some(o => o.value === String(v) && !o.disabled)) el.value = String(v); }
   else el.value = String(v);
 }
-function applyPreset(p) {
+export function applyPreset(p) {
   const v = p.values || {};
   Object.entries(v).filter(([k]) => !LATE_FIELDS.includes(k)).forEach(([k, x]) => setField(k, x));
   refreshAudioUI(); refreshVideoUI();
@@ -78,7 +92,7 @@ function presetChosen(p) {
   if (S.step === 'convert' && p.world === 'video' && S.vstep === 1 && S.files.video.length) { toast('Voreinstellung „' + p.name + '“ geladen', 'ok'); vGo(2); return; }
   toast('Voreinstellung „' + p.name + '“ geladen' + (S.step === 'convert' && p.world === 'video' && S.vstep === 1 ? ' – wähle jetzt Dateien' : ''), 'ok');
 }
-function renderPresetChips() {
+export function renderPresetChips() {
   const box = $('#vPresets'); if (!box) return;
   const list = cfg().presets.filter(p => p.world === 'video' && p.suggest); // Voreinstellungen gibt es nur für Video (Audio ist immer individuell)
   fill(box, list.map(p => h('button', {title: describePreset(p), onclick: () => { applyPreset(p); presetChosen(p); }}, p.name)),
@@ -87,7 +101,7 @@ function renderPresetChips() {
 
 const CODEC_NAMES = {copy: 'Remux (Video kopieren)', h264: 'H.264', hevc: 'H.265', av1: 'AV1', vp9: 'VP9'};
 const AFMT_NAMES = {mp3: 'MP3', ogg: 'Ogg Vorbis', opus: 'Opus', m4a: 'AAC (M4A)', flac: 'FLAC', wav: 'WAV'};
-function describePreset(p) {
+export function describePreset(p) {
   const v = p.values || {}, o = [];
   if (p.world === 'video') {
     o.push(CODEC_NAMES[v.vCodec] || 'Video');
@@ -112,7 +126,7 @@ function describePreset(p) {
 }
 
 // --- Dialog „Als Voreinstellung speichern“ ---
-function openPresetDialog() {
+export function openPresetDialog() {
   const world = S.world;
   $('#presetName').value = '';
   $('#presetSuggest').checked = true;
@@ -120,7 +134,7 @@ function openPresetDialog() {
   $('#presetDlg').showModal();
   setTimeout(() => $('#presetName').focus(), 50);
 }
-async function savePresetFromDialog() {
+export async function savePresetFromDialog() {
   const name = $('#presetName').value.trim();
   if (!name) { toast('Bitte einen Namen eingeben.', 'bad'); return; }
   const world = S.world, values = collectPresetValues(world), suggest = $('#presetSuggest').checked;
@@ -169,7 +183,7 @@ function showView(v) {
   applyKindTheme();
   window.scrollTo(0, 0);
 }
-function route() {
+export function route() {
   const m = /^#settings(?:\/(\w+))?$/.exec(location.hash);
   if (location.hash === '#rename') { showView('rename'); renderRenamePage(); }
   else if (location.hash === '#logs') { showView('logs'); logsPage(); }
@@ -183,7 +197,7 @@ function row(label, control, infoKey, hint) {
     h('div', {class: 'setl'}, h('b', {}, label, infoKey ? infoBtn(infoKey) : null), hint ? h('span', {class: 'muted small'}, hint) : null),
     h('div', {class: 'setc'}, control));
 }
-const check = (checked, onchange, text) => h('label', {class: 'check', style: 'margin:0'}, h('input', {type: 'checkbox', checked, onchange: e => onchange(e.target.checked)}), text);
+export const check = (checked, onchange, text) => h('label', {class: 'check', style: 'margin:0'}, h('input', {type: 'checkbox', checked, onchange: e => onchange(e.target.checked)}), text);
 
 function renderSettings() {
   const root = $('#viewSettings');
@@ -206,7 +220,7 @@ function renderSettings() {
     mobile ? null : h('h1', {}, 'Einstellungen')), warn,
     mobile ? h('div', {class: 'setpage panel'}, content) : h('div', {class: 'setlayout'}, nav, h('div', {class: 'setpage panel'}, content)));
 }
-matchMedia('(max-width:700px)').addEventListener('change', () => { if (!$('#viewSettings').classList.contains('hidden')) renderSettings(); });
+if (typeof matchMedia !== 'undefined') matchMedia('(max-width:700px)').addEventListener('change', () => { if (!$('#viewSettings').classList.contains('hidden')) renderSettings(); });
 
 // Standardauswahl der Kontrolle nach dem Konvertieren, je Art (im Konverter pro Lauf änderbar)
 function verifyControls(w) {
@@ -395,7 +409,7 @@ function buildDiagText(hw) {
   (hw.diag || []).forEach(d => l.push(`${d.backend} ${d.codec}${d.ten ? ' 10b' : ''} ${d.variant || ''}: ${d.ok ? 'ok' : 'FEHLER ' + (d.msg || '')}`));
   return l.join('\n');
 }
-async function copyText(t) {
+export async function copyText(t) {
   try { await navigator.clipboard.writeText(t); toast('In die Zwischenablage kopiert ✓', 'ok'); return; } catch (e) { /* weiter */ }
   const ta = h('textarea', {style: 'position:fixed;opacity:0'}); ta.value = t; document.body.append(ta); ta.select();
   try { document.execCommand('copy'); toast('In die Zwischenablage kopiert ✓', 'ok'); } catch (e) { toast('Kopieren nicht möglich', 'bad'); }

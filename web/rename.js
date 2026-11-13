@@ -1,3 +1,6 @@
+import { $, S, api, openBrowser, saveSettings, toast } from './app.js';
+import { fill, h } from './settings.js';
+
 'use strict';
 /* Namensmuster, Suchen & Ersetzen und Vorschau – gemeinsam für den Konverter (Ziel) und die Seite „Umbenennen“.
    Nutzt h(), fill(), api(), S, toast() aus settings.js/app.js (nur zur Laufzeit). */
@@ -7,7 +10,7 @@ const NAME_VARS = {
   video: [['filename', 'Dateiname'], ['title', 'Titel'], ['year', 'Jahr'], ['res', 'Auflösung'], ['codec', 'Codec'], ['bit', 'Bit-Tiefe'], ['container', 'Container'], ['date', 'Datum']],
   media: [['filename', 'Dateiname'], ['title', 'Titel'], ['year', 'Jahr'], ['res', 'Auflösung'], ['codec', 'Codec'], ['bit', 'Bit-Tiefe'], ['artist', 'Interpret'], ['album', 'Album'], ['track', 'Track-Nr.'], ['date', 'Datum']],
 };
-const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+export const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 
 // Klick auf eine Variable fügt sie an der Cursorposition ein
 function varChips(mount, input, vars, onChange) {
@@ -37,7 +40,7 @@ function ruleEditor(mount, get, set, onChange) {
     const last = mount.querySelector('.rulerow:last-child input'); if (last) last.focus();
   };
 }
-const cleanRules = rows => (rows || []).filter(r => r && r.find);
+export const cleanRules = rows => (rows || []).filter(r => r && r.find);
 
 function previewTable(items, withPath) {
   if (!items.length) return h('div', {class: 'empty'}, 'Noch keine Dateien.');
@@ -49,21 +52,21 @@ function previewTable(items, withPath) {
 }
 
 // ---------- Konverter: Ziel-Panel ----------
-function nameRules() { try { const r = JSON.parse($('#renRules').value || '[]'); return Array.isArray(r) ? r : []; } catch (e) { return []; } }
+export function nameRules() { try { const r = JSON.parse($('#renRules').value || '[]'); return Array.isArray(r) ? r : []; } catch (e) { return []; } }
 let addRuleFn = null;
-function syncNameUI() {
+export function syncNameUI() {
   const world = S.world;
   varChips($('#varChips'), $('#pattern'), NAME_VARS[world], () => { saveSettings(); refreshNamePreview(); });
   addRuleFn = ruleEditor($('#ruleRows'), nameRules, rows => { $('#renRules').value = JSON.stringify(rows); saveSettings(); }, refreshNamePreview);
   refreshNamePreview();
 }
-function outExt() {
+export function outExt() {
   if (S.world === 'video') return $('#vContainer').value;
   const f = $('#aFormat').value;
   return ({m4a: 'm4a', ogg: 'ogg'})[f] || f;
 }
 let previewSeq = 0;
-const refreshNamePreview = debounce(async () => {
+export const refreshNamePreview = debounce(async () => {
   const box = $('#namePreview'), files = S.files[S.world].slice(0, 3), seq = ++previewSeq;
   if (!files.length) { fill(box); return; }
   try {
@@ -89,13 +92,13 @@ const rnRefresh = debounce(async () => {
     $('#rnApply').textContent = changed ? changed + ' Datei(en) umbenennen' : 'Umbenennen';
   } catch (e) { fill($('#rnPreview'), h('div', {class: 'small bad'}, e.message)); $('#rnApply').disabled = true; }
 }, 250);
-function renderRenamePage() {
+export function renderRenamePage() {
   $('#rnPattern').value = R.pattern;
   varChips($('#rnChips'), $('#rnPattern'), NAME_VARS.media, () => { R.pattern = $('#rnPattern').value; rnRefresh(); });
   rnAddRule = ruleEditor($('#rnRules'), () => R.rules, rows => { R.rules = rows; }, rnRefresh);
   rnRefresh();
 }
-function wireRename() {
+export function wireRename() {
   $('#rnBack').onclick = () => { location.hash = ''; };
   $('#addRule').onclick = () => addRuleFn && addRuleFn();
   $('#rnAddRule').onclick = () => rnAddRule && rnAddRule();

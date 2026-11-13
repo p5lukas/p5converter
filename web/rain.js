@@ -1,3 +1,6 @@
+import { $, S } from './app.js';
+import { cfg } from './settings.js';
+
 'use strict';
 /* Matrix-Regen (wie bei p5assets, hier kurz und dezent): läuft etwa eine Sekunde über eine Karte, wenn ein Auftrag erfolgreich beendet ist
    (Startseite: die Karte des aktuellen Auftrags, Verlauf: die Warteschlange). In Einstellungen → Allgemein abschaltbar; bei
@@ -7,7 +10,7 @@ const RAIN_GLYPHS = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃ�
 const rainAllowed = () => !(typeof cfg === 'function' && cfg().noRain === true) && !matchMedia('(prefers-reduced-motion: reduce)').matches && !document.hidden;
 
 // Regen über host (ein Element); gibt false zurück, wenn er nicht laufen darf oder soll
-function matrixRain(host, ms) {
+export function matrixRain(host, ms) {
   if (!host || !rainAllowed() || host.querySelector(':scope > canvas.rain')) return false;
   ms = ms || 1300;
   const r = host.getBoundingClientRect();
@@ -46,7 +49,7 @@ function matrixRain(host, ms) {
 }
 
 // Aufträge, die seit dem letzten Abruf erfolgreich fertig wurden (Kontrolle bestanden): Regen auf der sichtbaren Karte
-function rainOnDone(jobs) {
+export function rainOnDone(jobs) {
   S.rainSeen = S.rainSeen || new Set();
   const first = !S.rainInit; S.rainInit = true;
   let fresh = 0;
@@ -65,7 +68,7 @@ let rainBarTimer = 0;
 const rainHash = (a, b) => { let x = (Math.imul(a + 1, 374761393) + Math.imul(b + 7, 668265263)) >>> 0; x = Math.imul(x ^ (x >>> 13), 1274126177) >>> 0; return (x ^ (x >>> 16)) >>> 0; };
 
 // Balken laufender Aufträge kennzeichnen (nach jedem Neuaufbau der Karten) und die Zeichenschleife starten
-function rainBarsSync() {
+export function rainBarsSync() {
   const allowed = rainAllowed();
   document.querySelectorAll('.bar.rain').forEach(b => { if (!allowed || !b.closest('.job.running, .jobnow')) { b.classList.remove('rain'); b.querySelector(':scope > canvas.rainbar')?.remove(); } });
   if (!allowed) return;
@@ -120,4 +123,4 @@ function rainBarFrame(now) {
   }
   rainBarTimer = requestAnimationFrame(rainBarFrame);
 }
-document.addEventListener('visibilitychange', () => { if (!document.hidden) rainBarsSync(); });
+if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => { if (!document.hidden) rainBarsSync(); });
