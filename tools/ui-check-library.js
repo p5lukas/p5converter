@@ -101,7 +101,7 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     p.on('pageerror', e => fails.push(name + ' JS: ' + e.message));
     await p.goto(L.url); await p.waitForTimeout(1300); await L.enter(p, 'video');
     await p.evaluate(async d => { const {libStart} = window.__p5; await libStart(d); }, L.INDIR);
-    await p.waitForFunction(() => LIBUI.state === 'done', null, {timeout: 60000});
+    await p.waitForFunction(() => window.__p5.LIBUI.state === 'done', null, {timeout: 60000});
     await p.evaluate(() => { const {LIBUI, libRender} = window.__p5; LIBUI.rows.forEach(r => { if (!r.group) { r.bytes = 20e9; r.saveBytes = 8e9; } }); libRender(); });
     await p.waitForTimeout(300);
     const t = (await p.textContent('#cvScan .libtotal').catch(() => '')) || '';
