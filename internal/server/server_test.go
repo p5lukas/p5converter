@@ -338,13 +338,15 @@ func TestLoginRateLimitOverHTTP(t *testing.T) {
 	c := jar()
 	doJSON(t, c, "POST", ts.URL+"/api/auth/setup", map[string]string{"username": "lukas", "password": "geheimes-passwort"})
 	attacker := jar()
-	var last int
+	var last *http.Response
 	for i := 0; i < 7; i++ {
-		r, _ := doJSON(t, attacker, "POST", ts.URL+"/api/auth/login", map[string]any{"username": "lukas", "password": "falsch"})
-		last = r.StatusCode
+		last, _ = doJSON(t, attacker, "POST", ts.URL+"/api/auth/login", map[string]any{"username": "lukas", "password": "falsch"})
 	}
-	if last != 429 {
-		t.Errorf("nach 6 Fehlversuchen erwartet 429, bekam %d", last)
+	if last.StatusCode != 429 {
+		t.Errorf("nach 6 Fehlversuchen erwartet 429, bekam %d", last.StatusCode)
+	}
+	if last.Header.Get("Retry-After") == "" {
+		t.Errorf("429 ohne Retry-After")
 	}
 }
 
