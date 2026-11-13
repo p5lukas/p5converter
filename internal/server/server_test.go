@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -22,6 +23,7 @@ import (
 	"github.com/p5lukas/p5converter/internal/ffmpeg"
 	"github.com/p5lukas/p5converter/internal/logs"
 	"github.com/p5lukas/p5converter/internal/version"
+	"github.com/p5lukas/p5converter/web"
 )
 
 func init() { auth.Iter = 1000 } // fast hashes in tests
@@ -445,21 +447,39 @@ func TestRenameTool(t *testing.T) {
 // every script/style referenced by the page must be embedded and served with the right type
 func TestPageAssetsServed(t *testing.T) {
 	_, ts := newTestServer(t, nil)
-	resp, _ := http.Get(ts.URL + "/")
+	resp, err := http.Get(ts.URL + "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
 	var page bytes.Buffer
 	page.ReadFrom(resp.Body)
-	refs := regexp.MustCompile(`(?:src|href)="/?([a-z0-9.-]+\.(?:js|css|png|ico))(?:\?v=[^"]*)?"`).FindAllStringSubmatch(page.String(), -1)
-	if len(refs) < 12 {
+	html := page.String()
+	if !strings.Contains(html, `type="module" src="app.js"`) {
+		t.Errorf("index.html bindet app.js nicht als Modul ein")
+	}
+	refs := regexp.MustCompile(`(?:src|href)="/?([a-z0-9.-]+\.(?:js|css|png|ico))(?:\?v=[^"]*)?"`).FindAllStringSubmatch(html, -1)
+	if len(refs) < 5 {
 		t.Fatalf("zu wenige Verweise gefunden: %d", len(refs))
 	}
+	assets := make([]string, 0, len(refs)+16)
 	for _, m := range refs {
-		r, err := http.Get(ts.URL + "/" + m[1])
+		assets = append(assets, m[1])
+	}
+	// Die uebrigen Module holt der Browser per Import; auch sie muessen ausgeliefert werden.
+	js, err := fs.Glob(web.FS, "*.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assets = append(assets, js...)
+	for _, name := range assets {
+		r, err := http.Get(ts.URL + "/" + name)
 		if err != nil || r.StatusCode != 200 {
-			t.Errorf("%s nicht ausgeliefert: %v %v", m[1], err, r)
+			t.Errorf("%s nicht ausgeliefert: %v %v", name, err, r)
 			continue
 		}
-		if ct := r.Header.Get("Content-Type"); strings.HasSuffix(m[1], ".js") && !strings.Contains(ct, "javascript") {
-			t.Errorf("%s: Content-Type %q", m[1], ct)
+		if ct := r.Header.Get("Content-Type"); strings.HasSuffix(name, ".js") && !strings.Contains(ct, "javascript") {
+			t.Errorf("%s: Content-Type %q", name, ct)
 		}
 	}
 }
