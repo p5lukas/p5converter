@@ -1,5 +1,11 @@
 [
   {
+    "id": "v053-stapel",
+    "version": "0.5.3",
+    "title": "Version 0.5.3: größere Stapel",
+    "text": "Sehr große Stapel mit tausenden Dateien lassen sich jetzt in einem Rutsch einreihen. Sonst ändert sich nichts – die Liste steht in der CHANGELOG."
+  },
+  {
     "id": "v052-teilung",
     "version": "0.5.2",
     "title": "Version 0.5.2: aufgeräumt und abgesichert",

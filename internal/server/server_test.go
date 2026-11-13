@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/fs"
 	"net/http"
@@ -86,6 +87,24 @@ func TestCSRFAndRoots(t *testing.T) {
 	// quit not available in server mode
 	if r := post(t, ts, "/api/quit", map[string]any{}, nil); r.StatusCode != 403 {
 		t.Errorf("quit: %d", r.StatusCode)
+	}
+}
+
+// Ein großer Stapel (mehrere MB) wird gelesen und erst danach nach Freigabe geprüft (403); über 16 MB gibt es 400.
+func TestJobBodyLimit(t *testing.T) {
+	_, ts := newTestServer(t, []string{t.TempDir()})
+	items := func(n int) []map[string]string {
+		it := make([]map[string]string, n)
+		for i := range it {
+			it[i] = map[string]string{"path": fmt.Sprintf("/etc/%0100d.mkv", i)}
+		}
+		return it
+	}
+	if r := post(t, ts, "/api/jobs", map[string]any{"kind": "video", "items": items(30000)}, nil); r.StatusCode != 403 {
+		t.Errorf("3-MB-Stapel: %d, erwartet 403 (gelesen, aber nicht freigegeben)", r.StatusCode)
+	}
+	if r := post(t, ts, "/api/jobs", map[string]any{"kind": "video", "items": items(200000)}, nil); r.StatusCode != 400 {
+		t.Errorf("über 16 MB: %d, erwartet 400", r.StatusCode)
 	}
 }
 
