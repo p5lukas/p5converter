@@ -42,7 +42,7 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     ok(/SSIM/.test(await p.textContent('#clipBox')), name + ': SSIM fehlt im Ergebnis');
     ok(await ov() <= 0 && await inside('#clipDlg'), name + ': Probeclip-Ergebnis ragt heraus');
     await p.screenshot({path: `${L.SHOTS}/p5c-clip-${name}-2.png`});
-    await p.evaluate(() => $('#clipDlg').close());
+    await p.evaluate(() => document.querySelector('#clipDlg').close());
     await ctx.close();
   }
   await b.close();
