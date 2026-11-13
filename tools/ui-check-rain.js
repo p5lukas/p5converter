@@ -16,7 +16,7 @@ const setNoRain = v => fetch(L.url + '/api/settings').then(r => r.json()).then(s
     const post = (path, body) => p.evaluate(async ([path, body]) => (await fetch(path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)})).json(), [path, body]);
     await p.goto(L.url); await p.evaluate(() => localStorage.clear()); await p.goto(L.url); await p.waitForTimeout(1500);
     // ---- die Funktion: läuft, ist durchsichtig, räumt auf, läuft nie doppelt ----
-    const r1 = await p.evaluate(() => { const a = matrixRain(document.querySelector('#hero')), c = document.querySelectorAll('#hero canvas.rain').length, b2 = matrixRain(document.querySelector('#hero')); return {a, c, b2, n: S.rainCount}; });
+    const r1 = await p.evaluate(() => { const {S, matrixRain} = window.__p5; const a = matrixRain(document.querySelector('#hero')), c = document.querySelectorAll('#hero canvas.rain').length, b2 = matrixRain(document.querySelector('#hero')); return {a, c, b2, n: S.rainCount}; });
     ok(r1.a === true && r1.c === 1 && r1.b2 === false && r1.n === 1, name + ': Regen startet nicht richtig: ' + JSON.stringify(r1));
     await p.screenshot({path: `${L.SHOTS}/p5c-rain-${name}-1.png`});
     await p.waitForTimeout(2600);
@@ -27,7 +27,7 @@ const setNoRain = v => fetch(L.url + '/api/settings').then(r => r.json()).then(s
     ok(await cb.count() === 1 && await cb.isChecked(), name + ': Einstellung „Matrix-Regen“ fehlt oder ist nicht an');
     await cb.uncheck(); await p.waitForTimeout(700);
     ok((await (await fetch(L.url + '/api/settings')).json()).settings.noRain === true, name + ': Abschalten nicht gespeichert');
-    ok(await p.evaluate(() => matrixRain(document.body.firstElementChild)) === false && await p.locator('canvas.rain').count() === 0, name + ': ausgeschaltet darf kein Regen laufen');
+    ok(await p.evaluate(() => { const {matrixRain} = window.__p5; return (matrixRain(document.body.firstElementChild)); }) === false && await p.locator('canvas.rain').count() === 0, name + ': ausgeschaltet darf kein Regen laufen');
     await cb.check(); await p.waitForTimeout(700);
     ok((await (await fetch(L.url + '/api/settings')).json()).settings.noRain === false, name + ': Anschalten nicht gespeichert');
     await p.evaluate(() => { location.hash = ''; }); await p.waitForTimeout(500);
@@ -51,7 +51,7 @@ const setNoRain = v => fetch(L.url + '/api/settings').then(r => r.json()).then(s
   {
     const ctx = await b.newContext({...L.views[0][1], reducedMotion: 'reduce'}); const p = await ctx.newPage();
     await p.goto(L.url); await p.waitForTimeout(1500);
-    ok(await p.evaluate(() => matrixRain(document.querySelector('#hero'))) === false && await p.locator('canvas.rain').count() === 0, 'reduzierte Bewegung: es darf nicht regnen');
+    ok(await p.evaluate(() => { const {matrixRain} = window.__p5; return (matrixRain(document.querySelector('#hero'))); }) === false && await p.locator('canvas.rain').count() === 0, 'reduzierte Bewegung: es darf nicht regnen');
     await ctx.close();
   }
   await setNoRain(false);

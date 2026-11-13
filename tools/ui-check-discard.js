@@ -41,7 +41,7 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     await p.screenshot({path: `${L.SHOTS}/p5c-discard-${name}-3-schritt2.png`});
     await p.click('#resetAll'); await p.waitForTimeout(300); await p.click('#resetYes'); await p.waitForTimeout(600);
     ok(await p.locator('#startTiles').isVisible(), name + ': nach „Verwerfen“ nicht auf der Startseite');
-    ok(await p.evaluate(() => S.files.video.length) === 0 && await p.evaluate(() => S.vstep) === 1, name + ': Zustand nicht zurückgesetzt');
+    ok(await p.evaluate(() => { const {S} = window.__p5; return (S.files.video.length); }) === 0 && await p.evaluate(() => { const {S} = window.__p5; return (S.vstep); }) === 1, name + ': Zustand nicht zurückgesetzt');
     // neuer Lauf beginnt leer in Schritt 1
     await L.enter(p, 'video'); await p.waitForTimeout(300);
     ok(await p.locator('#fileList .file').count() === 0, name + ': nach dem Verwerfen sind noch Dateien da');

@@ -38,7 +38,7 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
     // Namensliste: nur wenn umbenannt wird, dann alle Dateien einzeilig („alt → neu“)
     await p.waitForSelector('.cvnamelist .cvnl', {timeout: 8000});
     eq(name, 'ohne Umbenennen steht die Dateiliste trotzdem unter den Feldern (2 Zeilen, „behalten ihren Namen“)', (await p.locator('.cvnamelist .cvnl').count()) + '/' + /behalten ihren Namen/.test(await p.textContent('.cvnamelist')), '2/true');
-    await p.evaluate(() => cvSet('pattern', '{filename} [X]')); await p.evaluate(() => cvRender()); await p.waitForSelector('.cvnamelist .cvnl', {timeout: 8000}); await p.waitForTimeout(500);
+    await p.evaluate(() => { const {cvSet} = window.__p5; return (cvSet('pattern', '{filename} [X]')); }); await p.evaluate(() => { const {cvRender} = window.__p5; return (cvRender()); }); await p.waitForSelector('.cvnamelist .cvnl', {timeout: 8000}); await p.waitForTimeout(500);
     eq(name, 'Namensliste: eine Zeile je Datei (2)', await p.locator('.cvnamelist .cvnl').count(), 2);
     const nl = (await p.locator('.cvnamelist').textContent()).replace(/\s+/g, ' ');
     if (!/multi\.mkv.*multi \[X\]\.mkv/.test(nl) || !/multi2\.mkv.*multi2 \[X\]\.mkv/.test(nl)) errs.push(name + ': Namensliste „alt → neu“ unerwartet: ' + nl);
@@ -72,7 +72,7 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
     if (!/160 kbit\/s/.test(await row('Ton 2').locator('.cvenc').textContent())) errs.push(name + ': Zielbitrate fehlt: ' + (await row('Ton 2').textContent()).slice(0, 300));
     await row('Ton 2').locator('select.cvact').selectOption('copy'); await p.waitForTimeout(400);
     await p.screenshot({ path: `${L.SHOTS}/t-${name}-3-edited.png`, fullPage: true });
-    eq(name, 'Änderungen gelten für beide Dateien der Gruppe', await p.evaluate(() => S.files.video.map(f => Object.keys(f.tracks || {}).length >= 3).join()), 'true,true');
+    eq(name, 'Änderungen gelten für beide Dateien der Gruppe', await p.evaluate(() => { const {S} = window.__p5; return (S.files.video.map(f => Object.keys(f.tracks || {}).length >= 3).join()); }), 'true,true');
     // Dateiliste: beide Dateien melden geänderte Spuren
     await p.click('#cvStepper [data-step=files]'); await p.waitForTimeout(600); await p.click('#cvFileDetails summary'); await p.waitForTimeout(200);
     eq(name, 'beide Dateien melden geänderte Spuren', await p.locator('#fileList [data-tr]').count(), 2);
@@ -104,8 +104,8 @@ const OUTDIR = process.env.OUTDIR || '/tmp/out';
     await p.click('#resetNo'); await p.waitForTimeout(150);
     eq(name, 'Abbrechen schließt', await p.isVisible('#resetDlg'), false);
     await p.click('#resetAll'); await p.click('#resetYes'); await p.waitForTimeout(400);
-    eq(name, 'nach Zurücksetzen: Startseite', await p.evaluate(() => S.step), 'start');
-    eq(name, 'nach Zurücksetzen: keine Dateien', await p.evaluate(() => S.files.video.length), 0);
+    eq(name, 'nach Zurücksetzen: Startseite', await p.evaluate(() => { const {S} = window.__p5; return (S.step); }), 'start');
+    eq(name, 'nach Zurücksetzen: keine Dateien', await p.evaluate(() => { const {S} = window.__p5; return (S.files.video.length); }), 0);
     eq(name, 'nach Zurücksetzen: Remux', await p.inputValue('#vCodec'), 'copy');
     eq(name, 'nach Zurücksetzen: MKV', await p.inputValue('#vContainer'), 'mkv');
     eq(name, 'nach Zurücksetzen: Ton unverändert', await p.inputValue('#vAudioMode'), 'copy');

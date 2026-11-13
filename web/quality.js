@@ -4,7 +4,7 @@
    und das Programm rechnet sie je Encoder und Codec auf die passende Zahl um.
    Die Tabelle sind Startwerte aus Anleitungen und Erfahrung, NICHT auf echter Hardware gemessen. Stehen dort Bereiche, gilt der niedrigere Wert
    (bessere Qualität). Intel Quick Sync liegt bei gleicher Zahl erfahrungsgemäß deutlich kleiner (also schwächer) als NVENC; deshalb sind die Zahlen dort niedriger. */
-const Q = (() => {
+export const Q = (() => {
   const STAGES = [['very', 'Sehr gut', 'groß'], ['good', 'Gut', 'empfohlen'], ['normal', 'Normal', 'kleiner'], ['small', 'Klein', 'weich']];
   // je Encoder und Codec: Zahl für [Sehr gut, Gut, Normal, Klein]
   const TABLE = {

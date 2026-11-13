@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -10,10 +12,12 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/p5lukas/p5converter/internal/auth"
@@ -128,8 +132,15 @@ func main() {
 		log.Printf("Erlaubte Ordner: %s · Konfiguration: %s", strings.Join(rs, ", "), cfgDir)
 	}
 	log.Printf("Oberfläche: %s", url)
+	httpSrv := &http.Server{
+		Handler:           srv.Handler(),
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      2 * time.Minute,
+		IdleTimeout:       60 * time.Second,
+	}
 	go func() {
-		if err := http.Serve(ln, srv.Handler()); err != nil {
+		if err := httpSrv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			fatal(desktop, err.Error())
 		}
 	}()
@@ -141,7 +152,23 @@ func main() {
 		time.Sleep(400 * time.Millisecond)
 		openWindow(url)
 	}
-	select {} // der Server läuft im Hintergrund weiter
+	// Sauberes Ende (Docker: SIGTERM, Desktop: Ctrl+C): keine neuen Aufträge mehr, laufende werden abgebrochen
+	// und stehen beim nächsten Start wieder in der Warteschlange; unfertige .part-Dateien werden aufgeräumt.
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	sig := <-stop
+	log.Printf("%s empfangen – beende p5converter.", sig)
+	srv.Jobs.StopForRestart()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := httpSrv.Shutdown(ctx); err != nil {
+		log.Printf("Server konnte nicht sauber schließen: %v", err)
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for srv.Jobs.Running() > 0 && time.Now().Before(deadline) {
+		time.Sleep(100 * time.Millisecond)
+	}
+	log.Print("Beendet.")
 }
 
 func urlFor(addr string) string {

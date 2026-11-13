@@ -69,7 +69,7 @@ const putSettings = async mut => { const s = await settings(); mut(s); await fet
     ok(await row('Ton 1').locator('select.cvact').inputValue() === 'encode', name + ': wieder angewählt, Regel sollte wirken');
     await p.screenshot({path: `${L.SHOTS}/p5c-rules-${name}-3-kontrolle.png`, fullPage: true});
     // Voreinstellung speichert die Abwahl mit (off) – Schlüssel der Regel
-    const key = await p.evaluate(() => trkGlobalList()[0].key);
+    const key = await p.evaluate(() => { const {trkGlobalList} = window.__p5; return (trkGlobalList()[0].key); });
     ok(/^a\/dts\/any\/encode\/eac3\/256$/.test(key), name + ': Schlüssel der Regel: ' + key);
     await ctx.close();
   }

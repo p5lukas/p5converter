@@ -22,7 +22,7 @@ const probe = f => JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-print_fo
     const row = lbl => p.locator('.cvgrid .cvr', {has: p.locator('.cvk', {hasText: new RegExp('^' + lbl + '\\s*i?$', 'i')})});
     const jobs = async () => (await (await fetch(L.url + '/api/state')).json()).jobs.length;
     await p.goto(L.url); await p.evaluate(() => localStorage.clear()); await p.goto(L.url); await p.waitForTimeout(1300);
-    await p.evaluate(async () => { const s = await (await fetch('/api/settings')).json(); s.settings.trackPrefs = {audioKeep: [], subKeep: [], audioDefault: [], subDefault: []}; s.settings.presets = s.settings.presets.slice(0, 2);
+    await p.evaluate(async () => { const {api} = window.__p5; const s = await (await fetch('/api/settings')).json(); s.settings.trackPrefs = {audioKeep: [], subKeep: [], audioDefault: [], subDefault: []}; s.settings.presets = s.settings.presets.slice(0, 2);
       await fetch('/api/settings', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(s.settings)}); });
     await p.goto(L.url); await p.waitForTimeout(1300);
     await L.enter(p, 'video');
@@ -39,7 +39,7 @@ const probe = f => JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-print_fo
     const rc = await L.openCard(p, 'rules');
     ok(await rc.locator('.trkrule').count() === 1, name + ': die Regel steht nicht bei „Eigene Regeln“ in der Karte „Regeln“');
     await L.openCard(p, 'subs'); await p.waitForTimeout(500);
-    await p.evaluate(() => { CV.card.rules = false; cvRender(); }); await p.waitForTimeout(600);
+    await p.evaluate(() => { const {CV, cvRender} = window.__p5; CV.card.rules = false; cvRender(); }); await p.waitForTimeout(600);
 
     // ---- Gruppen nach Rahmendaten ----
     ok(await p.locator('.cvg').count() === 2, name + ': 2 Gruppen erwartet, ' + await p.locator('.cvg').count());
@@ -118,10 +118,10 @@ const probe = f => JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-print_fo
     await p.keyboard.press('Escape'); await p.waitForTimeout(200);
     ok(await p.locator('.cvpop').count() === 0, name + ': Fenster schließt nicht mit Esc');
     // Deckel: 5.1 mit 256 je Stereo-Paar = 768 → höchstens 640, mit Erklärung
-    const cap = await p.evaluate(() => { const r = {s: {channels: 6, type: 'audio'}, codec: 'eac3', kbps: 256}; return {i: trkEncInfo(r), d: trkTargetDesc(r), e: trkEncExplain(r)}; });
+    const cap = await p.evaluate(() => { const {trkEncExplain, trkEncInfo, trkTargetDesc} = window.__p5; const r = {s: {channels: 6, type: 'audio'}, codec: 'eac3', kbps: 256}; return {i: trkEncInfo(r), d: trkTargetDesc(r), e: trkEncExplain(r)}; });
     ok(cap.i.kbps === 640 && cap.i.capped && cap.i.raw === 768 && /640 kbit\/s \(Maximum\)/.test(cap.d) && /gedeckelt/.test(cap.e), name + ': 640er-Deckel: ' + JSON.stringify(cap));
     // Codec-Kennung mit Bitrate
-    const kn = await p.evaluate(() => [trkDesc({type: 'audio', codec: 'eac3', channels: 6, bitRate: 640000}), trkDesc({type: 'audio', codec: 'aac', channels: 2, bitRate: 128000}), trkDesc({type: 'audio', codec: 'dts', profile: 'DTS-HD MA', channels: 8}), trkDesc({type: 'subtitle', codec: 'hdmv_pgs_subtitle'}), trkDesc({type: 'audio', codec: 'truehd', channels: 8})]);
+    const kn = await p.evaluate(() => { const {trkDesc} = window.__p5; return ([trkDesc({type: 'audio', codec: 'eac3', channels: 6, bitRate: 640000}), trkDesc({type: 'audio', codec: 'aac', channels: 2, bitRate: 128000}), trkDesc({type: 'audio', codec: 'dts', profile: 'DTS-HD MA', channels: 8}), trkDesc({type: 'subtitle', codec: 'hdmv_pgs_subtitle'}), trkDesc({type: 'audio', codec: 'truehd', channels: 8})]); });
     ok(kn[0] === 'E-AC-3 (Dolby Digital Plus) 5.1 · 640 kbit/s' && kn[1] === 'AAC Stereo · 128 kbit/s' && kn[2] === 'DTS-HD MA 7.1' && kn[3] === 'PGS (Bild)' && kn[4] === 'TrueHD (Dolby TrueHD) 7.1', name + ': Codec-Kennung: ' + JSON.stringify(kn));
 
     // ---- genau eine Standard-Tonspur (Fehler: zweite Standard-Spur ließ sich nicht abwählen) ----

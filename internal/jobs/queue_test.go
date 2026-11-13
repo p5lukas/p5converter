@@ -89,6 +89,41 @@ func TestHoldAndPause(t *testing.T) {
 	m.CancelAll("")
 }
 
+// Beim Beenden (SIGTERM/Strg+C) wird der laufende Auftrag abgebrochen, bleibt aber in der Datei und
+// wird beim nächsten Start wieder angeboten – sonst wäre die Warteschlange nach jedem Neustart leer.
+func TestStopForRestartKeepsRunningJob(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "queue.json")
+	m := queueTestManager(t)
+	m.SetQueueFile(file)
+	submitN(m, "video", "a.mkv", "b.mkv")
+	cancelled := false
+	m.mu.Lock()
+	m.jobs[0].Status = "running"
+	m.jobs[0].cancel = func() { cancelled = true }
+	m.mu.Unlock()
+
+	m.StopForRestart()
+	if !cancelled {
+		t.Error("laufender Auftrag muss abgebrochen werden")
+	}
+	if !m.stopping {
+		t.Error("nach StopForRestart darf kein neuer Auftrag starten")
+	}
+	if got := m.Snapshot(); len(got) != 2 || got[0].Status != "stopped" || got[1].Status != "queued" {
+		t.Fatalf("Zustände nach dem Beenden: %+v", got)
+	}
+	m2 := queueTestManager(t)
+	if n := m2.SetQueueFile(file); n != 2 {
+		t.Fatalf("erwartet 2 wartende Aufträge, %d", n)
+	}
+	if r := m2.Restorable(); r["count"] != 2 || r["video"] != 2 {
+		t.Fatalf("Restorable: %v", r)
+	}
+	if got := m2.Snapshot(); len(got) != 0 {
+		t.Errorf("nach dem Beenden darf nichts von selbst starten: %+v", got)
+	}
+}
+
 func TestQueueSurvivesRestart(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "queue.json")
 	m := queueTestManager(t)

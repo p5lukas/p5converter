@@ -8,7 +8,7 @@ const fs = require('fs');
 const OUT = (process.env.OUTDIR || '/tmp/out') + '/forced';
 const fails = [];
 const ok = (c, m) => { if (!c) fails.push(m); };
-const setPrefs = async (p, subDefault) => { if (p.url() === 'about:blank') await p.goto(L.url); return p.evaluate(async subDefault => {
+const setPrefs = async (p, subDefault) => { if (p.url() === 'about:blank') await p.goto(L.url); return p.evaluate(async subDefault => { const {api} = window.__p5;
   const s = await (await fetch('/api/settings')).json();
   s.settings.trackPrefs = {audioKeep: [], subKeep: [], audioDefault: [], subDefault};
   await fetch('/api/settings', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(s.settings)});
@@ -57,7 +57,7 @@ const setPrefs = async (p, subDefault) => { if (p.url() === 'about:blank') await
     // ---- 3) echter Lauf (nur Desktop): Ergebnis prüfen ----
     if (name === 'desktop') {
       await open();
-      await L.goStep(p, 'dest'); await p.evaluate(o => { cvSet('outMode', 'custom'); cvSet('outDir', o); cvSet('exists', 'overwrite'); }, OUT);
+      await L.goStep(p, 'dest'); await p.evaluate(o => { const {cvSet} = window.__p5; cvSet('outMode', 'custom'); cvSet('outDir', o); cvSet('exists', 'overwrite'); }, OUT);
       await L.goStep(p, 'files');
       await p.click('#start'); await p.waitForTimeout(5000);
       const out = OUT + '/forced.mkv';

@@ -1,16 +1,21 @@
+import { $, S, resolveBackend } from './app.js';
+import { renderQualityControls } from './convert.js';
+import { Q } from './quality.js';
+import { setField } from './settings.js';
+
 'use strict';
 /* Qualität in Stufen (Sehr gut / Gut / Normal / Klein) statt einer CRF-Zahl; die Zahlen stehen in quality.js (Q).
    Die Zahl (#vCrf) bleibt das, was an den Server geht; die Stufe (#vQuality) ist die Auswahl des Nutzers: das Programm rechnet sie je Encoder, Codec,
    Material und Zielhöhe um. Bewegt man den Regler (Erweitert), wird die Stufe aus der Zahl abgeleitet oder steht auf „Eigener Wert“.
    Nutzt S, $, h(), cfg(), resolveBackend() aus app.js/settings.js. */
 
-function qCurrent() {
+export function qCurrent() {
   const r = resolveBackend();
   return {backend: r.id, codec: $('#vCodec').value};
 }
 const qSig = (c, st) => [c.backend, c.codec, st].join('/');
 // Stufe → Zahl; nur wenn sich Encoder, Codec oder Stufe geändert haben (sonst würde ein bewegter Regler zurückspringen)
-function qApply() {
+export function qApply() {
   const c = qCurrent(), st = $('#vQuality').value, sig = qSig(c, st);
   if (sig === S.qSig) return;
   S.qSig = sig;
@@ -19,18 +24,18 @@ function qApply() {
   if (v != null) $('#vCrf').value = v;
 }
 // Zahl → Stufe (Regler bewegt, Voreinstellung ohne Stufe geladen)
-function qSync() {
+export function qSync() {
   const c = qCurrent(), st = c.codec === 'copy' ? $('#vQuality').value : Q.stageOf(c.backend, c.codec, $('#vCrf').value);
   $('#vQuality').value = st; S.qSig = qSig(c, st);
 }
 // Nach dem Laden einer Voreinstellung: hat sie eine Stufe, gilt sie für den jetzigen Encoder; sonst wird die Stufe aus der Zahl abgeleitet
-function qAfterPreset(values) {
+export function qAfterPreset(values) {
   if (values && values.vQuality && values.vQuality !== 'custom') { S.qSig = null; qApply(); } else qSync();
 }
-function qSetStage(st) { setField('vQuality', st); S.qSig = null; qApply(); $('#vCrf').dispatchEvent(new Event('input', {bubbles: true})); }
+export function qSetStage(st) { setField('vQuality', st); S.qSig = null; qApply(); $('#vCrf').dispatchEvent(new Event('input', {bubbles: true})); }
 
 // Text neben dem Regler und Name der Zahl (CRF/CQ/ICQ/QP)
-function crfRefresh() {
+export function crfRefresh() {
   const c = qCurrent(), copy = c.codec === 'copy', scale = Q.scaleName(c.backend), st = $('#vQuality').value;
   $('#vQualityRow').classList.toggle('hidden', copy);
   const out = $('#vCrfOut'); out.textContent = $('#vCrf').value;
@@ -43,6 +48,6 @@ function crfRefresh() {
   }
   if (typeof renderQualityControls === 'function') renderQualityControls();
 }
-function wireCrf() {
+export function wireCrf() {
   $('#vCrf').addEventListener('input', () => { qSync(); crfRefresh(); });
 }

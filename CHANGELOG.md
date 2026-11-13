@@ -1,5 +1,25 @@
 # Änderungen
 
+## 0.5.1 – 2026-11-13
+
+**Geändert: innen aufgeräumt**
+- Server, Auftragsverwaltung und Video-Aufbau in kleinere Dateien und Schritte geteilt; das Verhalten bleibt gleich
+- Die Oberfläche lädt als ES-Module: `index.html` bindet nur noch `app.js` ein, jede Datei importiert selbst, was sie braucht. Damit gibt es keine Reihenfolge-Fallen mehr, und `node --check` prüft jede Datei einzeln
+- Docker-Kontext kleiner: Dokumentation, Werkzeuge und die versehentlich eingecheckten Python-Räder gehören nicht ins Image
+
+**Behoben**
+- Tonspur bearbeiten (Sprache oder Format ändern): `normLang`, `noLang` und `REC_KBPS` wurden ohne `TP.` benutzt und waren nicht definiert
+- Anmeldeseite: die zuletzt benutzte Farbe wurde nie gesetzt, weil `themeOf()` nicht existiert
+
+**Sicherheit und Stabilität**
+- Freigaben: ein Symlink innerhalb einer Freigabe konnte aus dem erlaubten Ordner herausführen; jetzt werden die aufgelösten Pfade verglichen
+- Auftrags-Annahme liest höchstens 1 MB Body
+- HTTP-Timeouts; Strg+C/SIGTERM beendet den Server sauber. Laufende Aufträge werden abgebrochen, die Warteschlange bleibt für den nächsten Start erhalten
+
+**Tests**
+- neue Go-Tests: Symlink-Flucht, Sicherheits-Header, Body-Limit, `StopForRestart`, Hardware-Erkennung mit ffmpeg-Ersatz
+- UI-Prüfungen und Node-Tests an die Module angepasst (Zustand über `window.__p5`)
+
 ## 0.5.0 – 2026-11-06
 <!-- zusammenfassung -->
 

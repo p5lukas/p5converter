@@ -1,6 +1,8 @@
 // Test der reinen Logik von „Audio & Untertitel“ (web/trkplan.js). Aufruf: node tools/test-trkplan.js
-const TP = require('../web/trkplan.js');
 const assert = require('assert');
+
+(async () => {
+  const { TP } = await import('../web/trkplan.js');
 const A = (index, lang, codec, ch, extra) => ({index, type: 'audio', lang, codec, channels: ch, ...extra});
 const S = (index, lang, codec, extra) => ({index, type: 'subtitle', lang, codec: codec || 'subrip', ...extra});
 const base = {audioMode: 'copy', subMode: 'copy', audioRules: [], subRules: [], usePrefs: true, prefs: {}};
@@ -182,4 +184,5 @@ t('Gründe für ✦: Regel, Sprach-Wunsch, Standard, Forced', () => {
   assert.deepStrictEqual(kinds(p.tracks.find(r => r.index === 4)).sort(), ['default', 'forced']);
   assert.deepStrictEqual(kinds(p.tracks.find(r => r.index === 3)), []);
 });
-console.log('trkplan: ' + n + ' Tests ok');
+  console.log('trkplan: ' + n + ' Tests ok');
+})().catch(e => { console.error(e); process.exit(1); });

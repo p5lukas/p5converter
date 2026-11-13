@@ -3,7 +3,7 @@
    Aus den Spuren einer Datei, den Regeln (Codec → umwandeln/entfernen), den Sprach-Wünschen aus den Einstellungen und den eigenen
    Änderungen des Nutzers wird berechnet, was mit jeder Spur passiert. Eigene Änderungen (manual) gehen immer vor.
    Ergebnis: edits = {Spurindex: {…}} – genau das Format, das der Server als overrides.tracks versteht (internal/build/video.go: TrackEdit). */
-const TP = (() => {
+export const TP = (() => {
   // gleiche Zuordnung wie im Server (langAlias in video.go): 2-Buchstaben- und Bibliothekscodes → ein Code
   const LANG_ALIAS = {de: 'ger', deu: 'ger', en: 'eng', fr: 'fre', fra: 'fre', es: 'spa', it: 'ita', ja: 'jpn', ru: 'rus', pt: 'por', nl: 'dut', nld: 'dut', pl: 'pol', tr: 'tur',
     zh: 'chi', zho: 'chi', ko: 'kor', sv: 'swe', da: 'dan', no: 'nor', nb: 'nor', nob: 'nor', fi: 'fin', cs: 'cze', ces: 'cze', hu: 'hun', el: 'gre', ell: 'gre', ar: 'ara', hi: 'hin'};

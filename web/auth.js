@@ -1,3 +1,6 @@
+import { $, S, api } from './app.js';
+import { fill, h } from './settings.js';
+
 'use strict';
 /* Anmeldung: Anmeldefenster (wie bei p5assets, mit Spaßmeldung), Abmelden und Anzeige-Umschaltung. */
 
@@ -12,23 +15,23 @@ function funLine(el) {
   funTimer = setInterval(() => { typed.textContent = text.slice(0, ++i); if (i >= text.length) clearInterval(funTimer); }, 32);
 }
 
-async function loadAuth() {
+export async function loadAuth() {
   try { S.auth = await (await fetch('/api/auth/state')).json(); } catch (e) { S.auth = {enabled: false, authenticated: true}; }
   return S.auth;
 }
 
-function updateAuthUI() {
+export function updateAuthUI() {
   const on = !!(S.auth && S.auth.enabled && S.auth.authenticated);
   $('#logoutBtn').classList.toggle('hidden', !on);
 }
 
-async function logout() {
+export async function logout() {
   try { await api('/api/auth/logout', {}); } catch (e) { /* trotzdem neu laden */ }
   location.hash = '';
   location.reload();
 }
 
-function showLogin(note) {
+export function showLogin(note) {
   if (S.view === 'login') return;
   S.view = 'login';
   clearInterval(S.pollTimer);
@@ -39,8 +42,7 @@ function showLogin(note) {
   try {
     const hue = +localStorage.getItem('p5hue');
     if (Number.isFinite(hue) && hue >= 0 && localStorage.getItem('p5hue') !== null) {
-      const t = themeOf(hue), st = document.documentElement.style;
-      st.setProperty('--h', hue); st.setProperty('--sat', t.sat + '%'); st.setProperty('--lit', t.lit + '%');
+      document.documentElement.style.setProperty('--h', hue);
     }
   } catch (e) { /* Standardfarbe */ }
 

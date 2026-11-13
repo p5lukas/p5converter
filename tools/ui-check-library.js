@@ -64,7 +64,7 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     await p.screenshot({path: `${L.SHOTS}/p5c-lib-${name}-1b-filter.png`, fullPage: true});
     // zweiter Durchlauf desselben Ordners: alles kommt aus dem Zwischenspeicher, die Zeilen bleiben gleich
     const rowsBefore = (await p.locator('#cvScan .librow').allTextContents()).join('|');
-    await p.evaluate(() => libStart(LIBUI.root)); await p.waitForSelector('#cvScan .librow', {timeout: 20000}); await p.waitForTimeout(500);
+    await p.evaluate(() => { const {LIBUI, libStart} = window.__p5; return (libStart(LIBUI.root)); }); await p.waitForSelector('#cvScan .librow', {timeout: 20000}); await p.waitForTimeout(500);
     ok(/4 von 4 Dateien kamen aus dem Zwischenspeicher/.test(await p.textContent('#cvScan .libcached').catch(() => '')), name + ': Hinweis „aus dem Zwischenspeicher“ fehlt');
     ok((await p.locator('#cvScan .librow').allTextContents()).join('|') === rowsBefore, name + ': Zeilen aus dem Zwischenspeicher weichen vom ersten Durchlauf ab');
     // Filter und Sortierung
@@ -79,13 +79,13 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     await serie.locator('input').check(); await p.waitForTimeout(200);
     ok(/\(1\)/.test(await p.textContent('#cvScan button.primary')), name + ': Zähler am Übernehmen-Knopf');
     await p.click('#cvScan button.primary'); await p.waitForTimeout(1500);
-    ok(await p.evaluate(() => S.files.video.length) === 3, name + ': Serie sollte 3 Dateien übernehmen, ' + await p.evaluate(() => S.files.video.length));
+    ok(await p.evaluate(() => { const {S} = window.__p5; return (S.files.video.length); }) === 3, name + ': Serie sollte 3 Dateien übernehmen, ' + await p.evaluate(() => { const {S} = window.__p5; return (S.files.video.length); }));
     ok(/3 Dateien/.test(await p.textContent('#fileSummary')), name + ': Zusammenfassung in Schritt 1');
     // Film dazu, Serie nochmal (schon dabei) → 4
     await p.locator('#cvScan .librow', {hasText: 'Mini (2020)'}).first().locator('input').check();
     await p.locator('#cvScan .librow', {hasText: 'Staffel 1'}).first().locator('input').check();
     await p.click('#cvScan button.primary'); await p.waitForTimeout(1500);
-    ok(await p.evaluate(() => S.files.video.length) === 4, name + ': Mini dazu, Staffel 1 war schon da → 4, ' + await p.evaluate(() => S.files.video.length));
+    ok(await p.evaluate(() => { const {S} = window.__p5; return (S.files.video.length); }) === 4, name + ': Mini dazu, Staffel 1 war schon da → 4, ' + await p.evaluate(() => { const {S} = window.__p5; return (S.files.video.length); }));
     await p.screenshot({path: `${L.SHOTS}/p5c-lib-${name}-2-uebernommen.png`, fullPage: true});
     // schließen
     await p.click('#cvScan button[aria-label="Schließen"]'); await p.waitForTimeout(300);
@@ -100,9 +100,9 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     const ctx = await b.newContext(opt); const p = await ctx.newPage();
     p.on('pageerror', e => fails.push(name + ' JS: ' + e.message));
     await p.goto(L.url); await p.waitForTimeout(1300); await L.enter(p, 'video');
-    await p.evaluate(async d => { await libStart(d); }, L.INDIR);
+    await p.evaluate(async d => { const {libStart} = window.__p5; await libStart(d); }, L.INDIR);
     await p.waitForFunction(() => LIBUI.state === 'done', null, {timeout: 60000});
-    await p.evaluate(() => { LIBUI.rows.forEach(r => { if (!r.group) { r.bytes = 20e9; r.saveBytes = 8e9; } }); libRender(); });
+    await p.evaluate(() => { const {LIBUI, libRender} = window.__p5; LIBUI.rows.forEach(r => { if (!r.group) { r.bytes = 20e9; r.saveBytes = 8e9; } }); libRender(); });
     await p.waitForTimeout(300);
     const t = (await p.textContent('#cvScan .libtotal').catch(() => '')) || '';
     ok(/≈ [\d,]+ GB/.test(t) && /ließen sich sparen/.test(t), name + ': Summe der Ersparnis fehlt: ' + t.slice(0, 120));
@@ -113,11 +113,11 @@ const ok = (c, m) => { if (!c) fails.push(m); };
   {
     const ctx = await b.newContext(L.views[0][1]); const p = await ctx.newPage();
     await p.goto(L.url); await p.waitForTimeout(1300); await L.enter(p, 'video');
-    await p.evaluate(async () => { await libStart('/tmp/many60'); });
+    await p.evaluate(async () => { const {libStart} = window.__p5; await libStart('/tmp/many60'); });
     await p.waitForTimeout(400);
     ok(await p.locator('#cvScan .libprog').count() === 1, 'Abbruch: Fortschritt fehlt');
     await p.click('#cvScan .libprog button:has-text("Abbrechen")'); await p.waitForTimeout(1500);
-    ok(await p.evaluate(() => LIBUI.state) === 'canceled', 'Abbruch: Zustand ' + await p.evaluate(() => LIBUI.state));
+    ok(await p.evaluate(() => { const {LIBUI} = window.__p5; return (LIBUI.state); }) === 'canceled', 'Abbruch: Zustand ' + await p.evaluate(() => { const {LIBUI} = window.__p5; return (LIBUI.state); }));
     await ctx.close();
   }
   await b.close();

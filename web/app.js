@@ -1,8 +1,23 @@
+import { loadAuth, logout, showLogin, updateAuthUI } from './auth.js';
+import { CV, cvRender, cvSet, cvUnreviewed, openSheet, wireConvert } from './convert.js';
+import { crfRefresh, qApply, qSync, wireCrf } from './crf.js';
+import { applySteps, captureDefaults, openReset, renderSaved, renderStartTiles, showStep, wireFlow } from './flow.js';
+import { ic, icon } from './icons.js';
+import { INFO } from './info.js';
+import { LIBUI, libPick, libRender, libStart } from './library.js';
+import { checkAlerts } from './logs.js';
+import { matrixRain, rainBarsSync, rainOnDone } from './rain.js';
+import { cleanRules, nameRules, refreshNamePreview, syncNameUI, wireRename } from './rename.js';
+import { W, cfg, check, copyText, fill, h, openPresetDialog, renderPresetChips, route, savePresetFromDialog } from './settings.js';
+import { trackOverridesFor, trkCount, trkDesc, trkEncExplain, trkEncInfo, trkGlobalList, trkProbeAll, trkRuleHint, trkTargetDesc } from './tracks.js';
+import { vfCollect, vfShow, vfStash, wireVerify } from './verify.js';
+import { Q } from './quality.js';
+
 'use strict';
-const $ = s => document.querySelector(s);
-const $$ = s => [...document.querySelectorAll(s)];
+export const $ = s => document.querySelector(s);
+export const $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const api = async (url, body, method) => {
+export const api = async (url, body, method) => {
   const r = await fetch(url, body === undefined ? {} : {method: method || 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
   const j = await r.json().catch(() => ({}));
   if (!r.ok) {
@@ -11,25 +26,25 @@ const api = async (url, body, method) => {
   }
   return j;
 };
-const fmtSize = n => n > 1e9 ? (n / 1e9).toFixed(2) + ' GB' : n > 1e6 ? (n / 1e6).toFixed(1) + ' MB' : n > 1e3 ? (n / 1e3).toFixed(0) + ' KB' : (n || 0) + ' B';
-const fmtTime = s => { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s % 60).padStart(2, '0'); };
+export const fmtSize = n => n > 1e9 ? (n / 1e9).toFixed(2) + ' GB' : n > 1e6 ? (n / 1e6).toFixed(1) + ' MB' : n > 1e3 ? (n / 1e3).toFixed(0) + ' KB' : (n || 0) + ' B';
+export const fmtTime = s => { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s % 60).padStart(2, '0'); };
 
-const S = {step: 'start', vstep: 1, world: 'video', files: {audio: [], video: []}, info: null, jobs: [], stats: null};
+export const S = {step: 'start', vstep: 1, world: 'video', files: {audio: [], video: []}, info: null, jobs: [], stats: null};
 const BACKEND_ORDER = ['qsv', 'nvenc', 'amf', 'vaapi', 'cpu'];
-const CODEC_LABEL = {h264: 'H.264', hevc: 'H.265', av1: 'AV1', vp9: 'VP9'};
+export const CODEC_LABEL = {h264: 'H.264', hevc: 'H.265', av1: 'AV1', vp9: 'VP9'};
 const SWENC = {h264: 'libx264', hevc: 'libx265', av1: 'libsvtav1', vp9: 'libvpx-vp9'};
 
 // ---------- persisted settings ----------
-const FIELDS = ['outMode', 'outDir', 'outStruct', 'exists', 'aFormat', 'aMode', 'aQuality', 'aBitrate', 'aFlac', 'aWav', 'aRate', 'aCh',
+export const FIELDS = ['outMode', 'outDir', 'outStruct', 'exists', 'aFormat', 'aMode', 'aQuality', 'aBitrate', 'aFlac', 'aWav', 'aRate', 'aCh',
   'vContainer', 'vCodec', 'vBackend', 'vCrf', 'vQuality', 'vPreset', 'vDepth', 'vHeight', 'vAudioMode', 'vAudioCodec', 'vAudioKbps', 'vSubMode', 'vTrkRules'];
-const CHECKS = ['aCover', 'vHwDec']; // „Quelldatei löschen“ wird bewusst NICHT gemerkt (verify.js, je Art, nur für diesen Besuch)
+export const CHECKS = ['aCover', 'vHwDec']; // „Quelldatei löschen“ wird bewusst NICHT gemerkt (verify.js, je Art, nur für diesen Besuch)
 // Namensmuster, Zusatz und Ersetzungen gehören je Art (Audio und Video getrennt)
-const NAME_FIELDS = ['pattern', 'suffix', 'renRules'];
-const NAME_EMPTY = {pattern: '', suffix: '', renRules: '[]'};
+export const NAME_FIELDS = ['pattern', 'suffix', 'renRules'];
+export const NAME_EMPTY = {pattern: '', suffix: '', renRules: '[]'};
 S.name = {audio: {...NAME_EMPTY}, video: {...NAME_EMPTY}};
 function stashName(world) { const o = {}; NAME_FIELDS.forEach(k => { o[k] = $('#' + k).value; }); S.name[world] = o; }
-function showName(world) { NAME_FIELDS.forEach(k => { $('#' + k).value = (S.name[world] || NAME_EMPTY)[k] ?? NAME_EMPTY[k]; }); S.nameFor = world; }
-function saveSettings() {
+export function showName(world) { NAME_FIELDS.forEach(k => { $('#' + k).value = (S.name[world] || NAME_EMPTY)[k] ?? NAME_EMPTY[k]; }); S.nameFor = world; }
+export function saveSettings() {
   if (S.nameFor) stashName(S.nameFor);
   const o = {name: S.name};
   FIELDS.forEach(f => o[f] = $('#' + f).value);
@@ -49,7 +64,7 @@ function loadSettings() {
 
 // ---------- Art (Video oder Audio) ----------
 // Die Art wird auf der Startseite gewählt. Video ist grün, Audio orange (nur Audio-Kachel und Audio-Ablauf); die Startseite und alle anderen Seiten sind grün.
-function applyKindTheme() {
+export function applyKindTheme() {
   const inFlow = S.step !== 'start' && !$('#viewMain').classList.contains('hidden');
   if (inFlow) document.documentElement.dataset.kind = S.world; else delete document.documentElement.dataset.kind;
 }
@@ -68,7 +83,7 @@ function setWorld(w) {
   saveSettings();
 }
 // Startseite: Kachel Video oder Audio gewählt → in den Ablauf dieser Art
-function enterKind(w) {
+export function enterKind(w) {
   if (w !== S.world) setWorld(w);
   if (location.hash) location.hash = '';
   S.step = 'convert';
@@ -79,7 +94,7 @@ function enterKind(w) {
 
 // ---------- audio UI ----------
 const A_BITRATES = {mp3: [96, 128, 160, 192, 224, 256, 320], ogg: [96, 128, 160, 192, 224, 256, 320, 500], opus: [48, 64, 96, 128, 160, 192, 256], m4a: [96, 128, 160, 192, 256, 320]};
-function refreshAudioUI() {
+export function refreshAudioUI() {
   const f = $('#aFormat').value, mode = $('#aMode').value;
   const lossy = ['mp3', 'ogg', 'opus', 'm4a'].includes(f);
   const vbrOK = f === 'mp3' || f === 'ogg';
@@ -103,27 +118,27 @@ function refreshAudioUI() {
 
 // ---------- video UI ----------
 // Antworten von /api/info: Listen sind nie null (die Erkennung kann noch laufen, wenn die Oberfläche schon fragt)
-function normInfo(info) {
+export function normInfo(info) {
   const h = info.hw || {};
   ['backends', 'gpus', 'renderNodes', 'diag', 'vainfo'].forEach(k => { if (!Array.isArray(h[k])) h[k] = []; });
   info.hw = h; info.encoders = info.encoders || {};
   return info;
 }
-function hwResult() { return (S.info && S.info.hw) || {backends: [], done: false}; }
+export function hwResult() { return (S.info && S.info.hw) || {backends: [], done: false}; }
 function backendCaps(id) { return (hwResult().backends || []).find(b => b.id === id); }
-function workingBackends(codec) {
+export function workingBackends(codec) {
   return BACKEND_ORDER.filter(id => { const b = backendCaps(id); return b && b.codecs && b.codecs[codec]; });
 }
 // „Automatisch“ nimmt den bevorzugten Encoder aus Einstellungen → Hardware, wenn er für diesen Codec nutzbar ist, sonst den schnellsten
 // verfügbaren (eine bewusst gewählte Hardware im Assistenten gilt immer)
-function preferredFor(codec) {
+export function preferredFor(codec) {
   const p = cfg().preferredBackend;
   if (!p || p === 'auto') return null;
   if (p === 'cpu') return 'cpu';
   const b = backendCaps(p);
   return b && b.codecs && b.codecs[codec] ? p : null;
 }
-function resolveBackend() {
+export function resolveBackend() {
   const codec = $('#vCodec').value, sel = $('#vBackend').value;
   if (codec === 'copy') return {id: 'copy'};
   if (sel !== 'auto') return {id: sel};
@@ -132,7 +147,7 @@ function resolveBackend() {
   const w = workingBackends(codec);
   return {id: w[0] || 'cpu', auto: true};
 }
-function refreshVideoUI() {
+export function refreshVideoUI() {
   const codec = $('#vCodec').value, copy = codec === 'copy';
   // backend options
   const cur = $('#vBackend').value || 'auto';
@@ -177,7 +192,7 @@ function refreshVideoUI() {
   crfRefresh();
   renderHwCard();
 }
-function encoderName(backend, codec) {
+export function encoderName(backend, codec) {
   const m = {qsv: '_qsv', nvenc: '_nvenc', vaapi: '_vaapi', amf: '_amf'};
   if (backend === 'cpu') {
     if (codec === 'av1' && S.info && !S.info.encoders.libsvtav1 && S.info.encoders['libaom-av1']) return 'libaom-av1';
@@ -187,7 +202,7 @@ function encoderName(backend, codec) {
 }
 // Hardware-Liste (Startseite und Einstellungen → Hardware): nutzbare zuerst, nicht nutzbare eingeklappt, Gründe auf Klick
 const HW_FOREIGN = {linux: ['amf'], windows: ['vaapi'], darwin: ['amf', 'vaapi', 'nvenc', 'qsv']};
-function hwRows(hw) {
+export function hwRows(hw) {
   const os = (S.info && S.info.os) || '', hide = HW_FOREIGN[os] || [];
   const list = hw.backends.filter(b => !hide.includes(b.id));
   const codecsOf = b => ['h264', 'hevc', 'av1', 'vp9'].filter(c => b.codecs && b.codecs[c]);
@@ -216,7 +231,7 @@ function renderHwCard() {
 }
 
 // ---------- files ----------
-function renderFileList() {
+export function renderFileList() {
   const list = S.files[S.world];
   const el = $('#fileList');
   if (!list.length) el.innerHTML = `<div class="empty">Noch keine Dateien.<br>„+ Dateien“ oder „+ Ordner“ wählen.</div>`;
@@ -227,11 +242,11 @@ function renderFileList() {
   $$('#fileList [data-rm]').forEach(b => b.onclick = () => { list.splice(+b.dataset.rm, 1); renderFiles(); });
   $$('#fileList [data-tr]').forEach(b => b.onclick = () => openSheet('tracks'));
 }
-function renderFiles() {
+export function renderFiles() {
   renderFileList(); renderStartInfo(); refreshNamePreview();
   if (typeof cvRender === 'function') cvRender();
 }
-function addScanned(files) {
+export function addScanned(files) {
   const list = S.files[S.world];
   const have = new Set(list.map(f => f.path));
   files.forEach(f => { if (!have.has(f.path)) list.push({path: f.path, rel: f.rel, size: f.size, tracks: {}}); });
@@ -246,9 +261,9 @@ const bJoin = (p, n) => p.replace(/[\\/]$/, '') + (p.includes('\\') ? '\\' : '/'
 const fU = t => String(t).toLowerCase().replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/ß/g, 'ss');
 const fE = t => String(t).toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss');
 const bMatch = (name, q) => fU(name).includes(fU(q)) || fE(name).includes(fE(q));
-const rootNameOf = path => (cfg().rootNames || {})[path] || '';
+export const rootNameOf = path => (cfg().rootNames || {})[path] || '';
 // Pfad mit dem Anzeigenamen der Wurzel: „/video1/Filme/x“ → „Filme 4K/Filme/x“ (die längste passende Wurzel gewinnt)
-function pathLabel(p) {
+export function pathLabel(p) {
   const names = cfg().rootNames || {};
   const root = Object.keys(names).filter(r => { const t = r.replace(/[\\/]$/, ''); return p === r || p === t || p.startsWith(t + '/') || p.startsWith(t + '\\'); }).sort((x, y) => y.length - x.length)[0];
   return root ? names[root] + p.slice(root.replace(/[\\/]$/, '').length) : p;
@@ -307,7 +322,7 @@ async function browseTo(path) {
     $('#bCount').textContent = '';
   } catch (e) { $('#bList').innerHTML = `<div class="empty warn">${esc(e.message)}</div>`; }
 }
-function openBrowser(mode, start) {
+export function openBrowser(mode, start) {
   B.mode = mode;
   $('#bAddSel').classList.toggle('hidden', mode !== 'files');
   $('#bAll').parentElement.classList.toggle('hidden', mode !== 'files');
@@ -319,18 +334,18 @@ function openBrowser(mode, start) {
 function closeBrowser(v) { $('#browser').close(); if (B.resolve) B.resolve(v); B.resolve = null; }
 
 // Dateien aus dem Browser holen (start = Ordner, in dem er aufgeht, z. B. ein Quellordner)
-async function pickFrom(start) {
+export async function pickFrom(start) {
   const r = await openBrowser('files', start); if (!r) return;
   if (r.dir) S.lastDir = r.dir;
   const d = await api('/api/scan', {paths: r.paths, kind: S.world}); addScanned(d.files);
 }
 
 // ---------- Toasts ----------
-function toast(msg, kind) {
+export function toast(msg, kind) {
   const t = document.createElement('div'); t.className = 'toast ' + (kind || ''); t.textContent = msg;
   $('#toasts').appendChild(t); setTimeout(() => t.remove(), kind === 'bad' ? 7000 : 3500);
 }
-function renderStartInfo() {
+export function renderStartInfo() {
   const n = S.files[S.world].length;
   $('#startInfo').textContent = n ? `${n} ${n === 1 ? 'Datei' : 'Dateien'} · ${W(S.world).name}` : 'Noch keine Dateien';
 }
@@ -383,8 +398,8 @@ function statusChip(j) {
   const m = {queued: ['wartet', ''], running: ['läuft', 'acc'], done: ['fertig', 'ok'], error: ['Fehler', 'err'], canceled: ['abgebrochen', 'warn'], skipped: ['übersprungen', 'warn']}[j.status];
   return `<span class="chip ${m[1]}">${m[0]}</span>`;
 }
-const BACKEND_NAMES = {qsv: 'Intel Quick Sync', nvenc: 'NVIDIA NVENC', vaapi: 'VAAPI', amf: 'AMD AMF', cpu: 'CPU'};
-const BACKEND_FULL = BACKEND_NAMES;
+export const BACKEND_NAMES = {qsv: 'Intel Quick Sync', nvenc: 'NVIDIA NVENC', vaapi: 'VAAPI', amf: 'AMD AMF', cpu: 'CPU'};
+export const BACKEND_FULL = BACKEND_NAMES;
 // „Schreiben“ = Encoder, „Lesen“ = Decoder: zwei getrennte Angaben mit gleicher Logik –
 // grün + Haken = ffmpeg hat es bestätigt, gelb = nicht bestätigt bzw. Ausweichweg, grau = so eingestellt/noch offen
 function encoderBadge(j) {
@@ -428,7 +443,7 @@ const kindBadge = k => `<span class="kindbadge ${k}">${esc(W(k).name)}</span>`;
 // Warteschlange und Verlauf werden regelmäßig neu gezeichnet. Damit sich dabei weder der Scrollstand noch geöffnete Details ändern:
 // (1) unveränderte Teile bleiben als DOM-Knoten stehen (syncChildren / reconcileCards), (2) keepView rückt die Seite nach dem Zeichnen so zurecht,
 // dass das erste sichtbare Element an derselben Stelle bleibt (der Scroll-Anker der Browser ist dafür nicht verlässlich, Safari hat keinen).
-function keepView(fn) {
+export function keepView(fn) {
   let anchor = null, top = 0;
   if (window.scrollY > 0) {
     for (const el of document.querySelectorAll('#queue .job, .histentry')) { const r = el.getBoundingClientRect(); if (r.bottom > 24) { anchor = el; top = r.top; break; } }
@@ -437,7 +452,7 @@ function keepView(fn) {
   if (anchor && anchor.isConnected) { const d = anchor.getBoundingClientRect().top - top; if (Math.abs(d) > 0.5) window.scrollBy(0, d); }
 }
 // Kinder von parent in die Reihenfolge von els bringen, ohne bereits richtig stehende Knoten anzufassen (sonst gingen Scrollstand und Auswahl darin verloren)
-function syncChildren(parent, els) {
+export function syncChildren(parent, els) {
   els.forEach((el, i) => { if (parent.children[i] !== el) parent.insertBefore(el, parent.children[i] || null); });
   while (parent.children.length > els.length) parent.lastElementChild.remove();
 }
@@ -565,7 +580,7 @@ function currentBatch() {
   return active ? active.jobs : [];
 }
 // Kopfbereich der Startseite: der aktuelle Auftrag („Datei 4 von 13“, Fortschritt, Hardware mit Haken) oder „Gerade nichts los“
-function renderHero() {
+export function renderHero() {
   const box = $('#jobNow'); if (!box) return;
   const batch = currentBatch(), total = batch.length;
   const running = batch.filter(j => j.status === 'running').sort((a, b) => new Date(a.started) - new Date(b.started));
@@ -619,7 +634,7 @@ async function poll() {
 }
 
 // ---------- info popovers ----------
-function infoBtn(key) {
+export function infoBtn(key) {
   const b = document.createElement('button');
   b.type = 'button'; b.className = 'info'; b.textContent = 'i'; b.dataset.key = key;
   b.title = 'Erklärung'; b.setAttribute('aria-label', 'Erklärung anzeigen');
@@ -680,14 +695,14 @@ function hideInfo() {
   const pop = $('#infoPop'); pop.classList.add('hidden');
   if (popFor) popFor.classList.remove('on'); popFor = null;
 }
-document.addEventListener('click', e => {
+if (typeof document !== 'undefined') document.addEventListener('click', e => {
   const b = e.target.closest('button.info');
   if (b) { e.preventDefault(); e.stopPropagation(); showInfo(b); return; }
   if (!e.target.closest('#infoPop')) hideInfo();
 }, true);
-document.addEventListener('keydown', e => { if (e.key === 'Escape') hideInfo(); });
+if (typeof document !== 'undefined') document.addEventListener('keydown', e => { if (e.key === 'Escape') hideInfo(); });
 let popY = 0;
-window.addEventListener('scroll', () => { if (popFor && Math.abs(scrollY - popY) > 40) hideInfo(); }, true);
+if (typeof document !== 'undefined') window.addEventListener('scroll', () => { if (popFor && Math.abs(scrollY - popY) > 40) hideInfo(); }, true);
 
 // ---------- init ----------
 async function loadInfo() {
@@ -705,8 +720,8 @@ function reportError(msg) {
   if (reported++ > 5) return;
   try { fetch('/api/client-error', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({msg: String(msg).slice(0, 500)})}); } catch (e) {}
 }
-window.addEventListener('error', e => reportError((e.message || 'Fehler') + (e.filename ? ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')' : '')));
-window.addEventListener('unhandledrejection', e => reportError('Promise: ' + (e.reason && e.reason.message || e.reason)));
+if (typeof document !== 'undefined') window.addEventListener('error', e => reportError((e.message || 'Fehler') + (e.filename ? ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')' : '')));
+if (typeof document !== 'undefined') window.addEventListener('unhandledrejection', e => reportError('Promise: ' + (e.reason && e.reason.message || e.reason)));
 function renderFooter() {
   const b = S.info.build, ff = S.info.ffmpeg.replace(/^ffmpeg version /, '').split(' Copyright')[0].split(' ')[0];
   const ver = b.tag ? `<a href="${esc(b.branchUrl)}" target="_blank" rel="noopener">v${esc(b.tag)}</a>` : `<a href="${esc(b.branchUrl)}" target="_blank" rel="noopener">${esc(b.branch)}</a>`;
@@ -735,7 +750,7 @@ function openNewsNotice(r) {
   $('#nnAll').onclick = () => { done(); openNews(); };
   dlg.showModal();
 }
-async function openNews() {
+export async function openNews() {
   let r;
   try { r = await api('/api/news'); } catch (e) { toast('Neuigkeiten konnten nicht geladen werden.', 'bad'); return; }
   const groups = {};
@@ -796,7 +811,7 @@ function wire() {
   wireVerify(); wireCrf(); wireConvert();
   $('#hwRedetect').onclick = async () => { await api('/api/hw/detect', {}); S.info.hw.done = false; S.info.hw.backends = []; renderHwCard(); setTimeout(loadInfo, 800); };
 }
-function outModeUI() {
+export function outModeUI() {
   const c = $('#outMode').value === 'custom';
   $('#outDirRow').classList.toggle('hidden', !c);
   $('#structRow').classList.toggle('hidden', !c);
@@ -830,6 +845,7 @@ async function startApp() {
 // ---------- Ziehen zum Aktualisieren (nur als Web-App vom Home-Bildschirm) ----------
 // Eine Web-App vom Home-Bildschirm hat in iOS kein Pull-to-Refresh: am oberen Rand nach unten ziehen lädt die Seite neu (wie bei p5assets).
 (function pullToRefresh() {
+  if (typeof document === 'undefined') return; // Node-Tests laden die Module ohne DOM
   const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   if (!standalone) return;
   const bar = document.createElement('div'); bar.id = 'ptr'; bar.textContent = '↓ Zum Aktualisieren ziehen';
@@ -853,8 +869,16 @@ async function startApp() {
 })();
 
 (async function boot() {
+  if (typeof document === 'undefined') return;
   await loadAuth();
   if (S.auth.enabled && !S.auth.authenticated) { showLogin(); return; }
   updateAuthUI();
   try { await startApp(); } catch (e) { if (e.status !== 401) { toast('Start fehlgeschlagen: ' + e.message, 'bad'); reportError('Start fehlgeschlagen: ' + e.message); } }
 })();
+
+// Test-Hook: Die UI-Prüfungen (tools/ui-check*.js) laufen in page.evaluate und kommen an keine Modul-Bindings.
+// Nur lesend/schreibend für Prüfungen gedacht; die App selbst braucht das nicht.
+if (typeof window !== 'undefined') {
+  window.__p5 = {S, api, CV, cvRender, cvSet, LIBUI, libStart, libRender, Q, matrixRain, check, openReset,
+    trkDesc, trkEncExplain, trkEncInfo, trkGlobalList, trkTargetDesc};
+}

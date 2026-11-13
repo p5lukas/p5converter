@@ -1,3 +1,8 @@
+import { $, S, api, toast } from './app.js';
+import { icon } from './icons.js';
+import { debounce } from './rename.js';
+import { fill, h } from './settings.js';
+
 'use strict';
 /* Log-Seite wie bei p5assets: Dateiauswahl, Stufenfilter, Suche, Live-Nachladen, Download, Leeren; dazu der Kopfzeilen-Knopf
    mit Zähler für neue Warnungen/Fehler. Nutzt h(), fill(), icon(), api(), toast(), debounce(), S aus den anderen Dateien. */
@@ -5,10 +10,10 @@
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* privater Modus */ } };
 let logTimer = null;
-function stopLogs() { clearInterval(logTimer); logTimer = null; }
+export function stopLogs() { clearInterval(logTimer); logTimer = null; }
 
 // ---- Kopfzeilen-Knopf: neue Warnungen/Fehler seit dem letzten Besuch der Log-Seite ----
-async function checkAlerts(markSeen) {
+export async function checkAlerts(markSeen) {
   try {
     if (S.logSeen == null) S.logSeen = +(lsGet('p5logseen') || 0);
     const r = await api('/api/logs/alerts?since=' + S.logSeen);
@@ -30,7 +35,7 @@ function paintAlert() {
 }
 
 // ---- Log-Seite ----
-async function logsPage() {
+export async function logsPage() {
   const root = $('#viewLogs');
   checkAlerts(true);
   stopLogs();

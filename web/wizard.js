@@ -1,3 +1,8 @@
+import { $, BACKEND_FULL, CODEC_LABEL, preferredFor, toast, workingBackends } from './app.js';
+import { Q } from './quality.js';
+import { collectPresetValues, fill, h, saveCfg } from './settings.js';
+import { trkHasPrefs } from './tracks.js';
+
 'use strict';
 /* Assistent „Neue Voreinstellung“ (nur Video) und Bearbeiten einer Voreinstellung: alle Einstellungen aus Video, Ton und Untertitel, jede Frage in einfachen Worten mit einer
    empfohlenen Vorauswahl. Neu: Frage für Frage, am Ende Zusammenfassung, Name, Speichern. Bearbeiten (Einstellungen → Voreinstellungen → „Bearbeiten“): alle Fragen auf einer
@@ -132,7 +137,7 @@ function wizRenderEdit(qs, keep) {
   box.scrollTop = keep;
 }
 // p: Voreinstellung zum Bearbeiten (ohne Angabe: neue anlegen)
-function openWizard(p) {
+export function openWizard(p) {
   p = p && p.id ? p : null;
   WIZ.i = 0; WIZ.edit = p ? p.id : null; WIZ.orig = p ? {...p.values} : null; WIZ.name = p ? p.name : null;
   WIZ.a = wizAnswers(p ? p.values : null);

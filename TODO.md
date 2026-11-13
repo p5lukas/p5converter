@@ -15,6 +15,8 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
+- [ ] **UI-Prüfung `ui-check-home.js` wiederholbar machen:** Der Verlauf-Zähler erwartet genau 3 Aufträge. Nach der ersten Ansicht bleiben Einträge im Verlauf, deshalb schlagen iPad-Ansichten fehl. Entweder den Verlauf vor jeder Ansicht leeren oder je Ansicht einen frischen Server starten (in der Sandbox am 13.11. gesehen; die Prüfung selbst ist nicht geändert)
+- [ ] **Frontend weiter teilen:** `convert.js` (Spur-Editor) und `tracks.js` (viele Exporte) sind nach der Modul-Umstellung noch die größten Brocken; als Nächstes nach Karten trennen
 - [ ] **Windows-App: Folgearbeiten** (erste Version 0.1.1 steht auf `dev`): (1) ~~Tray~~ (erledigt in 0.1.2); (2) **Prüfung durch den Nutzer** auf dem Windows-PC (Fenster, Symbol, Hardware-Erkennung, echte Konvertierung, Deinstallation); (3) Größe der `setup.exe` aus dem CI-Lauf (Zusammenfassung „Größen“) mitteilen; (4) Linux-App danach; (5) Windows erst nach Freigabe nach `main`
 - [ ] Optional: Image als multi-arch (amd64/arm64) bauen
 

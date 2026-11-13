@@ -1,16 +1,21 @@
+import { $, BACKEND_NAMES, S, api, fmtSize, fmtTime, keepView, syncChildren, toast } from './app.js';
+import { icon } from './icons.js';
+import { debounce } from './rename.js';
+import { W, copyText, fill, h } from './settings.js';
+
 'use strict';
 /* Verlauf der Konvertierungen (Seite #history): eine gemeinsame Liste für Video und Audio (je Art bleiben die letzten 100), jeder Eintrag mit Abzeichen,
    mit Suche, Filter nach Ergebnis und Zeitraum, Details, CSV-Export und „Verlauf leeren“.
    Nutzt h(), fill(), icon(), api(), toast(), debounce(), fmtSize(), fmtTime(), W(), S aus den anderen Dateien. */
 
 let histTimer = null;
-function stopHistory() { clearInterval(histTimer); histTimer = null; if (typeof S !== 'undefined') S.histReload = null; }
+export function stopHistory() { clearInterval(histTimer); histTimer = null; if (typeof S !== 'undefined') S.histReload = null; }
 
 const HIST_STATUS = {done: ['fertig', 'ok'], error: ['Fehler', 'err'], canceled: ['abgebrochen', 'warn'], skipped: ['übersprungen', 'warn']};
 const HIST_RANGE = [['all', 'Alle', 0], ['today', 'Heute', -1], ['7', 'Letzte 7 Tage', 7], ['30', 'Letzte 30 Tage', 30]];
 const fmtDateTime = d => { const x = new Date(d); return x.toLocaleDateString('de-DE') + ' ' + x.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'}); };
 
-async function historyPage() {
+export async function historyPage() {
   const root = $('#historyBody');
   stopHistory();
   const st = {kind: 'all', items: [], max: 100, persistent: true, q: '', status: 'all', range: 'all', open: new Set(), openLog: new Set(), cache: new Map()};
