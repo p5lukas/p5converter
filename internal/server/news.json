@@ -1,5 +1,11 @@
 [
   {
+    "id": "v052-teilung",
+    "version": "0.5.2",
+    "title": "Version 0.5.2: aufgeräumt und abgesichert",
+    "text": "Die Oberfläche ist in weitere Module geteilt, der Server schickt strengere Sicherheits-Header und setzt HSTS nur über HTTPS. Zum Bedienen ändert sich nichts – die Liste steht in der CHANGELOG."
+  },
+  {
     "id": "v051-stabil",
     "version": "0.5.1",
     "title": "Version 0.5.1: stabiler im Hintergrund",

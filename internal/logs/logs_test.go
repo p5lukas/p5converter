@@ -93,6 +93,9 @@ func TestRotationAndMemoryMode(t *testing.T) {
 	if len(fs) < 2 {
 		t.Errorf("keine Rotation: %+v", fs)
 	}
+	if len(fs) > backups+1 {
+		t.Errorf("zu viele Sicherungen: %d", len(fs))
+	}
 	fresh(t, "") // memory only
 	Get("m").Infof("eins")
 	r, _ := Read(Name, 10, 0, false)

@@ -8,7 +8,8 @@ import { icon } from './icons.js';
 import { logsPage, stopLogs } from './logs.js';
 import { Q } from './quality.js';
 import { renderRenamePage, syncNameUI } from './rename.js';
-import { LANGS, langName, trkRender, trkRulesBody } from './tracks.js';
+import { LANGS, langName, trkRender } from './tracks.js';
+import { trkRulesBody } from './tracks-rules.js';
 import { vfReset } from './verify.js';
 import { openWizard } from './wizard.js';
 

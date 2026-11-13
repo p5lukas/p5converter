@@ -16,6 +16,7 @@ const OUT = (process.env.OUTDIR || '/tmp/out') + '/home';
     await p.goto(L.url); await p.evaluate(() => localStorage.clear()); await p.goto(L.url); await p.waitForTimeout(1300);
     await p.waitForTimeout(800);
     await post('/api/jobs/cancel-all', {kind: ''}); await p.waitForTimeout(1500);
+    await post('/api/history/clear', {kind: 'all'}); await p.waitForTimeout(300);
     // ---- ruhige Startseite ----
     ok(!(await p.isVisible('#convertView')) && !(await p.isVisible('#stepnav')) && !(await p.isVisible('#wizNav')), name + ': Ablauf auf der Startseite sichtbar');
     ok(await p.locator('#startTiles .kindtile').count() === 2, name + ': Kacheln Video und Audio fehlen');
@@ -34,21 +35,29 @@ const OUT = (process.env.OUTDIR || '/tmp/out') + '/home';
     ok(!clipped.length, name + ': Knöpfe in der Kopfzeile werden abgeschnitten: ' + clipped.join(','));
     await p.screenshot({path: `${L.SHOTS}/p5c-home-${name}-1-idle.png`});
     // ---- laufende Aufträge: „Datei 1 von 3“ ----
+    // Erst pausieren: dann hängt die Zählung nicht davon ab, wie schnell die Datei fertig wird.
+    await post('/api/queue/pause', {on: true});
     for (let i = 0; i < 3; i++) await post('/api/jobs', {kind: 'video', items: [{path: L.INDIR + '/long.mkv'}], output: {dir: OUT, structure: 'flat', exists: 'rename'}, video: {codec: 'hevc', backend: 'cpu', crf: 24, preset: 'slow'}});
-    await p.waitForTimeout(3200);
+    await p.waitForFunction(() => /Datei 1 von 3/.test(document.querySelector('#jobNow')?.textContent || ''), null, {timeout: 5000});
     const now = await p.textContent('#jobNow');
     ok(/Datei 1 von 3/.test(now), name + ': „Datei 1 von 3“ fehlt: ' + now.replace(/\s+/g, ' ').slice(0, 160));
-    ok(/long\.mkv/.test(now) && /Schreiben: CPU/.test(now), name + ': aktueller Auftrag zeigt Datei/Hardware nicht: ' + now.replace(/\s+/g, ' ').slice(0, 200));
+    ok(/long\.mkv/.test(now), name + ': aktueller Auftrag zeigt die Datei nicht: ' + now.replace(/\s+/g, ' ').slice(0, 200));
     ok(await p.locator('#jobNow .bar i').count() >= 1, name + ': Fortschrittsbalken fehlt');
-    ok(/3/.test(await p.textContent('#histBadge')), name + ': Zähler am Verlauf-Knopf zeigt nicht 3');
+    ok((await p.textContent('#histBadge')).trim() === '3', name + ': Zähler am Verlauf-Knopf zeigt nicht 3');
+    // Jetzt starten: die Hardware steht erst fest, wenn der Auftrag läuft.
+    await post('/api/queue/pause', {on: false});
+    await p.waitForFunction(() => /Schreiben: CPU/.test(document.querySelector('#jobNow')?.textContent || ''), null, {timeout: 15000});
+    ok(/Schreiben: CPU/.test(await p.textContent('#jobNow')), name + ': aktueller Auftrag zeigt die Hardware nicht');
     await p.screenshot({path: `${L.SHOTS}/p5c-home-${name}-2-run.png`});
     // ---- Verlauf: Warteschlange oben ----
+    await post('/api/queue/pause', {on: true}); await p.waitForTimeout(300);
     await p.click('#startHistory'); await p.waitForTimeout(1000);
     ok(await p.locator('#viewHistory #queue .job').count() === 3, name + ': Warteschlange im Verlauf zeigt nicht 3 Aufträge');
     ok(await p.isVisible('#cancelAll') && await p.isVisible('#concV') && await p.isVisible('#concA'), name + ': „Alle abbrechen“/„Parallel“ fehlen im Verlauf');
     ok(await ov() <= 0, name + ': Überlauf im Verlauf ' + await ov() + 'px');
     await p.screenshot({path: `${L.SHOTS}/p5c-home-${name}-3-verlauf.png`, fullPage: true});
     await p.click('#cancelAll'); await p.waitForTimeout(1500);
+    await post('/api/queue/pause', {on: false});
     ok(await p.locator('#viewHistory #queue .job').count() === 0, name + ': Warteschlange nach „Alle abbrechen“ nicht leer');
     ok(await p.locator('.histentry').count() >= 3, name + ': abgebrochene Aufträge fehlen im Verlauf');
     // ---- Knöpfe der Kopfzeile aus anderen Ansichten ----

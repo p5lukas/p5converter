@@ -1,5 +1,23 @@
 # Änderungen
 
+## 0.5.2 – 2026-11-13
+
+**Geändert: Oberfläche weiter geteilt**
+- `convert.js` gibt die Spur-Zeilen, den Editor, die kleinen Fenster am Satz und die Namensliste an `convert-tracks.js` ab (570 → 410 Zeilen). Die Karten selbst bleiben, wo sie sind
+- `tracks.js` gibt Regel-Vorschläge, voreingestellte Regeln und den Regel-Editor an `tracks-rules.js` ab (278 → 210 Zeilen); die Spur-Logik bleibt unverändert
+- Importe aufgeräumt, ungenutztes `tok()` entfernt; die neuen Dateien stehen im Einbett-Verzeichnis
+
+**Sicherheit**
+- CSP enger: `object-src` und `frame-src` aus, Bilder und Medien nur aus der eigenen Quelle (plus `data:`/`blob:`), `worker-src`/`manifest-src` eigen
+- `Cross-Origin-Opener-Policy` und `Cross-Origin-Resource-Policy: same-origin`, `Permissions-Policy` ohne Kamera, Mikrofon, Standort, Zahlung und USB
+- HSTS nur, wenn die Verbindung wirklich verschlüsselt ist (direkt über TLS oder `X-Forwarded-Proto: https`) – sonst bliebe ein reiner HTTP-Zugriff im Browser hängen
+- Anmelde-Begrenzung und Logrotation waren schon da; jetzt mitgetestet (429 mit `Retry-After`, höchstens drei Sicherungen)
+
+**Tests**
+- Startseiten-Prüfung wiederholbar: Verlauf leeren, Warteschlange vor dem Einreihen pausieren, für den Hardware-Chip kurz starten. Alle fünf Ansichten grün
+- Neue Tests für die zusätzlichen Header, den HSTS-Fall, `Retry-After` und die Rotationsgrenze
+- UI-Prüfungen grün: Gesamtlauf, Einstellungen, Spuren (mit echter Umwandlung) und Regeln
+
 ## 0.5.1 – 2026-11-13
 
 **Geändert: innen aufgeräumt**
