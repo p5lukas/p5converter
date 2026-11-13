@@ -1,5 +1,14 @@
 # Änderungen
 
+## 0.5.3 – 2026-11-13
+
+**Behoben**
+- Aufträge: Die Obergrenze für eine Anfrage lag bei 1 MB. Ein Stapel mit mehreren tausend Dateien kann das überschreiten und wurde dann abgelehnt. Jetzt sind es 16 MB; größere Anfragen gibt es weiterhin mit Fehler 400 zurück
+
+**Tests**
+- Neuer Test für die Obergrenze (3-MB-Stapel wird gelesen, über 16 MB wird abgelehnt)
+- Komplette UI-Prüfung nach den Umbauten von 0.5.1 und 0.5.2 neu durchlaufen lassen (Ergebnis siehe Pull Request)
+
 ## 0.5.2 – 2026-11-13
 
 **Geändert: Oberfläche weiter geteilt**

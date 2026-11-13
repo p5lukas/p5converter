@@ -11,9 +11,12 @@ import (
 	"github.com/p5lukas/p5converter/internal/rename"
 )
 
+// maxJobBody: Obergrenze für einen Auftrag. Ein Stapel mit mehreren tausend Dateien ist leicht größer als 1 MB.
+const maxJobBody = 16 << 20
+
 func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 	var req jobs.Request
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxJobBody)).Decode(&req); err != nil {
 		httpErr(w, 400, err.Error())
 		return
 	}
