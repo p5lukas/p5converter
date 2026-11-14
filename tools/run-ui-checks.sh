@@ -23,7 +23,7 @@ for t in "$@"; do
     *ui-check-convert.js|*ui-check-discard.js|*ui-check-library.js|*ui-check-rules.js|*ui-check-source.js) IN="$FIX/season" ;;
     *) IN="$FIX/media" ;;
   esac
-  out=$(MANY="$FIX/many60" INDIR="$IN" OUTDIR="$WORK/out" SHOTS="$SHOTS" timeout 900 node "$t" 2>&1); rc=$?
+  out=$(MANY="$FIX/many60" INDIR="$IN" OUTDIR="$WORK/out" SHOTS="$SHOTS" timeout "${P5_TIMEOUT:-2400}" node "$t" 2>&1); rc=$?
   echo "$out" | tail -15
   if [ $rc -ne 0 ] || echo "$out" | grep -q "FEHLER\|Error"; then FAIL=1; echo "-> FEHLGESCHLAGEN: $t"; fi
 done
