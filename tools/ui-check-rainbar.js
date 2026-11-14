@@ -25,7 +25,9 @@ const paint = (p, sel) => p.evaluate(sel => { const c = document.querySelector(s
     await p.goto(L.url); await p.evaluate(() => localStorage.clear()); await p.goto(L.url); await p.waitForTimeout(1300);
     await api('/api/queue/pause', {on: false}); await api('/api/jobs/cancel-all', {kind: ''}); await api('/api/concurrency', {kind: 'video', n: 2}); await p.waitForTimeout(1000);
     for (const f of ['long.mkv', 'multi.mkv', 'long.mkv', 'multi.mkv', 'long.mkv', 'multi.mkv']) await api('/api/jobs', {kind: 'video', items: [{path: L.INDIR + '/' + f}], output: {dir: OUT, structure: 'flat', exists: 'rename'}, video: {codec: 'hevc', backend: 'cpu', crf: 24, preset: 'slow'}});
-    await p.waitForSelector('#jobNow .bar.rain', {timeout: 15000}); await p.waitForTimeout(2500);
+    await p.waitForSelector('#jobNow .bar.rain', {timeout: 15000});
+    // erst messen, wenn die Füllung sichtbar breit ist (bei langsamer Maschine dauert das ein paar Sekunden; unter 2 px zeichnet der Regen nichts)
+    await p.waitForFunction(() => { const i = document.querySelector('#jobNow .bar.rain > i'); return i && i.getBoundingClientRect().width >= 24; }, null, {timeout: 120000}); await p.waitForTimeout(1500);
     // ---- Startseite ----
     const hb = await p.locator('#jobNow .bar.rain').first().boundingBox();
     ok(hb && hb.height >= 20, name + ': Balken auf der Startseite nicht dick genug: ' + (hb && hb.height));
