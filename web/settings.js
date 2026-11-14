@@ -25,6 +25,7 @@ export function h(tag, attrs, ...kids) {
     if (k === 'class') el.className = v;
     else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
     else if (k === 'html') el.innerHTML = v;
+    else if (k === 'style') el.style.cssText = v; // über CSSOM: ein style-Attribut im Markup verbietet die CSP
     else if (k === 'value' || k === 'checked' || k === 'disabled' || k === 'selected') { el[k] = v; if (k === 'value') el.setAttribute('value', v); }
     else el.setAttribute(k, v === true ? '' : v);
   }

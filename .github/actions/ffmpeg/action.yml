@@ -1,0 +1,23 @@
+name: ffmpeg bereitstellen
+description: Installiert ffmpeg auf einem Ubuntu-Runner (nur wenn es fehlt), mit hartem Zeitlimit und bis zu drei Versuchen.
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        DEBIAN_FRONTEND: noninteractive
+        NEEDRESTART_MODE: a
+      run: |
+        # apt hing auf den Runnern mehrfach ohne Meldung (vermutlich wartet needrestart oder dpkg auf eine Eingabe).
+        # Deshalb: nie nach Eingaben fragen (</dev/null, noninteractive) und jeden Versuch hart beenden (timeout -k).
+        if command -v ffmpeg >/dev/null && command -v ffprobe >/dev/null; then
+          echo "ffmpeg ist schon da: $(ffmpeg -version | head -1)"; exit 0
+        fi
+        for i in 1 2 3; do
+          if sudo -E timeout -k 10 90 apt-get -o DPkg::Lock::Timeout=60 -o Acquire::Retries=3 update </dev/null \
+            && sudo -E timeout -k 10 150 apt-get -o DPkg::Lock::Timeout=60 -o Acquire::Retries=3 install -y ffmpeg </dev/null; then
+            exit 0
+          fi
+          echo "Versuch $i gescheitert, neuer Versuch folgt"; ps aux | grep -E "apt|dpkg|needrestart" | grep -v grep || true; sleep 10
+        done
+        exit 1

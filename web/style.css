@@ -1003,3 +1003,12 @@ dialog.wizdlg .wizbox{overflow-y:auto;max-height:100dvh}
 }
 .rootname code{text-transform:none;letter-spacing:0}
 #cvFiles .btns button,#addFiles,#addFolder,#clearFiles{white-space:nowrap}
+
+/* Hilfsklassen statt style-Attributen (die CSP erlaubt keine Inline-Styles) */
+.mt8 { margin-top: 8px; }
+.mb8 { margin-bottom: 8px; }
+.mt16 { margin-top: 16px; }
+.sp14 { height: 14px; }
+.w90 { width: 90px; }
+.badtxt { color: var(--bad); }
+.goodbye { padding: 60px; text-align: center; font: 18px system-ui; }

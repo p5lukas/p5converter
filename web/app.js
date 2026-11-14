@@ -124,6 +124,14 @@ export function normInfo(info) {
   info.hw = h; info.encoders = info.encoders || {};
   return info;
 }
+// Balkenbreiten: im Markup steht nur data-w (Prozent); gesetzt wird per CSSOM, weil die CSP keine style-Attribute erlaubt
+const applyW = el => { const w = el.getAttribute && el.getAttribute('data-w'); if (w !== null && w !== undefined) el.style.width = w + '%'; };
+new MutationObserver(list => {
+  for (const m of list) {
+    if (m.type === 'attributes') { applyW(m.target); continue; }
+    m.addedNodes.forEach(n => { if (n.nodeType === 1) { applyW(n); n.querySelectorAll('[data-w]').forEach(applyW); } });
+  }
+}).observe(document.body, {childList: true, subtree: true, attributes: true, attributeFilter: ['data-w']});
 export function hwResult() { return (S.info && S.info.hw) || {backends: [], done: false}; }
 function backendCaps(id) { return (hwResult().backends || []).find(b => b.id === id); }
 export function workingBackends(codec) {
@@ -481,7 +489,7 @@ function renderQueueNow() {
   renderPauseUI();
   // die Warteschlange zeigt nur laufende und wartende Aufträge; beendete stehen darunter im Verlauf
   const q = $('#queue'), mine = S.jobs.filter(j => j.status === 'queued' || j.status === 'running');
-  if (!mine.length) { q._cards = null; q.innerHTML = '<div class="empty" style="margin-top:8px">Keine laufenden oder wartenden Aufträge. Beendete Aufträge stehen unten im Verlauf.</div>'; return; }
+  if (!mine.length) { q._cards = null; q.innerHTML = '<div class="empty mt8">Keine laufenden oder wartenden Aufträge. Beendete Aufträge stehen unten im Verlauf.</div>'; return; }
   reconcileCards(q, mine.map(j => { // in der Reihenfolge, in der sie dran kommen (oben: läuft bzw. als Nächstes)
     const meta = [];
     if (j.status === 'running') {
@@ -498,9 +506,9 @@ function renderQueueNow() {
     const act = mv + ((j.status === 'queued' || j.status === 'running') ? `<button class="small ghost" data-cancel="${j.id}" title="Bricht diesen Auftrag ab und löscht die unfertige Datei. Die Quelldatei bleibt unberührt.">Abbrechen</button>` : '');
     const note = j.status === 'done' && (j.hwDecodeFallback || (j.warnings || []).length);
     return {id: j.id, cls: `job ${j.status}${note ? ' note' : ''}`, vol: `<div class="job-h">${kindBadge(j.kind)}<span class="n" title="${esc(j.input)}">${esc(j.name)}</span>${encoderBadge(j)}${decoderBadge(j)}${statusChip(j)}${act}</div>
-      <div class="bar"><i style="width:${j.progress.toFixed(1)}%"></i></div>
+      <div class="bar"><i data-w="${j.progress.toFixed(1)}"></i></div>
       <div class="job-m"><span>${j.progress.toFixed(1)} %</span>${meta.map(m => `<span>${m}</span>`).join('')}</div>
-      ${j.error && j.status === 'error' ? `<div class="small" style="color:var(--bad)">${esc(j.error)}</div>` : ''}
+      ${j.error && j.status === 'error' ? `<div class="small badtxt">${esc(j.error)}</div>` : ''}
 `, det: `<details data-id="${j.id}" ${openDetails.has(j.id) ? 'open' : ''}><summary>Details</summary>
         <div class="small muted">Ziel: ${esc(j.output || '–')}</div>
         ${(j.attempts || []).length ? `<div class="small muted">Frühere Versuche:<br>${j.attempts.map(a => esc(a)).join('<br>')}</div>` : ''}
@@ -598,10 +606,10 @@ export function renderHero() {
   box.className = 'jobnow';
   box.innerHTML = `${S.paused ? '<div class="jn-pause">Warteschlange pausiert: laufende Aufträge werden fertig, es startet kein neuer</div>' : ''}<div class="jn-title">Datei ${pos} von ${total}${running.length > 1 ? ` <span class="muted small">(${running.length} laufen parallel)</span>` : ''}</div>
     <div class="jn-name" title="${esc(cur.input)}">${esc(cur.name)}</div>
-    <div class="bar"><i style="width:${cur.progress.toFixed(1)}%"></i></div>
+    <div class="bar"><i data-w="${cur.progress.toFixed(1)}"></i></div>
     <div class="job-m"><span>${cur.progress.toFixed(1)} %</span>${meta.map(m => `<span>${m}</span>`).join('')}</div>
     <div class="jn-chips">${statusChip(cur)}${encoderBadge(cur)}${decoderBadge(cur)}</div>
-    ${total > 1 ? `<div class="jn-all"><span class="muted small">Gesamt ${overall} %</span><div class="bar thin"><i style="width:${overall}%"></i></div></div>` : ''}`;
+    ${total > 1 ? `<div class="jn-all"><span class="muted small">Gesamt ${overall} %</span><div class="bar thin"><i data-w="${overall}"></i></div></div>` : ''}`;
 }
 // Zähler am Verlauf-Knopf: laufende und wartende Aufträge (Video und Audio)
 function renderHistBadge() {
@@ -797,7 +805,7 @@ function wire() {
     const running = S.jobs.filter(j => j.status === 'running' || j.status === 'queued').length;
     if (!confirm(running ? `Es laufen/warten noch ${running} Aufträge. Trotzdem beenden und abbrechen?` : 'p5converter beenden?')) return;
     try { await api('/api/quit', {}); } catch (e) {}
-    document.body.innerHTML = '<div style="padding:60px;text-align:center;font:18px system-ui">p5converter wurde beendet.<br><br><small>Du kannst dieses Fenster schließen. Zum Neustart das Programm erneut öffnen.</small></div>';
+    document.body.innerHTML = '<div class="goodbye">p5converter wurde beendet.<br><br><small>Du kannst dieses Fenster schließen. Zum Neustart das Programm erneut öffnen.</small></div>';
     S.stopped = true;
   };
   $('#cancelAll').onclick = () => api('/api/jobs/cancel-all', {kind: ''}).then(poll);

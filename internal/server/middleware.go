@@ -17,7 +17,7 @@ func securityHeaders(next http.Handler) http.Handler {
 		h.Set("Cross-Origin-Opener-Policy", "same-origin")
 		h.Set("Cross-Origin-Resource-Policy", "same-origin")
 		h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")
-		h.Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "+
+		h.Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; "+
 			"img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; connect-src 'self'; worker-src 'self'; "+
 			"object-src 'none'; frame-src 'none'; manifest-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
 		// HSTS nur, wenn die Verbindung wirklich verschluesselt ist (der Container selbst hoert meist nur HTTP).

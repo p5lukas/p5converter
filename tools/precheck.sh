@@ -24,6 +24,9 @@ grep -q 'golang.org/x/sys v0.33.0' go.mod || bad "go.mod: golang.org/x/sys v0.33
 step "JavaScript-Syntax (node --check)"
 for f in web/*.js tools/*.js; do node --check "$f" || bad "Syntax $f"; done
 
+step "Shell-Skripte (sh -n)"
+for f in tools/*.sh .github/smoke.sh docker/entrypoint.sh; do sh -n "$f" || bad "Syntax $f"; done
+
 step "Logik von Audio & Untertitel (web/trkplan.js, Node-Test)"
 node tools/test-trkplan.js || bad "tools/test-trkplan.js"
 
