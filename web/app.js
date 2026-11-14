@@ -125,7 +125,13 @@ export function normInfo(info) {
   return info;
 }
 // Balkenbreiten: im Markup steht nur data-w (Prozent); gesetzt wird per CSSOM, weil die CSP keine style-Attribute erlaubt
-const applyW = el => { const w = el.getAttribute && el.getAttribute('data-w'); if (w !== null && w !== undefined) el.style.width = w + '%'; };
+// Ein neu eingefügter Balken springt sofort auf seine Breite (ohne die 0,4-s-Animation, sonst würde er bei jedem Neuaufbau der Karte
+// von vorn wachsen); ein vorhandener Balken gleitet wie bisher.
+const applyW = el => {
+  const w = el.getAttribute && el.getAttribute('data-w'); if (w === null || w === undefined) return;
+  if (el.style.width) { el.style.width = w + '%'; return; }
+  el.style.transition = 'none'; el.style.width = w + '%'; void el.offsetWidth; el.style.transition = '';
+};
 new MutationObserver(list => {
   for (const m of list) {
     if (m.type === 'attributes') { applyW(m.target); continue; }
