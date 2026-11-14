@@ -132,7 +132,7 @@ const applyW = el => {
   if (el.style.width) { el.style.width = w + '%'; return; }
   el.style.transition = 'none'; el.style.width = w + '%'; void el.offsetWidth; el.style.transition = '';
 };
-new MutationObserver(list => {
+if (typeof MutationObserver !== 'undefined' && typeof document !== 'undefined' && document.body) new MutationObserver(list => {
   for (const m of list) {
     if (m.type === 'attributes') { applyW(m.target); continue; }
     m.addedNodes.forEach(n => { if (n.nodeType === 1) { applyW(n); n.querySelectorAll('[data-w]').forEach(applyW); } });
