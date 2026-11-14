@@ -32,6 +32,8 @@ jobs:
         with: { go-version: "1.24" }
       - uses: ./.github/actions/ffmpeg
         timeout-minutes: 14
+      - name: Frontend auf nicht definierte Namen prüfen (eslint no-undef)
+        run: npx --yes eslint@10.1.0 -c tools/eslint.config.mjs web/*.js
       - run: go vet ./...
       - run: go test -race ./...
       - name: Logik von Audio und Untertitel (Node)

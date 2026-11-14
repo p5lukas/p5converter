@@ -4,7 +4,7 @@ import { $, infoBtn } from './app.js';
 import { icon } from './icons.js';
 import { h, saveCfg } from './settings.js';
 import { TP } from './trkplan.js';
-import { trkGlobalList, trkRender, trkRules, trkRulesSave } from './tracks.js';
+import { TRK, trkGlobalList, trkRender, trkRules, trkRulesSave } from './tracks.js';
 
 // ---------- Regel-Vorschläge aus den gelesenen Dateien ----------
 // Ein Vorschlag lässt sich nur für diesen Lauf anlegen oder dauerhaft (Einstellungen → Regeln, gilt künftig überall)

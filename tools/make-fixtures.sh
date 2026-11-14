@@ -33,8 +33,8 @@ want long.mkv && $F $V720:d=400 -f lavfi -i sine=d=400 $x264 -c:a aac "$A/long.m
 want hint.mkv && $F -f lavfi -i testsrc2=s=640x360:r=24:d=5 -f lavfi -i sine=d=5 -c:v libx264 -preset ultrafast -c:a aac "$A/hint.mkv"
 want a.mp3 && $F -f lavfi -i sine=d=3 -c:a libmp3lame "$A/a.mp3"
 # Umbenennen: Name mit Folgen-Nummer und Qualitätskennzeichen, Bild 720p
-want "Show S01E01 WEB-1080p.mkv" && $F $V720:d=5 -f lavfi -i sine=d=5 $x264 -c:a aac "$A/Show S01E01 WEB-1080p.mkv"
-for e in 2 3; do want "Show S01E0$e WEB-1080p.mkv" && cp "$A/Show S01E01 WEB-1080p.mkv" "$A/Show S01E0$e WEB-1080p.mkv"; done
+want "Show S01E01 [WEBDL-1080p].mkv" && $F $V720:d=5 -f lavfi -i sine=d=5 $x264 -c:a aac "$A/Show S01E01 [WEBDL-1080p].mkv"
+for e in 2 3; do want "Show S01E0$e [WEBDL-1080p].mkv" && cp "$A/Show S01E01 [WEBDL-1080p].mkv" "$A/Show S01E0$e [WEBDL-1080p].mkv"; done
 
 # multi.mkv / multi2.mkv: je 2 Ton- (ger, eng) und 2 Untertitelspuren (ger, eng)
 python3 - "$T" <<'PY'

@@ -24,6 +24,10 @@ grep -q 'golang.org/x/sys v0.33.0' go.mod || bad "go.mod: golang.org/x/sys v0.33
 step "JavaScript-Syntax (node --check)"
 for f in web/*.js tools/*.js; do node --check "$f" || bad "Syntax $f"; done
 
+step "Nicht definierte Namen im Frontend (eslint no-undef; fehlende Importe fallen sonst erst im Browser auf)"
+if command -v eslint >/dev/null; then eslint -c tools/eslint.config.mjs web/*.js || bad "eslint no-undef"
+else echo "(eslint nicht installiert – übersprungen; die CI prüft es trotzdem)"; fi
+
 step "Shell-Skripte (sh -n)"
 for f in tools/*.sh .github/smoke.sh docker/entrypoint.sh; do sh -n "$f" || bad "Syntax $f"; done
 
