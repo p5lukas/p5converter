@@ -24,12 +24,13 @@ for i in 1 2 3 4 5; do
     -i "$T/kurz.srt" -i "$T/kurz.srt" -i "$T/kurz.srt" -map 0 -map 1 -map 2 -map 3 -map 4 -map 5 -map 6 $x264 \
     -ac 1 -c:a:0 dca -strict -2 -c:a:1 ac3 -c:a:2 aac -c:s srt \
     -metadata:s:a:0 language=ger -metadata:s:a:1 language=eng -metadata:s:a:2 language=fre \
-    -metadata:s:s:0 language=ger -metadata:s:s:1 language=eng -metadata:s:s:2 language=fre "$S/ep0$i.mkv"; }
+    -metadata:s:s:0 language=ger -metadata:s:s:1 language=eng -metadata:s:s:2 language=fre \
+    -disposition:a:0 0 -disposition:a:1 default -disposition:a:2 0 "$S/ep0$i.mkv"; }
 done
 [ -s "$S/ep06.mkv" ] || { echo "  season/ep06.mkv"; $F $V720:d=10 -f lavfi -i sine=d=10 -i "$T/kurz.srt" -map 0 -map 1 -map 2 $x264 -ac 1 -c:a aac -c:s srt \
   -metadata:s:a:0 language=eng -metadata:s:s:0 language=eng "$S/ep06.mkv"; }
-# long.mkv: lang genug, dass ein Auftrag während der Prüfung läuft (Warteschlange, Balken, Regen)
-want long.mkv && $F $V720:d=400 -f lavfi -i sine=d=400 $x264 -c:a aac "$A/long.mkv"
+# long.mkv: 90 s, lang genug, dass ein Auftrag während der Prüfung läuft (Warteschlange, Balken, Regen)
+want long.mkv && $F $V720:d=90 -f lavfi -i sine=d=90 $x264 -c:a aac "$A/long.mkv"
 want hint.mkv && $F -f lavfi -i testsrc2=s=640x360:r=24:d=5 -f lavfi -i sine=d=5 -c:v libx264 -preset ultrafast -c:a aac "$A/hint.mkv"
 want a.mp3 && $F -f lavfi -i sine=d=3 -c:a libmp3lame "$A/a.mp3"
 # Umbenennen: Name mit Folgen-Nummer und Qualitätskennzeichen, Bild 720p
