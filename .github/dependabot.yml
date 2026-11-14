@@ -1,0 +1,22 @@
+# Abhängigkeiten einmal im Monat prüfen; ein Sammel-Pull-Request je Bereich, damit nicht jede Kleinigkeit einzeln kommt.
+# Pull Requests gehen nach dev. Die Go-Version (go 1.24.7) und golang.org/x/sys v0.33.0 sind in tools/precheck.sh festgenagelt:
+# ein Vorschlag dafür ändert dort bewusst etwas und braucht Handarbeit.
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    target-branch: dev
+    schedule: { interval: monthly }
+    groups: { go: { patterns: ["*"] } }
+    labels: [dependencies]
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: dev
+    schedule: { interval: monthly }
+    groups: { actions: { patterns: ["*"] } }
+    labels: [dependencies]
+  - package-ecosystem: docker
+    directory: /docker
+    target-branch: dev
+    schedule: { interval: monthly }
+    labels: [dependencies]

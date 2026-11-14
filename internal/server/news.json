@@ -1,5 +1,11 @@
 [
   {
+    "id": "v054-wartung",
+    "version": "0.5.4",
+    "title": "Version 0.5.4: Wartung",
+    "text": "Die Oberfläche kommt ohne Inline-Styles aus, damit ist die Sicherheitsrichtlinie strenger. Das Docker-Image gibt es auch für arm64. Zum Bedienen ändert sich nichts – die Liste steht in der CHANGELOG."
+  },
+  {
     "id": "v053-stapel",
     "version": "0.5.3",
     "title": "Version 0.5.3: größere Stapel",

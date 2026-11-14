@@ -38,10 +38,13 @@ func TestSecurityHeaders(t *testing.T) {
 		}
 		csp := resp.Header.Get("Content-Security-Policy")
 		for _, want := range []string{"default-src 'self'", "script-src 'self'", "img-src 'self' data: blob:", "media-src 'self' blob:",
-			"object-src 'none'", "frame-src 'none'", "form-action 'self'", "frame-ancestors 'none'", "base-uri 'none'"} {
+			"object-src 'none'", "frame-src 'none'", "form-action 'self'", "frame-ancestors 'none'", "base-uri 'none'", "style-src 'self';"} {
 			if !strings.Contains(csp, want) {
 				t.Errorf("%s: CSP ohne %q: %s", path, want, csp)
 			}
+		}
+		if strings.Contains(csp, "unsafe-") {
+			t.Errorf("%s: CSP erlaubt unsichere Quellen: %s", path, csp)
 		}
 	}
 }
@@ -49,7 +52,7 @@ func TestSecurityHeaders(t *testing.T) {
 // Ein übergroßer Auftrag wird abgewiesen, statt den Speicher zu füllen.
 func TestSubmitBodyLimit(t *testing.T) {
 	_, ts := newTestServer(t, nil)
-	body := append([]byte(`{"kind":"video","items":[`), bytes.Repeat([]byte(" "), 2<<20)...)
+	body := append([]byte(`{"kind":"video","items":[`), bytes.Repeat([]byte(" "), maxJobBody+1)...)
 	req, _ := http.NewRequest("POST", ts.URL+"/api/jobs", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)

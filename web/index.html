@@ -53,7 +53,7 @@
       </details>
       <details class="panel startdet" id="hwCard">
         <summary><h2 data-info="hwInfo">Hardware</h2><span class="muted small" id="hwSum"></span></summary>
-        <div class="btns" style="margin-bottom:8px"><button id="hwRedetect" class="small">Neu erkennen</button></div>
+        <div class="btns mb8"><button id="hwRedetect" class="small">Neu erkennen</button></div>
         <div id="hwList"></div>
         <div id="hwGpus" class="muted small"></div>
       </details>
@@ -117,7 +117,7 @@
       <div class="btns"><button id="rnAddFiles">+ Dateien</button><button id="rnAddFolder">+ Ordner</button><button id="rnClear" class="ghost">Leeren</button></div></div>
     <div id="rnSummary" class="muted small"></div>
   </div>
-  <div class="panel" style="margin-top:16px">
+  <div class="panel mt16">
     <h2>Neuer Name</h2>
     <label>Namensmuster (optional)
       <input id="rnPattern" placeholder="{title} ({year}) [{res}][{codec}]" autocomplete="off" spellcheck="false">
@@ -127,7 +127,7 @@
     <div id="rnRules" class="rulerows"></div>
     <button type="button" class="small" id="rnAddRule">+ Ersetzung</button>
   </div>
-  <div class="panel" style="margin-top:16px">
+  <div class="panel mt16">
     <div class="panel-h"><h2>Vorschau</h2><button id="rnApply" class="primary">Umbenennen</button></div>
     <div id="rnPreview" class="rnpreview"></div>
   </div>
@@ -176,7 +176,7 @@
         </label>
       </div>
     </div>
-<div style="height:14px"></div>
+<div class="sp14"></div>
     <div id="nameStore">
       <label class="cvsuffix"><span class="lt">Dateiname-Zusatz</span>
         <input id="suffix" placeholder="z. B. _x265">
@@ -279,7 +279,7 @@
         </label>
         <label id="vAudioCodecRow">Format und Bitrate (je Stereo-Paar)
           <div class="row"><select id="vAudioCodec"><option value="aac">AAC (läuft überall, empfohlen)</option><option value="opus">Opus (sehr klein, modern)</option><option value="ac3">AC-3 (Dolby Digital, für TV/AV-Receiver)</option><option value="eac3">E-AC-3 (Dolby Digital Plus)</option><option value="flac">FLAC (verlustfrei, groß)</option></select>
-          <input id="vAudioKbps" type="number" min="32" max="640" value="160" style="width:90px"></div>
+          <input id="vAudioKbps" type="number" min="32" max="640" value="160" class="w90"></div>
         </label>
         <p class="muted small" id="vAudioHint"></p>
         <label id="vSubModeRow">Alle übrigen Untertitel

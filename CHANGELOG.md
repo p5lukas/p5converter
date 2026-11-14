@@ -1,5 +1,21 @@
 # Änderungen
 
+## 0.5.4 – 2026-11-14
+
+**Sicherheit**
+- Die Content-Security-Policy erlaubt keine Inline-Styles mehr (`style-src 'self'`, kein `'unsafe-inline'`). Dafür gibt es jetzt Hilfsklassen in `style.css`; Balkenbreiten stehen als `data-w` im Markup und werden per CSSOM gesetzt, Stil-Angaben der Oberfläche (`h(…, {style})`) ebenfalls. Ein Test prüft, dass die Richtlinie keine `unsafe-`-Quelle enthält
+
+**Neu**
+- Docker-Image für amd64 und arm64 (die Intel-Treiber für Quick Sync gibt es nur auf amd64; die CPU- und VAAPI-Wege laufen auf beiden). Gebaut wird per Cross-Kompilierung, der arm64-Bau wird schon im Pull Request geprüft
+- `tools/make-fixtures.sh` erzeugt alle Testmedien für die Oberflächen-Prüfungen mit ffmpeg; `tools/run-ui-checks.sh` startet pro Prüfung einen frischen Server (ohne Argumente die ganze Suite)
+- Die CI führt einen Kurzsatz der Oberflächen-Prüfungen in Chromium aus (alle fünf Ansichten)
+- Dependabot: einmal im Monat ein Sammel-Pull-Request für Go-Module, GitHub Actions und das Docker-Basisimage, jeweils nach `dev`
+
+**Geändert**
+- CI: Die ffmpeg-Installation steckt in einer eigenen Aktion (`.github/actions/ffmpeg`) und wird übersprungen, wenn ffmpeg schon da ist
+- `tools/precheck.sh` prüft auch die Syntax der Shell-Skripte
+- Das Limit für Auftrags-Anfragen steht als Konstante `maxJobBody`, der Test dazu prüft die echte Grenze
+
 ## 0.5.3 – 2026-11-13
 
 **Behoben**

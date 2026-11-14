@@ -12,7 +12,7 @@ Gedacht für ganze Serien-Staffeln, Plex und alle, die ihre Mediathek kleiner ma
 ![Docker](https://img.shields.io/badge/Docker-ghcr.io%2Fp5lukas%2Fp5converter-00ff5a?logo=docker&logoColor=white&labelColor=0a1a0f)
 ![Unraid](https://img.shields.io/badge/Unraid-Template-00ff5a?labelColor=0a1a0f)
 ![Windows](https://img.shields.io/badge/Windows-Vorabversion-ffcc00?labelColor=0a1a0f)
-![Version](https://img.shields.io/badge/Version-0.5.3-00ff5a?labelColor=0a1a0f)
+![Version](https://img.shields.io/badge/Version-0.5.4-00ff5a?labelColor=0a1a0f)
 ![Lizenz](https://img.shields.io/badge/Lizenz-MIT-00ff5a?labelColor=0a1a0f)
 
 <img src="docs/images/start.png" alt="Startseite mit laufendem Auftrag und Video-Voreinstellungen" width="900">
@@ -154,7 +154,7 @@ Die Qualitätszahl heißt bei der CPU CRF, bei NVIDIA CQ, bei Quick Sync ICQ und
 
 ## Qualitätssicherung
 
-Die CI führt Unit- und Integrationstests mit echtem ffmpeg aus (alle Software-Encoder, Audioformate, Spuren und Untertitel, Parallelität, Abbruch, Sicherheitsprüfungen). Danach startet sie das gebaute Docker-Image zu einem Smoke-Test mit echten Konvertierungen, bevor es veröffentlicht wird. Unter Windows laufen ein Server-Test, ein Test der Programmoberfläche und ein Test des Installers.
+Die CI führt Unit- und Integrationstests mit echtem ffmpeg aus (alle Software-Encoder, Audioformate, Spuren und Untertitel, Parallelität, Abbruch, Sicherheitsprüfungen). Ein Kurzsatz der Oberflächen-Prüfungen läuft in Chromium in allen fünf Ansichten (Desktop, iPhone und iPad, hoch und quer). Danach startet sie das gebaute Docker-Image zu einem Smoke-Test mit echten Konvertierungen, bevor es veröffentlicht wird. Das Image gibt es für amd64 und arm64 (Quick Sync nur auf amd64). Unter Windows laufen ein Server-Test, ein Test der Programmoberfläche und ein Test des Installers.
 
 **Noch nicht auf echter Hardware geprüft** sind die GPU-Pfade (Quick Sync, NVENC, VAAPI, AMF) und der Probeclip mit Hardware-Encoder. Schau bei den ersten Läufen in die Details des Auftrags, und melde Probleme gern als [Issue](https://github.com/p5lukas/p5converter/issues).
 
@@ -165,6 +165,7 @@ sh tools/precheck.sh          # Vorprüfung vor jedem Push (gofmt, vet, Windows-
 go test ./...                 # braucht ffmpeg im PATH
 go build -o p5converter . && P5_NO_BROWSER=1 ./p5converter   # http://127.0.0.1:8787
 docker build -f docker/Dockerfile -t p5converter .
+sh tools/run-ui-checks.sh     # Oberflächen-Prüfungen in Chromium (erzeugt Testmedien selbst, die ganze Suite dauert etwa 40 Minuten)
 ```
 
 Umgebungsvariablen: `P5_LISTEN`, `P5_ROOTS`, `P5_JOBS`, `P5_CONFIG`, `P5_AUTH_RESET`, `P5_FFMPEG_DIR`, `P5_NO_BROWSER`, `PUID`, `PGID`.

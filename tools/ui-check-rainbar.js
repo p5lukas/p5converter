@@ -25,7 +25,11 @@ const paint = (p, sel) => p.evaluate(sel => { const c = document.querySelector(s
     await p.goto(L.url); await p.evaluate(() => localStorage.clear()); await p.goto(L.url); await p.waitForTimeout(1300);
     await api('/api/queue/pause', {on: false}); await api('/api/jobs/cancel-all', {kind: ''}); await api('/api/concurrency', {kind: 'video', n: 2}); await p.waitForTimeout(1000);
     for (const f of ['long.mkv', 'multi.mkv', 'long.mkv', 'multi.mkv', 'long.mkv', 'multi.mkv']) await api('/api/jobs', {kind: 'video', items: [{path: L.INDIR + '/' + f}], output: {dir: OUT, structure: 'flat', exists: 'rename'}, video: {codec: 'hevc', backend: 'cpu', crf: 24, preset: 'slow'}});
-    await p.waitForSelector('#jobNow .bar.rain', {timeout: 15000}); await p.waitForTimeout(2500);
+    await p.waitForSelector('#jobNow .bar.rain', {timeout: 15000});
+    // erst messen, wenn die Füllung sichtbar breit ist (bei langsamer Maschine dauert das ein paar Sekunden; unter 2 px zeichnet der Regen nichts)
+    await p.waitForFunction(() => { const i = document.querySelector('#jobNow .bar.rain > i'); return i && i.getBoundingClientRect().width >= 24; }, null, {timeout: 120000});
+    await p.locator('#jobNow .bar.rain').scrollIntoViewIfNeeded(); // außerhalb des Bildschirms zeichnet der Regen bewusst nicht (im Querformat liegt der Balken unter dem Rand)
+    await p.waitForTimeout(1500);
     // ---- Startseite ----
     const hb = await p.locator('#jobNow .bar.rain').first().boundingBox();
     ok(hb && hb.height >= 20, name + ': Balken auf der Startseite nicht dick genug: ' + (hb && hb.height));
@@ -69,7 +73,7 @@ const paint = (p, sel) => p.evaluate(sel => { const c = document.querySelector(s
   {
     const ctx = await b.newContext({...L.views[0][1], reducedMotion: 'reduce'}); const p = await ctx.newPage();
     await p.goto(L.url); await p.waitForTimeout(1300);
-    await p.evaluate(async path => { const {api} = window.__p5; await fetch('/api/jobs', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({kind: 'video', items: [{path}], output: {dir: '/tmp/out/rainbar', structure: 'flat', exists: 'rename'}, video: {codec: 'hevc', backend: 'cpu', crf: 24, preset: 'slow'}})}); }, L.INDIR + '/long.mkv');
+    await p.evaluate(async ([path, dir]) => { const {api} = window.__p5; await fetch('/api/jobs', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({kind: 'video', items: [{path}], output: {dir, structure: 'flat', exists: 'rename'}, video: {codec: 'hevc', backend: 'cpu', crf: 24, preset: 'slow'}})}); }, [L.INDIR + '/long.mkv', OUT]);
     await p.waitForSelector('#jobNow .bar', {timeout: 15000}); await p.waitForTimeout(2500);
     ok(await p.locator('.bar.rain').count() === 0 && await p.locator('canvas.rainbar').count() === 0, 'reduzierte Bewegung: kein Regen-Balken erlaubt');
     await p.evaluate(async () => { const {api} = window.__p5; await fetch('/api/jobs/cancel-all', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({kind: ''})}); });

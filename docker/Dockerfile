@@ -1,12 +1,15 @@
 # syntax=docker/dockerfile:1
-FROM golang:1.24 AS build
+# Gebaut wird immer auf dem Rechner des Bauenden (schnell), für die Zielarchitektur per Cross-Kompilierung
+FROM --platform=$BUILDPLATFORM golang:1.24 AS build
+ARG TARGETOS=linux
+ARG TARGETARCH
 WORKDIR /src
 COPY go.mod go.sum ./
 COPY . .
 ARG P5_TAG=
 ARG P5_BRANCH=
 ARG P5_COMMIT=
-RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w \
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags "-s -w \
   -X github.com/p5lukas/p5converter/internal/version.Tag=${P5_TAG} \
   -X github.com/p5lukas/p5converter/internal/version.Branch=${P5_BRANCH} \
   -X github.com/p5lukas/p5converter/internal/version.Commit=${P5_COMMIT}" -o /p5converter .
@@ -19,9 +22,13 @@ LABEL org.opencontainers.image.source="https://github.com/p5lukas/p5converter" \
       org.opencontainers.image.description="Audio- und Video-Konverter mit Web-Oberfläche (ffmpeg, Intel QSV, NVIDIA NVENC, VAAPI)" \
       org.opencontainers.image.licenses="MIT"
 ENV DEBIAN_FRONTEND=noninteractive
+ARG TARGETARCH
+# Die Intel-Treiber (Quick Sync) gibt es nur für amd64; auf arm64 bleiben CPU und VAAPI (Mesa).
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      ffmpeg ca-certificates pciutils util-linux \
-      intel-media-va-driver-non-free libvpl2 libmfx-gen1.2 libmfx1 mesa-va-drivers vainfo \
+      ffmpeg ca-certificates pciutils util-linux mesa-va-drivers vainfo \
+    && if [ "$TARGETARCH" = "amd64" ]; then \
+         apt-get install -y --no-install-recommends intel-media-va-driver-non-free libvpl2 libmfx-gen1.2 libmfx1; \
+       fi \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=build /p5converter /usr/local/bin/p5converter
 COPY docker/entrypoint.sh /entrypoint.sh

@@ -113,7 +113,7 @@ const ok = (c, m) => { if (!c) fails.push(m); };
   {
     const ctx = await b.newContext(L.views[0][1]); const p = await ctx.newPage();
     await p.goto(L.url); await p.waitForTimeout(1300); await L.enter(p, 'video');
-    await p.evaluate(async () => { const {libStart} = window.__p5; await libStart('/tmp/many60'); });
+    await p.evaluate(async dir => { const {libStart} = window.__p5; await libStart(dir); }, process.env.MANY || '/tmp/many60');
     await p.waitForTimeout(400);
     ok(await p.locator('#cvScan .libprog').count() === 1, 'Abbruch: Fortschritt fehlt');
     await p.click('#cvScan .libprog button:has-text("Abbrechen")'); await p.waitForTimeout(1500);
