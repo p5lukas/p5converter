@@ -15,12 +15,12 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
-- [ ] **CSP ohne `style-src 'unsafe-inline'`:** Die Oberfläche setzt noch Style-Attribute (Breiten, Farben). Wenn die in CSS-Klassen wandern, kann `unsafe-inline` für Styles entfallen
-- [ ] **Testmedien für die Spuren- und Regel-Prüfungen:** `ui-check-tracks.js` braucht `multi.mkv`/`multi2.mkv` (2 Ton-, 2 Untertitelspuren), `ui-check-rules.js` braucht `ep01–ep06.mkv`. Rezept in `tools/` festhalten, damit ein frischer Rechner die Prüfungen starten kann
 - [ ] **Windows-App: Folgearbeiten** (erste Version 0.1.1 steht auf `dev`): (1) ~~Tray~~ (erledigt in 0.1.2); (2) **Prüfung durch den Nutzer** auf dem Windows-PC (Fenster, Symbol, Hardware-Erkennung, echte Konvertierung, Deinstallation); (3) Größe der `setup.exe` aus dem CI-Lauf (Zusammenfassung „Größen“) mitteilen; (4) Linux-App danach; (5) Windows erst nach Freigabe nach `main`
-- [ ] Optional: Image als multi-arch (amd64/arm64) bauen
 
 ## Vom Nutzer zu prüfen (nicht in der Sandbox möglich)
+- [ ] 0.5.4 Auf `dev`: sieht die Oberfläche mit der strengen CSP (kein `unsafe-inline` für Styles) auf iPhone/iPad (Safari und Web-App) und am Desktop unverändert aus? Besonders die Fortschrittsbalken in Warteschlange und Startseite (sie werden jetzt per Skript auf Breite gesetzt)
+- [ ] 0.5.4 arm64-Image (`:dev`) auf echter ARM-Hardware starten, falls vorhanden (gebaut, aber nicht gestartet); Dependabot: nach dem Merge nach `main` der erste Sammel-Pull-Request im nächsten Monat
+- [ ] 0.5.4 `tools/ui-check-wizard.js` einmal von Hand laufen lassen (`sh tools/run-ui-checks.sh tools/ui-check-wizard.js`, dauert rund 20 Minuten, nicht im CI-Kurzsatz): in der Sandbox wurde nur der Assistent bis zum Speichern in allen Ansichten gesehen, der Lauf bis zum Ende nicht
 - [ ] 0.5.0 Release `v0.5.0` auf GitHub ansehen (Text, `p5converter-setup.exe`, Unraid-Vorlage) und auf `main` das Image `:latest`; README-Bilder auf GitHub; auf dem iPhone/iPad (Safari und Web-App) Startseite, Konvertieren, „Name & Ziel“ und Assistent durchklicken
 - [ ] 0.4.2 Qualitäts-Regler (Video-Karte, Assistent, Bearbeiten) auf iPhone/iPad und mit NVIDIA/Intel-Encoder (CQ/ICQ-Skala): Wert wird übernommen und in der Voreinstellung gespeichert?
 - [ ] 0.4.1 Voreinstellung bearbeiten (Einstellungen → Voreinstellungen → „Bearbeiten“) und Assistent „Neue Voreinstellung“ auf iPhone/iPad ansehen (lange Liste, Scrollen im Fenster); Encoder-Auswahl mit echter NVIDIA/Intel-Grafik; Dateiliste unter „Name & Ziel“: genau das, was gemeint war (sonst Seite „Umbenennen“ nennen)
