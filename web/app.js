@@ -490,7 +490,9 @@ function reconcileCards(box, cards) {
   }
   for (const [id, e] of cache) if (!seen.has(id)) { e.el.remove(); cache.delete(id); }
 }
-function renderQueue() { keepView(renderQueueNow); }
+// rainBarsSync gehört in denselben Durchgang: sonst sind die neu gezeichneten Balken kurz dünn (6 statt 22 px), keepView gleicht das aus,
+// und beim späteren Dickermachen rutscht die Seite jedes Mal um 16 px nach oben (der Verlauf „scrollte von selbst“).
+function renderQueue() { keepView(() => { renderQueueNow(); rainBarsSync(); }); }
 function renderQueueNow() {
   renderPauseUI();
   // die Warteschlange zeigt nur laufende und wartende Aufträge; beendete stehen darunter im Verlauf

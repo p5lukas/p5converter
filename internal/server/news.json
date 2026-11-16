@@ -1,5 +1,11 @@
 [
   {
+    "id": "v055-verlauf",
+    "version": "0.5.5",
+    "title": "Version 0.5.5: Verlauf bleibt stehen",
+    "text": "Die Verlauf-Seite wanderte bei laufenden Aufträgen alle paar Sekunden ein Stück nach oben. Das ist behoben."
+  },
+  {
     "id": "v054-wartung",
     "version": "0.5.4",
     "title": "Version 0.5.4: Wartung",

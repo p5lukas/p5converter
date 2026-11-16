@@ -1,5 +1,14 @@
 # Änderungen
 
+## 0.5.5 – 2026-11-16
+
+**Behoben**
+- Verlauf: Bei laufenden Aufträgen wanderte die Seite alle paar Sekunden um 16 Pixel nach oben, bis man oben ankam. Ursache: Die Warteschlange über dem Verlauf wird neu gezeichnet, ihre Balken waren danach kurz dünn (6 statt 22 Pixel) und wurden erst im nächsten Schritt wieder dick. Die Korrektur der Scrollposition glich nur den ersten Sprung aus. Jetzt läuft die Balken-Darstellung im selben Durchgang
+
+**Tests**
+- Neue Prüfung `ui-check-histdrift.js`: 40 Einträge im Verlauf, ein laufender und zwei wartende Aufträge, die Seite darf sich in 8 Sekunden nicht bewegen. Ohne den Fix scheitert sie in allen fünf Ansichten
+- Die CI-Kurzsatz-Prüfung enthält sie
+
 ## 0.5.4 – 2026-11-14
 
 **Sicherheit**
