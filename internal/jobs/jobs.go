@@ -430,11 +430,24 @@ func outputPath(j *Job, info *ffmpeg.Info) string {
 		base = parts[len(parts)-1]
 	}
 	out := filepath.Join(dir, base+"."+ext)
-	if filepath.Clean(out) == filepath.Clean(in) {
-		out = filepath.Join(dir, base+" (konvertiert)."+ext)
+	if filepath.Clean(out) == filepath.Clean(in) && !o.replacesSource() {
+		out = konvertiertName(out)
 	}
 	return out
 }
+
+// konvertiertName hängt „ (konvertiert)“ an den Dateinamen (vor der Endung) an.
+func konvertiertName(out string) string {
+	ext := filepath.Ext(out)
+	return strings.TrimSuffix(out, ext) + " (konvertiert)" + ext
+}
+
+// replacesSource: Der Nutzer will die Quelle durch das Ergebnis ersetzen („Überschreiben“ oder „Original danach löschen“).
+// Heißen Quelle und Ziel gleich, wird dann erst nach bestandener Prüfung getauscht (siehe replaceAndReport), sonst bleibt „(konvertiert)“.
+func (o OutputOpts) replacesSource() bool { return o.Exists == "overwrite" || o.DeleteSource }
+
+// inPlace: Ziel und Quelle sind dieselbe Datei.
+func inPlace(j *Job, out string) bool { return filepath.Clean(out) == filepath.Clean(j.item.Path) }
 
 // claimOutput picks the final output path for j and reserves it, so two parallel jobs never
 // write the same file. ok=false means the job should be skipped.
@@ -443,6 +456,13 @@ func (m *Manager) claimOutput(j *Job, out string) (string, bool) {
 	defer m.mu.Unlock()
 	_, err := os.Stat(out)
 	_, taken := m.reserved[out]
+	if inPlace(j, out) { // die Quelle selbst wird ersetzt: nur nicht, wenn ein anderer Auftrag sie gerade bearbeitet
+		if taken {
+			return out, false
+		}
+		m.reserved[out] = j.ID
+		return out, true
+	}
 	if err == nil || taken {
 		switch j.req.Output.Exists {
 		case "skip":
@@ -520,6 +540,10 @@ func (m *Manager) run(j *Job) {
 			return
 		}
 		m.fail(j, err)
+		return
+	}
+	if inPlace(j, out) {
+		m.replaceAndReport(ctx, j, info, tmp, out, usedArgs, cleanup)
 		return
 	}
 	if err := os.Rename(tmp, out); err != nil {
@@ -667,6 +691,69 @@ func (m *Manager) verifyAndReport(ctx context.Context, j *Job, info *ffmpeg.Info
 			}
 		}
 	}
+	m.report(j, size)
+}
+
+// replaceAndReport: Quelle und Ziel sind dieselbe Datei. Das Ergebnis liegt als .part neben der Quelle und wird zuerst geprüft; nur wenn
+// alles stimmt, ersetzt es die Quelle (Umbenennen im selben Ordner, also in einem Schritt). Fällt eine Prüfung durch, bleibt die Quelle
+// unverändert und das Ergebnis steht als „… (konvertiert)“ daneben, damit die Arbeit nicht verloren geht.
+func (m *Manager) replaceAndReport(ctx context.Context, j *Job, info *ffmpeg.Info, tmp, out string, usedArgs []string, cleanup func()) {
+	var size int64
+	if st, err := os.Stat(tmp); err == nil {
+		size = st.Size()
+	}
+	outInfo, perr := m.tools.Probe(context.Background(), tmp)
+	cs := m.verify(ctx, j, info, outInfo, perr, usedArgs, tmp, j.SizeIn, size)
+	ok := allOK(cs) && size > 0
+	m.update(j, func() {
+		j.Checks, j.CheckFailed, j.Phase = cs, !ok, ""
+		for _, c := range cs {
+			if !c.OK {
+				j.Warnings = append(j.Warnings, "Prüfung nicht bestanden: "+c.Note+" – Original unverändert, Ergebnis daneben gespeichert")
+				jlog.Warnf("Auftrag %s: Prüfung nicht bestanden: %s", j.ID, c.Note)
+			}
+		}
+	})
+	if ok {
+		err := os.Rename(tmp, out)
+		if err == nil {
+			jlog.Infof("Auftrag %s: Original durch das Ergebnis ersetzt (%s)", j.ID, filepath.Base(out))
+			m.report(j, size)
+			return
+		}
+		jlog.Warnf("Auftrag %s: Original konnte nicht ersetzt werden: %v", j.ID, err)
+		m.update(j, func() {
+			j.Warnings = append(j.Warnings, "Original konnte nicht ersetzt werden: "+err.Error()+" – Ergebnis daneben gespeichert")
+		})
+	}
+	// nicht ersetzt: Ergebnis neben der Quelle behalten
+	if size == 0 {
+		cleanup()
+		m.fail(j, fmt.Errorf("das Ergebnis ist leer"))
+		return
+	}
+	side := konvertiertName(out)
+	if _, err := os.Stat(side); err == nil { // schon eine „(konvertiert)“-Datei da: nummerieren
+		ext := filepath.Ext(side)
+		for i := 2; ; i++ {
+			c := fmt.Sprintf("%s (%d)%s", strings.TrimSuffix(side, ext), i, ext)
+			if _, e := os.Stat(c); os.IsNotExist(e) {
+				side = c
+				break
+			}
+		}
+	}
+	if err := os.Rename(tmp, side); err != nil {
+		cleanup()
+		m.fail(j, err)
+		return
+	}
+	m.update(j, func() { j.Output = side })
+	m.report(j, size)
+}
+
+// report schließt den Auftrag ab (Status, Statistik, Log) und meldet ihn an Verlauf und Warteschlange.
+func (m *Manager) report(j *Job, size int64) {
 	var sizeIn int64
 	m.update(j, func() {
 		j.Status = "done"

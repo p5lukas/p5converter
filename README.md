@@ -12,7 +12,7 @@ Gedacht für ganze Serien-Staffeln, Plex und alle, die ihre Mediathek kleiner ma
 ![Docker](https://img.shields.io/badge/Docker-ghcr.io%2Fp5lukas%2Fp5converter-00ff5a?logo=docker&logoColor=white&labelColor=0a1a0f)
 ![Unraid](https://img.shields.io/badge/Unraid-Template-00ff5a?labelColor=0a1a0f)
 ![Windows](https://img.shields.io/badge/Windows-Vorabversion-ffcc00?labelColor=0a1a0f)
-![Version](https://img.shields.io/badge/Version-0.5.5-00ff5a?labelColor=0a1a0f)
+![Version](https://img.shields.io/badge/Version-0.5.6-00ff5a?labelColor=0a1a0f)
 ![Lizenz](https://img.shields.io/badge/Lizenz-MIT-00ff5a?labelColor=0a1a0f)
 
 <img src="docs/images/start.png" alt="Startseite mit laufendem Auftrag und Video-Voreinstellungen" width="900">
@@ -120,7 +120,7 @@ Neues landet zuerst auf `dev` und geht nach dem Test nach `main`. Der Build läu
 
 **Audio** ist eine einzige Ansicht: MP3, Ogg Vorbis, Opus, AAC/M4A, FLAC und WAV, VBR-Qualität oder feste Bitrate, Samplerate und Kanäle. Tags und Cover bleiben erhalten, Ordner lassen sich rekursiv hinzufügen. Voreinstellungen gibt es nur für Video.
 
-**Name und Ziel.** Das Ergebnis kommt neben die Quelle oder in einen eigenen Ordner, mit Ordnerstruktur ab dem Quellordner oder alles in einen Ordner. Das Namensmuster kennt Variablen wie `{title}`, `{year}`, `{res}`, `{codec}` und `{filename}` (bei Audio `{artist}`, `{album}`, `{track}`). Darunter stehen alle Dateien mit altem und neuem Namen. Existiert die Zieldatei schon, kannst du beide behalten (die neue wird nummeriert), überspringen oder überschreiben.
+**Name und Ziel.** Das Ergebnis kommt neben die Quelle oder in einen eigenen Ordner, mit Ordnerstruktur ab dem Quellordner oder alles in einen Ordner. Das Namensmuster kennt Variablen wie `{title}`, `{year}`, `{res}`, `{codec}` und `{filename}` (bei Audio `{artist}`, `{album}`, `{track}`). Darunter stehen alle Dateien mit altem und neuem Namen. Existiert die Zieldatei schon, kannst du beide behalten (die neue wird nummeriert), überspringen oder überschreiben. Heißt das Ergebnis genauso wie die Quelle, ersetzt „Überschreiben“ (oder „Original danach löschen“) die Quelle selbst, aber erst, wenn die Prüfung bestanden ist; sonst bleibt das Original und das Ergebnis steht als „(konvertiert)“ daneben.
 
 **Ton und Untertitel.** Standard ist, nichts zu ändern. Das Programm macht Vorschläge, jeder lässt sich abwählen:
 * *Regeln nach Format*, zum Beispiel nur DTS in E-AC-3 umwandeln. Die erste passende Regel gewinnt. Allgemeine Regeln legst du einmal unter Einstellungen → Regeln an, im Ablauf lassen sie sich pro Lauf abwählen.

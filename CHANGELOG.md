@@ -1,5 +1,17 @@
 # Änderungen
 
+## 0.5.6 – 2026-11-18
+
+**Behoben**
+- „Überschreiben“ und „Original danach löschen“ ersetzten die Quelle nicht, wenn das Ergebnis denselben Namen hatte (Standard bei „Neben der Quelle“ ohne Namensänderung): Das Programm hängte „(konvertiert)“ an, und danach lagen beide Dateien im Ordner, obwohl die Oberfläche das Ersetzen versprach. Jetzt entsteht das Ergebnis als `.part` neben der Quelle, wird geprüft und ersetzt die Quelle erst dann in einem Schritt. Fällt eine Prüfung durch (zum Beispiel Ergebnis größer als die Quelle), bleibt das Original unverändert und das Ergebnis steht als „… (konvertiert)“ daneben, mit Warnung im Verlauf
+- Mit „Beide behalten“ und ohne Löschen ändert sich nichts: Das Ergebnis heißt weiter „… (konvertiert)“
+
+**Geändert**
+- Die Hinweise zu „Überschreiben“ (Name & Ziel, Info-Fenster, README) erklären das Ersetzen der Quelle
+
+**Tests**
+- Neue Tests: Ersetzen mit „Überschreiben“ und mit „Original danach löschen“ (nur noch eine Datei), „Beide behalten“ (zwei Dateien), und der Fall mit durchgefallener Prüfung (Original unverändert, Ergebnis daneben)
+
 ## 0.5.5 – 2026-11-16
 
 **Behoben**
