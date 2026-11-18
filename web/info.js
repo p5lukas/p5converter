@@ -11,7 +11,7 @@ export const INFO = {
     <li><b>Alles in einen Ordner:</b> Alle Dateien landen direkt im Zielordner. Achtung: gleiche Dateinamen werden dann umbenannt/überschrieben (siehe „Wenn Datei existiert“).</li></ul>`},
   suffix: {t: 'Dateiname-Zusatz', b: `<p>Text, der an den Dateinamen vor der Endung angehängt wird. Hilft, Original und Kopie zu unterscheiden.</p>
     <p class="ex">Beispiel: Zusatz <code>_x265</code> → aus <code>Film.mkv</code> wird <code>Film_x265.mkv</code>.</p>
-    <p>Leer lassen ist ok: Haben Quelle und Ziel denselben Namen, hängt das Programm automatisch „(konvertiert)“ an, damit nichts überschrieben wird. Wählst du „Überschreiben“ oder „Original danach löschen“, ersetzt das Ergebnis stattdessen die Quelle, aber erst nach bestandener Prüfung.</p>`},
+    <p>Leer lassen ist ok: Haben Quelle und Ziel denselben Namen, hängt das Programm automatisch „(konvertiert)“ an, damit nichts überschrieben wird. Wählst du „Zieldatei überschreiben“ oder „Quelldatei danach: löschen“, ersetzt das Ergebnis stattdessen die Quelle, aber erst nach bestandener Prüfung.</p>`},
   pattern: {t: 'Namensmuster', b: `<p>Legt fest, wie die neue Datei heißt – aus Variablen wie Titel, Jahr, Auflösung oder Codec. Leer = Originalname. Klicke unter dem Feld auf eine Variable, um sie einzufügen.</p>
     <p class="ex">Video: <code>{title} ({year}) [{res}][{codec}]</code><br>→ <code>Der Flug (2023) [720p][x265].mkv</code></p>
     <p class="ex">Audio: <code>{artist}/{album}/{track} - {title}</code><br>→ <code>Die Ärzte/Jazz ist anders/03 - Lied.mp3</code> (mit <code>/</code> entstehen Ordner)</p>
@@ -23,8 +23,8 @@ export const INFO = {
   exists: {t: 'Wenn Datei existiert', b: `<p>Was passieren soll, wenn es die Zieldatei schon gibt.</p>
     <ul><li><b>Beide behalten, neue Datei nummerieren:</b> Die vorhandene Datei bleibt, die neue bekommt eine Nummer, z. B. <code>Film (2).mkv</code>. Nichts geht verloren – die sicherste Wahl.</li>
     <li><b>Überspringen, vorhandene Datei nicht anfassen:</b> Die Datei wird nicht erneut umgewandelt. Gut, wenn du einen Ordner nach einem Abbruch noch einmal startest.</li>
-    <li><b>Überschreiben, vorhandene Datei ersetzen:</b> Die alte Zieldatei wird durch die neue ersetzt. Heißt das Ergebnis genauso wie die Quelle, ersetzt es die Quelle selbst, aber erst nach bestandener Prüfung; fällt sie durch, bleibt das Original und das Ergebnis steht als „(konvertiert)“ daneben. Das Ersetzen lässt sich nicht rückgängig machen.</li></ul>`},
-  deleteSource: {t: 'Quelldatei löschen', b: `<p>Löscht das Original, <b>nachdem</b> die neue Datei fertig ist <b>und die Prüfung bestanden hat</b>. Das ist <b>endgültig</b> (kein Papierkorb).</p>
+    <li><b>Zieldatei überschreiben, vorhandene Datei ersetzen:</b> Eine schon vorhandene Zieldatei wird durch die neue ersetzt. Die Quelle bleibt dabei erhalten (dafür gibt es „Quelldatei danach“ weiter unten). Heißt das Ergebnis genauso wie die Quelle, ersetzt es die Quelle selbst, aber erst nach bestandener Prüfung; fällt sie durch, bleibt das Original und das Ergebnis steht als „(konvertiert)“ daneben. Das Ersetzen lässt sich nicht rückgängig machen.</li></ul>`},
+  deleteSource: {t: 'Quelldatei danach', b: `<p>Unter „Name &amp; Ziel“ legst du fest, was mit dem Original passiert: <b>Behalten</b> oder <b>Nach bestandener Prüfung löschen</b>. Löschen entfernt das Original, <b>nachdem</b> die neue Datei fertig ist <b>und die Prüfung bestanden hat</b>. Das ist <b>endgültig</b> (kein Papierkorb).</p>
     <p>Fällt die Prüfung durch, bleibt das Original liegen und am Auftrag steht eine Warnung.</p>
     <p>Empfehlung für Anfänger: aus lassen, erst Ergebnis ansehen/anhören, dann selbst aufräumen.</p>`},
   vfInfo: {t: 'Ergebnis prüfen & Original', b: `<p>Jede neue Datei wird immer geprüft: lässt sie sich lesen und ist sie (fast) genauso lang wie das Original?</p>
@@ -130,7 +130,7 @@ export const INFO = {
   tileCheck: {t: 'Danach prüfen', b: `<p>Jede neue Datei wird immer geprüft: lässt sie sich lesen, und ist sie (fast) genauso lang wie das Original? Hier wählst du mehr dazu:</p>
     <ul><li><b>Spuren &amp; Größe:</b> sind alle gewählten Spuren drin, und ist die Datei nicht absurd klein? Kostet kaum Zeit.</li>
     <li><b>Komplett durchlesen:</b> ffmpeg liest die ganze neue Datei einmal durch und meldet beschädigte Stellen. Dauert bei langen Videos merklich.</li>
-    <li><b>Original danach löschen:</b> endgültig, kein Papierkorb, und nur wenn alle Prüfungen bestanden sind.</li></ul>
+    </ul><p>Ob das Original danach gelöscht wird, stellst du unter „Name &amp; Ziel“ ein („Quelldatei danach“). Gelöscht wird nur, wenn alle Prüfungen bestanden sind.</p>
     <p>Wird das Ergebnis bei einem neu kodierten Video <b>nicht kleiner</b> als die Quelle, schlägt die Prüfung an und dein Original bleibt in jedem Fall erhalten.</p>`},
   cardVideo: {t: 'Video', b: `<p>Alles zum Bild: Codec, Auflösung, Bit-Tiefe, Container (Dateityp), Qualität, Geschwindigkeit und Encoder. Links steht die Quelle, rechts das Ergebnis. Geänderte Zeilen sind grün hervorgehoben. Mit dem Probeclip siehst du vorab, was die Einstellungen bringen.</p>`},
   cardAudio: {t: 'Audio', b: `<p>Alle Tonspuren der Datei, eine Zeile je Spur (orange). Pro Spur wählst du <b>unverändert</b>, <b>umwandeln</b> oder <b>entfernen</b>; dazu, welche Spur Standard ist.</p>`},

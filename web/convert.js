@@ -92,10 +92,11 @@ function cvDestText() {
   const custom = $('#outMode').value === 'custom', dir = $('#outDir').value.trim();
   return custom ? (dir ? 'Ordner ' + pathLabel(dir).split(/[\\/]/).filter(Boolean).slice(-2).join('/') : 'eigenem Ordner (fehlt noch)') : 'neben der Quelle';
 }
+const srcFate = () => $('#deleteSource').checked ? 'Original wird gelöscht' : 'Original bleibt';
 function cvCheckText() {
-  const t = $('#vfTracks').checked, d = $('#vfDecode').checked, del = $('#deleteSource').checked;
+  const t = $('#vfTracks').checked, d = $('#vfDecode').checked;
   const what = t && d ? 'Spuren und Decode-Test' : t ? 'Spuren' : d ? 'Decode-Test' : 'nur Grundprüfung';
-  return what + (del ? ', Original löschen' : '');
+  return what;
 }
 
 // ---------- Dateien ----------
@@ -204,6 +205,14 @@ const cvNumber = (id, aria, min, max) => h('input', {type: 'number', class: 'cvn
 const SPEED_HINT = {slow: 'kleinste Datei, dauert länger', medium: 'guter Kompromiss', fast: 'schneller, Datei etwas größer', veryfast: 'sehr schnell, Datei größer'};
 
 // ---------- Inhalt der Karten „Name & Ziel“, „Prüfen“, „Regeln“ ----------
+// Was mit der Quelldatei passiert (Zustand im versteckten Feld #deleteSource, damit verify.js und der Start unverändert bleiben)
+function cvSourceGroup(grp) {
+  const del = $('#deleteSource').checked;
+  const set = v => { const src = $('#deleteSource'); src.checked = v; src.dispatchEvent(new Event('input', {bubbles: true})); };
+  const pill = (v, text) => h('button', {type: 'button', role: 'radio', class: 'pill' + (v === del ? ' on' : ''), 'aria-checked': v === del ? 'true' : 'false', onclick: () => set(v)}, text);
+  return grp('Quelldatei danach', h('div', {class: 'pills', role: 'radiogroup', 'aria-label': 'Quelldatei danach'}, pill(false, 'Behalten'), pill(true, 'Nach bestandener Prüfung löschen')),
+    h('span', {class: 'small ' + (del ? 'warn' : 'muted')}, del ? 'Achtung: Das Original wird sofort und endgültig gelöscht (kein Papierkorb), sobald alle Prüfungen bestanden sind.' : 'Das Original bleibt erhalten.'));
+}
 function cvDestBody(files) {
   const custom = $('#outMode').value === 'custom', grp = (label, ...kids) => h('div', {class: 'tgrp'}, h('span', {class: 'lt'}, label), ...kids);
   return [
@@ -211,15 +220,15 @@ function cvDestBody(files) {
     custom ? h('div', {class: 'tgrp'}, h('div', {class: 'row'}, h('input', {value: $('#outDir').value, placeholder: '/output', 'aria-label': 'Zielordner', onchange: ev => cvSet('outDir', ev.target.value.trim())}),
       h('button', {type: 'button', class: 'small', onclick: async () => { const x = await openBrowser('dir', $('#outDir').value); if (x) cvSet('outDir', x.dir); }}, '…'))) : null,
     custom ? grp('Struktur', cvPills('outStruct', {keep: 'Ordnerstruktur beibehalten', flat: 'Alles in einen Ordner'}, 'Struktur')) : null,
-    grp('Wenn die Datei schon da ist', cvPills('exists', {rename: 'Beide behalten', skip: 'Überspringen', overwrite: 'Überschreiben'}, 'Wenn Datei existiert'),
+    grp('Wenn die Datei schon da ist', cvPills('exists', {rename: 'Beide behalten', skip: 'Überspringen', overwrite: 'Zieldatei überschreiben'}, 'Wenn Datei existiert'),
       h('span', {class: 'small ' + ($('#exists').value === 'overwrite' ? 'warn' : 'muted')}, EXISTS_HINT[$('#exists').value] || '')),
+    cvSourceGroup(grp),
     h('div', {class: 'tgrp cvnamebox', 'data-nameslot': '1'}), // #nameStore (Dateiname, Muster, Ersetzungen) wird hier eingehängt
     cvNameList(files)];
 }
 function cvCheckBody() {
   const w = S.world;
   return [cvOpt('vfTracks', 'Spuren & Größe', vfTime(w, 'tracks')[0]), cvOpt('vfDecode', 'Komplett durchlesen (Decode-Test)', vfTime(w, 'decode')[0]),
-    cvOpt('deleteSource', 'Original danach löschen', 'unwiderruflich, kein Papierkorb', true),
     h('p', {class: 'muted small'}, 'Die neue Datei wird immer auf Lesbarkeit und Laufzeit geprüft. Das Original bleibt, bis alles stimmt.')];
 }
 function cvRulesBody(items) {
@@ -289,14 +298,14 @@ function cvVideoTable(items) {
   const attention = type => ex.plan.tracks.some(r => r.type === type && (r.own || r.guess || !r.kept || r.why.length || (r.kept && TP.noLang(r.lang)))) || (type === 'audio' ? $('#vAudioMode').value !== 'copy' : $('#vSubMode').value !== 'copy');
   const vsum = copy ? 'Video wird nicht neu kodiert' : (vsrc ? (CV_SRC_CODEC[vsrc.codec] || (vsrc.codec || '?').toUpperCase()) : '?') + ' → ' + CV_CODEC[$('#vCodec').value] + ' · ' + Q.stageName($('#vQuality').value) + ' · ' + SPEED_NAME[$('#vPreset').value] + ' · ' + (BACKEND_FULL[resolveBackend().id] || '');
   const plainName = !$('#pattern').value.trim() && !cleanRules(nameRules()).length && !$('#suffix').value;
-  const nameSum = 'Name ' + (plainName ? 'bleibt' : 'wird angepasst') + ' · ' + cvDestText() + ' · ' + ({rename: 'Datei da: nummerieren', skip: 'Datei da: überspringen', overwrite: 'Datei da: überschreiben'}[$('#exists').value] || '');
+  const nameSum = 'Name ' + (plainName ? 'bleibt' : 'wird angepasst') + ' · ' + cvDestText() + ' · ' + ({rename: 'Datei da: nummerieren', skip: 'Datei da: überspringen', overwrite: 'Datei da: überschreiben'}[$('#exists').value] || '') + ' · ' + srcFate();
   return [strip, gline, cvWarnings(null, g, items), cvColHead(),
     cvCard('video', 'video', 'Video', 'cardVideo', vsum, vRows, {id: 'video', open: true}),
     cvCard('audio', 'wave', 'Ton', 'cardAudio', sumOf('audio', 'Tonspur', 'Tonspuren') + (nSug ? ' · ' + nSug + (nSug === 1 ? ' Vorschlag' : ' Vorschläge') : ''), aRows, {id: 'audio', open: attention('audio') || nSug > 0}),
     cvCard('subs', 'subs', 'Untertitel', 'cardSubs', sumOf('subtitle', 'Untertitel', 'Untertitel'), sRows, {id: 'subs', open: attention('subtitle')}),
     cvCard('rules', 'shield', 'Regeln', 'trkGlobal', cvRulesSummary(items), null, {id: 'rules', open: false, body: cvRulesBody(items)}),
-    cvCard('name', 'file', 'Name & Ziel', 'cardName', nameSum, null, {id: 'name', open: ($('#outMode').value === 'custom' && !$('#outDir').value.trim()) || $('#exists').value === 'overwrite', body: cvDestBody(S.files.video)}),
-    cvCard('check', 'shield', 'Prüfen', 'tileCheck', cvCheckText().replace(/^./, c => c.toUpperCase()), null, {id: 'check', open: $('#deleteSource').checked, body: cvCheckBody()})];
+    cvCard('name', 'file', 'Name & Ziel', 'cardName', nameSum, null, {id: 'name', open: ($('#outMode').value === 'custom' && !$('#outDir').value.trim()) || $('#exists').value === 'overwrite' || $('#deleteSource').checked, body: cvDestBody(S.files.video)}),
+    cvCard('check', 'shield', 'Prüfen', 'tileCheck', cvCheckText().replace(/^./, c => c.toUpperCase()), null, {id: 'check', open: false, body: cvCheckBody()})];
 }
 export const SPEED_NAME = {slow: 'Langsam', medium: 'Mittel', fast: 'Schnell', veryfast: 'Sehr schnell'};
 // Hinweis, wenn die Quelle schon klein ist: Neukodieren spart dann kaum Platz
@@ -326,10 +335,10 @@ function cvAudioTable(items) {
     !$('#aCover').parentElement.classList.contains('hidden') ? cvRow('Cover-Bild', pic ? 'vorhanden' : 'keines', h('div', {class: 'cvafter'}, h('label', {class: 'check'}, cvCheck('aCover'), h('span', {}, 'übernehmen'))), {info: 'aCover'}) : null,
   ].filter(Boolean);
   const plainName = !$('#pattern').value.trim() && !cleanRules(nameRules()).length && !$('#suffix').value;
-  const nameSum = 'Name ' + (plainName ? 'bleibt' : 'wird angepasst') + ' · ' + cvDestText();
+  const nameSum = 'Name ' + (plainName ? 'bleibt' : 'wird angepasst') + ' · ' + cvDestText() + ' · ' + srcFate();
   return [cvWarnings(null, null, items), cvColHead(), cvCard('audio', 'audio', 'Audio-Datei', 'cardAudioFile', items.length === 1 ? 'Vorher → Nachher' : items.length + ' Dateien', rows),
-    cvCard('name', 'file', 'Name & Ziel', 'cardName', nameSum, null, {id: 'name', open: $('#outMode').value === 'custom' && !$('#outDir').value.trim(), body: cvDestBody(S.files.audio)}),
-    cvCard('check', 'shield', 'Prüfen', 'tileCheck', cvCheckText().replace(/^./, c => c.toUpperCase()), null, {id: 'check', open: $('#deleteSource').checked, body: cvCheckBody()})];
+    cvCard('name', 'file', 'Name & Ziel', 'cardName', nameSum, null, {id: 'name', open: ($('#outMode').value === 'custom' && !$('#outDir').value.trim()) || $('#deleteSource').checked, body: cvDestBody(S.files.audio)}),
+    cvCard('check', 'shield', 'Prüfen', 'tileCheck', cvCheckText().replace(/^./, c => c.toUpperCase()), null, {id: 'check', open: false, body: cvCheckBody()})];
 }
 
 // ---------- Leisten unten ----------
