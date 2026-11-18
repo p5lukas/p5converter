@@ -15,6 +15,7 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
+- [ ] **„Original danach löschen“ nach „Name & Ziel“ (Entscheidung des Nutzers):** Die Option steckt heute in der Karte „Prüfen“ und wird dort nicht gefunden. Sie wandert neben „Wenn die Datei schon da ist“ in „Name & Ziel“ (Wahl „Was passiert mit der Quelle?“ oder Schalter mit Hinweis „unwiderruflich, kein Papierkorb“). In „Prüfen“ bleiben nur die Prüfungen. Dazu: „Überschreiben“ heißt „Vorhandene Zieldatei überschreiben“ und sagt, dass die Quelle bleibt; die Zeile von „Name & Ziel“ und die Zusammenfassung unten nennen das Schicksal der Quelle („Original bleibt“ / „wird nach bestandener Prüfung gelöscht“); Tests und Info-Texte anpassen (`vfCollect`, `ui-check-verify.js`, `info.js`)
 - [ ] **Windows-App: Folgearbeiten** (erste Version 0.1.1 steht auf `dev`): (1) ~~Tray~~ (erledigt in 0.1.2); (2) **Prüfung durch den Nutzer** auf dem Windows-PC (Fenster, Symbol, Hardware-Erkennung, echte Konvertierung, Deinstallation); (3) Größe der `setup.exe` aus dem CI-Lauf (Zusammenfassung „Größen“) mitteilen; (4) Linux-App danach; (5) Windows erst nach Freigabe nach `main`
 
 ## Vom Nutzer zu prüfen (nicht in der Sandbox möglich)
