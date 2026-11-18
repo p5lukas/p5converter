@@ -307,3 +307,76 @@ func TestSnapshotStripsFinishedAndPrunes(t *testing.T) {
 		t.Errorf("Finished()=%d", m.Finished())
 	}
 }
+
+// Ersetzen am Ort: Heißen Quelle und Ziel gleich und der Nutzer wählt „Überschreiben“ oder „Original danach löschen“, steht danach nur noch EINE
+// Datei im Ordner (mit dem alten Namen und dem neuen Inhalt). Ohne diese Wünsche bleibt es bei „(konvertiert)“ neben dem Original.
+func TestReplaceSourceInPlace(t *testing.T) {
+	real, video, _ := testMedia(t)
+	for _, tc := range []struct {
+		name string
+		out  OutputOpts
+		same bool // true: Original wird ersetzt, false: „(konvertiert)“ daneben
+	}{
+		{"überschreiben", OutputOpts{Exists: "overwrite", VerifyTracks: true}, true},
+		{"original löschen", OutputOpts{Exists: "rename", DeleteSource: true, VerifyTracks: true, VerifyDecode: true}, true},
+		{"beide behalten", OutputOpts{Exists: "rename"}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			src := filepath.Join(dir, "film.mkv")
+			if b, err := os.ReadFile(video); err != nil || os.WriteFile(src, b, 0o644) != nil {
+				t.Fatal("Testdatei kopieren", err)
+			}
+			orig, _ := os.Stat(src)
+			m := New(real, hw.NewSampler(), 1)
+			m.Submit(&Request{Kind: "video", Items: []Item{{Path: src}}, Video: build.VideoOpts{Container: "mkv", Codec: "hevc", Backend: "cpu", CRF: 35, Preset: "ultrafast"}, Output: tc.out})
+			js := waitJobs(m, 1, func(j Job) bool { return j.Status == "done" || j.Status == "error" })
+			if len(js) != 1 || js[0].Status != "done" {
+				t.Fatalf("Auftrag: %+v", js)
+			}
+			ents, _ := os.ReadDir(dir)
+			var names []string
+			for _, e := range ents {
+				names = append(names, e.Name())
+			}
+			st, _ := os.Stat(src)
+			switch {
+			case tc.same && (len(names) != 1 || names[0] != "film.mkv"):
+				t.Errorf("erwartet nur film.mkv, im Ordner: %v (Auftrag: %+v)", names, js[0].Warnings)
+			case tc.same && st.Size() == orig.Size():
+				t.Errorf("film.mkv wurde nicht ersetzt (Größe unverändert %d)", st.Size())
+			case !tc.same && (len(names) != 2 || st.Size() != orig.Size()):
+				t.Errorf("erwartet film.mkv (unverändert) und „(konvertiert)“, im Ordner: %v", names)
+			}
+			for _, n := range names {
+				if strings.HasSuffix(n, ".part") {
+					t.Errorf("übrig gebliebene Zwischendatei %s", n)
+				}
+			}
+		})
+	}
+}
+
+// Fällt die Prüfung durch (hier: Ergebnis größer als die Quelle), bleibt das Original unverändert und das Ergebnis steht daneben.
+func TestReplaceSourceKeepsOriginalWhenCheckFails(t *testing.T) {
+	real, video, _ := testMedia(t)
+	fake := fakeFFmpeg(t, "for a; do last=$a; done\nhead -c 5000000 /dev/zero > \"$last\"")
+	dir := t.TempDir()
+	src := filepath.Join(dir, "film.mkv")
+	b, _ := os.ReadFile(video)
+	os.WriteFile(src, b, 0o644)
+	m := New(ffmpeg.Tools{FFmpeg: fake, FFprobe: real.FFprobe}, hw.NewSampler(), 1)
+	m.Submit(&Request{Kind: "video", Items: []Item{{Path: src}}, Video: build.VideoOpts{Container: "mkv", Codec: "hevc", Backend: "cpu", CRF: 30, Preset: "fast"},
+		Output: OutputOpts{Exists: "overwrite", DeleteSource: true}})
+	js := waitJobs(m, 1, func(j Job) bool { return j.Status == "done" || j.Status == "error" })
+	if len(js) != 1 {
+		t.Fatalf("Auftrag: %+v", js)
+	}
+	got, _ := os.ReadFile(src)
+	if string(got) != string(b) {
+		t.Error("das Original wurde trotz fehlgeschlagener Prüfung verändert")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "film (konvertiert).mkv")); err != nil {
+		t.Errorf("Ergebnis sollte als „film (konvertiert).mkv“ daneben stehen: %v (Auftrag: %+v)", err, js[0])
+	}
+}

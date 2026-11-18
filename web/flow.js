@@ -107,7 +107,7 @@ async function doSavedReset() {
 export const EXISTS_HINT = {
   rename: 'Vorhandene Datei bleibt, die neue bekommt eine Nummer, z. B. „Film (2).mkv“.',
   skip: 'Vorhandene Datei wird nicht angefasst, dieser Auftrag wird übersprungen.',
-  overwrite: 'Achtung: Die vorhandene Datei wird ersetzt. Das lässt sich nicht rückgängig machen.',
+  overwrite: 'Achtung: Die vorhandene Datei wird ersetzt, auch die Quelle selbst, wenn das Ergebnis genauso heißt (erst nach bestandener Prüfung). Das lässt sich nicht rückgängig machen.',
 };
 function existsUI() {
   const v = $('#exists').value, el = $('#existsHint');

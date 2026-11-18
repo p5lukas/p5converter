@@ -1,5 +1,11 @@
 [
   {
+    "id": "v056-ersetzen",
+    "version": "0.5.6",
+    "title": "Version 0.5.6: Ersetzen klappt jetzt wirklich",
+    "text": "Wer „Überschreiben“ oder „Original danach löschen“ wählt und das Ergebnis genauso heißt wie die Quelle, hat danach nur noch eine Datei im Ordner. Vorher blieben beide stehen. Ersetzt wird erst nach bestandener Prüfung."
+  },
+  {
     "id": "v055-verlauf",
     "version": "0.5.5",
     "title": "Version 0.5.5: Verlauf bleibt stehen",
