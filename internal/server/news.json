@@ -1,5 +1,11 @@
 [
   {
+    "id": "v057-quelle",
+    "version": "0.5.7",
+    "title": "Version 0.5.7: Quelldatei bei „Name & Ziel“",
+    "text": "Was mit dem Original passiert (behalten oder nach bestandener Prüfung löschen), stellst du jetzt bei „Name & Ziel“ ein, und die Zeile dort nennt es. „Überschreiben“ heißt „Zieldatei überschreiben“."
+  },
+  {
     "id": "v056-ersetzen",
     "version": "0.5.6",
     "title": "Version 0.5.6: Ersetzen klappt jetzt wirklich",
