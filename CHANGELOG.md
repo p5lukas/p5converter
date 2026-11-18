@@ -7,6 +7,9 @@
 - „Überschreiben“ heißt „Zieldatei überschreiben“; der Hinweis sagt, dass die Quelle dabei erhalten bleibt, außer das Ergebnis heißt genauso (dann siehe 0.5.6)
 - Info-Texte entsprechend angepasst
 
+**CI**
+- Die ffmpeg-Installation hält langsame Ubuntu-Spiegel aus (mit PR #54 schon auf `dev`): ohne Empfehlungs-Pakete, 300 statt 150 Sekunden je Versuch (apt setzt unfertige Downloads fort), größere Zeitlimits. Anlass: Zwei Läufe scheiterten, weil der Download auf dem Runner in allen Versuchen zu langsam war
+
 **Tests**
 - `ui-check-verify.js` prüft die neue Wahl in allen fünf Ansichten (Vorauswahl „Behalten“, Zusammenfassung, Warnhinweis) und dass „Prüfen“ nur noch zwei Auswahlen hat
 
