@@ -10,12 +10,13 @@ runs:
       run: |
         # apt hing auf den Runnern mehrfach ohne Meldung (vermutlich wartet needrestart oder dpkg auf eine Eingabe).
         # Deshalb: nie nach Eingaben fragen (</dev/null, noninteractive) und jeden Versuch hart beenden (timeout -k).
+        # Ohne Empfehlungen (--no-install-recommends) ist der Download deutlich kleiner. Ein langsamer Spiegel braucht manchmal mehrere Minuten: apt setzt unfertige Downloads beim nächsten Versuch fort.
         if command -v ffmpeg >/dev/null && command -v ffprobe >/dev/null; then
           echo "ffmpeg ist schon da: $(ffmpeg -version | head -1)"; exit 0
         fi
         for i in 1 2 3; do
           if sudo -E timeout -k 10 90 apt-get -o DPkg::Lock::Timeout=60 -o Acquire::Retries=3 update </dev/null \
-            && sudo -E timeout -k 10 150 apt-get -o DPkg::Lock::Timeout=60 -o Acquire::Retries=3 install -y ffmpeg </dev/null; then
+            && sudo -E timeout -k 10 300 apt-get -o DPkg::Lock::Timeout=60 -o Acquire::Retries=3 install -y --no-install-recommends ffmpeg </dev/null; then
             exit 0
           fi
           echo "Versuch $i gescheitert, neuer Versuch folgt"; ps aux | grep -E "apt|dpkg|needrestart" | grep -v grep || true; sleep 10
