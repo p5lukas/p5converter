@@ -7,13 +7,14 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 
 	"github.com/p5lukas/p5converter/internal/ffmpeg"
 )
 
-const libCacheVersion = 1
+const libCacheVersion = 2 // 2: Ton, Kanäle, Quelle aus dem Dateinamen
 
 // fileFacts: die Fakten einer Datei, aus denen die Ordnerzeilen entstehen.
 type fileFacts struct {
@@ -24,6 +25,8 @@ type fileFacts struct {
 	Height int      `json:"height"`
 	Heavy  []string `json:"heavy,omitempty"` // dts, dtshd, truehd
 	Img    bool     `json:"img,omitempty"`
+	Audio  string   `json:"audio,omitempty"` // Codec der ersten Tonspur (aac, ac3, eac3, dts, dtshd, truehd, flac, opus, mp3 …)
+	Src    string   `json:"src,omitempty"`   // Quelle aus dem Dateinamen: remux, bluray, webdl, webrip, web, hdtv, dvd (leer = unbekannt)
 }
 
 // factsOf liest die Fakten aus der ffprobe-Antwort (Größe und Zeit setzt der Aufrufer).
@@ -34,6 +37,9 @@ func factsOf(info *ffmpeg.Info) fileFacts {
 	}
 	heavy := map[string]bool{}
 	for _, st := range info.Streams {
+		if st.Type == "audio" && f.Audio == "" {
+			f.Audio = audioClass(st.Codec, st.Profile)
+		}
 		switch {
 		case st.Type == "audio" && st.Codec == "truehd":
 			heavy["truehd"] = true
@@ -55,11 +61,78 @@ func factsOf(info *ffmpeg.Info) fileFacts {
 	return f
 }
 
+// audioClass fasst den Tonformat-Namen von ffprobe für die Oberfläche zusammen (DTS-HD getrennt von DTS).
+func audioClass(codec, profile string) string {
+	if codec == "dts" {
+		if u := strings.ToUpper(profile); strings.Contains(u, "MA") || strings.Contains(u, "HD") {
+			return "dtshd"
+		}
+	}
+	return codec
+}
+
+// heightClass sortiert die Bildhöhe in die Klassen der Oberfläche: sd (unter 700), 720 (bis 999), 1080 (bis 1999), 2160 (ab 2000).
+func heightClass(h int) string {
+	switch {
+	case h <= 0:
+		return ""
+	case h < 700:
+		return "sd"
+	case h < 1000:
+		return "720"
+	case h < 2000:
+		return "1080"
+	}
+	return "2160"
+}
+
+var (
+	srcRemux  = regexp.MustCompile(`(?i)(^|[^a-z0-9])remux([^a-z0-9]|$)`)
+	srcBluray = regexp.MustCompile(`(?i)(^|[^a-z0-9])(blu-?ray|bdrip|brrip|bdmv|bd)([^a-z0-9]|$)`)
+	srcWebDL  = regexp.MustCompile(`(?i)(^|[^a-z0-9])web[-. ]?dl([^a-z0-9]|$)`)
+	srcWebRip = regexp.MustCompile(`(?i)(^|[^a-z0-9])web[-. ]?rip([^a-z0-9]|$)`)
+	srcWeb    = regexp.MustCompile(`(?i)(^|[^a-z0-9])web([^a-z0-9]|$)`)
+	srcHDTV   = regexp.MustCompile(`(?i)(^|[^a-z0-9])(hdtv|pdtv|dsr)([^a-z0-9]|$)`)
+	srcDVD    = regexp.MustCompile(`(?i)(^|[^a-z0-9])(dvd(rip)?|dvdr)([^a-z0-9]|$)`)
+)
+
+// sourceTag liest die Quelle aus dem Dateinamen, wie sie Plex, Radarr und Sonarr schreiben („… [Bluray-1080p] …“, „… WEBDL-720p …“).
+// Reihenfolge: Remux vor Bluray, WEB-DL und WEBRip vor dem allgemeinen WEB. Leer, wenn nichts erkennbar ist.
+func sourceTag(name string) string {
+	switch {
+	case srcRemux.MatchString(name):
+		return "remux"
+	case srcBluray.MatchString(name):
+		return "bluray"
+	case srcWebDL.MatchString(name):
+		return "webdl"
+	case srcWebRip.MatchString(name):
+		return "webrip"
+	case srcWeb.MatchString(name):
+		return "web"
+	case srcHDTV.MatchString(name):
+		return "hdtv"
+	case srcDVD.MatchString(name):
+		return "dvd"
+	}
+	return ""
+}
+
 // addFacts rechnet die Fakten einer lesbaren Datei in die Ordnersumme ein.
 func (a *libAgg) addFacts(f fileFacts) {
 	a.dur += f.Dur
 	a.save += int64(float64(f.Size) * (1 - estimateRatio(f.Codec, f.Size, f.Dur, f.Height)))
 	a.codecs[f.Codec]++
+	if c := heightClass(f.Height); c != "" {
+		a.heights[c]++
+	}
+	if f.Audio != "" {
+		a.audio[f.Audio]++
+	}
+	a.sources[f.Src]++ // "" = unbekannt
+	if f.Mtime/1e9 > a.newest {
+		a.newest = f.Mtime / 1e9
+	}
 	if f.Height > a.maxHeight {
 		a.maxHeight = f.Height
 	}
