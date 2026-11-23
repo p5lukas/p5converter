@@ -37,6 +37,9 @@ want a.mp3 && $F -f lavfi -i sine=d=3 -c:a libmp3lame "$A/a.mp3"
 want "Show S01E01 [WEBDL-1080p].mkv" && $F $V720:d=5 -f lavfi -i sine=d=5 $x264 -c:a aac "$A/Show S01E01 [WEBDL-1080p].mkv"
 for e in 2 3; do want "Show S01E0$e [WEBDL-1080p].mkv" && cp "$A/Show S01E01 [WEBDL-1080p].mkv" "$A/Show S01E0$e [WEBDL-1080p].mkv"; done
 
+# Sehr langer Name (Namensliste: der ganze Name muss sichtbar sein)
+want "Hellsing Ultimate (2006) - S01E01 - Hellsing I [Bluray-1080p][DTS 5.1][x265][10bit]-GRUPPE.mkv" && cp "$A/hint.mkv" "$A/Hellsing Ultimate (2006) - S01E01 - Hellsing I [Bluray-1080p][DTS 5.1][x265][10bit]-GRUPPE.mkv"
+
 # multi.mkv / multi2.mkv: je 2 Ton- (ger, eng) und 2 Untertitelspuren (ger, eng)
 python3 - "$T" <<'PY'
 import sys

@@ -147,7 +147,7 @@ const probe = f => JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-print_fo
       const nc = await L.openCard(p, 'name');
       await nc.locator('.pill:has-text("Eigener Ordner")').click(); await p.waitForTimeout(300);
       await nc.locator('input[aria-label="Zielordner"]').fill(OUT); await nc.locator('input[aria-label="Zielordner"]').press('Enter'); await p.waitForTimeout(400);
-      await nc.locator('.pill:has-text("Überschreiben")').click(); await p.waitForTimeout(300);
+      await L.moreOptions(nc); await nc.locator('.pill:has-text("überschreiben")').click(); await p.waitForTimeout(300);
       ok(await p.inputValue('#outDir') === OUT && await p.inputValue('#exists') === 'overwrite', name + ': Ziel und „Überschreiben“ nicht gesetzt'); accept = true;
       await p.click('#start'); await p.waitForTimeout(9000);
       for (const e of ['ep01', 'ep03', 'ep05']) {

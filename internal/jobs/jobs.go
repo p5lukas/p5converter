@@ -442,9 +442,10 @@ func konvertiertName(out string) string {
 	return strings.TrimSuffix(out, ext) + " (konvertiert)" + ext
 }
 
-// replacesSource: Der Nutzer will die Quelle durch das Ergebnis ersetzen („Überschreiben“ oder „Original danach löschen“).
+// replacesSource: Der Nutzer will das Original durch das Ergebnis ersetzen („Original: Ersetzen“, DeleteSource).
 // Heißen Quelle und Ziel gleich, wird dann erst nach bestandener Prüfung getauscht (siehe replaceAndReport), sonst bleibt „(konvertiert)“.
-func (o OutputOpts) replacesSource() bool { return o.Exists == "overwrite" || o.DeleteSource }
+// „Exists“ (Zieldatei überschreiben) betrifft nur eine schon vorhandene Zieldatei, nie das Original.
+func (o OutputOpts) replacesSource() bool { return o.DeleteSource }
 
 // inPlace: Ziel und Quelle sind dieselbe Datei.
 func inPlace(j *Job, out string) bool { return filepath.Clean(out) == filepath.Clean(j.item.Path) }
