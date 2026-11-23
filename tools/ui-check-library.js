@@ -35,7 +35,7 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     ok(!names.some(n => /\.mkv/.test(n)) && !(await p.textContent('#cvScan .liblist')).includes('ep01.mkv'), name + ': es dürfen nie einzelne Dateien auftauchen');
     ok(['Staffel 1', 'Staffel 2', 'Season 01', 'Serie'].every(n => names.includes(n)), name + ': Ordnernamen: ' + names.join('|'));
     const serie = p.locator('#cvScan .librow', {hasText: 'Serie'}).first();
-    ok(/ganze Serie · 2 Ordner/.test(await serie.textContent()) && /3 Dateien/.test(await serie.textContent()), name + ': Sammelzeile Serie: ' + (await serie.textContent()).replace(/\s+/g, ' '));
+    ok(/ganzer Ordner · 2 Ordner/.test(await serie.textContent()) && /3 Dateien/.test(await serie.textContent()), name + ': Sammelzeile Serie: ' + (await serie.textContent()).replace(/\s+/g, ' '));
     const staffel = (await p.locator('#cvScan .librow', {hasText: 'Staffel 1'}).textContent()).replace(/\s+/g, ' ');
     ok(/2 Dateien/.test(staffel) && /H\.264 ×2/.test(staffel) && /Älterer Codec/.test(staffel) && /DTS/.test(staffel), name + ': Fakten und Hinweise der Staffel: ' + staffel);
     ok(!/Mbit\/s.*gespart|spart.*%|geschätzt/i.test(await p.textContent('#cvScan')), name + ': keine Schätzung der Ersparnis erlaubt');

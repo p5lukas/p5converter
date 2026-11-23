@@ -313,7 +313,7 @@ function libRowEl(r, groups, sp) {
     h('span', {class: 'libmain'},
       h('span', {class: 'libname', title: pathLabel(r.path)}, icon('folder'),
         t.series ? [h('span', {class: 'libpar'}, t.series), h('span', {class: 'libsep', 'aria-hidden': 'true'}, '›')] : null,
-        h('b', {}, t.name), r.group ? h('span', {class: 'chip'}, 'ganze Serie · ' + LIB.nf(r.folders) + ' Ordner') : null,
+        h('b', {}, t.name), r.group ? h('span', {class: 'chip'}, 'ganzer Ordner · ' + LIB.nf(r.folders) + ' Ordner') : null,
         flat && up ? h('small', {class: 'muted'}, 'in ' + up) : null),
       h('span', {class: 'libfacts muted small'}, num0(r.files) + ' · ' + fmtSize(r.bytes) + ' · ' + LIB.mix(r.codecs) + (r.avgBitrate ? ' · Ø ' + LIB.mbit(r.avgBitrate) : '') + (r.maxHeight ? ' · ' + r.maxHeight + 'p' : '')),
       prof ? h('span', {class: 'libprof muted small'}, prof) : null,
@@ -393,7 +393,7 @@ export function libRender(opt) {
     const big = h('div', {class: 'libtotal'}, total >= 50e6 ? [h('b', {}, '≈ ' + LIB.fmtSizeLib(total)), ' von ' + LIB.fmtSizeLib(tb) + ' ließen sich sparen ', h('span', {class: 'muted small'}, '(Schätzung für H.265 „Gut“, nur das Bild)')] : ['Hier ist kaum etwas zu holen: ', h('span', {class: 'muted small'}, 'geschätzt unter 50 MB bei H.265 „Gut“ (nur das Bild).')]);
     const foot = h('div', {class: 'btns libfoot'}, h('button', {type: 'button', class: 'primary', id: 'libAdopt', disabled: !LIBUI.sel.size, onclick: libAdopt},
       LIBUI.sel.size ? 'Ausgewählte Ordner übernehmen (' + LIBUI.sel.size + ')' : 'Ordner übernehmen'), h('span', {class: 'muted small'}, 'Übernommen wird immer der ganze Ordner mit allen Unterordnern.'),
-      LIBUI.cached ? h('span', {class: 'muted small libcached'}, LIBUI.cached + ' von ' + num0(LIBUI.total) + ' aus dem Zwischenspeicher gelesen') : null);
+      LIBUI.cached ? h('span', {class: 'muted small libcached'}, LIBUI.cached + ' von ' + num0(LIBUI.total) + ' kamen aus dem Zwischenspeicher (unverändert seit dem letzten Mal).') : null);
     if (focusRow) body = [big, libFocusEl(focusRow), foot];
     else {
       const sortKey = LIBUI.sort, flat = sortKey !== 'tree';
