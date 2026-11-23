@@ -13,6 +13,8 @@ exports.INDIR = process.env.INDIR || '/tmp/media';
 // 2 Konvertieren), Audio eine Ansicht. Es gibt kein Fenster „Details“ mehr: alles steht in Karten auf der Konvertieren-Seite, die sich an Ort und Stelle aufklappen
 // (Video, Ton, Untertitel, Regeln, Name & Ziel, Prüfen).
 const CARD = {dest: 'name', name: 'name', video: 'video', audio: 'video', tracks: 'audio', subs: 'subs', rules: 'rules', verify: 'check', check: 'check'};
+// „Weitere Optionen“ in Name & Ziel aufklappen (dort steht „Wenn die Zieldatei schon da ist“)
+exports.moreOptions = async card => { const d = card.locator('details.cvmore'); if (!(await d.evaluate(x => x.open))) { await d.locator('summary').click(); await d.page().waitForTimeout(200); } };
 // zur Startseite (Ablauf verlassen, andere Seiten schließen)
 exports.home = async p => {
   if (!(await p.isVisible('#startTiles'))) {

@@ -308,8 +308,8 @@ func TestSnapshotStripsFinishedAndPrunes(t *testing.T) {
 	}
 }
 
-// Ersetzen am Ort: Heißen Quelle und Ziel gleich und der Nutzer wählt „Überschreiben“ oder „Original danach löschen“, steht danach nur noch EINE
-// Datei im Ordner (mit dem alten Namen und dem neuen Inhalt). Ohne diese Wünsche bleibt es bei „(konvertiert)“ neben dem Original.
+// Ersetzen am Ort: Heißen Quelle und Ziel gleich und der Nutzer wählt „Original: Ersetzen“ (DeleteSource), steht danach nur noch EINE Datei im Ordner
+// (mit dem alten Namen und dem neuen Inhalt). Ohne diesen Wunsch bleibt es bei „(konvertiert)“ neben dem Original, auch mit „Zieldatei überschreiben“.
 func TestReplaceSourceInPlace(t *testing.T) {
 	real, video, _ := testMedia(t)
 	for _, tc := range []struct {
@@ -317,8 +317,9 @@ func TestReplaceSourceInPlace(t *testing.T) {
 		out  OutputOpts
 		same bool // true: Original wird ersetzt, false: „(konvertiert)“ daneben
 	}{
-		{"überschreiben", OutputOpts{Exists: "overwrite", VerifyTracks: true}, true},
-		{"original löschen", OutputOpts{Exists: "rename", DeleteSource: true, VerifyTracks: true, VerifyDecode: true}, true},
+		{"original ersetzen", OutputOpts{Exists: "rename", DeleteSource: true, VerifyTracks: true, VerifyDecode: true}, true},
+		{"ersetzen mit zieldatei überschreiben", OutputOpts{Exists: "overwrite", DeleteSource: true, VerifyTracks: true}, true},
+		{"nur zieldatei überschreiben", OutputOpts{Exists: "overwrite", VerifyTracks: true}, false},
 		{"beide behalten", OutputOpts{Exists: "rename"}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

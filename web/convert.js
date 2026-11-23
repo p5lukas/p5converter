@@ -92,7 +92,7 @@ function cvDestText() {
   const custom = $('#outMode').value === 'custom', dir = $('#outDir').value.trim();
   return custom ? (dir ? 'Ordner ' + pathLabel(dir).split(/[\\/]/).filter(Boolean).slice(-2).join('/') : 'eigenem Ordner (fehlt noch)') : 'neben der Quelle';
 }
-const srcFate = () => $('#deleteSource').checked ? 'Original wird gelöscht' : 'Original bleibt';
+const srcFate = () => $('#deleteSource').checked ? 'Original wird ersetzt' : 'Original bleibt';
 function cvCheckText() {
   const t = $('#vfTracks').checked, d = $('#vfDecode').checked;
   const what = t && d ? 'Spuren und Decode-Test' : t ? 'Spuren' : d ? 'Decode-Test' : 'nur Grundprüfung';
@@ -205,13 +205,23 @@ const cvNumber = (id, aria, min, max) => h('input', {type: 'number', class: 'cvn
 const SPEED_HINT = {slow: 'kleinste Datei, dauert länger', medium: 'guter Kompromiss', fast: 'schneller, Datei etwas größer', veryfast: 'sehr schnell, Datei größer'};
 
 // ---------- Inhalt der Karten „Name & Ziel“, „Prüfen“, „Regeln“ ----------
-// Was mit der Quelldatei passiert (Zustand im versteckten Feld #deleteSource, damit verify.js und der Start unverändert bleiben)
+// Was mit dem Original passiert: Behalten (beide Dateien) oder Ersetzen. „Ersetzen“ ist das Feld #deleteSource (verify.js und der Start bleiben unverändert):
+// bei gleichem Namen wird die Datei nach bestandener Prüfung getauscht, bei anderem Namen das Original nach bestandener Prüfung gelöscht
 function cvSourceGroup(grp) {
   const del = $('#deleteSource').checked;
   const set = v => { const src = $('#deleteSource'); src.checked = v; src.dispatchEvent(new Event('input', {bubbles: true})); };
   const pill = (v, text) => h('button', {type: 'button', role: 'radio', class: 'pill' + (v === del ? ' on' : ''), 'aria-checked': v === del ? 'true' : 'false', onclick: () => set(v)}, text);
-  return grp('Quelldatei danach', h('div', {class: 'pills', role: 'radiogroup', 'aria-label': 'Quelldatei danach'}, pill(false, 'Behalten'), pill(true, 'Nach bestandener Prüfung löschen')),
-    h('span', {class: 'small ' + (del ? 'warn' : 'muted')}, del ? 'Achtung: Das Original wird sofort und endgültig gelöscht (kein Papierkorb), sobald alle Prüfungen bestanden sind.' : 'Das Original bleibt erhalten.'));
+  return grp('Original', h('div', {class: 'pills', role: 'radiogroup', 'aria-label': 'Original'}, pill(false, 'Behalten (beide Dateien)'), pill(true, 'Ersetzen (nach bestandener Prüfung)')),
+    h('span', {class: 'small ' + (del ? 'warn' : 'muted')}, del ? 'Achtung: Das Original wird nach bestandener Prüfung sofort und endgültig gelöscht (kein Papierkorb). Heißt das Ergebnis genauso, nimmt es den Platz des Originals ein.' : 'Das Original bleibt erhalten, die neue Datei steht daneben.'));
+}
+// „Weitere Optionen“ (eingeklappt): Was geschieht, wenn die Zieldatei schon da ist (selten nötig). Klappt von selbst auf, wenn etwas anderes als „Beide behalten“ gewählt ist
+const EXISTS_NAME = {rename: 'Beide behalten', skip: 'Überspringen', overwrite: 'Zieldatei überschreiben'};
+function cvMoreOptions(grp) {
+  const ex = $('#exists').value;
+  return h('details', {class: 'tgrp cvmore', open: CV.moreOpen || ex !== 'rename', ontoggle: ev => { CV.moreOpen = ev.target.open; }},
+    h('summary', {}, 'Weitere Optionen', h('span', {class: 'muted small'}, ' · Wenn die Zieldatei schon da ist: ' + (EXISTS_NAME[ex] || ''))),
+    grp('Wenn die Datei schon da ist', cvPills('exists', EXISTS_NAME, 'Wenn Datei existiert'),
+      h('span', {class: 'small ' + (ex === 'overwrite' ? 'warn' : 'muted')}, EXISTS_HINT[ex] || '')));
 }
 function cvDestBody(files) {
   const custom = $('#outMode').value === 'custom', grp = (label, ...kids) => h('div', {class: 'tgrp'}, h('span', {class: 'lt'}, label), ...kids);
@@ -220,9 +230,8 @@ function cvDestBody(files) {
     custom ? h('div', {class: 'tgrp'}, h('div', {class: 'row'}, h('input', {value: $('#outDir').value, placeholder: '/output', 'aria-label': 'Zielordner', onchange: ev => cvSet('outDir', ev.target.value.trim())}),
       h('button', {type: 'button', class: 'small', onclick: async () => { const x = await openBrowser('dir', $('#outDir').value); if (x) cvSet('outDir', x.dir); }}, '…'))) : null,
     custom ? grp('Struktur', cvPills('outStruct', {keep: 'Ordnerstruktur beibehalten', flat: 'Alles in einen Ordner'}, 'Struktur')) : null,
-    grp('Wenn die Datei schon da ist', cvPills('exists', {rename: 'Beide behalten', skip: 'Überspringen', overwrite: 'Zieldatei überschreiben'}, 'Wenn Datei existiert'),
-      h('span', {class: 'small ' + ($('#exists').value === 'overwrite' ? 'warn' : 'muted')}, EXISTS_HINT[$('#exists').value] || '')),
     cvSourceGroup(grp),
+    cvMoreOptions(grp),
     h('div', {class: 'tgrp cvnamebox', 'data-nameslot': '1'}), // #nameStore (Dateiname, Muster, Ersetzungen) wird hier eingehängt
     cvNameList(files)];
 }
@@ -298,7 +307,7 @@ function cvVideoTable(items) {
   const attention = type => ex.plan.tracks.some(r => r.type === type && (r.own || r.guess || !r.kept || r.why.length || (r.kept && TP.noLang(r.lang)))) || (type === 'audio' ? $('#vAudioMode').value !== 'copy' : $('#vSubMode').value !== 'copy');
   const vsum = copy ? 'Video wird nicht neu kodiert' : (vsrc ? (CV_SRC_CODEC[vsrc.codec] || (vsrc.codec || '?').toUpperCase()) : '?') + ' → ' + CV_CODEC[$('#vCodec').value] + ' · ' + Q.stageName($('#vQuality').value) + ' · ' + SPEED_NAME[$('#vPreset').value] + ' · ' + (BACKEND_FULL[resolveBackend().id] || '');
   const plainName = !$('#pattern').value.trim() && !cleanRules(nameRules()).length && !$('#suffix').value;
-  const nameSum = 'Name ' + (plainName ? 'bleibt' : 'wird angepasst') + ' · ' + cvDestText() + ' · ' + ({rename: 'Datei da: nummerieren', skip: 'Datei da: überspringen', overwrite: 'Datei da: überschreiben'}[$('#exists').value] || '') + ' · ' + srcFate();
+  const nameSum = 'Name ' + (plainName ? 'bleibt' : 'wird angepasst') + ' · ' + cvDestText() + ({rename: '', skip: ' · Datei da: überspringen', overwrite: ' · Datei da: überschreiben'}[$('#exists').value] || '') + ' · ' + srcFate();
   return [strip, gline, cvWarnings(null, g, items), cvColHead(),
     cvCard('video', 'video', 'Video', 'cardVideo', vsum, vRows, {id: 'video', open: true}),
     cvCard('audio', 'wave', 'Ton', 'cardAudio', sumOf('audio', 'Tonspur', 'Tonspuren') + (nSug ? ' · ' + nSug + (nSug === 1 ? ' Vorschlag' : ' Vorschläge') : ''), aRows, {id: 'audio', open: attention('audio') || nSug > 0}),
