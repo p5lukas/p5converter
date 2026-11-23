@@ -1,5 +1,11 @@
 [
   {
+    "id": "v058-name-ziel",
+    "version": "0.5.8",
+    "title": "Version 0.5.8: „Name & Ziel“ einfacher",
+    "text": "Lange Dateinamen werden nicht mehr abgeschnitten (alter Name oben, neuer darunter). „Name & Ziel“ fragt nur noch nach dem Speicherort und dem Original (Behalten oder Ersetzen); „Wenn die Zieldatei schon da ist“ steht unter „Weitere Optionen“."
+  },
+  {
     "id": "v057-quelle",
     "version": "0.5.7",
     "title": "Version 0.5.7: Quelldatei bei „Name & Ziel“",
