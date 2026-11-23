@@ -15,6 +15,7 @@
 # p5converter – Ideen & Verbesserungen
 
 ## Offen
+- [ ] **Ganze Dateinamen in der Namensliste sehen:** In „Name & Ziel“ (Liste „N Dateien bekommen einen neuen Namen“) und auf der Seite „Umbenennen“ werden lange Namen abgeschnitten („…“), vorn wie hinten. Wer hinten im Dateinamen etwas ersetzen will (Release-Gruppe, Codec-Angaben wie `[Bluray-1080p][DTS 5.1][x265]`), sieht die Stelle nie. Der ganze Name soll sichtbar sein (Umbruch statt Abschneiden, am Handy untereinander), auch bei 10 und mehr Dateien. Vorschläge zur Auswahl beim Umsetzen: A) Umbruch in der Zeile (alter Name, darunter der neue), B) Abschneiden nur in der Mitte, C) Zeile antippen/anklicken klappt den ganzen Namen auf (Ersatz: Screenshot des Nutzers aus Name & Ziel, 23.11.)
 - [ ] **Windows-App: Folgearbeiten** (erste Version 0.1.1 steht auf `dev`): (1) ~~Tray~~ (erledigt in 0.1.2); (2) **Prüfung durch den Nutzer** auf dem Windows-PC (Fenster, Symbol, Hardware-Erkennung, echte Konvertierung, Deinstallation); (3) Größe der `setup.exe` aus dem CI-Lauf (Zusammenfassung „Größen“) mitteilen; (4) Linux-App danach; (5) Windows erst nach Freigabe nach `main`
 
 ## Vom Nutzer zu prüfen (nicht in der Sandbox möglich)
