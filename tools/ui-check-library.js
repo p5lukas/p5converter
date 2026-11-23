@@ -38,7 +38,8 @@ const ok = (c, m) => { if (!c) fails.push(m); };
     ok(/ganzer Ordner · 2 Ordner/.test(await serie.textContent()) && /3 Dateien/.test(await serie.textContent()), name + ': Sammelzeile Serie: ' + (await serie.textContent()).replace(/\s+/g, ' '));
     const staffel = (await p.locator('#cvScan .librow', {hasText: 'Staffel 1'}).textContent()).replace(/\s+/g, ' ');
     ok(/2 Dateien/.test(staffel) && /H\.264 ×2/.test(staffel) && /Älterer Codec/.test(staffel) && /DTS/.test(staffel), name + ': Fakten und Hinweise der Staffel: ' + staffel);
-    ok(!/Mbit\/s.*gespart|spart.*%|geschätzt/i.test(await p.textContent('#cvScan')), name + ': keine Schätzung der Ersparnis erlaubt');
+    // Die Summe oben darf die Schätzung nennen („≈ … sparen“, mit Hinweis); die Zeilen der Liste nennen keine Prozentzahl und kein „gespart“
+    ok(!/Mbit\/s.*gespart|spart.*%/i.test(await p.textContent('#cvScan .liblist')), name + ': keine Prozent-Schätzung der Ersparnis in den Zeilen erlaubt');
     ok(await ov() <= 0, name + ': Überlauf mit Ergebnisliste ' + await ov() + 'px');
     await p.screenshot({path: `${L.SHOTS}/p5c-lib-${name}-1-ergebnis.png`, fullPage: true});
     // Anzeigename: Serie vor Staffelordnern, ohne {tvdb-…}; im Ordnerbaum nicht doppelt zur Sammelzeile
