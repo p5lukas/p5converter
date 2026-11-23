@@ -32,7 +32,11 @@ type LibRow struct {
 	AvgBitrate int64          `json:"avgBitrate"` // Bit/s über Größe und Laufzeit (gesamte Datei, mit Ton)
 	Codecs     map[string]int `json:"codecs"`     // Video-Codec → Zahl der Dateien
 	MaxHeight  int            `json:"maxHeight"`
-	Heavy      map[string]int `json:"heavy"` // schwere Tonformate: dts, dtshd, truehd → Zahl der Dateien
+	Heavy      map[string]int `json:"heavy"`   // schwere Tonformate: dts, dtshd, truehd → Zahl der Dateien
+	Heights    map[string]int `json:"heights"` // Bildhöhe in Klassen (sd, 720, 1080, 2160) → Zahl der Dateien
+	Audio      map[string]int `json:"audio"`   // Codec der ersten Tonspur → Zahl der Dateien
+	Sources    map[string]int `json:"sources"` // Quelle aus dem Dateinamen (remux, bluray, webdl, webrip, web, hdtv, dvd; "" = unbekannt) → Zahl der Dateien
+	Newest     int64          `json:"newest"`  // jüngste Änderungszeit einer Datei (Unix, Sekunden)
 	ImageSubs  int            `json:"imageSubs"`
 	Unreadable int            `json:"unreadable"`
 	SaveBytes  int64          `json:"saveBytes"` // geschätzte Ersparnis beim Umwandeln mit H.265 „Gut“ (nur Bild, Schätzung)
@@ -40,12 +44,14 @@ type LibRow struct {
 
 type libAgg struct {
 	files, imageSubs, unreadable, maxHeight, leaves int
-	bytes, save                                     int64
+	bytes, save, newest                             int64
 	dur                                             float64
-	codecs, heavy                                   map[string]int
+	codecs, heavy, heights, audio, sources          map[string]int
 }
 
-func newAgg() *libAgg { return &libAgg{codecs: map[string]int{}, heavy: map[string]int{}} }
+func newAgg() *libAgg {
+	return &libAgg{codecs: map[string]int{}, heavy: map[string]int{}, heights: map[string]int{}, audio: map[string]int{}, sources: map[string]int{}}
+}
 
 func (a *libAgg) add(b *libAgg) {
 	a.files += b.files
@@ -64,6 +70,18 @@ func (a *libAgg) add(b *libAgg) {
 	for k, v := range b.heavy {
 		a.heavy[k] += v
 	}
+	for k, v := range b.heights {
+		a.heights[k] += v
+	}
+	for k, v := range b.audio {
+		a.audio[k] += v
+	}
+	for k, v := range b.sources {
+		a.sources[k] += v
+	}
+	if b.newest > a.newest {
+		a.newest = b.newest
+	}
 }
 
 func (a *libAgg) row(root, dir string, group bool) LibRow {
@@ -73,7 +91,8 @@ func (a *libAgg) row(root, dir string, group bool) LibRow {
 		depth = len(strings.Split(filepath.ToSlash(rel), "/"))
 	}
 	r := LibRow{Path: dir, Name: filepath.Base(dir), Depth: depth, Group: group, Folders: a.leaves, Files: a.files, Bytes: a.bytes, Codecs: a.codecs,
-		MaxHeight: a.maxHeight, Heavy: a.heavy, ImageSubs: a.imageSubs, Unreadable: a.unreadable, SaveBytes: a.save}
+		MaxHeight: a.maxHeight, Heavy: a.heavy, Heights: a.heights, Audio: a.audio, Sources: a.sources, Newest: a.newest,
+		ImageSubs: a.imageSubs, Unreadable: a.unreadable, SaveBytes: a.save}
 	if a.dur > 0 {
 		r.AvgBitrate = int64(float64(a.bytes) * 8 / a.dur)
 	}
@@ -224,6 +243,7 @@ func (s *Server) libraryRun(ctx context.Context, sc *libScan) {
 						}
 					}
 				}
+				facts.Src = sourceTag(filepath.Base(fp)) // aus dem Namen, nicht aus dem Zwischenspeicher (Umbenennen ändert weder Größe noch Zeit)
 				dir := filepath.Dir(fp)
 				dmu.Lock()
 				a := direct[dir]

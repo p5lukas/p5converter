@@ -1,5 +1,11 @@
 [
   {
+    "id": "v059-ordner-pruefen",
+    "version": "0.5.9",
+    "title": "Version 0.5.9: „Ordner prüfen“ neu",
+    "text": "Suche, Filter (Auflösung, Codec, Ton, Quelle, Mindest-Ersparnis) und mehr Sortierungen, dazu eine Übersicht je Serie mit Quelle, Auflösung, Codec und Ton jeder Staffel."
+  },
+  {
     "id": "v058-name-ziel",
     "version": "0.5.8",
     "title": "Version 0.5.8: „Name & Ziel“ einfacher",

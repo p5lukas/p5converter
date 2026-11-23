@@ -203,3 +203,64 @@ func TestLibraryScanCache(t *testing.T) {
 		t.Error("gelöschte Datei steht noch im Merker")
 	}
 }
+
+func TestSourceTag(t *testing.T) {
+	for name, want := range map[string]string{
+		"Hellsing Ultimate (2006) - S01E01 - Hellsing I [Bluray-1080p][DTS 5.1][x265]-GRP.mkv": "bluray",
+		"Show S01E01 [WEBDL-720p][AAC 2.0][h264].mkv":                                          "webdl",
+		"Show.S01E01.1080p.WEB-DL.DDP5.1.H.264-GRP.mkv":                                        "webdl",
+		"Show.S01E01.720p.WEBRip.x264.mkv":                                                     "webrip",
+		"Show S01E01 WEB 720p.mkv":                                                             "web",
+		"Film (2010) [Remux-2160p][TrueHD 7.1].mkv":                                            "remux",
+		"Film.2010.1080p.BluRay.REMUX.AVC.mkv":                                                 "remux",
+		"Show.S02E03.HDTV.x264.mkv":                                                            "hdtv",
+		"Film.2001.DVDRip.XviD.mkv":                                                            "dvd",
+		"Film (1999).mkv":                                                                      "",
+		"Webcam Aufnahme.mkv":                                                                  "", // „Webcam“ ist kein „WEB“
+		"Sowebdl.mkv":                                                                          "", // nur ganze Wörter
+	} {
+		if got := sourceTag(name); got != want {
+			t.Errorf("sourceTag(%q) = %q, erwartet %q", name, got, want)
+		}
+	}
+}
+
+func TestHeightAndAudioClass(t *testing.T) {
+	for h, want := range map[int]string{0: "", 360: "sd", 576: "sd", 698: "sd", 720: "720", 816: "720", 1000: "1080", 1080: "1080", 1920: "1080", 2160: "2160", 4320: "2160"} {
+		if got := heightClass(h); got != want {
+			t.Errorf("heightClass(%d) = %q, erwartet %q", h, got, want)
+		}
+	}
+	if audioClass("dts", "DTS-HD MA") != "dtshd" || audioClass("dts", "DTS") != "dts" || audioClass("eac3", "") != "eac3" {
+		t.Error("audioClass")
+	}
+}
+
+// Die neuen Zähler (Auflösung, Ton, Quelle, Änderungszeit) laufen von den Ordnern in die Sammelzeile.
+func TestLibraryRowsCarryProfile(t *testing.T) {
+	mk := func(src, audio string, h int, mtime int64, files int) *libAgg {
+		a := newAgg()
+		a.files, a.bytes, a.dur = files, int64(files)*1_000_000, float64(files)*10
+		for i := 0; i < files; i++ {
+			a.addFacts(fileFacts{Size: 1_000_000, Mtime: mtime * 1e9, Dur: 10, Codec: "h264", Height: h, Audio: audio, Src: src})
+		}
+		a.dur, a.save = float64(files)*10, 0
+		return a
+	}
+	rows := libraryRows("/lib", map[string]*libAgg{"/lib/Serie/S1": mk("webdl", "aac", 720, 1000, 3), "/lib/Serie/S2": mk("bluray", "dts", 1080, 2000, 2)})
+	var g, s1 LibRow
+	for _, r := range rows {
+		if r.Path == "/lib/Serie" && r.Group {
+			g = r
+		}
+		if r.Path == "/lib/Serie/S1" {
+			s1 = r
+		}
+	}
+	if g.Heights["720"] != 3 || g.Heights["1080"] != 2 || g.Audio["aac"] != 3 || g.Audio["dts"] != 2 || g.Sources["webdl"] != 3 || g.Sources["bluray"] != 2 || g.Newest != 2000 {
+		t.Errorf("Sammelzeile: %+v", g)
+	}
+	if s1.Heights["720"] != 3 || s1.Sources["webdl"] != 3 || s1.Newest != 1000 {
+		t.Errorf("Staffel 1: %+v", s1)
+	}
+}
