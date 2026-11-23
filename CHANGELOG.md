@@ -1,5 +1,17 @@
 # Änderungen
 
+## 0.5.8 – 2026-11-23
+
+**Geändert**
+- Namensliste („N Dateien bekommen einen neuen Namen“ in „Name & Ziel“) und Vorschau auf der Seite „Umbenennen“: Der alte Name steht oben, der neue darunter; lange Namen brechen um und werden nie mehr abgeschnitten. So lassen sich auch Teile hinten im Namen (`[Bluray-1080p][DTS 5.1][x265]`) ersetzen
+- „Name & Ziel“ stellt nur noch zwei Fragen: **Speichern** (Neben der Quelle / Eigener Ordner) und **Original** (Behalten (beide Dateien) / Ersetzen (nach bestandener Prüfung)). „Wenn die Zieldatei schon da ist“ (Beide behalten / Überspringen / Zieldatei überschreiben) steht unter **Weitere Optionen**, eingeklappt, und klappt von selbst auf, wenn etwas anderes als „Beide behalten“ gewählt ist. Die Zeile der Karte nennt weiter, was mit dem Original passiert
+- „Original: Ersetzen“ meint immer, dass die neue Datei den Platz des Originals einnimmt: bei gleichem Namen wird die Datei nach bestandener Prüfung getauscht (0.5.6), bei anderem Namen wird das Original nach bestandener Prüfung gelöscht. „Zieldatei überschreiben“ betrifft nur noch eine schon vorhandene Zieldatei und lässt das Original in Ruhe (vorher ersetzte es bei gleichem Namen auch die Quelle)
+- Info-Texte und README angepasst
+
+**Tests**
+- Neue Prüfung `ui-check-longnames.js` (Name & Ziel und Umbenennen mit einem sehr langen Dateinamen, alle fünf Ansichten, nichts abgeschnitten); die Testmedien enthalten dafür eine Datei mit langem Namen
+- `ui-check-verify.js`, `-tracks.js` und `-convert.js` an die neue Aufteilung angepasst (zwei sichtbare Fragen, „Weitere Optionen“); Go-Test für „Original: Ersetzen“ und „Zieldatei überschreiben“ getrennt
+
 ## 0.5.7 – 2026-11-18
 
 **Geändert**
