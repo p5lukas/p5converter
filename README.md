@@ -12,7 +12,7 @@ Gedacht für ganze Serien-Staffeln, Plex und alle, die ihre Mediathek kleiner ma
 ![Docker](https://img.shields.io/badge/Docker-ghcr.io%2Fp5lukas%2Fp5converter-00ff5a?logo=docker&logoColor=white&labelColor=0a1a0f)
 ![Unraid](https://img.shields.io/badge/Unraid-Template-00ff5a?labelColor=0a1a0f)
 ![Windows](https://img.shields.io/badge/Windows-Vorabversion-ffcc00?labelColor=0a1a0f)
-![Version](https://img.shields.io/badge/Version-0.5.8-00ff5a?labelColor=0a1a0f)
+![Version](https://img.shields.io/badge/Version-0.5.9-00ff5a?labelColor=0a1a0f)
 ![Lizenz](https://img.shields.io/badge/Lizenz-MIT-00ff5a?labelColor=0a1a0f)
 
 <img src="docs/images/start.png" alt="Startseite mit laufendem Auftrag und Video-Voreinstellungen" width="900">
@@ -37,7 +37,7 @@ Gedacht für ganze Serien-Staffeln, Plex und alle, die ihre Mediathek kleiner ma
 * **Ton und Untertitel für ganze Staffeln:** Dateien mit gleichem Aufbau bilden eine Gruppe, eine Entscheidung gilt für alle. Dazu Regeln nach Format (zum Beispiel nur DTS in E-AC-3 umwandeln), Sprach-Wünsche und die Erkennung von Forced-Untertiteln.
 * **Voreinstellungen für Video** als Kacheln auf der Startseite, angelegt mit einem Assistenten, der alle Einstellungen abfragt.
 * **Kontrolle nach dem Umwandeln:** Spuren, Laufzeit, Größe und auf Wunsch ein kompletter Decode-Test, bevor ein Original gelöscht wird. Wird ein neu kodiertes Video nicht kleiner, bleibt das Original erhalten.
-* **Platz sparen:** „Ordner untersuchen“ zeigt ordnerweise, wo sich das Umwandeln lohnt, mit grober Ersparnis-Schätzung. Dabei wird nichts verändert.
+* **Platz sparen:** „Ordner untersuchen“ zeigt ordnerweise, wo sich das Umwandeln lohnt, mit grober Ersparnis-Schätzung. Du kannst suchen, nach Auflösung, Codec, Ton, Quelle und Ersparnis filtern und sortieren; bei einer Serie zeigt eine Übersicht jede Staffel mit Quelle, Auflösung, Codec und Ton. Dabei wird nichts verändert.
 * **Warteschlange** mit Reihenfolge, Anhalten und Pausieren, die einen Neustart übersteht. Dazu ein Verlauf der letzten 100 Aufträge je Art mit CSV-Export und der gewonnene Speicherplatz.
 * **Umbenennen** mit Namensmuster, Suchen und Ersetzen und Live-Vorschau, auch ohne zu konvertieren.
 * **Handy und Tablet:** läuft im Browser und als Web-App auf dem Home-Bildschirm (Hoch- und Querformat).

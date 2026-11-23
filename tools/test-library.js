@@ -104,5 +104,49 @@ t('Quelle der Dateien und Hinweis zur Codec-Wahl', () => {
   assert.ok(/nur neu verpackt/.test(LIB.convertHint(old, 'copy').text)); assert.strictEqual(LIB.convertHint(old, 'vp9'), null); assert.strictEqual(LIB.convertHint(LIB.sourceFacts([]), 'hevc'), null);
   assert.ok(!/GB|MB|Prozent|%/.test(LIB.convertHint(old, 'hevc').text), 'keine Schätzung der Ersparnis');
 });
+t('Facetten: Auflösung, Codec, Ton und Quelle (UND zwischen den Gruppen, ODER innerhalb)', () => {
+  const a = row({path: '/a', heights: {'1080': 4}, codecs: {h264: 4}, audio: {dts: 4}, sources: {bluray: 4}, saveBytes: 3e9, bytes: 8e9});
+  const b = row({path: '/b', heights: {'720': 3, '1080': 1}, codecs: {hevc: 4}, audio: {aac: 4}, sources: {webdl: 3, webrip: 1}, saveBytes: 1e9, bytes: 2e9});
+  const c = row({path: '/c', heights: {sd: 2}, codecs: {mpeg4: 2}, audio: {mp3: 2}, sources: {'': 2}, saveBytes: 0, bytes: 1e9});
+  const F = (o = {}) => Object.assign(LIB.FILTER_NONE(), o);
+  const m = (r, f) => LIB.matchesAll(r, f, Q.lowBitrate);
+  assert.ok(m(a, F()) && m(b, F()) && m(c, F()), 'ohne Filter bleibt alles');
+  assert.ok(m(a, F({res: new Set(['1080'])})) && m(b, F({res: new Set(['1080'])})) && !m(c, F({res: new Set(['1080'])})), 'gemischte Ordner zählen für jede ihrer Klassen');
+  assert.ok(m(b, F({res: new Set(['720', '2160'])})) && !m(a, F({res: new Set(['720', '2160'])})), 'ODER innerhalb einer Gruppe');
+  assert.ok(m(a, F({res: new Set(['1080']), au: new Set(['dts'])})) && !m(b, F({res: new Set(['1080']), au: new Set(['dts'])})), 'UND zwischen Gruppen');
+  assert.ok(m(c, F({vc: new Set(['other'])})) && m(a, F({vc: new Set(['h264'])})) && !m(a, F({vc: new Set(['hevc'])})), 'Video-Codec, unbekannte Codecs unter „Andere“');
+  assert.ok(m(c, F({au: new Set(['other'])})) && m(b, F({src: new Set(['web'])})) && m(c, F({src: new Set(['unknown'])})) && !m(a, F({src: new Set(['web', 'unknown'])})), 'Ton „Andere“, WEB-DL und WEBRip zählen als WEB, Quelle unbekannt');
+  assert.ok(m(a, F({minSave: 2e9})) && !m(b, F({minSave: 2e9})), 'Mindest-Ersparnis in Byte');
+  assert.ok(m(b, F({minPct: 40})) && !m(a, F({minPct: 40})) && !m(c, F({minPct: 20})), 'Mindest-Ersparnis in Prozent der Größe (ohne Ersparnis nie)');
+  assert.ok(m(a, F({q: 'A'})) && !m(a, F({q: 'zzz'})) && m(row({path: '/lib/Hellsing Ultimate/Season 01', name: 'Season 01'}), F({q: 'hellsing season'})), 'Suche: alle Wörter, Groß-/Kleinschreibung egal, auch im Pfad');
+  assert.ok(!m(row({}), F({worth: true})) && m(row({codecs: {h264: 1}}), F({worth: true})), '„Nur Ordner mit Hinweisen“');
+  const cnt = LIB.facetCounts([a, b, c], F({res: new Set(['1080'])}), Q.lowBitrate);
+  assert.deepStrictEqual([cnt.res['1080'], cnt.res['720'], cnt.res.sd, cnt.res['2160']], [2, 1, 1, 0], 'Zähler je Wert (andere Gruppen bleiben, die eigene wird ersetzt)');
+  assert.deepStrictEqual([cnt.au.dts, cnt.au.aac, cnt.au.other], [1, 1, 0], 'Zähler Ton unter dem Filter 1080p');
+  assert.strictEqual(LIB.filterCount(F()), 0); assert.strictEqual(LIB.filterCount(F({worth: true})), 0, 'Standard-Hinweise zählen nicht');
+  assert.strictEqual(LIB.filterCount(F({worth: true, hints: new Set(['old'])})), 1); assert.strictEqual(LIB.filterCount(F({res: new Set(['720', '1080']), minSave: 1e9})), 3);
+});
+t('Sortierung: Ersparnis, Prozent, Dateizahl, Auflösung, Datum, Richtung', () => {
+  const rows = [row({path: '/a', name: 'a', saveBytes: 1, bytes: 10, files: 9, maxHeight: 480, newest: 100}), row({path: '/b', name: 'B', saveBytes: 5, bytes: 10, files: 1, maxHeight: 2160, newest: 300}), row({path: '/c', name: 'c', saveBytes: 3, bytes: 100, files: 5, maxHeight: 1080, newest: 200})];
+  const o = (k, d) => LIB.sortRows(rows, k, d).map(r => r.path.slice(1)).join('');
+  assert.strictEqual(o('save'), 'bca'); assert.strictEqual(o('save', 'asc'), 'acb');
+  assert.strictEqual(o('savepct'), 'bac', 'in Prozent der Größe'); assert.strictEqual(o('files'), 'acb'); assert.strictEqual(o('height'), 'bca');
+  assert.strictEqual(o('date'), 'bca'); assert.strictEqual(o('date', 'asc'), 'acb'); assert.strictEqual(o('name'), 'abc'); assert.strictEqual(o('name', 'desc'), 'cba');
+  assert.strictEqual(o('tree', 'desc'), 'abc', 'Ordnerbaum bleibt in Reihenfolge');
+  assert.ok(LIB.SORTS.every(([k]) => k in LIB.SORT_DIR));
+});
+t('Profil: Quelle, Auflösung, Codec, Ton; gemischt mit Aufschlüsselung', () => {
+  const p = LIB.profile(row({heights: {'1080': 2}, codecs: {h264: 2}, audio: {dts: 2}, sources: {bluray: 2}}));
+  assert.deepStrictEqual([p.src.text, p.res.text, p.codec.text, p.audio.text], ['Bluray', '1080p', 'H.264', 'DTS']); assert.ok(!p.src.mixed);
+  const m = LIB.profile(row({heights: {'1080': 8, '720': 2}, codecs: {h264: 10}, audio: {eac3: 5, ac3: 5}, sources: {webdl: 3, webrip: 2, '': 5}}));
+  assert.strictEqual(m.res.text, '8× 1080p · 2× 720p'); assert.ok(m.res.mixed);
+  assert.strictEqual(m.src.text, '5× unbekannt · 3× WEB-DL · 2× WEBRip'); assert.strictEqual(m.audio.text, '5× AC-3 · 5× E-AC-3');
+  assert.strictEqual(LIB.profile(row({heights: {}, codecs: {}, audio: {}, sources: {}})).res.text, '–');
+});
+t('Staffeln einer Serie: Ordner darunter, natürlich sortiert, Namen ab der Serie', () => {
+  const rows = [row({path: '/lib/S', group: true, name: 'S'}), row({path: '/lib/S/Season 10', name: 'Season 10'}), row({path: '/lib/S/Season 2', name: 'Season 2'}), row({path: '/lib/S/Season 1/Disc 1', name: 'Disc 1'}), row({path: '/lib/Sx/Season 1', name: 'Season 1'})];
+  assert.deepStrictEqual(LIB.seasons(rows, rows[0]).map(x => x.rel), ['Season 1/Disc 1', 'Season 2', 'Season 10']);
+  assert.strictEqual(LIB.parentDir('/lib/S/Season 2'), '/lib/S');
+});
   console.log('library: ' + n + ' Tests ok');
 })().catch(e => { console.error(e); process.exit(1); });

@@ -1,5 +1,18 @@
 # Änderungen
 
+## 0.5.9 – 2026-11-23
+
+**Neu: „Ordner prüfen“ komplett neu gestaltet**
+- Oben eine ruhige Kopfzeile mit **Suche**, **Filter** (mit der Zahl gesetzter Filter) und **Sortierung** samt Richtung (auf-/absteigend; die Wahl wird je Gerät gemerkt). Die Filter öffnen sich in einem Fenster, am Handy als Blatt von unten; gesetzte Filter stehen als entfernbare Kärtchen unter der Kopfzeile
+- Neue Filter: **Auflösung** (SD, 720p, 1080p, 4K), **Video-Codec**, **Ton** (DTS, DTS-HD, TrueHD, E-AC-3, AC-3, AAC), **Quelle** (Remux, Bluray, WEB, HDTV, DVD, aus dem Dateinamen) und **Mindest-Ersparnis** (in GB oder in Prozent der Größe). Zwischen den Gruppen gilt „und“, innerhalb einer Gruppe „oder“; an jedem Kärtchen steht, wie viele Ordner übrig bleiben
+- Neue Sortierungen: nach Ersparnis, Ersparnis in Prozent, Dateizahl, Auflösung und Änderungsdatum (dazu Ordnerbaum, Größe, Bitrate, Name)
+- Die Zeile über der Liste nennt die Summe der **gefilterten** Ordner („12 Ordner von 31 · ≈ 85 GB sparen“) und bietet „Alle gezeigten auswählen“, „Auch Ordner ohne Hinweise zeigen“ und „Filter zurücksetzen“
+- **Serien-Übersicht mit Fokus:** „Staffeln ansehen“ bei einer ganzen Serie zeigt nur noch diese Serie, eine Zeile je Staffel mit Dateizahl, Quelle, Auflösung, Codec, Ton, Größe und Ersparnis (zum Beispiel Staffel 1: WEB-DL · 720p · H.264 · AAC, Staffel 2: Bluray · 1080p · H.264 · DTS). Gemischte Staffeln zeigen die Aufschlüsselung („8× 1080p · 2× 720p“). Einzelne Staffeln lassen sich direkt übernehmen. Am Handy stehen die Staffeln als Karten untereinander
+- Server: Der Scan liefert je Ordner Auflösung, Ton, Quelle und Änderungsdatum mit. Die Quelle wird aus dem Dateinamen gelesen (`WEBDL`, `WEBRip`, `Bluray`, `Remux`, `HDTV`, `DVD`). Der Zwischenspeicher des Scans hat eine neue Version: Beim ersten Durchlauf nach dem Update werden die Dateien einmal neu gelesen
+
+**Tests**
+- Neue Go-Tests (Quelle aus dem Dateinamen, Höhenklassen, Zähler in Sammelzeilen), neue Node-Tests (Filter, Zähler, Sortierung, Profil, Staffeln) und eine neu geschriebene `ui-check-library.js` für alle fünf Ansichten
+
 ## 0.5.8 – 2026-11-23
 
 **Geändert**
