@@ -62,7 +62,7 @@ jobs:
           npx playwright install chromium
           echo "NODE_PATH=$RUNNER_TEMP/pw/node_modules" >> "$GITHUB_ENV"
       - name: Oberflächen-Prüfungen (Kurzsatz)
-        run: sh tools/run-ui-checks.sh tools/ui-check.js tools/ui-check-home.js tools/ui-check-queue.js tools/ui-check-settings.js tools/ui-check-history.js tools/ui-check-histdrift.js tools/ui-check-longnames.js tools/ui-check-library.js
+        run: sh tools/run-ui-checks.sh tools/ui-check.js tools/ui-check-home.js tools/ui-check-queue.js tools/ui-check-settings.js tools/ui-check-history.js tools/ui-check-histdrift.js tools/ui-check-longnames.js tools/ui-check-library.js tools/ui-check-album.js tools/ui-check-stats.js
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
