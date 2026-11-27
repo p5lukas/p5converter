@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/p5lukas/p5converter/internal/proc"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -774,11 +775,13 @@ func (m *Manager) report(j *Job, size int64) {
 		sizeIn = j.SizeIn
 	})
 	m.mu.Lock()
-	dur, backend, encoder, decoder := j.Ended.Sub(j.Started).Round(time.Second), j.Backend, j.Encoder, j.Decoder
+	took := j.Ended.Sub(j.Started)
+	dur, backend, encoder, decoder := took.Round(time.Second), j.Backend, j.Encoder, j.Decoder
 	m.mu.Unlock()
+	secs := int(math.Ceil(took.Seconds())) // aufgerundet: auch ein Lied, das unter einer Sekunde braucht, zählt für die Monatsstatistik
 	jlog.Infof("Auftrag %s fertig in %s: %d → %d Bytes (Schreiben: %s/%s, Lesen: %s)", j.ID, dur, sizeIn, size, backend, encoder, decoder)
 	if m.OnDone != nil {
-		m.OnDone(j.Kind, sizeIn, size, int(dur/time.Second))
+		m.OnDone(j.Kind, sizeIn, size, secs)
 	}
 	m.finish(j)
 }
