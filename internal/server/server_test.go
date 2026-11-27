@@ -1103,3 +1103,24 @@ func TestStatsHistoryAPI(t *testing.T) {
 		t.Errorf("nach dem Zurücksetzen von Video: %+v", h)
 	}
 }
+
+// Eine frische Installation zeigt keinen Hinweis „Neu in dieser Version“: das Vorbefüllen der Monatsstatistik darf keine stats.json anlegen
+// (die Neuigkeiten erkennen an stats.json/settings.json ein Update).
+func TestFreshInstallShowsNoNewsAndWritesNoStats(t *testing.T) {
+	dir := t.TempDir()
+	tl, err := ffmpeg.Locate("")
+	if err != nil {
+		t.Skip("ffmpeg nicht installiert")
+	}
+	s := New(version.Get(), tl, nil, 1, dir)
+	ts := httptest.NewServer(s.Handler())
+	t.Cleanup(ts.Close)
+	var n struct{ Show bool }
+	getJSON(t, ts, "/api/news", &n)
+	if n.Show {
+		t.Error("frische Installation darf keinen Hinweis zeigen")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "stats.json")); err == nil {
+		t.Error("frische Installation darf keine stats.json haben")
+	}
+}

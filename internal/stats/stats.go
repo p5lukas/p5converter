@@ -125,13 +125,19 @@ func (s *Store) Backfill(list []Past) bool {
 		return false
 	}
 	s.d.Backfilled = true
+	added := 0
 	for _, p := range list {
 		if p.In <= 0 || p.Out <= 0 || p.Ended.IsZero() || (p.Kind != "audio" && p.Kind != "video") {
 			continue
 		}
 		s.addMonth(p.Kind, p.Ended, p.In, p.Out, p.Seconds)
+		added++
 	}
-	s.save()
+	// Ohne etwas zum Eintragen wird nichts geschrieben: eine frische Installation soll keine stats.json haben (die Neuigkeiten erkennen daran ein Update).
+	// Das Merkzeichen steht dann im Speicher und wird beim ersten gezählten Auftrag mit gespeichert.
+	if added > 0 {
+		s.save()
+	}
 	return true
 }
 

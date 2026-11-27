@@ -97,3 +97,19 @@ func TestBackfillOnce(t *testing.T) {
 		t.Errorf("die Gesamtzahlen bleiben unberührt: %+v", g.Video)
 	}
 }
+
+// Eine frische Installation (leerer Verlauf) bekommt durch das Vorbefüllen keine stats.json; das Merkzeichen wird erst mit dem ersten Auftrag gespeichert.
+func TestBackfillWritesNothingWithoutHistory(t *testing.T) {
+	dir := t.TempDir()
+	s := Open(dir)
+	if !s.Backfill(nil) {
+		t.Fatal("Vorbefüllen")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "stats.json")); err == nil {
+		t.Error("ohne Verlauf darf keine stats.json entstehen (sonst gilt die Installation als Update)")
+	}
+	s.Add("video", 100, 50, 3)
+	if r := Open(dir); !r.Backfilled() || len(r.History("video")) != 1 {
+		t.Errorf("nach dem ersten Auftrag: vorbefüllt=%v, Monate=%v", r.Backfilled(), r.History("video"))
+	}
+}
