@@ -49,8 +49,9 @@ type Server struct {
 	enc         map[string]bool
 	ffver       string
 	lib         libraryScans
-	libCache    *libCache // Merker des Ordner-Scans
-	clips       clipStore // Probeclips (Vergleich von Einstellungen an einem kurzen Ausschnitt)
+	libCache    *libCache  // Merker des Ordner-Scans
+	clips       clipStore  // Probeclips (Vergleich von Einstellungen an einem kurzen Ausschnitt)
+	bench       benchStore // Encoder-Schnelltest (Einstellungen → Hardware)
 }
 
 func New(build version.Info, t ffmpeg.Tools, roots []string, concurrency int, configDir string) *Server {
@@ -60,6 +61,7 @@ func New(build version.Info, t ffmpeg.Tools, roots []string, concurrency int, co
 	s.Stats = stats.Open(statsDir(s.Settings, configDir))
 	s.Jobs.OnDone = s.Stats.Add
 	s.History = history.Open(configDir, s.Settings.Persistent())
+	s.backfillStats()
 	s.Jobs.OnFinish = func(j jobs.Job) { s.History.Add(historyEntry(j)) }
 	json.Unmarshal(newsJSON, &s.newsEntries)
 	s.news = openNews(configDir, s.Settings.Persistent(), s.newsEntries, build.Base)
@@ -77,6 +79,8 @@ func New(build version.Info, t ffmpeg.Tools, roots []string, concurrency int, co
 	s.libCache = openLibCache("")
 	if s.Settings.Persistent() {
 		s.libCache = openLibCache(filepath.Join(configDir, "library-cache.json"))
+		s.bench.file = filepath.Join(configDir, "bench.json")
+		s.bench.load()
 	}
 	s.enc = t.Encoders()
 	s.ffver = t.Version()
@@ -122,6 +126,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/news", s.newsGet)
 	mux.HandleFunc("POST /api/news/seen", s.newsSeen)
 	mux.HandleFunc("POST /api/stats/reset", s.statsReset)
+	mux.HandleFunc("GET /api/stats/history", s.statsHistory)
 	mux.HandleFunc("GET /api/history", s.historyList)
 	mux.HandleFunc("GET /api/history.csv", s.historyCSV)
 	mux.HandleFunc("POST /api/history/clear", s.historyClear)
@@ -190,6 +195,27 @@ func (s *Server) Handler() http.Handler {
 		default:
 			httpErr(w, 400, "action muss resume oder discard sein")
 		}
+	})
+	mux.HandleFunc("POST /api/bench/start", s.benchStart)
+	mux.HandleFunc("GET /api/bench/last", s.benchLast)
+	mux.HandleFunc("GET /api/bench/{id}", s.benchGet)
+	mux.HandleFunc("POST /api/bench/{id}/cancel", s.benchCancel)
+	mux.HandleFunc("POST /api/batches/{id}/cancel", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, map[string]int{"n": s.Jobs.CancelBatch(r.PathValue("id"))})
+	})
+	mux.HandleFunc("POST /api/batches/{id}/move", func(w http.ResponseWriter, r *http.Request) {
+		var b struct{ How string }
+		json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&b)
+		if !s.Jobs.MoveBatch(r.PathValue("id"), b.How) {
+			httpErr(w, 409, "Das Album lässt sich so nicht verschieben")
+			return
+		}
+		writeJSON(w, map[string]bool{"ok": true})
+	})
+	mux.HandleFunc("POST /api/batches/{id}/hold", func(w http.ResponseWriter, r *http.Request) {
+		var b struct{ On bool }
+		json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&b)
+		writeJSON(w, map[string]int{"n": s.Jobs.HoldBatch(r.PathValue("id"), b.On)})
 	})
 	mux.HandleFunc("POST /api/jobs/cancel-all", func(w http.ResponseWriter, r *http.Request) {
 		var b struct{ Kind string }
@@ -389,7 +415,7 @@ func (s *Server) statsReset(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"Art fehlt (audio oder video)"}`, 400)
 		return
 	}
-	s.Stats.Reset(body.Kind)
+	s.Stats.Reset(body.Kind) // setzt auch die Monatssummen dieser Art zurück
 	logs.Get("app").Infof("Statistik „Gewonnener Platz“ zurückgesetzt (%s)", body.Kind)
 	writeJSON(w, map[string]any{"ok": true, "saved": s.Stats.Get()})
 }

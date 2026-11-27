@@ -263,7 +263,7 @@ func TestOnDoneReportsSizes(t *testing.T) {
 		in, out int64
 	}
 	got := make(chan rec, 4)
-	m.OnDone = func(k string, in, out int64) { got <- rec{k, in, out} }
+	m.OnDone = func(k string, in, out int64, _ int) { got <- rec{k, in, out} }
 	m.Submit(&Request{Kind: "video", Items: []Item{{Path: video}}, Video: build.VideoOpts{Container: "mkv", Codec: "copy"},
 		Output: OutputOpts{Dir: t.TempDir(), Exists: "rename"}})
 	select {

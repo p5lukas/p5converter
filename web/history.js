@@ -59,13 +59,45 @@ export async function historyPage() {
           h('pre', {}, e.cmd), h('pre', {}, (e.log || []).join('\n'))) : null));
     return det;
   }
+  // Ein Album (Audio, mehrere Lieder eines Starts) ist EIN Eintrag mit der Summe; aufgeklappt stehen die einzelnen Lieder darunter
+  function albumEl(batch, songs) {
+    const id = 'album-' + batch, n = songs.length, ok = songs.filter(x => x.status === 'done' && !x.checkFailed).length;
+    const bad = songs.filter(x => x.status === 'error').length, warn = songs.filter(x => x.status === 'canceled' || x.status === 'skipped' || (x.status === 'done' && (x.checkFailed || (x.warnings || []).length))).length;
+    const live = S.jobs.filter(x => x.batch === batch), active = live.some(x => x.status === 'queued' || x.status === 'running'); // das Album läuft noch
+    const cls = active ? '' : bad ? 'err' : warn ? 'warn' : 'ok';
+    const lbl = active ? 'läuft: ' + n + ' von ' + live.length + ' fertig' : !bad && !warn ? 'fertig' : ok + ' von ' + n + ' fertig' + (bad ? ', ' + bad + (bad === 1 ? ' Fehler' : ' Fehler') : '') + (warn ? ', ' + warn + ' mit Hinweis' : '');
+    const sizeIn = songs.reduce((a, x) => a + (x.status === 'done' ? x.sizeIn || 0 : 0), 0), sizeOut = songs.reduce((a, x) => a + (x.status === 'done' ? x.sizeOut || 0 : 0), 0);
+    const ends = songs.map(x => new Date(x.ended).getTime()), starts = songs.map(x => new Date(x.ended).getTime() - (x.seconds || 0) * 1000);
+    const secs = Math.round((Math.max(...ends) - Math.min(...starts)) / 1000);
+    const first = songs.slice().sort((a, b) => new Date(a.ended) - new Date(b.ended))[0];
+    const det = h('details', {class: 'histentry histalbum', 'data-batch': batch, open: st.open.has(id), ontoggle: ev => { if (ev.target !== det) return; ev.target.open ? st.open.add(id) : st.open.delete(id); }},
+      h('summary', {},
+        h('span', {class: 'hname', title: first ? first.input : ''}, h('span', {class: 'kindbadge audio'}, W('audio').name), active ? live.length + ' Lieder' : n + ' Lieder'),
+        h('span', {class: 'chip ' + cls}, lbl),
+        h('span', {class: 'muted small hmeta'}, fmtDateTime(Math.max(...ends)), sizeIn && sizeOut ? ' · ' + fmtSize(sizeIn) + ' → ' + fmtSize(sizeOut) + ' (' + Math.round(sizeOut / sizeIn * 100) + ' %)' : '', secs > 0 ? ' · ' + fmtTime(secs) : '')),
+      h('div', {class: 'hdet small histsongs'}, songs.slice().sort((a, b) => new Date(a.ended) - new Date(b.ended)).map(x => entry(x))));
+    return det;
+  }
   function render() {
     const rows = visible();
     keepView(() => {
       if (!rows.length) { st.cache.clear(); fill(list, h('div', {class: 'empty', style: 'padding:24px'}, st.items.length ? 'Keine Einträge für diesen Filter.' : 'Es wurde noch nichts umgewandelt.')); return; }
       // Einträge, die sich nicht geändert haben, bleiben als Knoten stehen (geöffnete Details, Scrollstand und Textauswahl bleiben erhalten)
       const next = new Map();
-      const els = rows.map(e => {
+      // Lieder desselben Albums zu einem Eintrag zusammenfassen (an der Stelle des neuesten Lieds)
+      const albums = {};
+      rows.forEach(e => { if (e.batch) (albums[e.batch] = albums[e.batch] || []).push(e); });
+      const seenAlbum = new Set(), items = [];
+      rows.forEach(e => {
+        if (e.batch && albums[e.batch].length > 1) { if (!seenAlbum.has(e.batch)) { seenAlbum.add(e.batch); items.push({album: e.batch, songs: albums[e.batch]}); } } else items.push({e});
+      });
+      const els = items.map(it => {
+        if (it.album) {
+          const aid = 'album-' + it.album, asig = JSON.stringify(it.songs) + S.jobs.filter(x => x.batch === it.album && (x.status === 'queued' || x.status === 'running')).length, aold = st.cache.get(aid);
+          if (aold && aold.sig === asig) { next.set(aid, aold); return aold.el; }
+          const ael = albumEl(it.album, it.songs); next.set(aid, {sig: asig, el: ael}); return ael;
+        }
+        const e = it.e;
         const sig = JSON.stringify(e), old = st.cache.get(e.id);
         if (old && old.sig === sig) { next.set(e.id, old); return old.el; }
         const el = entry(e);

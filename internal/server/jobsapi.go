@@ -20,6 +20,7 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 		httpErr(w, 400, err.Error())
 		return
 	}
+	req.Batch = "" // die Kennung eines Albums vergibt nur der Server
 	if req.Kind != "audio" && req.Kind != "video" {
 		httpErr(w, 400, "kind muss audio oder video sein")
 		return

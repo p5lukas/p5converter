@@ -22,7 +22,8 @@ type Check struct {
 // Entry is one finished job (status: done, error, canceled, skipped).
 type Entry struct {
 	ID      string    `json:"id"`
-	Kind    string    `json:"kind"` // audio | video
+	Batch   string    `json:"batch,omitempty"` // Album: gemeinsame Kennung der Lieder eines Starts (nur Audio)
+	Kind    string    `json:"kind"`            // audio | video
 	Name    string    `json:"name"`
 	Input   string    `json:"input"`
 	Output  string    `json:"output"`

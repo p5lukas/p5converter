@@ -48,10 +48,14 @@ type Request struct {
 	Audio  build.AudioOpts `json:"audio"`
 	Video  build.VideoOpts `json:"video"`
 	Output OutputOpts      `json:"output"`
+	// Batch: gemeinsame Kennung aller Lieder eines Starts (nur Audio, nur bei mehr als einem Lied). Sie wird vom Server vergeben, was ein
+	// Aufrufer der API hier schickt, wird verworfen; die Auftragsdatei (queue.json) behält sie, damit ein Album nach dem Neustart zusammenbleibt.
+	Batch string `json:"batch,omitempty"`
 }
 
 type Job struct {
 	ID     string `json:"id"`
+	Batch  string `json:"batch,omitempty"` // siehe Request.Batch
 	Kind   string `json:"kind"`
 	Name   string `json:"name"`
 	Input  string `json:"input"`
@@ -104,11 +108,12 @@ type Manager struct {
 	mu          sync.Mutex
 	jobs        []*Job
 	seq         int
+	batchSeq    int
 	concurrency map[string]int // per world: audio and video have their own queue
 	running     map[string]int
 	reserved    map[string]string // output path -> job id (queued/running jobs)
-	// OnDone is called after every successful conversion (kind, bytes in, bytes out).
-	OnDone func(kind string, in, out int64)
+	// OnDone is called after every successful conversion (kind, bytes in, bytes out, running time in seconds).
+	OnDone func(kind string, in, out int64, seconds int)
 	// OnFinish is called once for every job that reached an end state (done, error, canceled, skipped) – used for the history.
 	OnFinish    func(Job)
 	partialFile string
@@ -174,10 +179,14 @@ func (m *Manager) Concurrency(kind string) int {
 
 func (m *Manager) Submit(req *Request) []string {
 	m.mu.Lock()
+	if req.Batch == "" && req.Kind == "audio" && len(req.Items) > 1 { // ein Album: alle Lieder gehören zu einem Auftrag
+		m.batchSeq++
+		req.Batch = "b" + strconv.FormatInt(time.Now().UnixMilli(), 36) + strconv.Itoa(m.batchSeq)
+	}
 	var ids []string
 	for _, it := range req.Items {
 		m.seq++
-		j := &Job{ID: "j" + strconv.Itoa(m.seq), Kind: req.Kind, Name: filepath.Base(it.Path), Input: it.Path,
+		j := &Job{ID: "j" + strconv.Itoa(m.seq), Batch: req.Batch, Kind: req.Kind, Name: filepath.Base(it.Path), Input: it.Path,
 			Status: "queued", Created: time.Now(), item: it, req: req, Speed: ""}
 		if st, err := os.Stat(it.Path); err == nil {
 			j.SizeIn = st.Size()
@@ -769,7 +778,7 @@ func (m *Manager) report(j *Job, size int64) {
 	m.mu.Unlock()
 	jlog.Infof("Auftrag %s fertig in %s: %d → %d Bytes (Schreiben: %s/%s, Lesen: %s)", j.ID, dur, sizeIn, size, backend, encoder, decoder)
 	if m.OnDone != nil {
-		m.OnDone(j.Kind, sizeIn, size)
+		m.OnDone(j.Kind, sizeIn, size, int(dur/time.Second))
 	}
 	m.finish(j)
 }

@@ -40,6 +40,8 @@ jobs:
         run: node tools/test-trkplan.js
       - name: Qualitätsstufen (Node-Test)
         run: node tools/test-quality.js
+      - name: Bibliothek-Scan und Monatsgrafik (Node-Tests)
+        run: node tools/test-library.js && node tools/test-statschart.js
 
   # Kurzer Satz der Oberflächen-Prüfungen (Chromium, alle Ansichten) mit frisch erzeugten Testmedien (tools/make-fixtures.sh).
   # Die vollständige Suite dauert rund 40 Minuten und läuft von Hand: sh tools/run-ui-checks.sh

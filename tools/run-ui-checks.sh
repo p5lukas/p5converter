@@ -15,7 +15,7 @@ FAIL=0
 for t in "$@"; do
   pkill -x "$(basename "$WORK-bin")" 2>/dev/null; sleep 1
   rm -rf "$WORK"; mkdir -p "$WORK/cfg" "$WORK/out"
-  P5_CONFIG="$WORK/cfg" P5_ROOTS="$FIX/season,$FIX/media,$FIX/many60,$WORK/out" nohup "$WORK-bin" >"$WORK/server.log" 2>&1 &
+  P5_TEST_BENCH_SECONDS=2 P5_CONFIG="$WORK/cfg" P5_ROOTS="$FIX/season,$FIX/media,$FIX/many60,$WORK/out" nohup "$WORK-bin" >"$WORK/server.log" 2>&1 &
   sleep 2
   printf '=== %s\n' "$t"
   # Prüfungen mit Episoden (ep01–ep06) brauchen den Ordner „season“, alle anderen „media“

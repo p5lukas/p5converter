@@ -508,7 +508,7 @@ func TestPageAssetsServed(t *testing.T) {
 // the start page needs the lifetime totals in the state, and finished jobs must feed them
 func TestStateCarriesSavedTotals(t *testing.T) {
 	s, ts := newTestServer(t, nil)
-	s.Stats.Add("video", 1000, 250)
+	s.Stats.Add("video", 1000, 250, 5)
 	resp, err := http.Get(ts.URL + "/api/state")
 	if err != nil {
 		t.Fatal(err)
@@ -673,8 +673,8 @@ func TestNewsNoticeOncePerVersion(t *testing.T) {
 
 func TestStatsResetPerWorld(t *testing.T) {
 	s, ts := newTestServer(t, nil)
-	s.Stats.Add("audio", 100, 50)
-	s.Stats.Add("video", 100, 40)
+	s.Stats.Add("audio", 100, 50, 1)
+	s.Stats.Add("video", 100, 40, 1)
 	if resp := post(t, ts, "/api/stats/reset", map[string]string{"kind": "x"}, nil); resp.StatusCode != 400 {
 		t.Errorf("ungültige Welt: %d", resp.StatusCode)
 	}
@@ -1033,5 +1033,73 @@ func TestQueueRestoreAPI(t *testing.T) {
 	post(t, ts2, "/api/queue/restore", map[string]any{"action": "discard"}, nil)
 	if s2.Jobs.Restorable()["count"] != 0 || len(s2.Jobs.Snapshot()) != 0 {
 		t.Error("Verwerfen startet nichts und leert die Liste")
+	}
+}
+
+// Die Kennung eines Albums vergibt der Server; was die API mitgeschickt bekommt, wird verworfen. Alle Lieder eines Starts tragen dieselbe Kennung,
+// sie steht im Zustand und im Verlauf.
+func TestAlbumBatchOverAPI(t *testing.T) {
+	dir := t.TempDir()
+	s, ts := newTestServer(t, []string{dir})
+	s.Jobs.Pause(true)
+	items := []map[string]string{{"path": dir + "/a.mp3"}, {"path": dir + "/b.mp3"}}
+	r := post(t, ts, "/api/jobs", map[string]any{"kind": "audio", "batch": "bgefaelscht", "items": items, "output": map[string]string{"dir": dir + "/out"}, "audio": map[string]any{"format": "mp3", "mode": "vbr", "quality": 2}}, nil)
+	if r.StatusCode != 200 {
+		t.Fatalf("Einreihen: %d", r.StatusCode)
+	}
+	var st struct {
+		Jobs []struct{ Batch, ID string }
+	}
+	getJSON(t, ts, "/api/state", &st)
+	if len(st.Jobs) != 2 || st.Jobs[0].Batch == "" || st.Jobs[0].Batch != st.Jobs[1].Batch || st.Jobs[0].Batch == "bgefaelscht" {
+		t.Fatalf("Kennung im Zustand: %+v", st.Jobs)
+	}
+	id := st.Jobs[0].Batch
+	// das ganze Album abbrechen
+	if r := post(t, ts, "/api/batches/"+id+"/cancel", map[string]any{}, nil); r.StatusCode != 200 {
+		t.Fatalf("Album abbrechen: %d", r.StatusCode)
+	}
+	getJSON(t, ts, "/api/state", &struct{}{})
+	// im Verlauf tragen die Einträge die Kennung
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		var h struct{ Items []struct{ Batch string } }
+		getJSON(t, ts, "/api/history?kind=audio", &h)
+		if len(h.Items) == 2 {
+			if h.Items[0].Batch != id || h.Items[1].Batch != id {
+				t.Fatalf("Kennung im Verlauf: %+v", h.Items)
+			}
+			return
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	t.Fatal("die abgebrochenen Lieder stehen nicht im Verlauf")
+}
+
+// Monatssummen über die API: pro Art, nach „Zurücksetzen“ leer; die Antwort nennt, ob aus dem Verlauf vorbefüllt wurde.
+func TestStatsHistoryAPI(t *testing.T) {
+	s, ts := newTestServer(t, nil)
+	s.Stats.Add("video", 2000, 500, 30)
+	s.Stats.Add("video", 1000, 400, 10)
+	s.Stats.Add("audio", 100, 50, 1)
+	var h struct {
+		Audio, Video []struct {
+			Month          string
+			Count, Seconds int
+			In, Out        int64
+		}
+		Backfilled bool
+		Max        int
+	}
+	getJSON(t, ts, "/api/stats/history", &h)
+	if len(h.Video) != 1 || h.Video[0].Count != 2 || h.Video[0].In != 3000 || h.Video[0].Out != 900 || h.Video[0].Seconds != 40 || len(h.Audio) != 1 || h.Max != 100 || !h.Backfilled {
+		t.Fatalf("Monatssummen: %+v", h)
+	}
+	if r := post(t, ts, "/api/stats/reset", map[string]string{"kind": "video"}, nil); r.StatusCode != 200 {
+		t.Fatalf("Zurücksetzen: %d", r.StatusCode)
+	}
+	getJSON(t, ts, "/api/stats/history", &h)
+	if len(h.Video) != 0 || len(h.Audio) != 1 {
+		t.Errorf("nach dem Zurücksetzen von Video: %+v", h)
 	}
 }

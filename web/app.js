@@ -490,6 +490,29 @@ function reconcileCards(box, cards) {
   }
   for (const [id, e] of cache) if (!seen.has(id)) { e.el.remove(); cache.delete(id); }
 }
+// Fortschritt eines Albums: Lieder fertig + Anteil des laufenden, in Prozent aller Lieder
+export function albumInfo(batch) {
+  const js = S.jobs.filter(j => j.batch === batch), total = js.length;
+  const ended = j => !(j.status === 'queued' || j.status === 'running');
+  const done = js.filter(j => j.status === 'done').length, bad = js.filter(j => j.status === 'error' || (j.status === 'done' && j.checkFailed)).length, canceled = js.filter(j => j.status === 'canceled' || j.status === 'skipped').length;
+  const running = js.filter(j => j.status === 'running'), cur = running[0] || js.find(j => j.status === 'queued');
+  const pct = total ? js.reduce((a, j) => a + (j.status === 'running' ? j.progress : ended(j) ? 100 : 0), 0) / total : 0;
+  const finished = js.filter(ended).length;
+  return {js, total, done, bad, canceled, running, cur, pct, finished, pos: Math.min(total, finished + 1), held: js.some(j => j.status === 'queued') && js.every(j => j.status !== 'queued' || j.held)};
+}
+// Eine Karte für alle Lieder eines Albums: Gesamtbalken, „Lied 5 von 12: Name“, Aktionen für das ganze Album
+function albumCard(batch) {
+  const a = albumInfo(batch), cur = a.cur, running = a.running.length > 0, queued = a.js.some(j => j.status === 'queued');
+  const mv = queued ? `<span class="qmove"><button class="small ghost" data-bmv="${batch}" data-how="top" title="Das ganze Album an den Anfang der Warteschlange" aria-label="An den Anfang">Zuerst</button><button class="small ghost" data-bmv="${batch}" data-how="up" title="Eine Stelle nach vorn" aria-label="Nach vorn">${ic('up')}</button><button class="small ghost" data-bmv="${batch}" data-how="down" title="Eine Stelle nach hinten" aria-label="Nach hinten"><span class="flip">${ic('up')}</span></button><button class="small ghost" data-bhold="${batch}" data-on="${a.held ? 0 : 1}" title="${a.held ? 'Die wartenden Lieder wieder freigeben' : 'Die wartenden Lieder anhalten (das laufende wird fertig)'}">${a.held ? 'Freigeben' : 'Anhalten'}</button></span>` : '';
+  const meta = [`<span>${a.pct.toFixed(0)} %</span>`, `<span>${a.finished} von ${a.total} Liedern fertig</span>`];
+  if (a.bad) meta.push(`<span class="badtxt">${a.bad} mit Fehler</span>`);
+  if (a.canceled) meta.push(`<span class="muted">${a.canceled} abgebrochen</span>`);
+  if (running && cur.speed) meta.push('Speed ' + esc(cur.speed));
+  return {id: 'album-' + batch, cls: `job album ${running ? 'running' : 'queued'}${a.held ? ' held' : ''}`, vol: `<div class="job-h">${kindBadge('audio')}<span class="n" title="${esc(cur ? cur.input : '')}"><b>${a.total} Lieder</b>${cur ? ' · ' + (running ? 'Lied ' + a.pos + ' von ' + a.total + ': ' : 'als Nächstes: ') + esc(cur.name) : ''}</span>${a.held ? '<span class="chip warn">angehalten</span>' : ''}${mv}<button class="small ghost" data-bcancel="${batch}" title="Bricht alle Lieder dieses Albums ab und räumt unfertige Dateien auf. Die Quelldateien bleiben unberührt.">Alles abbrechen</button></div>
+      <div class="bar"><i data-w="${a.pct.toFixed(1)}"></i></div>
+      <div class="job-m">${meta.join('')}</div>
+`, det: ''};
+}
 // rainBarsSync gehört in denselben Durchgang: sonst sind die neu gezeichneten Balken kurz dünn (6 statt 22 px), keepView gleicht das aus,
 // und beim späteren Dickermachen rutscht die Seite jedes Mal um 16 px nach oben (der Verlauf „scrollte von selbst“).
 function renderQueue() { keepView(() => { renderQueueNow(); rainBarsSync(); }); }
@@ -498,7 +521,13 @@ function renderQueueNow() {
   // die Warteschlange zeigt nur laufende und wartende Aufträge; beendete stehen darunter im Verlauf
   const q = $('#queue'), mine = S.jobs.filter(j => j.status === 'queued' || j.status === 'running');
   if (!mine.length) { q._cards = null; q.innerHTML = '<div class="empty mt8">Keine laufenden oder wartenden Aufträge. Beendete Aufträge stehen unten im Verlauf.</div>'; return; }
-  reconcileCards(q, mine.map(j => { // in der Reihenfolge, in der sie dran kommen (oben: läuft bzw. als Nächstes)
+  // Alben (Audio, mehrere Lieder eines Starts) sind EINE Karte mit einem Gesamtbalken; alles andere bleibt eine Karte je Auftrag
+  const seenAlbum = new Set(), cards = [];
+  mine.forEach(j => {
+    if (j.batch && S.jobs.filter(x => x.batch === j.batch).length > 1) { if (!seenAlbum.has(j.batch)) { seenAlbum.add(j.batch); cards.push({album: j.batch}); } }
+    else cards.push({job: j});
+  });
+  reconcileCards(q, cards.map(c => { if (c.album) return albumCard(c.album); const j = c.job; // in der Reihenfolge, in der sie dran kommen (oben: läuft bzw. als Nächstes)
     const meta = [];
     if (j.status === 'running') {
       if (j.speed) meta.push('Speed ' + esc(j.speed));
@@ -513,7 +542,7 @@ function renderQueueNow() {
     const mv = j.status === 'queued' ? `<span class="qmove"><button class="small ghost" data-mv="${j.id}" data-how="top" title="An den Anfang der Warteschlange" aria-label="An den Anfang">Zuerst</button><button class="small ghost" data-mv="${j.id}" data-how="up" title="Eine Stelle nach vorn" aria-label="Nach vorn">${ic('up')}</button><button class="small ghost" data-mv="${j.id}" data-how="down" title="Eine Stelle nach hinten" aria-label="Nach hinten"><span class="flip">${ic('up')}</span></button><button class="small ghost" data-hold="${j.id}" data-on="${j.held ? 0 : 1}" title="${j.held ? 'Wieder zur Warteschlange freigeben' : 'Diesen Auftrag anhalten: er startet erst, wenn du ihn freigibst'}">${j.held ? 'Freigeben' : 'Anhalten'}</button></span>` : '';
     const act = mv + ((j.status === 'queued' || j.status === 'running') ? `<button class="small ghost" data-cancel="${j.id}" title="Bricht diesen Auftrag ab und löscht die unfertige Datei. Die Quelldatei bleibt unberührt.">Abbrechen</button>` : '');
     const note = j.status === 'done' && (j.hwDecodeFallback || (j.warnings || []).length);
-    return {id: j.id, cls: `job ${j.status}${note ? ' note' : ''}`, vol: `<div class="job-h">${kindBadge(j.kind)}<span class="n" title="${esc(j.input)}">${esc(j.name)}</span>${encoderBadge(j)}${decoderBadge(j)}${statusChip(j)}${act}</div>
+    return {id: j.id, cls: `job ${j.status}${note ? ' note' : ''}${j.kind === 'audio' ? ' norain' : ''}`, vol: `<div class="job-h">${kindBadge(j.kind)}<span class="n" title="${esc(j.input)}">${esc(j.name)}</span>${encoderBadge(j)}${decoderBadge(j)}${statusChip(j)}${act}</div>
       <div class="bar"><i data-w="${j.progress.toFixed(1)}"></i></div>
       <div class="job-m"><span>${j.progress.toFixed(1)} %</span>${meta.map(m => `<span>${m}</span>`).join('')}</div>
       ${j.error && j.status === 'error' ? `<div class="small badtxt">${esc(j.error)}</div>` : ''}
@@ -524,6 +553,9 @@ function renderQueueNow() {
         <div class="copyrow"><button type="button" class="small ghost" data-copy="cmd" data-id="${j.id}">Befehl kopieren</button><button type="button" class="small ghost" data-copy="log" data-id="${j.id}">Log kopieren</button></div>
         <pre>${esc(j.cmd || '')}</pre><pre>${esc((j.log || []).slice(-25).join('\n'))}</pre></details>`};
   }));
+  $$('#queue [data-bcancel]').forEach(b => b.onclick = () => api('/api/batches/' + b.dataset.bcancel + '/cancel', {}).then(poll));
+  $$('#queue [data-bmv]').forEach(b => b.onclick = () => api('/api/batches/' + b.dataset.bmv + '/move', {how: b.dataset.how}).then(poll).catch(e => toast(e.message, 'bad')));
+  $$('#queue [data-bhold]').forEach(b => b.onclick = () => api('/api/batches/' + b.dataset.bhold + '/hold', {on: b.dataset.on === '1'}).then(poll));
   $$('#queue [data-cancel]').forEach(b => b.onclick = () => api('/api/jobs/' + b.dataset.cancel + '/cancel', {}).then(poll));
   $$('#queue [data-mv]').forEach(b => b.onclick = () => api('/api/jobs/' + b.dataset.mv + '/move', {how: b.dataset.how}).then(poll).catch(e => toast(e.message, 'bad')));
   $$('#queue [data-hold]').forEach(b => b.onclick = () => api('/api/jobs/' + b.dataset.hold + '/hold', {on: b.dataset.on === '1'}).then(poll));
@@ -611,7 +643,19 @@ export function renderHero() {
   const overall = Math.round(batch.reduce((a, j) => a + (j.status === 'running' ? j.progress : j.status === 'queued' ? 0 : 100), 0) / total);
   const meta = [];
   if (cur.status === 'running') { if (cur.speed) meta.push('Speed ' + esc(cur.speed)); if (cur.fps) meta.push(cur.fps.toFixed(0) + ' fps'); if (cur.eta) meta.push('noch ' + fmtTime(cur.eta)); }
-  box.className = 'jobnow';
+  // Album (nur Lieder desselben Starts im aktuellen Durchlauf): „Lied 5 von 12“ mit dem Gesamtbalken als Hauptbalken
+  if (cur.batch && batch.length > 1 && batch.every(j => j.batch === cur.batch)) {
+    const a = albumInfo(cur.batch), am = [`<span>${a.pct.toFixed(0)} %</span>`, `<span>${a.finished} von ${a.total} Liedern fertig</span>`];
+    if (a.bad) am.push(`<span class="badtxt">${a.bad} mit Fehler</span>`);
+    if (cur.status === 'running' && cur.speed) am.push('Speed ' + esc(cur.speed));
+    box.className = 'jobnow';
+    box.innerHTML = `${S.paused ? '<div class="jn-pause">Warteschlange pausiert: laufende Aufträge werden fertig, es startet kein neuer</div>' : ''}<div class="jn-title">Lied ${a.pos} von ${a.total}</div>
+      <div class="jn-name" title="${esc(cur.input)}">${esc(cur.name)}</div>
+      <div class="bar"><i data-w="${a.pct.toFixed(1)}"></i></div>
+      <div class="job-m">${am.join('')}</div>`;
+    return;
+  }
+  box.className = cur.kind === 'audio' ? 'jobnow norain' : 'jobnow'; // ein einzelnes Lied ist in Sekunden fertig: dünner Balken statt Regen
   box.innerHTML = `${S.paused ? '<div class="jn-pause">Warteschlange pausiert: laufende Aufträge werden fertig, es startet kein neuer</div>' : ''}<div class="jn-title">Datei ${pos} von ${total}${running.length > 1 ? ` <span class="muted small">(${running.length} laufen parallel)</span>` : ''}</div>
     <div class="jn-name" title="${esc(cur.input)}">${esc(cur.name)}</div>
     <div class="bar"><i data-w="${cur.progress.toFixed(1)}"></i></div>
