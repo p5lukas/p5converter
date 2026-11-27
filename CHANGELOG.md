@@ -1,5 +1,25 @@
 # Änderungen
 
+## 0.5.10 – 2026-11-27
+
+**Neu: Musik als Album (ein Auftrag für alle Lieder eines Starts)**
+- Alle Lieder, die du mit einem Klick auf „Start“ einreihst, sind jetzt ein Auftrag: in der Warteschlange **eine Karte „12 Lieder“** mit einem Gesamtbalken und der Zeile „Lied 5 von 12: Name“, auf der Startseite „Lied 5 von 12“ mit dem Gesamtbalken. „Alles abbrechen“, „Anhalten/Freigeben“ und „Zuerst/nach vorn/nach hinten“ gelten für das ganze Album; ein einzelnes Lied bleibt eine eigene Karte
+- Im **Verlauf ein Eintrag je Album** („12 Lieder · fertig · 58 MB → 31 MB · 1:12“), aufgeklappt mit den einzelnen Liedern und ihrem Ergebnis; bei Fehlern „11 von 12 fertig, 1 Fehler“. Solange das Album läuft, steht dort „läuft: 6 von 12 fertig“. Der CSV-Export bleibt je Lied
+- **Regen nur noch dort, wo er passt:** Lieder regnen nicht mehr einzeln; ein Album bekommt den Regen-Balken am Gesamtbalken und einen einzigen Schauer, wenn es fertig ist. Einzelne Lieder haben einen dünnen Balken. Video bleibt wie bisher
+- Server: Alle Lieder eines Starts tragen eine gemeinsame Kennung (`batch`; sie vergibt nur der Server, auch nach einem Neustart über `queue.json` bleibt das Album zusammen), dazu die Aktionen `/api/batches/{id}/cancel|hold|move`
+
+**Neu: Encoder-Schnelltest (Einstellungen → Hardware)**
+- Ein Knopf kodiert ein kurzes synthetisches Testbild (10 Sekunden, 1080p, nichts von deinen Dateien) nacheinander mit jedem erkannten, funktionierenden Encoder und Codec (H.264, H.265, AV1) in der Stufe „Gut“ und zeigt Geschwindigkeit (× Echtzeit, fps), Größe und Bitrate. Dazu die Empfehlung „Bei dir ist … am schnellsten“ mit „Als bevorzugt übernehmen“; gibt es nur einen nutzbaren Encoder, steht das als Hinweis da
+- Läuft nie neben Aufträgen (er startet nicht, solange einer läuft, und meldet „Zahlen unsicher“, wenn währenddessen einer anläuft), ist abbrechbar, und das Ergebnis merkt sich der Server für die erkannte Hardware (`bench.json`). Die GPU-Wege sind nur auf echter Hardware prüfbar
+
+**Neu: Gewonnener Platz je Monat**
+- Auf der Startseite zeigt die Karte „Gewonnener Platz“ unter den Gesamtzahlen eine Säulengrafik der letzten zwölf Monate, getrennt für Video und Audio, umschaltbar zwischen Platz, Dateien und Dauer; ein Tipp auf eine Säule nennt die genauen Zahlen. „Zurücksetzen“ leert auch die Monate der Art
+- Der Server führt die Monatssummen (`stats.json`). Beim ersten Start nach dem Update werden sie einmal aus dem Verlauf vorbefüllt (höchstens die letzten 100 Aufträge je Art), die ersten Monate können daher unvollständig sein; das steht dann dabei
+
+**Tests**
+- Neue Prüfungen `ui-check-album.js`, `ui-check-bench.js`, `ui-check-stats.js` (alle fünf Ansichten), neue Node-Tests (`test-statschart.js`) und Go-Tests (Alben, Schnelltest, Monatssummen); `test-library.js` läuft jetzt auch in der CI
+- Die Testmedien enthalten ein Album mit sechs Liedern
+
 ## 0.5.9 – 2026-11-23
 
 **Neu: „Ordner prüfen“ komplett neu gestaltet**

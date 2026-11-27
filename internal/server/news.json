@@ -1,5 +1,11 @@
 [
   {
+    "id": "v0510-album-schnelltest-statistik",
+    "version": "0.5.10",
+    "title": "Version 0.5.10: Alben, Schnelltest, Monatsgrafik",
+    "text": "Die Lieder eines Albums sind jetzt ein Auftrag mit einem Balken, im Verlauf ein Eintrag. In Einstellungen → Hardware misst ein Schnelltest, welcher Encoder bei dir am schnellsten ist. Und „Gewonnener Platz“ zeigt eine Grafik je Monat."
+  },
+  {
     "id": "v059-ordner-pruefen",
     "version": "0.5.9",
     "title": "Version 0.5.9: „Ordner prüfen“ neu",

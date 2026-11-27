@@ -40,6 +40,9 @@ node tools/test-quality.js || bad "tools/test-quality.js"
 step "Bibliothek-Scan (web/library.js, Node-Test)"
 node tools/test-library.js || bad "tools/test-library.js"
 
+step "Monatsgrafik (web/statschart.js, Node-Test)"
+node tools/test-statschart.js || bad "tools/test-statschart.js"
+
 step "Release-Text aus dem CHANGELOG (tools/release-notes.sh)"
 V="$(sed -n 's/.*Base = "\([^"]*\)".*/\1/p' internal/version/version.go)"
 sh tools/release-notes.sh "$V" > /tmp/p5c-notes.md 2>&1 && grep -q "^### $V " /tmp/p5c-notes.md && grep -q "^\*\*Downloads:\*\*" /tmp/p5c-notes.md || bad "tools/release-notes.sh liefert für $V keinen Abschnitt"

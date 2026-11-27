@@ -14,7 +14,7 @@ import (
 
 // historyEntry turns a finished job into a history entry. Command and log lines are only kept for errors.
 func historyEntry(j jobs.Job) history.Entry {
-	e := history.Entry{ID: fmt.Sprintf("%d-%s", j.Ended.UnixNano(), j.ID), Kind: j.Kind, Name: j.Name, Input: j.Input, Output: j.Output,
+	e := history.Entry{ID: fmt.Sprintf("%d-%s", j.Ended.UnixNano(), j.ID), Batch: j.Batch, Kind: j.Kind, Name: j.Name, Input: j.Input, Output: j.Output,
 		Status: j.Status, Ended: j.Ended, SizeIn: j.SizeIn, SizeOut: j.SizeOut, Backend: j.Backend, Encoder: j.Encoder, Decoder: j.Decoder, EncoderOK: j.EncoderConfirmed, DecoderOK: j.DecoderConfirmed,
 		Error: j.Error, Warnings: j.Warnings, CheckBad: j.CheckFailed}
 	if !j.Started.IsZero() && !j.Ended.IsZero() {

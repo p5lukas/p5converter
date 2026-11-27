@@ -1070,3 +1070,34 @@ dialog.libdlg{width:min(620px,100vw)}
 .w90 { width: 90px; }
 .badtxt { color: var(--bad); }
 .goodbye { padding: 60px; text-align: center; font: 18px system-ui; }
+
+/* Alben: Karte in der Warteschlange und Eintrag im Verlauf */
+.job.album .n{display:inline-flex;gap:6px;flex-wrap:wrap;align-items:baseline;min-width:0;overflow-wrap:anywhere}
+.job.album.held{opacity:.85}
+.histsongs{display:block;margin:6px 0 0 4px;padding:0 0 0 10px;border-left:2px solid var(--line)}
+.histsongs .histentry{padding:6px 0;border-top:1px solid color-mix(in srgb,var(--line) 50%,transparent)}
+.histsongs .histentry:first-child{border-top:0}
+.histalbum>summary .hname{font-weight:700}
+
+/* Encoder-Schnelltest (Einstellungen → Hardware) */
+.benchbox{display:grid;gap:10px;margin-bottom:6px}
+.benchtable td,.benchtable th{vertical-align:top}
+.benchrow.best td{color:var(--accent)}
+.benchbest{margin-left:6px}
+.benchrec{border:1px solid var(--accent);border-radius:10px;background:var(--dim);padding:10px 14px;display:grid;gap:8px}
+.benchrec p{margin:0}
+
+/* Gewonnener Platz über die Zeit (Startseite) */
+.savedhist{margin-top:12px;border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent);padding-top:10px;display:grid;gap:8px}
+.savedhead{display:flex;gap:8px 14px;flex-wrap:wrap;align-items:center}
+.savedhead .pills{gap:6px}
+.schart{width:100%;height:auto;max-height:190px;display:block;overflow:visible}
+.sgroup{cursor:pointer;outline:none}
+.shit{fill:transparent}
+.sbar{fill:var(--accent);opacity:.55}
+.sbar.neg{fill:var(--warn)}
+.sgroup:hover .sbar,.sgroup:focus-visible .sbar,.sgroup.sel .sbar{opacity:1}
+.sgroup.sel .slab{fill:var(--accent);font-weight:700}
+.sval{fill:var(--text);font-size:9.5px}
+.slab{fill:var(--muted);font-size:10px}
+.savedhistdetail{color:var(--text);min-height:1.4em;overflow-wrap:anywhere}

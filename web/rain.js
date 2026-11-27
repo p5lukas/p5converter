@@ -53,7 +53,15 @@ export function rainOnDone(jobs) {
   S.rainSeen = S.rainSeen || new Set();
   const first = !S.rainInit; S.rainInit = true;
   let fresh = 0;
-  jobs.forEach(j => { if (j.status === 'done' && !S.rainSeen.has(j.id)) { S.rainSeen.add(j.id); if (!j.checkFailed) fresh++; } });
+  jobs.forEach(j => { if (j.status === 'done' && !S.rainSeen.has(j.id)) { S.rainSeen.add(j.id); if (!j.checkFailed && !j.batch) fresh++; } }); // Lieder eines Albums regnen nicht einzeln
+  // ein Album regnet einmal, wenn alle seine Lieder beendet sind (und mindestens eines geklappt hat)
+  S.rainBatches = S.rainBatches || new Set();
+  const albums = {};
+  jobs.forEach(j => { if (j.batch) (albums[j.batch] = albums[j.batch] || []).push(j); });
+  for (const [b, js] of Object.entries(albums)) {
+    if (S.rainBatches.has(b) || js.some(j => j.status === 'queued' || j.status === 'running')) continue;
+    S.rainBatches.add(b); if (js.some(j => j.status === 'done' && !j.checkFailed)) fresh++;
+  }
   if (first || !fresh) return;
   const onStart = !$('#viewMain').classList.contains('hidden') && S.step === 'start', onHist = !$('#viewHistory').classList.contains('hidden');
   if (onStart) matrixRain($('#hero')); else if (onHist) matrixRain($('#queuePanel'));
@@ -70,9 +78,9 @@ const rainHash = (a, b) => { let x = (Math.imul(a + 1, 374761393) + Math.imul(b 
 // Balken laufender Aufträge kennzeichnen (nach jedem Neuaufbau der Karten) und die Zeichenschleife starten
 export function rainBarsSync() {
   const allowed = rainAllowed();
-  document.querySelectorAll('.bar.rain').forEach(b => { if (!allowed || !b.closest('.job.running, .jobnow')) { b.classList.remove('rain'); b.querySelector(':scope > canvas.rainbar')?.remove(); } });
+  document.querySelectorAll('.bar.rain').forEach(b => { if (!allowed || !b.closest('.job.running:not(.norain), .jobnow:not(.norain)')) { b.classList.remove('rain'); b.querySelector(':scope > canvas.rainbar')?.remove(); } });
   if (!allowed) return;
-  document.querySelectorAll('#queue .job.running .bar, #jobNow.jobnow .bar:not(.thin)').forEach(b => { b.classList.add('rain'); if (!b.querySelector(':scope > canvas.rainbar')) rainBarDraw(b, performance.now() / 1000); }); // sofort zeichnen: nach dem Neuaufbau der Karten kein Flackern
+  document.querySelectorAll('#queue .job.running:not(.norain) .bar, #jobNow.jobnow:not(.norain) .bar:not(.thin)').forEach(b => { b.classList.add('rain'); if (!b.querySelector(':scope > canvas.rainbar')) rainBarDraw(b, performance.now() / 1000); }); // sofort zeichnen: nach dem Neuaufbau der Karten kein Flackern
   if (!rainBarTimer && document.querySelector('.bar.rain')) rainBarTimer = requestAnimationFrame(rainBarFrame);
 }
 

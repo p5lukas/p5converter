@@ -5,6 +5,7 @@ import { syncNameUI } from './rename.js';
 import { PRESET_FIELDS, W, applyPreset, cfg, describePreset, fill, h, setField } from './settings.js';
 import { vfReset } from './verify.js';
 import { openWizard } from './wizard.js';
+import { refreshStatsHistory } from './statschart.js';
 
 'use strict';
 /* Startseite (Kacheln Video und Audio), Wegweiser durch den Ablauf, gewonnener Platz, „Wenn Datei existiert“, Zurücksetzen.
@@ -89,6 +90,7 @@ export function renderSaved() {
   fill(box, ['video', 'audio'].map(k => savedCol(k, d[k])));
   const ts = ['video', 'audio'].map(k => d[k]).filter(t => t && t.count), gain = ts.reduce((a, t) => a + t.in - t.out, 0), el = $('#savedSum');
   if (el) el.textContent = ts.length ? fmtSize(Math.abs(gain)) + (gain >= 0 ? ' gewonnen' : ' Mehrbedarf') : 'noch nichts umgewandelt';
+  refreshStatsHistory(); // die Monatsgrafik darunter folgt den Gesamtzahlen
 }
 function openSavedReset(kind) {
   S.resetKind = kind;

@@ -12,6 +12,7 @@ import { LANGS, langName, trkRender } from './tracks.js';
 import { trkRulesBody } from './tracks-rules.js';
 import { vfReset } from './verify.js';
 import { openWizard } from './wizard.js';
+import { benchSection } from './bench.js';
 
 'use strict';
 /* Einstellungen-Seite, Voreinstellungen und gemeinsame Hilfsfunktionen. Wird vor app.js geladen; app.js stellt
@@ -383,6 +384,7 @@ function pageHardware() {
     row('Bevorzugter Encoder', pref, 'setBackend', 'Gilt im Konverter bei „Automatisch“, wenn dieser Encoder für den Codec nutzbar ist'),
     row('Hardware-Decoding', check(c.hwDecode, v => saveCfg(x => { x.hwDecode = v; }), 'Standardmäßig nutzen'), 'vHwDec'),
     h('h3', {}, 'Erkannte Hardware'), h('div', {}, hw.done ? backends : h('span', {class: 'muted'}, 'Erkennung läuft …')),
+    hw.done && hw.backends.length ? [h('h3', {}, 'Schnelltest'), benchSection()] : null,
     h('details', {class: 'gpuhelp'}, h('summary', {}, 'Wie schalte ich meine GPU frei?'),
       ...((S.info && S.info.os) === 'windows' ? [
         h('p', {class: 'small'}, h('b', {}, 'Windows: '), 'Hier musst du nichts einstellen. Intel Quick Sync, NVIDIA NVENC und AMD AMF werden automatisch erkannt, sobald der aktuelle Grafiktreiber des Herstellers installiert ist (Intel, NVIDIA oder AMD).'),

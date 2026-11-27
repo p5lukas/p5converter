@@ -37,6 +37,12 @@ want a.mp3 && $F -f lavfi -i sine=d=3 -c:a libmp3lame "$A/a.mp3"
 want "Show S01E01 [WEBDL-1080p].mkv" && $F $V720:d=5 -f lavfi -i sine=d=5 $x264 -c:a aac "$A/Show S01E01 [WEBDL-1080p].mkv"
 for e in 2 3; do want "Show S01E0$e [WEBDL-1080p].mkv" && cp "$A/Show S01E01 [WEBDL-1080p].mkv" "$A/Show S01E0$e [WEBDL-1080p].mkv"; done
 
+# Album: 6 kurze Lieder mit Tags (Warteschlange und Verlauf zeigen sie als EIN Auftrag)
+mkdir -p "$A/Album"
+for i in 1 2 3 4 5 6; do
+  [ -s "$A/Album/Lied 0$i.mp3" ] || { echo "  Album/Lied 0$i.mp3"; $F -f lavfi -i "sine=f=$((300 + i * 40)):d=20" -metadata artist=Band -metadata album=Testalbum -metadata title="Lied $i" -metadata track=$i -c:a libmp3lame -q:a 4 "$A/Album/Lied 0$i.mp3"; }
+done
+
 # Sehr langer Name (Namensliste: der ganze Name muss sichtbar sein)
 want "Hellsing Ultimate (2006) - S01E01 - Hellsing I [Bluray-1080p][DTS 5.1][x265][10bit]-GRUPPE.mkv" && cp "$A/hint.mkv" "$A/Hellsing Ultimate (2006) - S01E01 - Hellsing I [Bluray-1080p][DTS 5.1][x265][10bit]-GRUPPE.mkv"
 
