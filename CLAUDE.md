@@ -11,7 +11,7 @@ Gleiche Zusammenarbeit wie im Schwesterprojekt **p5assets** (Vorbild: `TODO.md` 
 - Regeln des Nutzers werden als „Arbeitsregel (Nutzer)“ in `TODO.md` oben festgehalten.
 
 ## Versionen und Veröffentlichung
-- Bei jedem „leg los“ ein **Patch-Sprung** (0.0.1 → 0.0.2): Version hochsetzen, neuen Abschnitt oben in `CHANGELOG.md` (Datum; Neu/Geändert/Behoben), alles testen, auf Feature-Branch pushen.
+- Bei jedem „leg los“ ein **Patch-Sprung der letzten Stelle** (0.5.9 → 0.5.10); **die mittlere Stelle springt nur, wenn der Nutzer es ausdrücklich sagt**, auch bei großen Funktionen: Version hochsetzen, neuen Abschnitt oben in `CHANGELOG.md` (Datum; Neu/Geändert/Behoben), alles testen, auf Feature-Branch pushen.
 - **Tags/Releases nur bei Sprüngen der mittleren Stelle** (0.1.0 → 0.2.0 …), nicht bei Patch-Versionen. Größere Funktionen = kleine Versionssprünge nur nach Absprache.
 - **Tag und Release nur auf ausdrücklichen Wunsch** bzw. bei Sprüngen der mittleren Stelle (ein Pre-Release `vX.Y.Z` von `main`, solange die Version mit 0. beginnt). **Tags kann ich aus der Sandbox nicht pushen**; Ausweg nur auf Wunsch: Workflow `build.yml` per `workflow_dispatch` mit Eingabe `version` (legt Tag + Pre-Release an).
 - Aktueller Stand: Version 0.5.0 (Sprung der mittleren Stelle, auf Wunsch des Nutzers nach `main` gemergt, Pre-Release `v0.5.0` mit Windows-exe). Davor: `v0.3.0`, `v0.2.0`, `v0.1.0` (Pre-Releases). Der Release-Text kommt aus dem CHANGELOG; steht im Abschnitt der Version die Zeile `<!-- zusammenfassung -->`, enthält er nur diesen Abschnitt. Die `-dev`-Releases sind gelöscht; `tidy-releases` (nur von Hand, mit Bestätigung) schreibt Release-Texte neu. Nächster Tag erst beim nächsten Sprung der mittleren Stelle oder auf Wunsch.
