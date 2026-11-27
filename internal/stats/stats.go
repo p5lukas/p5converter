@@ -154,7 +154,7 @@ type MonthRow struct {
 func (s *Store) History(kind string) []MonthRow {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	var out []MonthRow
+	out := []MonthRow{} // leer statt null: die Oberfläche braucht eine Liste
 	for k, m := range s.d.Months[kind] {
 		out = append(out, MonthRow{Month: k, Count: m.Count, In: m.In, Out: m.Out, Seconds: m.Seconds})
 	}

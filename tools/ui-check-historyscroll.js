@@ -61,8 +61,11 @@ const OUT = (process.env.OUTDIR || '/tmp/out') + '/hscroll';
     await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(300);
     const det = p.locator('#queue .job.running details').first();
     if (await det.count()) {
+      const jid = await det.getAttribute('data-id');
       await det.locator('summary').click(); await p.waitForTimeout(3500);
-      ok(await p.locator('#queue .job.running details').first().evaluate(d => d.open), name + ': Details der Warteschlange schließen sich von selbst');
+      // genau diesen Auftrag prüfen (ist er inzwischen fertig, gibt es nichts mehr zu prüfen; ein anderer laufender Auftrag zählt nicht)
+      const same = p.locator('#queue details[data-id="' + jid + '"]');
+      if (await same.count()) ok(await same.first().evaluate(d => d.open), name + ': Details der Warteschlange schließen sich von selbst');
       ok(await p.locator('#queue .job.running [data-copy=cmd]').count() >= 1, name + ': Kopieren-Knopf in der Warteschlange fehlt');
     }
     await p.screenshot({path: `${L.SHOTS}/p5c-hscroll-${name}-2-lauf.png`, fullPage: true});

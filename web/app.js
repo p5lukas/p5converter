@@ -644,7 +644,7 @@ export function renderHero() {
   const meta = [];
   if (cur.status === 'running') { if (cur.speed) meta.push('Speed ' + esc(cur.speed)); if (cur.fps) meta.push(cur.fps.toFixed(0) + ' fps'); if (cur.eta) meta.push('noch ' + fmtTime(cur.eta)); }
   // Album (nur Lieder desselben Starts im aktuellen Durchlauf): „Lied 5 von 12“ mit dem Gesamtbalken als Hauptbalken
-  if (cur.batch && batch.length > 1 && batch.every(j => j.batch === cur.batch)) {
+  if (cur.batch && S.jobs.filter(j => j.batch === cur.batch).length > 1 && !batch.some(j => (j.status === 'queued' || j.status === 'running') && j.batch !== cur.batch)) {
     const a = albumInfo(cur.batch), am = [`<span>${a.pct.toFixed(0)} %</span>`, `<span>${a.finished} von ${a.total} Liedern fertig</span>`];
     if (a.bad) am.push(`<span class="badtxt">${a.bad} mit Fehler</span>`);
     if (cur.status === 'running' && cur.speed) am.push('Speed ' + esc(cur.speed));
